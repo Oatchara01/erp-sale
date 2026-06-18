@@ -1,0 +1,6448 @@
+<?php include("head.php"); ?>
+<?php include('dbconnect_sale.php'); ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+	/* Custom Circular Checkbox/Radio Styling */
+	.shipping-custom-radio {
+		display: inline-block;
+		position: relative;
+		cursor: pointer;
+		width: 20px;
+		height: 20px;
+		margin: 0;
+		vertical-align: middle;
+	}
+
+	.shipping-custom-radio input {
+		position: absolute;
+		opacity: 0;
+		cursor: pointer;
+		height: 0;
+		width: 0;
+	}
+
+	.shipping-custom-radio .checkmark {
+		position: absolute;
+		top: 0;
+		left: 0;
+		height: 20px;
+		width: 20px;
+		background-color: #fff;
+		border: 1px solid #ccc;
+		border-radius: 50%;
+		transition: all 0.2s ease;
+		box-sizing: border-box;
+	}
+
+	.shipping-custom-radio input:checked~.checkmark {
+		background-color: #612989;
+		border-color: #612989;
+	}
+
+	.shipping-custom-radio .checkmark:after {
+		content: "";
+		position: absolute;
+		display: none;
+	}
+
+	.shipping-custom-radio input:checked~.checkmark:after {
+		display: block;
+	}
+
+	.shipping-custom-radio .checkmark:after {
+		left: 6px;
+		top: 2px;
+		width: 5px;
+		height: 10px;
+		border: solid white;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg);
+	}
+</style>
+<script>
+	var HttPRequest = false;
+
+	function setElementValue(id, value) {
+		var element = document.getElementById(id);
+		if (element) {
+			element.value = value || "";
+		}
+	}
+
+	function setFieldValueBySelector(selector, value) {
+		var element = document.querySelector(selector);
+		if (element) {
+			element.value = value || "";
+		}
+	}
+
+	function setSelectedShippingId(value) {
+		setFieldValueBySelector('input[name="shipping_id"]', value || '');
+	}
+
+	function updateDeliveryContractRequirement() {
+		var haveOrderCheckbox = document.getElementById('have_order');
+		var deliveryContractInput = document.getElementById('delivery_contract');
+		if (!haveOrderCheckbox || !deliveryContractInput) {
+			return;
+		}
+
+		var isRequired = !!haveOrderCheckbox.checked;
+		deliveryContractInput.required = isRequired;
+		if (!isRequired) {
+			deliveryContractInput.setCustomValidity('');
+		}
+	}
+
+	function validateDeliveryContractRequirement() {
+		var haveOrderCheckbox = document.getElementById('have_order');
+		var deliveryContractInput = document.getElementById('delivery_contract');
+		if (!haveOrderCheckbox || !deliveryContractInput) {
+			return true;
+		}
+
+		if (haveOrderCheckbox.checked && deliveryContractInput.value === '') {
+			alert('กรุณาระบุวันที่กำหนดส่งตามสัญญา เมื่อเลือกออเดอร์ฝาก');
+			deliveryContractInput.focus();
+			return false;
+		}
+
+		return true;
+	}
+
+	function syncShippingFieldsToLegacy() {
+		var contactName = document.querySelector('input[name="contact_name"]');
+		var contactTel = document.querySelector('input[name="contact_tel"]');
+		var contactProvince = document.querySelector('select[name="contact_province"]');
+		var shippingAddress = document.querySelector('input[name="shipping_address"]');
+		var installLocation = document.querySelector('input[name="install_location"]');
+
+		setFieldValueBySelector('#customer_name', contactName ? contactName.value : '');
+		setFieldValueBySelector('#customer_tel', contactTel ? contactTel.value : '');
+		setFieldValueBySelector('#province_name', contactProvince ? contactProvince.value : '');
+		setFieldValueBySelector('textarea[name="address_name"]', shippingAddress ? shippingAddress.value : '');
+		setFieldValueBySelector('textarea[name="address_send"]', installLocation ? installLocation.value : '');
+	}
+
+	function applyShippingSelection(data) {
+		if (Array.isArray(data)) {
+			var selectedItems = data.filter(function(item) {
+				return item && !item.is_all;
+			});
+
+			if (!selectedItems.length) {
+				if (window.originalShippingData) {
+					setFieldValueBySelector('input[name="contact_name"]', window.originalShippingData.shipping_name || window.originalShippingData.customer_name || '');
+					setFieldValueBySelector('input[name="contact_tel"]', window.originalShippingData.shipping_tel || window.originalShippingData.customer_tel || '');
+					setFieldValueBySelector('select[name="contact_province"]', window.originalShippingData.shipping_province || '');
+					setFieldValueBySelector('input[name="shipping_address"]', window.originalShippingData.shipping_full_address || '');
+					setFieldValueBySelector('input[name="install_location"]', window.originalShippingData.install_location || window.originalShippingData.shipping_full_address || '');
+				} else {
+					setFieldValueBySelector('input[name="contact_name"]', '');
+					setFieldValueBySelector('input[name="contact_tel"]', '');
+					setFieldValueBySelector('select[name="contact_province"]', '');
+					setFieldValueBySelector('input[name="shipping_address"]', '');
+					setFieldValueBySelector('input[name="install_location"]', '');
+				}
+				setSelectedShippingId('');
+				syncShippingFieldsToLegacy();
+				return;
+			}
+
+			var firstItem = selectedItems[0];
+			var mergedAddresses = selectedItems.map(function(item) {
+				return String(item.shipping_full_address || item.shipping_address || '').trim();
+			}).filter(Boolean).join(' | ');
+
+			var mergedInstallLocations = selectedItems.map(function(item) {
+				return String(item.install_location || '').trim();
+			}).filter(Boolean).join(' | ');
+
+			setFieldValueBySelector('input[name="contact_name"]', firstItem.shipping_name || firstItem.customer_name || '');
+			setFieldValueBySelector('input[name="contact_tel"]', firstItem.shipping_tel || firstItem.customer_tel || '');
+			setFieldValueBySelector('select[name="contact_province"]', firstItem.shipping_province || '');
+			setFieldValueBySelector('input[name="shipping_address"]', mergedAddresses);
+			setFieldValueBySelector('input[name="install_location"]', mergedInstallLocations);
+			setSelectedShippingId(firstItem.row_id || '');
+			syncShippingFieldsToLegacy();
+			return;
+		}
+
+		data = data || {};
+		if (data.is_all) {
+			if (window.originalShippingData) {
+				setFieldValueBySelector('input[name="contact_name"]', window.originalShippingData.shipping_name || window.originalShippingData.customer_name || '');
+				setFieldValueBySelector('input[name="contact_tel"]', window.originalShippingData.shipping_tel || window.originalShippingData.customer_tel || '');
+				setFieldValueBySelector('select[name="contact_province"]', window.originalShippingData.shipping_province || '');
+				setFieldValueBySelector('input[name="shipping_address"]', window.originalShippingData.shipping_full_address || '');
+				setFieldValueBySelector('input[name="install_location"]', window.originalShippingData.install_location || window.originalShippingData.shipping_full_address || '');
+			} else {
+				setFieldValueBySelector('input[name="contact_name"]', '');
+				setFieldValueBySelector('input[name="contact_tel"]', '');
+				setFieldValueBySelector('select[name="contact_province"]', '');
+				setFieldValueBySelector('input[name="shipping_address"]', '');
+				setFieldValueBySelector('input[name="install_location"]', '');
+			}
+			setSelectedShippingId('');
+			syncShippingFieldsToLegacy();
+			return;
+		}
+
+		var fullAddress = String(data.shipping_full_address || '').trim();
+
+		setFieldValueBySelector('input[name="contact_name"]', data.shipping_name || data.customer_name || '');
+		setFieldValueBySelector('input[name="contact_tel"]', data.shipping_tel || data.customer_tel || '');
+		setFieldValueBySelector('select[name="contact_province"]', data.shipping_province || '');
+		setFieldValueBySelector('input[name="shipping_address"]', fullAddress);
+		setFieldValueBySelector('input[name="install_location"]', data.install_location || '');
+		setSelectedShippingId(data.row_id || '');
+
+		syncShippingFieldsToLegacy();
+	}
+
+	function bindShippingFieldMirrors() {
+		var selectors = [
+			'input[name="contact_name"]',
+			'input[name="contact_tel"]',
+			'select[name="contact_province"]',
+			'input[name="shipping_address"]',
+			'input[name="install_location"]'
+		];
+
+		selectors.forEach(function(selector) {
+			var element = document.querySelector(selector);
+			if (!element) return;
+			element.addEventListener('input', syncShippingFieldsToLegacy);
+			element.addEventListener('change', syncShippingFieldsToLegacy);
+		});
+
+		syncShippingFieldsToLegacy();
+	}
+
+	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, pre_name, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
+		if (typeof mode === 'function') {
+			onComplete = mode;
+			mode = undefined;
+		}
+
+		HttPRequest = false;
+		if (window.XMLHttpRequest) {
+			HttPRequest = new XMLHttpRequest();
+			if (HttPRequest.overrideMimeType) HttPRequest.overrideMimeType('text/html');
+		} else if (window.ActiveXObject) {
+			try {
+				HttPRequest = new ActiveXObject("Msxml2.XMLHTTP");
+			} catch (e) {
+				try {
+					HttPRequest = new ActiveXObject("Microsoft.XMLHTTP");
+				} catch (e) {}
+			}
+		}
+		if (!HttPRequest) {
+			alert('Cannot create XMLHTTP instance');
+			return false;
+		}
+
+		var url = 'data_bill_name1.php';
+		var billIdVal = "";
+		var billIdElem = document.getElementById(bill_id);
+		if (billIdElem) {
+			billIdVal = billIdElem.value;
+		} else {
+			billIdVal = bill_id;
+		}
+		var pmeters = "bill_id=" + encodeURIComponent(billIdVal);
+		HttPRequest.open('POST', url, true);
+		HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		HttPRequest.setRequestHeader("Content-length", pmeters.length);
+		HttPRequest.setRequestHeader("Connection", "close");
+		HttPRequest.send(pmeters);
+
+		HttPRequest.onreadystatechange = function() {
+			if (HttPRequest.readyState === 4) {
+				// 200 เท่านั้นถึงจะประมวลผล (กัน error เงียบๆ)
+				if (HttPRequest.status !== 200) {
+					console.error('XHR error', HttPRequest.status);
+					if (typeof onComplete === 'function') {
+						onComplete(false, ['โหลดข้อมูลลูกค้าไม่สำเร็จ']);
+					}
+					return;
+				}
+
+				var myProduct = HttPRequest.responseText || '';
+				if (myProduct !== "") {
+					var myArr = myProduct.split("|");
+
+					var isCustomerMode = (mode === 'customer' || mode === undefined);
+					var isBillingMode = (mode === 'billing' || mode === undefined);
+
+					if (isBillingMode) {
+						setElementValue(bill_name, myArr[0]);
+						setElementValue(bill_address, myArr[1]);
+						setElementValue(bill_tel, myArr[2]);
+						setElementValue(tax_id, myArr[3]);
+
+						var preNameVal = (myArr[10] || "").trim();
+						var preNameSelect = document.getElementById(pre_name);
+						if (preNameSelect) {
+							var exists = false;
+							for (var i = 0; i < preNameSelect.options.length; i++) {
+								if (preNameSelect.options[i].value === preNameVal) {
+									exists = true;
+									break;
+								}
+							}
+							if (!exists && preNameVal !== "") {
+								var opt = document.createElement('option');
+								opt.value = preNameVal;
+								opt.innerHTML = preNameVal;
+								preNameSelect.appendChild(opt);
+							}
+							preNameSelect.value = preNameVal;
+						}
+					}
+
+					if (isCustomerMode) {
+						setElementValue('display_bill_name', myArr[0]);
+						setElementValue('display_bill_tel', myArr[2]);
+
+						setElementValue(mode_name, myArr[20]);
+						setElementValue('display_mode_name', myArr[20]);
+						setElementValue(email, myArr[21]);
+						setElementValue(customer_typename, myArr[22]);
+						setElementValue('display_customer_typename', myArr[22]);
+						setElementValue('display_credit_thb', myArr[24]);
+
+						var vipCkk = (myArr[25] || "").trim();
+						var vipIcon = document.getElementById('display_vip_icon');
+						if (vipIcon) {
+							if (vipCkk === "1") {
+								vipIcon.style.display = "";
+							} else {
+								vipIcon.style.display = "none";
+							}
+						}
+
+						// เก็บ bill_id ที่ค้นหาได้ไว้ใน hidden
+						var sourceBillIdElem = document.getElementById(bill_id);
+						var billIdToSet = sourceBillIdElem ? sourceBillIdElem.value : bill_id;
+						var hBillIdElem = document.getElementById('h_bill_id');
+						if (hBillIdElem) hBillIdElem.value = billIdToSet;
+						var displayBillId = document.getElementById('display_bill_id');
+						if (displayBillId) displayBillId.textContent = billIdToSet;
+					}
+
+					if (isCustomerMode) {
+						setElementValue(payment, myArr[23]);
+						setElementValue(credit_thb, myArr[24]);
+						var defaultShipping = {
+							customer_name: myArr[0],
+							customer_tel: myArr[17] || myArr[5],
+							shipping_name: myArr[18] || myArr[12] || myArr[0],
+							shipping_province: myArr[15],
+							shipping_full_address: myArr[19] || myArr[13] || ''
+						};
+						window.originalShippingData = defaultShipping;
+						applyShippingSelection(defaultShipping);
+
+						// เก็บค่า credit_ckk ของลูกค้าไว้ใน hidden
+						var cusCkk = (myArr[23] || "").trim();
+						var hCreditCkk = document.getElementById('h_credit_ckk_value');
+						if (hCreditCkk) hCreditCkk.value = cusCkk;
+
+						// อัปเดตโหมดชำระเงินและการแสดงผลอัตโนมัติ
+						if (cusCkk !== '0' && cusCkk !== "") {
+							switchPaymentMode('credit');
+						} else {
+							switchPaymentMode('cash');
+						}
+
+						// ประเมินการแสดง/ซ่อนตารางหนี้ตามเงื่อนไขใหม่
+						evaluateDebtPanel();
+					}
+
+					if (typeof onComplete === 'function') {
+						onComplete(true, []);
+					}
+				} else if (typeof onComplete === 'function') {
+					onComplete(false, ['ไม่พบข้อมูลลูกค้า']);
+				}
+			}
+		};
+	}
+
+	// ----- เงื่อนไขการแสดงตารางหนี้: payment != '0' และมีวงเงิน > 0 -----
+	function shouldShowDebtPanel() {
+		var payVal = (document.getElementById('payment').value || '').trim();
+		var creditRaw = (document.getElementById('credit_thb').value || '0').replace(/,/g, '');
+		var creditNum = parseFloat(creditRaw) || 0;
+		return (payVal !== '0' && creditNum > 0);
+	}
+
+	function evaluateDebtPanel() {
+		if (shouldShowDebtPanel()) {
+			var cusId = (document.getElementById('h_bill_id').value || '').trim();
+			if (cusId) {
+				showDebts(cusId);
+			} else {
+				// ไม่มีลูกค้า -> ซ่อน
+				hideDebts();
+			}
+		} else {
+			hideDebts();
+		}
+	}
+
+	// โหลด options ช่องทางชำระเงิน
+	function loadBankOptions(creditOnly, callback) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'bank_options_awl.php?credit_only=' + (creditOnly ? '1' : '0'), true);
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				if (xhr.status === 200) {
+					var sel = document.getElementById('payment');
+					var prev = sel.value; // เก็บค่าเดิมไว้ (กันเด้ง reset กรณีโหลดใหม่)
+					sel.innerHTML = '<option value="">**Please Select Item**</option>' + xhr.responseText;
+					// พยายาม restore ค่าเดิม ถ้ายังอยู่ใน options ใหม่
+					if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+
+					// ซิงค์ค่าไปยัง dropdown ฝั่ง cash
+					var cashSel = document.getElementById('payment_cash_select');
+					if (cashSel) {
+						cashSel.innerHTML = sel.innerHTML;
+						cashSel.value = sel.value;
+					}
+
+					if (typeof callback === 'function') {
+						callback();
+					}
+				} else {
+					console.error('โหลดช่องทางชำระเงินไม่สำเร็จ');
+				}
+			}
+		};
+		xhr.send();
+	}
+
+	// แสดงตารางหนี้คงค้าง
+	function showDebts(cusId) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'get_debts.php?cus_id=' + encodeURIComponent(cusId), true);
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				if (xhr.status === 200) {
+					try {
+						var res = JSON.parse(xhr.responseText || '{}');
+
+						// ดึงวงเงิน
+						var creditInput = document.getElementById('credit_thb').value || '0';
+						var credit = parseFloat(String(creditInput).replace(/,/g, '').trim()) || 0;
+
+						// ยอดหนี้
+						var rawOutstanding = res.total_outstanding || 0;
+						var outstanding = parseFloat(String(rawOutstanding).replace(/,/g, '').trim()) || 0;
+
+						// วงเงินคงเหลือ
+						var remain = credit - outstanding;
+						document.getElementById('sum_ca').value = remain;
+
+						var billName = document.getElementById('bill_name').value || '-';
+
+						if (remain < 0) {
+							Swal.fire({
+								title: "กรุณาติดต่อบัญชี",
+								html: "<div style='font-size:16px; text-align:left;'>" +
+
+									"<p>เพื่อขอเพิ่มวงเงินของคุณ เนื่องจากวงเงินของคุณไม่เพียงพอ</p>" +
+									"<hr>" +
+									"<p><b> " + billName + "</b></p>" +
+									"<p><b>วงเงิน: " + numberFormat(credit) + " บาท</b></p>" +
+									"<p><b>ยอดวงเงินคงเหลือ:</b> " +
+									"<span style='color:red; font-weight:bold;'>" +
+									numberFormat(remain) + " บาท" +
+									"</span>" +
+									"</p>" +
+									"</div>",
+								icon: "warning",
+								confirmButtonText: "กลับหน้าหลัก",
+							}).then(() => {
+								window.location.href = "main_suphos_so.php";
+							});
+
+							return;
+						}
+
+						// Summary
+						var summaryHtml = `
+            <div style="margin-bottom:16px; font-weight:bold;">
+              วงเงิน: ${numberFormat(credit)} |
+              ยอดวงเงินคงเหลือ:
+              <span style="color:${remain < 0 ? 'red' : 'green'};">
+                ${numberFormat(remain)}
+              </span>
+            </div>
+          `;
+
+						// แสดงผล
+						document.getElementById('debt_table_wrap').innerHTML =
+							summaryHtml + (res.html || '');
+						document.getElementById('debt_panel').style.display = 'block';
+
+					} catch (e) {
+						console.error('Parse JSON error', e);
+						hideDebts();
+					}
+				} else {
+					console.error('โหลดยอดหนี้คงค้างไม่สำเร็จ');
+					hideDebts();
+				}
+			}
+		};
+		xhr.send();
+	}
+
+
+	function hideDebts() {
+		document.getElementById('debt_panel').style.display = 'none';
+		document.getElementById('debt_table_wrap').innerHTML = '';
+		document.getElementById('credit_summary').innerHTML = '';
+	}
+
+	// utility แปลงตัวเลขให้อ่านง่าย
+	function numberFormat(n) {
+		return (Number(n) || 0).toLocaleString('en-US', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+	}
+
+	// กรณีผู้ใช้แก้ไขค่า payment เองภายหลัง
+	document.addEventListener('DOMContentLoaded', function() {
+		// เริ่มต้นโหลดในโหมดเงินสด/เครดิตตามค่าเริ่มต้น
+		switchPaymentMode('cash');
+
+		// ผู้ใช้แก้ไขวงเงิน -> ประเมินใหม่ (ถ้าวงเงินเป็น 0 จะซ่อน)
+		document.getElementById('credit_thb').addEventListener('input', function() {
+			evaluateDebtPanel();
+			updateCreditDisplay();
+		});
+	});
+
+	// สลับโหมดการชำระเงิน (เครดิต / เงินสด)
+	function switchPaymentMode(mode) {
+		var isCredit = (mode === 'credit');
+
+		var radCredit = document.getElementById('pay_mode_credit');
+		var radCash = document.getElementById('pay_mode_cash');
+
+		if (isCredit) {
+			if (radCredit) radCredit.checked = true;
+			document.getElementById('lbl-pay_mode_credit')?.classList.add('active');
+			document.getElementById('lbl-pay_mode_cash')?.classList.remove('active');
+
+			document.getElementById('row-credit-fields').style.display = 'grid';
+			document.getElementById('row-cash-fields').style.display = 'none';
+
+			loadBankOptions(false, function() {
+				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
+				var sel = document.getElementById('payment');
+				if (savedCusCkk && savedCusCkk !== '0') {
+					sel.value = savedCusCkk;
+				} else {
+					if (sel.options.length > 1) {
+						sel.selectedIndex = 1;
+					}
+				}
+				updateCreditDisplay();
+				evaluateDebtPanel();
+			});
+		} else {
+			if (radCash) radCash.checked = true;
+			document.getElementById('lbl-pay_mode_cash')?.classList.add('active');
+			document.getElementById('lbl-pay_mode_credit')?.classList.remove('active');
+
+			document.getElementById('row-cash-fields').style.display = 'grid';
+			document.getElementById('row-credit-fields').style.display = 'none';
+
+			loadBankOptions(true, function() {
+				var sel = document.getElementById('payment');
+				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
+				if (savedCusCkk === '0' || !savedCusCkk) {
+					if (sel.options.length > 1) {
+						sel.selectedIndex = 1;
+					}
+				} else {
+					sel.value = '';
+				}
+				var cashSel = document.getElementById('payment_cash_select');
+				if (cashSel) cashSel.value = sel.value;
+				evaluateDebtPanel();
+			});
+		}
+	}
+
+	// อัปเดตข้อมูลการแสดงผลเครดิต
+	function updateCreditDisplay() {
+		var sel = document.getElementById('payment');
+		var selectedText = sel.options[sel.selectedIndex]?.text || '';
+		var creditDays = selectedText.match(/\d+/) ? selectedText.match(/\d+/)[0] : '';
+
+		var displayDays = document.getElementById('display_credit_days');
+		if (displayDays) displayDays.value = creditDays || '30';
+
+		var creditLimit = document.getElementById('credit_thb').value || '0';
+		var formattedLimit = parseFloat(creditLimit.replace(/,/g, '')) || 0;
+		var displayLimit = document.getElementById('display_credit_limit');
+		if (displayLimit) displayLimit.value = formattedLimit.toLocaleString('en-US');
+	}
+</script>
+
+<script>
+	const lastOkValues = {};
+
+	function num(v) {
+		return parseFloat(String(v || '').replace(/,/g, '')) || 0;
+	}
+
+	function calcTotal() {
+		let total = 0;
+		for (let i = 1; i <= 20; i++) {
+			const el = document.getElementById('sum_amount' + i);
+			if (el) total += num(el.value);
+		}
+		const totalInput = document.getElementById('sum_amount_total');
+		if (totalInput) totalInput.value = total.toFixed(2);
+		return total;
+	}
+
+	function checkOverLimit(changedId) {
+		setTimeout(function() {
+			const total = calcTotal();
+			const sumCaEl = document.getElementById('sum_ca');
+			const limit = sumCaEl ? num(sumCaEl.value) : 0;
+
+			if (limit > 0 && total > limit) {
+				showOverLimitPopup(total, limit);
+
+				const el = document.getElementById(changedId);
+				if (el && lastOkValues[changedId] !== undefined) {
+					el.value = lastOkValues[changedId];
+				}
+				calcTotal();
+				if (el) {
+					el.focus();
+					if (typeof el.select === 'function') el.select();
+				}
+			} else {
+				const el = document.getElementById(changedId);
+				if (el) lastOkValues[changedId] = el.value;
+			}
+		}, 30);
+	}
+
+	function bindRow(i) {
+		['sale_count', 'product_price', 'discount_unit'].forEach(function(prefix) {
+			const id = prefix + i;
+			const el = document.getElementById(id);
+			if (!el) return;
+
+			lastOkValues[id] = el.value;
+			el.addEventListener('focus', function() {
+				lastOkValues[id] = el.value;
+			});
+			el.addEventListener('input', function() {
+				checkOverLimit(id);
+			});
+			el.addEventListener('change', function() {
+				checkOverLimit(id);
+			});
+		});
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		for (let i = 1; i <= 20; i++) bindRow(i);
+		calcTotal();
+	});
+</script>
+
+<script>
+	function object() {
+		if (document.getElementById('object1').checked) {
+			document.getElementById('dt1').style.display = 'block';
+			document.getElementById('dt2').style.display = 'none';
+			document.getElementById('dt3').style.display = 'none';
+			document.getElementById('dt4').style.display = 'none';
+		} else if (document.getElementById('object2').checked) {
+			document.getElementById('dt1').style.display = 'none';
+			document.getElementById('dt2').style.display = 'block';
+			document.getElementById('dt3').style.display = 'none';
+			document.getElementById('dt4').style.display = 'none';
+		} else if (document.getElementById('object3').checked) {
+			document.getElementById('dt1').style.display = 'none';
+			document.getElementById('dt2').style.display = 'none';
+			document.getElementById('dt3').style.display = 'block';
+			document.getElementById('dt4').style.display = 'none';
+		} else if (document.getElementById('object4').checked) {
+			document.getElementById('dt1').style.display = 'none';
+			document.getElementById('dt2').style.display = 'none';
+			document.getElementById('dt3').style.display = 'none';
+			document.getElementById('dt4').style.display = 'block';
+		}
+
+	}
+
+
+	function ckk_1() {
+		if (document.getElementById('object5').checked) {
+			document.getElementById('dt5').style.display = 'block';
+		} else if (document.getElementById('object6').checked) {
+			document.getElementById('dt5').style.display = 'none';
+		} else if (document.getElementById('object7').checked) {
+			document.getElementById('dt5').style.display = 'none';
+		}
+	}
+
+
+
+</script>
+
+<style type="text/css">
+	.button {
+		background-color: #339900;
+		border: none;
+		color: white;
+		padding: 8px 10px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+		margin: 4px 2px;
+		cursor: pointer;
+	}
+
+	.button1 {
+		border-radius: 2px;
+	}
+
+	.button2 {
+		border-radius: 4px;
+	}
+
+	.button3 {
+		border-radius: 8px;
+	}
+
+	.button4 {
+		border-radius: 12px;
+	}
+
+	.button5 {
+		border-radius: 50%;
+	}
+
+	.style15 {
+		font-size: 18px;
+		color: #000000;
+	}
+
+	.style30 {
+		font-size: 12px;
+	}
+
+	.style32 {
+		font-size: 11px;
+	}
+
+	.style33 {
+		font-size: 12px;
+	}
+
+	.style34 {
+		color: #FF0000;
+	}
+
+	.style35 {
+		font-size: 12px;
+		color: #f2f2f2;
+	}
+
+	.style37 {
+		color: #FF0000;
+		font-size: 14px;
+	}
+
+	.style38 {
+		color: #f2f2f2;
+	}
+
+	.style39 {
+		font-size: 14px;
+	}
+
+	.style40 {
+		font-size: 16px;
+		color: #FF0000;
+	}
+
+	/* ================= MODERN PREMIUM THEME ================= */
+	@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+	body {
+		background-color: #F4EFF8 !important;
+		background-image: none !important;
+		font-family: 'Prompt', sans-serif !important;
+		color: #4A4A4A !important;
+	}
+
+	/* Modern Header Layout */
+	.so-header-container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 0 auto;
+		padding: 16px 0;
+		width: 100%;
+		max-width: 1096px;
+		box-sizing: border-box;
+	}
+
+	.so-header-left {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.so-title {
+		font-size: 28px;
+		font-weight: 600;
+		color: #612989;
+		margin: 0 0 8px 0;
+	}
+
+	.so-ref-info {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 14px;
+	}
+
+	.so-ref-label {
+		color: #8E8B94;
+	}
+
+	.so-ref-value {
+		color: #612989;
+		font-weight: 700;
+	}
+
+	.so-header-right {
+		display: flex;
+		gap: 12px;
+	}
+
+	/* Buttons */
+	.btn-clear-loan-reserve {
+		background-color: #F1E1FF;
+		color: #612989;
+		border: none;
+		border-radius: 20px;
+		padding: 10px 24px;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.btn-clear-loan-reserve:hover {
+		background-color: #DCD6FA;
+	}
+
+	.btn-preview-so {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid transparent;
+		border-radius: 20px;
+		padding: 10px 24px;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-family: 'Prompt', sans-serif;
+		box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
+	}
+
+	.btn-preview-so:hover {
+		background-color: #FAF9FC;
+		opacity: 0.9;
+	}
+
+	/* Tabs */
+	.so-tabs-container {
+		display: flex;
+		background-color: transparent;
+		margin-bottom: -1px;
+		padding-left: 50px;
+		position: relative;
+	}
+
+	.so-tab-btn {
+		background: #FFFFFF;
+		border: 1px solid #FFFFFF;
+		border-bottom: none;
+		outline: none;
+		padding: 12px 28px;
+		font-size: 14px;
+		font-weight: 500;
+		color: #3B3B3B;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		position: relative;
+		/* margin-right: 6px; */
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.so-tab-btn:first-child {
+		border-radius: 12px 0 0 0;
+	}
+
+	.so-tab-btn:last-child {
+		border-radius: 0 12px 0 0;
+	}
+
+	.so-tab-btn:hover {
+		color: #612989;
+		background: #EFEBFF;
+	}
+
+	.so-tab-btn.active {
+		color: #612989;
+		font-weight: 500;
+		font-size: 14px;
+		background: #FFFFFF;
+		padding-bottom: 11px;
+	}
+
+	.so-tab-btn.active::after {
+		content: "";
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 4px;
+		background-color: #612989;
+		border-radius: 25px;
+	}
+
+	/* Card Container */
+	.so-card {
+		background-color: #FFFFFF;
+		border-radius: 10px;
+		box-shadow: 0 4px 20px rgba(97, 41, 137, 0.04);
+		padding: 32px;
+		margin-bottom: 30px;
+		border: 1px solid #EFEBEF;
+		position: relative;
+		width: 100%;
+		max-width: 1096px;
+		margin-left: auto;
+		margin-right: auto;
+		box-sizing: border-box;
+	}
+
+	/* Tab content */
+	.so-tab-content {
+		display: none;
+	}
+
+	.so-tab-content.active {
+		display: block;
+		background-color: transparent;
+	}
+
+	/* Grid Layouts */
+	.so-grid-3 {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	.so-grid-2 {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	.so-grid-3-2-1 {
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	@media (max-width: 992px) {
+
+		.so-grid-3,
+		.so-grid-3-2-1 {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (max-width: 768px) {
+
+		.so-grid-3,
+		.so-grid-2,
+		.so-grid-3-2-1 {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+	}
+
+	/* Field styling */
+	.so-field-group {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.so-label {
+		font-size: 13px;
+		font-weight: 500;
+		color: #612989;
+	}
+
+	.so-label .required {
+		color: #DC3545;
+		margin-left: 2px;
+	}
+
+	.so-input {
+		background-color: #F5F6F8;
+		border: 1px solid transparent;
+		border-radius: 10px;
+		padding: 0 16px;
+		font-size: 14px;
+		color: #333333;
+		font-family: 'Prompt', sans-serif;
+		outline: none;
+		transition: all 0.2s ease;
+		height: 42px;
+		line-height: 40px;
+		box-sizing: border-box;
+	}
+
+	.so-input:focus {
+		background-color: #FFFFFF;
+		border-color: #612989;
+		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
+	}
+
+	.so-textarea {
+		background-color: #F5F6F8;
+		border: 1px solid transparent;
+		border-radius: 12px;
+		padding: 12px 16px;
+		font-size: 14px;
+		color: #333333;
+		font-family: 'Prompt', sans-serif;
+		outline: none;
+		transition: all 0.2s ease;
+		resize: vertical;
+		box-sizing: border-box;
+		width: 100%;
+	}
+
+	.so-textarea:focus {
+		background-color: #FFFFFF;
+		border-color: #612989;
+		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
+	}
+
+	/* Input Clear Wrapper */
+	.so-input-wrapper {
+		position: relative;
+		display: flex;
+	}
+
+	.so-input-wrapper .so-input {
+		width: 328px;
+		padding-right: 40px;
+	}
+
+	/* fa-times clear icon inside wrappers */
+	.so-input-wrapper>i.fas.fa-times {
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		cursor: pointer;
+		color: #8E8B94;
+		font-size: 14px;
+		z-index: 1;
+	}
+
+	.so-input-clear {
+		position: absolute;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		background: transparent;
+		border: none;
+		color: #8E8B94;
+		font-size: 20px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+	}
+
+	.so-input-clear:hover {
+		color: #333333;
+		background-color: rgba(0, 0, 0, 0.05);
+	}
+
+	/* Select wrapper and select styling */
+	.so-select-wrapper {
+		position: relative;
+		display: flex;
+		width: 328px;
+	}
+
+	.so-select {
+		width: 100%;
+		background-color: #F5F6F8;
+		border: 1px solid transparent;
+		border-radius: 10px;
+		padding: 0 32px 0 16px;
+		font-size: 14px;
+		color: #333333;
+		font-family: 'Prompt', sans-serif;
+		outline: none;
+		transition: all 0.2s ease;
+		height: 42px;
+		line-height: 40px;
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		cursor: pointer;
+		box-sizing: border-box;
+	}
+
+	.so-select:focus {
+		background-color: #FFFFFF;
+		border-color: #612989;
+		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
+	}
+
+	.so-select-wrapper::after {
+		content: '\f078';
+		font-family: 'Font Awesome 5 Free';
+		font-weight: 900;
+		position: absolute;
+		right: 16px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #8E8B94;
+		pointer-events: none;
+		font-size: 12px;
+	}
+
+	.so-select:disabled {
+		opacity: 0.8;
+		cursor: not-allowed;
+	}
+
+	/* Section Title */
+	.so-section-title-container {
+		margin: 32px 0 24px 0;
+		border-bottom: 1px solid #EFEBEF;
+		padding-bottom: 12px;
+	}
+
+	.so-section-title {
+		font-size: 20px;
+		font-weight: 500;
+		color: #3B3B3B;
+		margin: 0;
+	}
+
+	.so-divider {
+		border: 2px solid #EDE9F0;
+	}
+
+	/* Custom Grid for Date & Toggles */
+	.so-grid-3-custom {
+		display: grid;
+		grid-template-columns: 1fr 2fr;
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	@media (max-width: 768px) {
+		.so-grid-3-custom {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+	}
+
+	.so-toggle-group {
+		display: flex;
+		align-items: flex-end;
+		gap: 12px;
+		height: 48px;
+		/* Align with input height */
+	}
+
+	@media (max-width: 768px) {
+		.so-toggle-group {
+			height: auto;
+			flex-wrap: wrap;
+		}
+	}
+
+	/* Date picker calendar icon placement */
+	.calendar-wrapper {
+		position: relative;
+	}
+
+	.calendar-wrapper::after {
+		content: '';
+		background-image: url('img/icons/calendar.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
+		position: absolute;
+		right: 16px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		width: 18px;
+		height: 18px;
+	}
+
+	.calendar-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: auto;
+		height: auto;
+		color: transparent;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	/* Time picker clock icon placement */
+	.time-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+		width: 100%;
+	}
+
+	.time-wrapper::after {
+		content: '';
+		background-image: url('img/icons/clock.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
+		position: absolute;
+		right: 16px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		width: 18px;
+		height: 18px;
+	}
+
+	.time-wrapper input[type="time"]::-webkit-calendar-picker-indicator {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: auto;
+		height: auto;
+		color: transparent;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	/* Checklist layout for document attachments */
+	.so-checkbox-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 12px;
+		margin-bottom: 24px;
+	}
+
+	.so-checkbox-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 16px;
+		background-color: #F8F7FC;
+		border-radius: 10px;
+		font-size: 14px;
+		font-weight: 500;
+		color: #4A4A4A;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		border: 1px solid #EFEBEF;
+	}
+
+	.so-checkbox-pill:hover {
+		background-color: #F1EDFA;
+		border-color: #D3C9FC;
+	}
+
+	.so-checkbox-pill input[type="checkbox"] {
+		width: 18px;
+		height: 18px;
+		accent-color: #612989;
+		cursor: pointer;
+		margin: 0;
+	}
+
+	/* Pills styling for extra documents tab */
+	.so-doc-pill {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #F4F3F7;
+		color: #5f5f5f;
+		border-radius: 8px;
+		padding: 10px 16px;
+		font-size: 14px;
+		font-weight: 400;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-align: center;
+		user-select: none;
+		height: 42px;
+		box-sizing: border-box;
+	}
+
+	.so-doc-pill:hover {
+		background-color: #EFEBFF;
+		color: #612989;
+	}
+
+	.so-doc-pill input[type="checkbox"] {
+		display: none;
+	}
+
+	.so-doc-pill:has(input:checked) {
+		background-color: #612989;
+		color: #FFFFFF;
+	}
+
+	.so-doc-pill:has(input:checked):hover {
+		background-color: #502073;
+		color: #FFFFFF;
+	}
+
+	.so-doc-grid {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 16px;
+		margin-bottom: 24px;
+		align-items: end;
+	}
+
+	@media (max-width: 992px) {
+		.so-doc-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		.so-doc-grid>.so-doc-pill {
+			grid-column: span 1 !important;
+		}
+
+		.so-doc-grid>.so-doc-other-wrapper {
+			grid-column: span 3 !important;
+		}
+	}
+
+	@media (max-width: 576px) {
+		.so-doc-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.so-doc-grid>.so-doc-pill {
+			grid-column: span 1 !important;
+		}
+
+		.so-doc-grid>.so-doc-other-wrapper {
+			grid-column: span 1 !important;
+		}
+	}
+
+	.so-checkbox-pill-other {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		grid-column: span 2;
+	}
+
+	@media (max-width: 768px) {
+		.so-checkbox-pill-other {
+			grid-column: span 1;
+			flex-direction: column;
+			align-items: stretch;
+		}
+	}
+
+	/* Radio Group */
+	.so-radio-group-vertical {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.so-radio-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 14px;
+		color: #4A4A4A;
+		cursor: pointer;
+	}
+
+	.so-radio-label input[type="radio"] {
+		width: 18px;
+		height: 18px;
+		accent-color: #612989;
+		cursor: pointer;
+		margin: 0;
+	}
+
+	/* File Upload input */
+	.so-file-uploads {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.so-file-input-wrapper {
+		background-color: #F8F7FC;
+		border: 1px dashed #D3C9FC;
+		border-radius: 10px;
+		padding: 8px 12px;
+		font-size: 13px;
+		transition: all 0.2s ease;
+	}
+
+	.so-file-input-wrapper:hover {
+		background-color: #F1EDFA;
+	}
+
+	.so-file-input {
+		font-family: 'Prompt', sans-serif;
+		cursor: pointer;
+	}
+
+	/* Fieldset and legend */
+	.so-fieldset {
+		border: 1px solid #EFEBEF;
+		border-radius: 12px;
+		padding: 24px;
+		margin-bottom: 24px;
+	}
+
+	.so-legend {
+		font-size: 15px;
+		font-weight: 600;
+		color: #612989;
+		padding: 0 10px;
+	}
+
+	/* Buttons footer */
+	.so-footer-buttons {
+		display: flex;
+		justify-content: center;
+		margin-top: 30px;
+	}
+
+	.btn-submit-so {
+		background-color: #612989;
+		color: #FFFFFF;
+		border: none;
+		border-radius: 24px;
+		padding: 12px 48px;
+		font-size: 16px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.2);
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.btn-submit-so:hover {
+		background-color: #502173;
+		box-shadow: 0 6px 16px rgba(97, 41, 137, 0.3);
+	}
+
+	/* Collapsible Section styles */
+	.collapsible-clear-section {
+		max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.3s ease-out;
+		margin-bottom: 0;
+	}
+
+	.collapsible-clear-section.show {
+		max-height: 500px;
+		margin-bottom: 24px;
+	}
+
+	/* Bottom tabs */
+	.bottom-tabs-container {
+		display: flex;
+		border-bottom: 2px solid #EFEBEF;
+		margin-bottom: 24px;
+		gap: 8px;
+	}
+
+	.bottom-tab-btn {
+		background: transparent;
+		border: none;
+		outline: none;
+		padding: 10px 20px;
+		font-size: 15px;
+		font-weight: 500;
+		color: #8E8B94;
+		cursor: pointer;
+		text-decoration: none !important;
+		border-bottom: 3px solid transparent;
+		transition: all 0.2s ease;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.bottom-tab-btn:hover {
+		color: #612989;
+	}
+
+	.bottom-tab-btn.active {
+		color: #612989;
+		font-weight: 600;
+		border-bottom: 3px solid #612989;
+	}
+
+	/* Checkbox/Toggle styling for modern pills */
+	.so-toggle-pill {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #F1F0F5;
+		color: #495057;
+		padding: 10px 24px;
+		border-radius: 10px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		user-select: none;
+		border: 1px solid transparent;
+		min-width: 120px;
+		text-align: center;
+		font-family: 'Prompt', sans-serif;
+		box-sizing: border-box;
+		height: 42px;
+	}
+
+	.so-toggle-pill input[type="checkbox"] {
+		display: none;
+	}
+
+	.so-toggle-pill.active,
+	.so-toggle-pill:has(input[type="checkbox"]:checked) {
+		background-color: #612989;
+		color: #FFFFFF;
+		border-color: #612989;
+		font-weight: 500;
+	}
+
+	.so-toggle-pill-outline {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EFEBEF;
+		border-radius: 24px;
+	}
+
+	.so-toggle-pill-outline.active,
+	.so-toggle-pill-outline:has(input[type="checkbox"]:checked) {
+		background-color: #EFEBFF;
+		color: #612989;
+		border-color: #612989;
+	}
+
+	/* Autocomplete style tweaks for integration */
+	.autocomplete {
+		z-index: 9999 !important;
+	}
+
+	.so-input-with-checkbox {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+	}
+
+	.so-checkbox-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 14px;
+		font-weight: 500;
+		color: #4A4A4A;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.so-checkbox-label input[type="checkbox"] {
+		width: 18px;
+		height: 18px;
+		accent-color: #612989;
+		cursor: pointer;
+		margin: 0;
+	}
+
+	/* Radio Button Styling */
+	.so-payment-modes {
+		display: flex;
+		gap: 32px;
+		margin-bottom: 24px;
+	}
+
+	.so-payment-radio-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 15px;
+		font-weight: 500;
+		color: #4A4A4A;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.so-payment-radio-label input[type="radio"] {
+		appearance: none;
+		-webkit-appearance: none;
+		width: 22px;
+		height: 22px;
+		border: 2px solid #E2DCE8;
+		border-radius: 50%;
+		outline: none;
+		margin: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s ease;
+		background-color: #FFFFFF;
+	}
+
+	.so-payment-radio-label input[type="radio"]::before {
+		content: "";
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background-color: #612989;
+		transform: scale(0);
+		transition: transform 0.2s ease;
+	}
+
+	.so-payment-radio-label input[type="radio"]:checked {
+		border-color: #612989;
+	}
+
+	.so-payment-radio-label input[type="radio"]:checked::before {
+		transform: scale(1);
+	}
+
+	.so-payment-radio-label:has(input[type="radio"]:checked) {
+		color: #612989;
+	}
+
+	/* Customer Info custom grid */
+	.so-customer-grid {
+		display: grid;
+		grid-template-columns: 2fr 1fr;
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	@media (max-width: 768px) {
+		.so-customer-grid {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+	}
+
+	.so-customer-left {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.so-customer-right-box {
+		width: 680px;
+		margin: 27px 10px 0 0;
+		background-color: #F1F0F5;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+
+	.btn-add-customer {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EFEBEF;
+		border-radius: 24px;
+		padding: 12px 32px;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+		font-family: 'Prompt', sans-serif;
+		transition: all 0.2s ease;
+	}
+
+	.btn-add-customer:hover {
+		background-color: #EFEBFF;
+		border-color: #612989;
+		transform: translateY(-1px);
+	}
+
+	.search-wrapper {
+		position: relative;
+	}
+
+	.search-wrapper::after {
+		content: '\f002';
+		font-family: 'Font Awesome 5 Free';
+		font-weight: 900;
+		position: absolute;
+		right: 16px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #8E8B94;
+		pointer-events: none;
+		font-size: 16px;
+	}
+
+	/* Customer top grid layout to match new design */
+	.so-customer-top-grid {
+		display: grid;
+		grid-template-columns: 328px 1fr;
+		gap: 24px;
+		margin-bottom: 24px;
+	}
+
+	@media (max-width: 768px) {
+		.so-customer-top-grid {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+	}
+
+	.so-customer-top-left {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+		justify-content: space-between;
+	}
+
+	.so-customer-pills-row {
+		display: flex;
+		gap: 16px;
+		align-items: center;
+		height: 42px;
+		margin-bottom: 4px;
+	}
+
+	/* Special pill buttons styling for customer section */
+	.btn-add-customer-pill {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EFEBEF;
+		border-radius: 24px;
+		height: 42px;
+		padding: 0 24px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+		font-family: 'Prompt', sans-serif;
+		transition: all 0.2s ease;
+		box-sizing: border-box;
+	}
+
+	.btn-add-customer-pill:hover {
+		background-color: #EFEBFF;
+		border-color: #612989;
+	}
+
+	.so-toggle-pill-outline-custom {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EFEBEF;
+		border-radius: 24px;
+		height: 42px;
+		padding: 0 24px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		min-width: 120px;
+		text-align: center;
+		font-family: 'Prompt', sans-serif;
+		box-sizing: border-box;
+		user-select: none;
+	}
+
+	.so-toggle-pill-outline-custom input[type="checkbox"] {
+		display: none;
+	}
+
+	.so-toggle-pill-outline-custom.active,
+	.so-toggle-pill-outline-custom:has(input[type="checkbox"]:checked) {
+		background-color: #EFEBFF;
+		color: #612989;
+		border-color: #612989;
+	}
+
+	.so-toggle-pill-outline-custom span {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.so-customer-top-right {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.so-customer-top-right .so-textarea {
+		height: 118px;
+		resize: none;
+	}
+
+	/* Responsive refinements for dense form layouts */
+	.w3-container[style*="max-width: 1200px"] {
+		width: min(100%, 1200px);
+		padding-inline: 16px;
+		box-sizing: border-box;
+	}
+
+	.so-header-container,
+	.so-tabs-container,
+	.so-card {
+		container-type: inline-size;
+	}
+
+	.so-input-wrapper,
+	.so-select-wrapper,
+	.so-input-wrapper .so-input,
+	.so-select-wrapper .so-select {
+		width: 100%;
+		max-width: 100%;
+		min-width: 0;
+	}
+
+	.so-input,
+	.so-select,
+	.so-textarea {
+		max-width: 100%;
+	}
+
+	.so-header-left,
+	.so-header-right,
+	.so-ref-info,
+	.so-payment-modes,
+	.so-customer-pills-row,
+	.so-toggle-group {
+		flex-wrap: wrap;
+	}
+
+	.so-header-right,
+	.so-payment-modes,
+	.so-toggle-group,
+	.so-customer-pills-row {
+		row-gap: 12px;
+	}
+
+	.so-tab-btn,
+	.so-toggle-pill,
+	.so-toggle-pill-outline-custom,
+	.btn-add-customer-pill,
+	.btn-preview-so,
+	.btn-clear-loan-reserve,
+	.so-payment-radio-label,
+	.customer-popup-add,
+	.customer-popup-actions button {
+		min-height: 44px;
+	}
+
+	.customer-info-display-card,
+	.so-payment-modes,
+	.so-customer-pills-row {
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.so-address-actions {
+		flex-wrap: wrap;
+		row-gap: 12px;
+	}
+
+	.so-address-action-btn {
+		min-height: 44px;
+	}
+
+	#debt_table_wrap,
+	#debt_panel {
+		max-width: 100%;
+		overflow-x: auto;
+	}
+
+	.so-sticky-actions,
+	.so-sticky-actions-inner {
+		box-sizing: border-box;
+	}
+
+	@container (max-width: 860px) {
+		.so-header-container {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 16px;
+		}
+
+		.so-header-right {
+			width: 100%;
+		}
+
+		.so-header-right>button {
+			flex: 1 1 220px;
+			justify-content: center;
+		}
+
+		.so-tabs-container {
+			padding-left: 0;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+
+		.so-tab-btn {
+			flex: 1 1 220px;
+			text-align: center;
+			border-radius: 12px;
+			border-bottom: 1px solid #ffffff;
+		}
+
+		.so-tab-btn.active {
+			padding-bottom: 12px;
+		}
+
+		.so-address-action-btn {
+			flex: 1 1 220px;
+			justify-content: center;
+		}
+
+		.so-card {
+			padding: 24px 18px;
+		}
+
+		.so-customer-top-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.customer-info-display-card {
+			flex-direction: column;
+			gap: 18px;
+			padding: 18px;
+		}
+
+		.cidc-label {
+			width: 96px;
+			flex: 0 0 96px;
+		}
+	}
+
+	@container (max-width: 560px) {
+		.so-ref-info {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 4px;
+		}
+
+		.so-card {
+			padding: 20px 14px;
+		}
+
+		.so-title {
+			font-size: clamp(24px, 6vw, 28px);
+		}
+
+		.so-section-title {
+			font-size: 18px;
+		}
+
+		.so-toggle-pill,
+		.so-toggle-pill-outline-custom,
+		.btn-add-customer-pill,
+		.so-payment-radio-label,
+		.customer-popup-add,
+		.so-address-action-btn {
+			width: 100%;
+			justify-content: center;
+		}
+
+		.so-payment-modes {
+			gap: 12px;
+		}
+
+		.so-payment-radio-label {
+			padding: 10px 14px;
+			border: 1px solid #ece3f4;
+			border-radius: 12px;
+			background: #fff;
+		}
+
+		.cidc-row {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 4px;
+		}
+
+		.cidc-label {
+			width: auto;
+			flex: none;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.so-input-with-checkbox {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.so-checkbox-label {
+			white-space: normal;
+		}
+
+		.so-fieldset {
+			padding: 18px 14px;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.so-sticky-actions {
+			padding: 14px 12px !important;
+		}
+
+		.so-sticky-actions-inner {
+			padding-right: 0 !important;
+			flex-direction: column;
+			align-items: stretch !important;
+		}
+
+		.so-sticky-actions-inner>button {
+			width: 100%;
+			justify-content: center;
+		}
+	}
+</style>
+
+<body>
+	<?php
+
+	$yearMonth = substr(date("Y") + 543, -2) . date("m");
+	$sql = "SELECT MAX(ref_id) AS MAXID FROM hos__so";
+	$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+	$rs = mysqli_fetch_assoc($qry);
+	$maxId = substr($rs['MAXID'], -4);
+	$maxId3 = substr($rs['MAXID'], -8);
+
+	$maxId1 = substr($maxId3, 0, -4);
+	$so = "SO";
+
+	if ($maxId1 == $yearMonth) {
+		$maxId1 = ($maxId + 1);
+		$maxId2 = substr("00000" . $maxId1, -4);
+		$nextId = $yearMonth . $maxId2;
+	} else {
+		$maxId1 = "0001";
+		$nextId = $yearMonth . $maxId1;
+	}
+
+
+
+
+
+	?>
+
+	<!--action="register_office1.php"-->
+	<form action='register_suphos1.php' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+
+		<script language="javascript">
+			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
+			{
+				updateDeliveryContractRequirement();
+				if (!validateDeliveryContractRequirement()) {
+					return false;
+				}
+
+				if (document.frmMain.payment.value == "") {
+					alert('กรุณาเลือกช่องทางการชำระเงิน');
+					var visiblePayment = document.getElementById('payment_cash_select') || document.getElementById('payment_method') || document.getElementById('pay_mode_cash');
+					if (visiblePayment) {
+						visiblePayment.focus();
+					}
+					return false;
+				}
+
+				if (document.frmMain.payment.value != "") {
+					if (document.frmMain.payment.value == "7") {
+
+
+						if (document.frmMain.date_tranfer && document.frmMain.date_tranfer.type !== "hidden" && document.frmMain.date_tranfer.value == "") {
+
+							alert('กรุณาใส่วันที่โอน');
+							document.frmMain.date_tranfer.focus();
+							return false;
+						}
+					}
+				}
+
+				if (document.frmMain.start_time.value == "") {
+
+					alert('กรุณาใส่เวลาส่ง');
+					document.frmMain.start_time.focus();
+					return false;
+				}
+
+				if (document.frmMain.customer_name.value == "") {
+					alert('กรุณาใส่ชื่อลูกค้า');
+					document.frmMain.customer_name.focus();
+					return false;
+				}
+
+				if (document.frmMain.customer_tel.value == "") {
+					alert('กรุณาใส่เบอร์โทรลูกค้า');
+					document.frmMain.customer_tel.focus();
+					return false;
+				}
+				if (document.frmMain.address_1.value == "") {
+					alert('กรุณาใส่สถานที่ส่งสินค้า');
+					document.frmMain.address_1.focus();
+					return false;
+				}
+
+				if (document.frmMain.address_name.value == "") {
+					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
+					document.frmMain.address_name.focus();
+					return false;
+				}
+
+				if (document.frmMain.address_send.value == "") {
+					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
+					document.frmMain.address_send.focus();
+					return false;
+				}
+
+				if (document.frmMain.h_employee_name.value == "") {
+					alert('กรุณาเลือกชื่อพนักงาน');
+					document.frmMain.employee_name.focus();
+					return false;
+				}
+
+				if (document.frmMain.province_name.value == "") {
+					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
+					document.frmMain.province_name.focus();
+					return false;
+				}
+
+				return true;
+			}
+		</script>
+
+		<div class="w3-container" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
+
+			<!-- Header Section -->
+			<div class="so-header-container">
+				<div class="so-header-left">
+					<h1 class="so-title">Register Sale Order</h1>
+					<div class="so-ref-info">
+						<span class="so-ref-label">เลขที่อ้างอิง</span>
+						<span class="so-ref-value"><?php echo $so . $nextId; ?></span>
+					</div>
+
+				</div>
+				<div class="so-header-right">
+					<button type="button" class="btn-clear-loan-reserve" onclick="toggleClearSection()">เคลียร์ยืม/จอง</button>
+					<button type="button" class="btn-preview-so" onclick="window.print();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
+				</div>
+			</div>
+
+			<!-- Tab buttons -->
+			<div class="so-tabs-container">
+				<button type="button" class="so-tab-btn active" onclick="switchSoTab(event, 'tab-document-info')">ข้อมูลเอกสาร</button>
+				<button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tab-admin-info')">Admin</button>
+			</div>
+
+			<input type="hidden" name="ref_id" value="<?php echo $ffirst['ref_id'] + 1; ?>">
+
+			<!-- Card Container -->
+			<div>
+
+				<!-- TAB 1: ข้อมูลเอกสาร -->
+				<div id="tab-document-info" class="so-tab-content active">
+
+					<!-- เคลียร์ยืม/จอง Section (hidden by default) -->
+					<div class="so-card">
+						<!-- <div id="clear_loan_reserve_section" class="collapsible-clear-section">
+							<div style="background-color: #FAF9FC; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px dashed #D3C9FC;">
+								<h3 class="so-section-sub-title" style="color: #612989; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">เคลียร์ยืม/จอง</h3>
+								<div class="so-grid-3">
+									<div class="so-field-group">
+										<div class="so-input-with-checkbox">
+											<label class="so-checkbox-label">
+												<input type="checkbox" name="book_clear" value="1"> เคลียร์ใบจอง :
+											</label>
+											<input name="book_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
+										</div>
+									</div>
+									<div class="so-field-group">
+										<div class="so-input-with-checkbox">
+											<label class="so-checkbox-label">
+												<input type="checkbox" name="brn_clear" value="1"> เคลียร์ใบยืมสินค้า ติดเล่ม :
+											</label>
+											<input name="brn_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
+										</div>
+									</div>
+									<div class="so-field-group">
+										<div class="so-input-with-checkbox">
+											<label class="so-checkbox-label">
+												<input type="checkbox" name="brnp_clear" value="1"> เคลียร์ใบยืมสินค้า กระดาษต่อเนื่อง :
+											</label>
+											<input name="brnp_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div> -->
+
+						<div class="so-grid-3">
+							<!-- บริษัท* -->
+							<div class="so-field-group">
+								<label class="so-label">บริษัท<span class="required">*</span></label>
+								<div class="so-select-wrapper">
+									<!-- Keeping original radio checked and named type_doc hidden so it submits correctly -->
+									<input type="radio" checked='checked' name="type_doc" value="3" style="display:none;">
+									<select class="so-select">
+										<option value="3">AWL</option>
+										<option value="3">NBM</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- ประเภท* -->
+							<div class="so-field-group">
+								<label class="so-label">ประเภท<span class="required">*</span></label>
+								<div class="so-select-wrapper">
+									<select class="so-select" onchange="
+									document.getElementById('ic_ckk').checked = false;
+									document.getElementById('et_ckk').checked = false;
+									if(this.value == '2') document.getElementById('et_ckk').checked = true;
+									if(this.value == '3') document.getElementById('ic_ckk').checked = true;
+								">
+										<option value="1">ใบสั่งขาย</option>
+										<option value="2">ใบสั่งขาย E-Tax</option>
+										<option value="3">ใบฝากขาย (IC)</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- E-Mail* -->
+							<div class="so-field-group">
+								<label class="so-label">E-Mail<span class="required">*</span></label>
+								<div class="so-input-wrapper">
+									<input type="text" name="email" id="email" class="so-input" placeholder="example@email.com" style="padding-right: 32px;">
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('email').value=''"></i>
+								</div>
+							</div>
+						</div>
+
+						<div class="so-grid-3">
+							<!-- แผนก/เขตการขาย* -->
+							<div class="so-field-group">
+								<label class="so-label">แผนก/เขตการขาย<span class="required">*</span></label>
+								<div class="so-select-wrapper">
+									<select class="so-select">
+										<option value="">เลือกแผนก/เขตการขาย</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- ช่องทางการขาย* -->
+							<div class="so-field-group">
+								<label class="so-label">ช่องทางการขาย<span class="required">*</span></label>
+								<div class="so-select-wrapper">
+									<select class="so-select">
+										<option value="">เลือกช่องทางการขาย</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- Extra document options that were next to type_doc in original: ใบฝากขาย, ขอบิล E-Tax (Hidden since it's now in the dropdown) -->
+							<div class="so-field-group" style="display: none;">
+								<div style="display: flex; gap: 16px; align-items: center; height: 48px;">
+									<label class="so-checkbox-label">
+										<input type="checkbox" name="ic_ckk" id="ic_ckk" value="1">
+										<span style="color: #612989; font-weight: 600;">ใบฝากขาย</span>
+									</label>
+									<label class="so-checkbox-label">
+										<input type="checkbox" name="et_ckk" id="et_ckk" value="1">
+										<span style="color: #612989; font-weight: 600;">ขอบิล E-Tax</span>
+									</label>
+								</div>
+							</div>
+						</div>
+
+						<!-- Section: ข้อมูลเอกสาร -->
+						<div class="so-section-title-container">
+							<h2 class="so-section-title">ข้อมูลเอกสาร</h2>
+							<hr class="so-divider">
+						</div>
+
+						<?php
+						date_default_timezone_set("Asia/Bangkok");
+						$month = date('m');
+						$day = date('d');
+						$year = date('Y');
+						$today = $year . '-' . $month . '-' . $day;
+						?>
+
+						<div class="so-grid-3-custom">
+							<!-- วันที่ -->
+							<div class="so-field-group">
+								<label class="so-label">วันที่</label>
+								<div class="so-input-wrapper calendar-wrapper">
+									<input type="date" name="date_so" id="date_so" value="<?php echo $today; ?>" class="so-input">
+								</div>
+							</div>
+
+							<!-- Toggles: งานด่วน, ออเดอร์ฝาก, ไม่ได้ประมาณการ -->
+							<div class="so-field-group">
+								<label class="so-label">&nbsp;</label>
+								<div class="so-toggle-group">
+									<label class="so-toggle-pill" id="lbl-que_ckk">
+										<input type="checkbox" name="que_ckk" id="que_ckk" value="1">
+										<span>งานด่วน</span>
+									</label>
+									<label class="so-toggle-pill" id="lbl-have_order">
+										<input type="checkbox" name="have_order" id="have_order" value="1">
+										<span>ออเดอร์ฝาก</span>
+									</label>
+									<label class="so-toggle-pill" id="lbl-plan_ckk">
+										<input type="checkbox" name="plan_ckk" id="plan_ckk" value="1">
+										<span>ไม่ได้ประมาณการ</span>
+									</label>
+								</div>
+							</div>
+						</div>
+
+						<div class="so-grid-3">
+							<!-- เลขที่ใบสั่งซื้อ/สัญญา -->
+							<div class="so-field-group">
+								<label class="so-label">เลขที่ใบสั่งซื้อ/สัญญา</label>
+								<input name="po_no" class="so-input" placeholder="เช่น lv58945820965">
+							</div>
+
+							<!-- วันที่กำหนดส่งตามสัญญา* -->
+							<div class="so-field-group">
+								<label class="so-label">วันที่กำหนดส่งตามสัญญา<span class="required">*</span></label>
+								<div class="so-input-wrapper calendar-wrapper">
+									<input name="delivery_contract" type='date' id="delivery_contract" class="so-input" placeholder="กรุณาระบุเป็นวันที่เท่านั้น !!!">
+								</div>
+							</div>
+
+							<!-- เลขที่ใบงานบริการ -->
+							<div class="so-field-group">
+								<label class="so-label">เลขที่ใบงานบริการ</label>
+								<input name="cm_no" id="cm_no" class="so-input" placeholder="เช่น 932813829r7">
+							</div>
+						</div>
+					</div>
+
+				</div><!-- End TAB 1 -->
+
+				<!-- TAB 2: Admin -->
+				<div id="tab-admin-info" class="so-tab-content">
+					<style>
+						/* .admin-ui-card {
+					background-color: #FFFFFF;
+					border-radius: 16px;
+					padding: 32px;
+					margin-bottom: 30px;
+					border: 1px solid #E5E7EB;
+					font-family: 'Prompt', sans-serif;
+				} */
+
+						.admin-ui-title {
+							font-size: 20px;
+							font-weight: 500;
+							color: #3B3B3B;
+							margin: 0 0 24px 0;
+							padding-bottom: 16px;
+							border-bottom: 1px solid #EFEBEF;
+						}
+
+						.admin-ui-grid {
+							display: grid;
+							grid-template-columns: repeat(4, 1fr);
+							gap: 24px;
+							margin-bottom: 24px;
+						}
+
+						@media (max-width: 992px) {
+							.admin-ui-grid {
+								grid-template-columns: repeat(2, 1fr);
+							}
+
+							.admin-ui-field.span-3 {
+								grid-column: span 2;
+							}
+						}
+
+						@media (max-width: 768px) {
+							.admin-ui-grid {
+								grid-template-columns: 1fr;
+							}
+
+							.admin-ui-field.span-3 {
+								grid-column: span 1;
+							}
+						}
+
+						.admin-ui-field {
+							display: flex;
+							flex-direction: column;
+							gap: 8px;
+						}
+
+						.admin-ui-field.span-3 {
+							grid-column: span 3;
+						}
+
+						.admin-ui-label {
+							font-size: 14px;
+							font-weight: 400;
+							color: #6E3CBC;
+						}
+
+						.admin-ui-input-wrapper {
+							position: relative;
+							display: flex;
+							align-items: center;
+						}
+
+						.admin-ui-input {
+							width: 100%;
+							background-color: #F5F5F7;
+							border: 1px solid transparent;
+							border-radius: 12px;
+							padding: 0 16px;
+							font-size: 16px;
+							font-weight: 400;
+							color: #612989;
+							font-family: 'Prompt', sans-serif;
+							outline: none;
+							height: 48px;
+							box-sizing: border-box;
+							transition: all 0.2s ease;
+						}
+
+						.admin-ui-input:focus {
+							background-color: #FFFFFF;
+							border-color: #6E3CBC;
+							box-shadow: 0 0 0 3px rgba(110, 60, 188, 0.1);
+						}
+
+						.admin-ui-input.has-icon {
+							padding-right: 48px;
+						}
+
+						.admin-ui-icon {
+							position: absolute;
+							right: 16px;
+							color: #3B3B3B;
+							font-size: 18px;
+							pointer-events: none;
+						}
+
+						.admin-ui-icon-clickable {
+							position: absolute;
+							right: 16px;
+							color: #8E8B94;
+							font-size: 16px;
+							cursor: pointer;
+						}
+
+						.admin-ui-btn {
+							background-color: #F1E1FF;
+							color: #612989;
+							border: none;
+							border-radius: 24px;
+							height: 48px;
+							padding: 0 24px;
+							font-size: 16px;
+							font-weight: 500;
+							cursor: pointer;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							gap: 8px;
+							font-family: 'Prompt', sans-serif;
+							margin-top: 25px;
+						}
+					</style>
+
+					<div class="so-card">
+						<h2 class="admin-ui-title">ข้อมูลเพิ่มเติม (Admin)</h2>
+
+						<!-- Row 1 -->
+						<div class="admin-ui-grid" style="margin-bottom: 24px;">
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">เลขที่เอกสาร</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_doc_no" class="admin-ui-input" placeholder="No.">
+								</div>
+							</div>
+							<div class="admin-ui-field">
+								<button type="button" class="admin-ui-btn">
+									<img src="img/icons/doc.png" alt="doc" style="width: 16px; height: 16px;"> Run เอกสาร
+								</button>
+							</div>
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">เลขที่ลงงาน</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_work_no" class="admin-ui-input has-icon" value="3149713948">
+									<i class="fas fa-search admin-ui-icon"></i>
+								</div>
+							</div>
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">เลขที่ SR ลดหนี้</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_sr_no" class="admin-ui-input has-icon" value="4732981308">
+									<i class="fas fa-search admin-ui-icon"></i>
+								</div>
+							</div>
+						</div>
+
+						<!-- Row 2 -->
+						<div class="admin-ui-grid" style="margin-bottom: 24px;">
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">เลขที่ใบฝาก</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_deposit_no" class="admin-ui-input has-icon" value="3124791749">
+									<i class="fas fa-search admin-ui-icon"></i>
+								</div>
+							</div>
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">วันที่ออกเอกสาร</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_doc_date" class="admin-ui-input has-icon" value="09/09/2568">
+									<i class="far fa-calendar-alt admin-ui-icon"></i>
+								</div>
+							</div>
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">จำนวนกล่อง</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_box_count" class="admin-ui-input" placeholder="เฉพาะตัวเลข">
+								</div>
+							</div>
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">จำนวนครั้งที่แก้ไขบิล</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_edit_count" class="admin-ui-input" placeholder="ใส่เฉพาะตัวเลข">
+								</div>
+							</div>
+						</div>
+
+						<!-- Row 3 -->
+						<div class="admin-ui-grid" style="margin-bottom: 24px;">
+							<div class="admin-ui-field">
+								<label class="admin-ui-label">วันที่ออกเอกสาร (เดิม)</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_old_doc_date" class="admin-ui-input has-icon" value="09/09/2568">
+									<i class="far fa-calendar-alt admin-ui-icon"></i>
+								</div>
+							</div>
+							<div class="admin-ui-field span-3">
+								<label class="admin-ui-label">สาเหตุการแก้ไขบิล</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_edit_reason" class="admin-ui-input has-icon" value="">
+									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
+								</div>
+							</div>
+						</div>
+
+						<!-- Row 4 -->
+						<div class="admin-ui-grid">
+							<div class="admin-ui-field">
+								<button type="button" class="admin-ui-btn">
+									<img src="img/icons/circle_x.png" alt="circle_x" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
+								</button>
+							</div>
+							<div class="admin-ui-field span-3">
+								<label class="admin-ui-label">หมายเหตุการยกเลิก</label>
+								<div class="admin-ui-input-wrapper">
+									<input type="text" name="admin_cancel_reason" class="admin-ui-input has-icon" value="">
+									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
+								</div>
+							</div>
+						</div>
+
+					</div>
+
+					<!-- <fieldset class="so-fieldset">
+				<legend class="so-legend">หมายเหตุแจ้งแผนกที่เกี่ยวข้อง</legend>
+
+				<div class="so-field-group" style="margin-bottom: 16px;">
+					<label class="so-label">จัดส่ง</label>
+					<textarea name="comment_cs" class="so-textarea" id="comment_cs" rows="3" placeholder="ข้อความแจ้งฝ่ายจัดส่ง..."></textarea>
+				</div>
+
+				<div class="so-field-group" style="margin-bottom: 16px;">
+					<label class="so-label">ช่าง</label>
+					<textarea name="comment_en" class="so-textarea" id="comment_en" rows="3" placeholder="ข้อความแจ้งฝ่ายช่าง..."></textarea>
+				</div>
+
+				<div class="so-field-group" style="margin-bottom: 16px;">
+					<label class="so-label">คลังสินค้า</label>
+					<textarea name="comment_st" class="so-textarea" id="comment_st" rows="3" placeholder="ข้อความแจ้งฝ่ายคลังสินค้า..."></textarea>
+				</div>
+
+				<div class="so-field-group" style="margin-bottom: 8px;">
+					<label class="so-label">Admin</label>
+					<textarea name="comment_ad" class="so-textarea" id="comment_ad" rows="3" placeholder="ข้อความแจ้ง Admin..."></textarea>
+				</div>
+			</fieldset> -->
+				</div>
+				<!-- End TAB 2 -->
+
+				<div class="so-card">
+					<!-- Section: ข้อมูลลูกค้า -->
+					<div class="so-section-title-container">
+						<h2 class="so-section-title">ข้อมูลลูกค้า</h2>
+						<hr class="so-divider">
+					</div>
+
+					<div class="so-customer-top-grid">
+						<div class="so-customer-top-left">
+							<!-- Pills Row: Add Customer & Bill Info Toggle -->
+							<div class="so-customer-pills-row">
+								<button type="button" class="btn-add-customer-pill" onclick="openCustomerPopup();">
+									<img src="img/icons/add_user.png" alt="add_user" style="width: 23px;"> ข้อมูลลูกค้า
+								</button>
+								<label class="so-toggle-pill-outline-custom" id="lbl-full_bill">
+									<input type="checkbox" name="full_bill" id="full_bill" value="1">
+									<span><img src="img/icons/user_card.png" alt="user_card" style="width: 23px;"> ข้อมูลออกบิล</span>
+								</label>
+							</div>
+
+							<!-- เลขประจำตัวผู้เสียภาษี -->
+							<div class="so-field-group">
+								<label class="so-label">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
+								<div class="so-input-wrapper">
+									<input type="text" name="tax_id" id="tax_id" class="so-input" placeholder="เลขประจำตัวผู้เสียภาษี..." style="padding-right: 32px;">
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('tax_id').value=''"></i>
+								</div>
+							</div>
+						</div>
+
+						<div class="so-customer-top-right">
+							<!-- ค้นหาลูกค้า (ข้อมูลลูกค้า) -->
+							<div class="so-field-group" style="height: 100%;">
+								<label class="so-label">ข้อมูลลูกค้า</label>
+								<style>
+									.customer-info-display-card {
+										background-color: #F4F5F7;
+										border-radius: 12px;
+										padding: 24px;
+										display: flex;
+										gap: 48px;
+										font-family: 'Prompt', sans-serif;
+										width: 100%;
+										box-sizing: border-box;
+									}
+
+									.cidc-col {
+										flex: 1;
+										display: flex;
+										flex-direction: column;
+										gap: 16px;
+									}
+
+									.cidc-row {
+										display: flex;
+										align-items: center;
+									}
+
+									.cidc-label {
+										width: 100px;
+										font-size: 14px;
+										color: #6C757D;
+										font-weight: 400;
+									}
+
+									.cidc-value {
+										flex: 1;
+										font-size: 14px;
+										color: #3B3B3B;
+										display: flex;
+										align-items: center;
+									}
+
+									.cidc-value-input {
+										background: transparent;
+										border: none;
+										outline: none;
+										font-size: 14px;
+										color: #3B3B3B;
+										width: 100%;
+										font-family: 'Prompt', sans-serif;
+										resize: none;
+										padding: 0;
+										margin: 0;
+									}
+
+									.cidc-value-input.purple-text {
+										color: #612989;
+									}
+
+									.cidc-value-input.underline {
+										text-decoration: underline;
+									}
+
+									.cidc-display-text {
+										font-size: 14px;
+										color: #3B3B3B;
+										font-family: 'Prompt', sans-serif;
+										line-height: 24px;
+										min-height: 24px;
+										display: inline-block;
+									}
+
+									.cidc-status-icon {
+										width: 24px;
+										height: 20px;
+										margin-right: 8px;
+										object-fit: contain;
+									}
+								</style>
+
+								<div class="customer-info-display-card">
+									<!-- Column 1 -->
+									<div class="cidc-col">
+										<div class="cidc-row">
+											<div class="cidc-label">รหัสลูกค้า</div>
+											<div class="cidc-value">
+												<span id="display_bill_id" class="cidc-display-text"></span>
+												<input type="hidden" name="bill_id" id="bill_id">
+												<input type='hidden' name="h_bill_id" id="h_bill_id" readonly>
+												<!-- billing_id เตรียมไว้สำหรับผูกกับ billing address record โดยตรง แต่ disable การใช้งานใน save flow ชั่วคราว -->
+												<input type="hidden" name="billing_id" id="billing_id" value="">
+												<input type="hidden" name="shipping_id" id="shipping_id" value="">
+											</div>
+										</div>
+										<div class="cidc-row">
+											<div class="cidc-label">เบอร์โทร</div>
+											<div class="cidc-value">
+												<input type="text" name="display_bill_tel" id="display_bill_tel" class="cidc-value-input" readonly placeholder="">
+											</div>
+										</div>
+										<div class="cidc-row">
+											<div class="cidc-label">สถานะลูกค้า</div>
+											<div class="cidc-value">
+												<img src="img/icons/vip.png" class="cidc-status-icon" id="display_vip_icon" alt="VIP" style="display: none;">
+												<input type="text" id="display_mode_name" class="cidc-value-input" readonly placeholder="">
+											</div>
+										</div>
+									</div>
+
+									<!-- Column 2 -->
+									<div class="cidc-col">
+										<div class="cidc-row">
+											<div class="cidc-label">ชื่อลูกค้า</div>
+											<div class="cidc-value">
+												<input type="text" name="display_bill_name" id="display_bill_name" class="cidc-value-input" readonly placeholder="">
+											</div>
+										</div>
+										<div class="cidc-row">
+											<div class="cidc-label">ประเภทลูกค้า</div>
+											<div class="cidc-value">
+												<input type="text" id="display_customer_typename" class="cidc-value-input" readonly placeholder="">
+											</div>
+										</div>
+										<div class="cidc-row">
+											<div class="cidc-label">เครดิตเทอม</div>
+											<div class="cidc-value">
+												<input type="text" id="display_credit_thb" class="cidc-value-input purple-text underline" readonly placeholder="">
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="so-grid-3">
+						<!-- คำนำหน้าชื่อ -->
+						<div class="so-field-group">
+							<label class="so-label">คำนำหน้าชื่อ<span class="required">*</span></label>
+							<div class="so-select-wrapper">
+								<select name="pre_name" id="pre_name" class="so-select">
+									<option value="">Select</option>
+									<option value="นาย">นาย</option>
+									<option value="นาง">นาง</option>
+									<option value="นางสาว">นางสาว</option>
+									<option value="บริษัท">บริษัท</option>
+									<option value="หจก.">หจก.</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- ชื่อออกบิล -->
+						<div class="so-field-group">
+							<label class="so-label">ชื่อออกบิล<span class="required">*</span></label>
+							<div class="so-input-wrapper">
+								<input type='text' name="bill_name" id="bill_name" class="so-input" placeholder="ชื่อที่ต้องการออกบิล..." style="padding-right: 32px;">
+								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_name').value=''"></i>
+							</div>
+						</div>
+
+						<!-- เบอร์โทรศัพท์ -->
+						<div class="so-field-group">
+							<label class="so-label">เบอร์โทรศัพท์<span class="required">*</span></label>
+							<div class="so-input-wrapper">
+								<input type='text' name="bill_tel" id="bill_tel" class="so-input" readonly placeholder="เบอร์โทรศัพท์..." style="padding-right: 32px;">
+								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_tel').value=''"></i>
+							</div>
+						</div>
+					</div>
+
+					<!-- ที่อยู่ออกบิล -->
+					<div class="so-field-group" style="margin-bottom: 24px;">
+						<label class="so-label">ที่อยู่ออกบิล<span class="required">*</span></label>
+						<div class="so-input-wrapper" style="width: 100%; max-width: 1032px;">
+							<input type="text" name="bill_address" id="bill_address" class="so-input" style="width: 100%; max-width: 1032px; padding-right: 32px;" readonly placeholder="ที่อยู่ที่ใช้ในการออกบิล...">
+							<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_address').value=''"></i>
+						</div>
+					</div>
+
+					<div class="so-grid-3">
+						<!-- ผู้แนะนำ -->
+						<div class="so-field-group">
+							<label class="so-label">ผู้แนะนำ</label>
+							<div class="so-input-wrapper">
+								<input type="text" name="suggest" id="suggest" class="so-input" placeholder="ระบุชื่อผู้แนะนำ..." required style="padding-right: 32px;">
+								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('suggest').value=''"></i>
+							</div>
+						</div>
+
+						<!-- ลูกค้าซื้อซ้ำ -->
+						<div class="so-field-group" style="justify-content: flex-end;">
+							<div style="display: flex; align-items: center; height: 42px;">
+								<label class="so-toggle-pill" id="lbl-repeat_cus">
+									<input type="checkbox" name="repeat_cus" id="repeat_cus" value="1">
+									<span>ลูกค้าซื้อซ้ำ</span>
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="so-card">
+					<!-- Section: การชำระเงิน -->
+					<div class="so-section-title-container">
+						<h2 class="so-section-title">การชำระเงิน</h2>
+						<hr class="so-divider">
+					</div>
+
+					<!-- Radio Buttons Toggle for Credit vs Cash -->
+					<div class="so-payment-modes">
+						<label class="so-payment-radio-label" id="lbl-pay_mode_credit">
+							<input type="radio" name="pay_mode" id="pay_mode_credit" value="credit" onclick="switchPaymentMode('credit')">
+							<span>เครดิต</span>
+						</label>
+						<label class="so-payment-radio-label" id="lbl-pay_mode_cash">
+							<input type="radio" name="pay_mode" id="pay_mode_cash" value="cash" onclick="switchPaymentMode('cash')">
+							<span>ชำระเงินสด</span>
+						</label>
+					</div>
+
+					<!-- Hidden inputs for mapping and state -->
+					<input type="hidden" id="h_credit_ckk_value" value="">
+
+					<!-- Hidden actual select dropdown which is required by the form -->
+					<select name="payment" id="payment" style="display:none;">
+						<option value="">**Please Select Item**</option>
+					</select>
+
+					<!-- Row: Credit Fields (Only shown in Credit mode) -->
+					<div class="so-grid-2" id="row-credit-fields" style="display: none;">
+						<!-- จำนวนเครดิต (วัน) -->
+						<div class="so-field-group">
+							<label class="so-label">จำนวนเครดิต (วัน)</label>
+							<input type="text" id="display_credit_days" class="so-input" readonly placeholder="30">
+						</div>
+
+						<!-- ยอดเงินเครดิต -->
+						<div class="so-field-group">
+							<label class="so-label">ยอดเงินเครดิต</label>
+							<input type="text" id="display_credit_limit" class="so-input" readonly placeholder="0.00">
+						</div>
+					</div>
+
+					<!-- Row: Cash Fields (Only shown in Cash mode) -->
+					<div class="so-grid-3" id="row-cash-fields" style="display: none; margin-bottom: 24px;">
+						<!-- วิธีชำระเงิน -->
+						<div class="so-field-group">
+							<label class="so-label">วิธีชำระเงิน</label>
+							<div class="so-select-wrapper">
+								<select id="payment_method" name="payment_method" class="so-select">
+									<option value="">เลือกวิธีชำระเงิน</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- ช่องทางการชำระ -->
+						<div class="so-field-group">
+							<label class="so-label">ช่องทางการชำระ</label>
+							<div class="so-select-wrapper">
+								<select id="payment_cash_select" class="so-select" onchange="document.getElementById('payment').value = this.value; evaluateDebtPanel();">
+									<option value="">Select</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- หลักฐานการโอนเงิน -->
+						<div class="so-field-group">
+							<label class="so-label">หลักฐานการโอนเงิน</label>
+							<div class="so-file-upload">
+								<label for="slip_upload" class="so-input" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #333333;">
+									<span id="file_name_display">Choose File</span>
+									<i class="far fa-image" style="color: #333333; font-size: 18px;"></i>
+								</label>
+								<input type="file" name="slip_upload" id="slip_upload" style="display: none;" onchange="document.getElementById('file_name_display').textContent = this.files[0] ? this.files[0].name : 'Choose File'">
+							</div>
+						</div>
+					</div>
+
+					<!-- รายละเอียดการชำระเงิน -->
+					<div class="so-field-group" style="margin-bottom: 24px;">
+						<label class="so-label">รายละเอียดการชำระเงิน</label>
+						<div class="so-input-wrapper">
+							<input type="text" name="payment_des" id="payment_des" class="so-input" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="width: 1032px; max-width: 100%; padding-right: 32px;">
+							<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('payment_des').value=''"></i>
+						</div>
+					</div>
+				</div>
+
+
+				<!-- Bottom product & delivery details section -->
+				<div class="so-card" style="padding: 24px;">
+					<div id="pd" class="w3-container city1">
+
+						<?php
+						if ($_SESSION["department"] == 'วิศวกรรม') {
+							include('product_engineer.php');
+						} else {
+							include('product_salehos.php');
+						}
+						?>
+
+					</div>
+
+					<!-- วงเงิน (ซ่อน/เก็บค่าเหมือนเดิม) -->
+					<input type="hidden" name="credit_thb" id="credit_thb">
+					<input type="hidden" name="sum_ca" id="sum_ca">
+					<input type="hidden" name="sum_amount_total" id="sum_amount_total" value="0">
+
+					<!-- พื้นที่ตารางหนี้คงค้าง -->
+					<div id="debt_panel" style="margin-top:16px; display:none;">
+						<h4 class="so-section-sub-title" style="color: #612989; font-size: 15px; font-weight: 600; margin-bottom: 12px;">ยอดหนี้คงค้าง</h4>
+						<div id="debt_table_wrap"></div>
+						<div id="credit_summary" style="margin-top:8px; font-weight:600;"></div>
+					</div>
+
+					<!-- เอกสารแนบบิล HIDDEN -->
+				</div>
+
+				<!-- NEW DELIVERY CARD -->
+				<div class="so-tabs-container" style="margin-top: 24px;">
+					<button type="button" class="so-tab-btn active" onclick="openDelTab('del_info', this)">ข้อมูลการจัดส่ง</button>
+					<button type="button" class="so-tab-btn" onclick="openDelTab('del_cost', this)">ค่าจัดส่ง</button>
+				</div>
+				<div class="so-card" style="padding: 24px;">
+
+					<!-- TAB 1: ข้อมูลการจัดส่ง -->
+					<div id="del_info" class="so-del-tab-content">
+						<style>
+							#del_info .so-section-title-container {
+								margin-bottom: 24px;
+							}
+
+							#del_info .so-section-title {
+								font-size: 18px;
+								color: #3B3B3B;
+								font-weight: 500;
+								margin: 0 0 16px 0;
+								font-family: 'Prompt', sans-serif;
+							}
+
+							#del_info .so-divider {
+								border: none;
+								border-top: 2px solid #EDE9F0;
+								margin: 0;
+							}
+
+							#del_info .so-grid-6-col {
+								display: grid;
+								grid-template-columns: repeat(6, 1fr);
+								gap: 20px 16px;
+								margin-top: 24px;
+							}
+
+							#del_info .so-field-group {
+								display: flex;
+								flex-direction: column;
+								gap: 8px;
+								margin-top: 0 !important;
+							}
+
+							#del_info .so-label {
+								font-size: 14px;
+								font-weight: 500;
+								color: #612989 !important;
+								margin: 0;
+								font-family: 'Prompt', sans-serif;
+							}
+
+							#del_info .so-select-wrapper {
+								position: relative;
+								display: flex;
+								align-items: center;
+								width: 100% !important;
+							}
+
+							#del_info .so-select,
+							#del_info .so-input {
+								background-color: #F4F3F7 !important;
+								border: none !important;
+								border-radius: 8px !important;
+								font-family: 'Prompt', sans-serif !important;
+								font-size: 14px !important;
+								color: #333333 !important;
+								width: 100% !important;
+								height: 42px !important;
+								padding: 0 12px !important;
+								box-sizing: border-box !important;
+								outline: none !important;
+								transition: background-color 0.2s ease !important;
+							}
+
+							#del_info .so-select:focus,
+							#del_info .so-input:focus {
+								background-color: #ECEAF0 !important;
+							}
+
+							#del_info .so-select {
+								padding-right: 40px !important;
+								appearance: none !important;
+								-webkit-appearance: none !important;
+								-moz-appearance: none !important;
+							}
+
+							#del_info .so-toggle-btn {
+								flex: 1;
+								text-align: center;
+								background-color: #F4F3F7;
+								border-radius: 8px;
+								padding: 12px;
+								cursor: pointer;
+								transition: all 0.2s ease;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+								height: 42px;
+								box-sizing: border-box;
+							}
+
+							#del_info .so-toggle-btn span {
+								color: #6e6e6eff;
+								font-size: 14px;
+								font-weight: 400;
+								font-family: 'Prompt', sans-serif;
+								transition: color 0.2s ease;
+							}
+
+							#del_info .so-toggle-btn:has(input:checked) {
+								background-color: #612989 !important;
+							}
+
+							#del_info .so-toggle-btn:has(input:checked) span {
+								color: #FFFFFF !important;
+							}
+						</style>
+
+						<div class="so-section-title-container">
+							<h3 class="so-section-title">ข้อมูลการจัดส่ง</h3>
+							<hr class="so-divider">
+						</div>
+
+						<div class="so-grid-6-col">
+							<!-- วิธีการจัดส่ง -->
+							<div class="so-field-group" style="grid-column: span 2;">
+								<label class="so-label">วิธีการจัดส่ง<span style="color:red">*</span></label>
+								<div class="so-select-wrapper">
+									<select name="delivery_type" id="delivery_type" class="so-select">
+										<option value="1">Sale รับเอง</option>
+										<option value="2">ช่างรับเอง</option>
+										<option value="3">ลูกค้ารับเอง</option>
+										<option value="4">บริษัทจัดส่ง</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- บริษัทขนส่ง -->
+							<div class="so-field-group" style="grid-column: span 2;">
+								<label class="so-label">บริษัทขนส่ง<span style="color:red">*</span></label>
+								<div class="so-select-wrapper">
+									<select name="transport_company" id="transport_company" class="so-select">
+										<option value="">เลือกบริษัทขนส่ง</option>
+										<option value="1">Kerry</option>
+										<option value="2">Flash</option>
+										<option value="3">J&T</option>
+										<option value="4">ไปรษณีย์ไทย</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- วันที่ในการจัดส่ง -->
+							<div class="so-field-group" style="grid-column: span 2;">
+								<label class="so-label">วันที่ในการจัดส่ง<span style="color:red">*</span></label>
+								<div class="calendar-wrapper" style="width: 100%; display: flex;">
+									<input name="start_date" type="date" id="start_date" class="so-input" style="padding-right: 40px;" />
+								</div>
+							</div>
+
+							<!-- เลือกช่วงเวลา -->
+							<div class="so-field-group" style="grid-column: span 1;">
+								<label class="so-label">ช่วงเวลา</label>
+								<div class="so-select-wrapper">
+									<select name="time_range" id="time_range" class="so-select">
+										<option value="">เลือกช่วงเวลา</option>
+										<option value="morning">ช่วงเช้า</option>
+										<option value="afternoon">ช่วงบ่าย</option>
+										<option value="allday">ทั้งวัน</option>
+										<option value="specific">กำหนดเวลา</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- เวลาในการจัดส่ง -->
+							<div class="so-field-group" style="grid-column: span 1;">
+								<label class="so-label">เวลาในการจัดส่ง<span style="color:red">*</span></label>
+								<div class="time-wrapper">
+									<input id="start_time" name="start_time" class="so-input" type="time" style="padding-right: 40px;" />
+								</div>
+							</div>
+
+							<!-- ช่วงวันที่โดยประมาณ -->
+							<div class="so-field-group" style="grid-column: span 4;">
+								<label class="so-label">ช่วงวันที่โดยประมาณ</label>
+								<div style="position: relative; display: flex; align-items: center; width: 100%;">
+									<input name="between_date" class="so-input" type="text" id="between_date" placeholder="ช่วงวันที่โดยประมาณ" style="padding-right: 36px !important;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('between_date').value=''"></i>
+								</div>
+							</div>
+
+							<!-- หมายเหตุสถานะเพิ่มเติม -->
+							<div class="so-field-group" style="grid-column: span 6;">
+								<label class="so-label">หมายเหตุสถานะเพิ่มเติม</label>
+								<div style="position: relative; display: flex; align-items: center; width: 100%;">
+									<input name="status_comment" type="text" id="status_comment" class="so-input" placeholder="หมายเหตุสถานะเพิ่มเติม" style="padding-right: 36px !important;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('status_comment').value=''"></i>
+								</div>
+							</div>
+						</div>
+
+						<div style="display: flex; gap: 16px; margin-top: 24px;">
+							<label class="so-toggle-btn">
+								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;" onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ต้องการให้โทรแจ้ง</span>
+							</label>
+
+							<label class="so-toggle-btn">
+								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;" onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)</span>
+							</label>
+						</div>
+					</div>
+
+					<!-- TAB 2: ค่าจัดส่ง -->
+					<div id="del_cost" class="so-del-tab-content" style="display:none;">
+						<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ค่าจัดส่ง</h3>
+
+						<div class="so-grid-3">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">วันที่คีย์ค่าส่ง</label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<input name="shipping_date" type="date" id="shipping_date" class="so-input" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; font-family: 'Prompt', sans-serif; height: 42px;" />
+								</div>
+							</div>
+
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">รหัสอ้างอิง 1</label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<input name="shipping_ref1" type="text" id="shipping_ref1" class="so-input" placeholder="" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px; font-family: 'Prompt', sans-serif;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('shipping_ref1').value=''"></i>
+								</div>
+							</div>
+
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">รหัสอ้างอิง 2</label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<input name="shipping_ref2" type="text" id="shipping_ref2" class="so-input" placeholder="" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px; font-family: 'Prompt', sans-serif;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('shipping_ref2').value=''"></i>
+								</div>
+							</div>
+						</div>
+
+						<div class="so-grid-3" style="margin-top: 16px;">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">ค่าจัดส่ง</label>
+								<input name="shipping_cost" type="text" id="shipping_cost" class="so-input" value="0.00" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; font-family: 'Prompt', sans-serif;" />
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- NEW DELIVERY CARD END -->
+
+				<!-- NEW ADDRESS CARD -->
+				<div class="so-tabs-container" style="margin-top: 24px;">
+					<button type="button" class="so-tab-btn active" onclick="openAddrTab('addr_main', this)">ที่อยู่</button>
+					<button type="button" class="so-tab-btn" onclick="openAddrTab('addr_detail', this)">รายละเอียดที่อยู่</button>
+					<button type="button" class="so-tab-btn" onclick="openAddrTab('addr_extra', this)">ที่อยู่เพิ่มเติม</button>
+				</div>
+				<div class="so-card" style="padding: 24px;">
+
+					<!-- TAB 1: ที่อยู่ -->
+					<div id="addr_main" class="so-addr-tab-content">
+						<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ที่อยู่จัดส่ง</h3>
+						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+						<div class="so-address-actions" style="display: flex; gap: 16px; margin-bottom: 24px;">
+							<button type="button" class="so-address-action-btn so-address-action-btn-primary" onclick="openShippingAddressPopup()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+								<i class="fas fa-search"></i> ค้นหาที่อยู่
+							</button>
+							<button type="button" class="so-address-action-btn so-address-action-btn-secondary" onclick="openShippingAddressCreatePage(getCurrentShippingPopupCustomerId())" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+								<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า
+							</button>
+						</div>
+
+						<div class="so-grid-3">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">ชื่อผู้ติดต่อ<span style="color:red">*</span></label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<input name="contact_name" type="text" class="so-input" placeholder="ใส่ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+								</div>
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">เบอร์โทร<span style="color:red">*</span></label>
+								<input name="contact_tel" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">จังหวัด<span style="color:red">*</span></label>
+								<div class="so-select-wrapper">
+									<select name="contact_province" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
+										<option value="">เลือกจังหวัด</option>
+										<?php
+										$strSQL_prov_main = "select * from tb_province order by province_ID ";
+										$objQuery_prov_main = mysqli_query($conn, $strSQL_prov_main);
+										if ($objQuery_prov_main) {
+											while ($objResuut_prov_main = mysqli_fetch_array($objQuery_prov_main, MYSQLI_ASSOC)) {
+										?>
+												<option value="<?php echo $objResuut_prov_main['province_name']; ?>"><?php echo $objResuut_prov_main['province_name']; ?></option>
+										<?php
+											}
+										}
+										?>
+									</select>
+								</div>
+							</div>
+						</div>
+
+						<div class="so-field-group" style="margin-top: 16px;">
+							<label class="so-label" style="color: #612989;">ที่อยู่ในการส่งสินค้า<span style="color:red">*</span></label>
+							<div style="position: relative; display: flex; align-items: center;">
+								<input name="shipping_address" type="text" class="so-input" placeholder="ใส่ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+							</div>
+						</div>
+
+						<div class="so-field-group" style="margin-top: 16px;">
+							<label class="so-label" style="color: #612989;">สถานที่ติดตั้งเครื่อง<span style="color:red">*</span></label>
+							<div style="position: relative; display: flex; align-items: center;">
+								<input name="install_location" type="text" class="so-input" placeholder="ใส่ที่ติดตั้งเครื่อง" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+							</div>
+						</div>
+					</div>
+
+					<!-- TAB 2: ที่อยู่เพิ่มเติม -->
+					<div id="addr_extra" class="so-addr-tab-content" style="display:none;">
+						<div id="extra_address_list">
+							<div class="extra-addr-row" data-index="1">
+								<h3 class="so-section-title extra-addr-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ที่อยู่เพิ่มเติม 1</h3>
+								<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+								<div class="so-grid-3">
+									<div class="so-field-group">
+										<label class="so-label extra-contact-name-label" style="color: #612989;">ชื่อผู้ติดต่อ (เพิ่มเติม1)</label>
+										<div style="position: relative; display: flex; align-items: center;">
+											<input name="extra_contact_name_1" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+										</div>
+									</div>
+									<div class="so-field-group">
+										<label class="so-label extra-contact-tel-label" style="color: #612989;">เบอร์โทร (เพิ่มเติม1)</label>
+										<div style="position: relative; display: flex; align-items: center;">
+											<input name="extra_contact_tel_1" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+										</div>
+									</div>
+									<div class="so-field-group">
+										<label class="so-label" style="color: #612989;">จังหวัด</label>
+										<div class="so-select-wrapper">
+											<select name="extra_contact_province_1" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
+												<option value="">เลือกจังหวัด</option>
+												<?php
+												$strSQL_prov_extra = "select * from tb_province order by province_ID ";
+												$objQuery_prov_extra = mysqli_query($conn, $strSQL_prov_extra);
+												if ($objQuery_prov_extra) {
+													while ($objResuut_prov_extra = mysqli_fetch_array($objQuery_prov_extra, MYSQLI_ASSOC)) {
+												?>
+														<option value="<?php echo $objResuut_prov_extra['province_name']; ?>"><?php echo $objResuut_prov_extra['province_name']; ?></option>
+												<?php
+													}
+												}
+												?>
+											</select>
+										</div>
+									</div>
+								</div>
+
+								<div style="display: flex; gap: 16px; margin-top: 16px; align-items: flex-end; margin-bottom: 24px;">
+									<div class="so-field-group" style="flex: 1;">
+										<label class="so-label extra-shipping-address-label" style="color: #612989;">ที่อยู่ส่งสินค้า (เพิ่มเติม1)</label>
+										<div style="position: relative; display: flex; align-items: center;">
+											<input name="extra_shipping_address_1" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+										</div>
+									</div>
+									<button type="button" onclick="removeExtraAddress(this)" style="background-color: #FFFFFF; color: #DC3545; border: 1px solid #EBEBEB; border-radius: 24px; padding: 0 24px; height: 42px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+										<i class="far fa-trash-alt"></i> ลบที่อยู่
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div style="margin-top: 24px;">
+							<button type="button" onclick="addExtraAddress()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+								<img src="img/icons/add_address.png" alt="add_address" style="width: 16px; height: 16px;"> เพิ่มที่อยู่
+							</button>
+						</div>
+
+						<script>
+							function addExtraAddress() {
+								const list = document.getElementById('extra_address_list');
+								const template = list.querySelector('.extra-addr-row').cloneNode(true);
+
+								// Clear inputs in cloned node
+								template.querySelectorAll('input').forEach(input => input.value = '');
+								template.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+
+								list.appendChild(template);
+								updateExtraAddressIndices();
+							}
+
+							function removeExtraAddress(btn) {
+								const list = document.getElementById('extra_address_list');
+								if (list.querySelectorAll('.extra-addr-row').length > 1) {
+									btn.closest('.extra-addr-row').remove();
+									updateExtraAddressIndices();
+								} else {
+									alert('ต้องมีที่อยู่เพิ่มเติมอย่างน้อย 1 รายการ หรือถ้าไม่ต้องการใช้ ให้เว้นว่างข้อมูลไว้ครับ');
+								}
+							}
+
+							function updateExtraAddressIndices() {
+								const rows = document.querySelectorAll('.extra-addr-row');
+								rows.forEach((row, index) => {
+									const displayIndex = index + 1;
+									row.setAttribute('data-index', displayIndex);
+									row.querySelector('.extra-addr-title').innerHTML = 'ที่อยู่เพิ่มเติม ' + displayIndex;
+									row.querySelector('.extra-contact-name-label').innerHTML = 'ชื่อผู้ติดต่อ (เพิ่มเติม' + displayIndex + ')';
+									row.querySelector('.extra-contact-tel-label').innerHTML = 'เบอร์โทร (เพิ่มเติม' + displayIndex + ')';
+									row.querySelector('.extra-shipping-address-label').innerHTML = 'ที่อยู่ส่งสินค้า (เพิ่มเติม' + displayIndex + ')';
+
+									// Update input names dynamically
+									const contactName = row.querySelector('input[name^="extra_contact_name"]');
+									if (contactName) contactName.name = 'extra_contact_name_' + displayIndex;
+
+									const contactTel = row.querySelector('input[name^="extra_contact_tel"]');
+									if (contactTel) contactTel.name = 'extra_contact_tel_' + displayIndex;
+
+									const contactProvince = row.querySelector('select[name^="extra_contact_province"]');
+									if (contactProvince) contactProvince.name = 'extra_contact_province_' + displayIndex;
+
+									const shippingAddress = row.querySelector('input[name^="extra_shipping_address"]');
+									if (shippingAddress) shippingAddress.name = 'extra_shipping_address_' + displayIndex;
+								});
+							}
+						</script>
+					</div>
+
+					<!-- TAB 3: รายละเอียดที่อยู่ -->
+					<div id="addr_detail" class="so-addr-tab-content" style="display:none;">
+						<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">รายละเอียดที่อยู่</h3>
+						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+						<div class="so-grid-3" style="align-items: end;">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">จอดรถหน้าบ้าน</label>
+								<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="park_front" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ได้
+									</label>
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="park_front" value="0" style="accent-color: #612989; width: 18px; height: 18px;"> ไม่ได้
+									</label>
+								</div>
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">สถานที่จอดรถ</label>
+								<input name="park_location" type="text" class="so-input" placeholder="สถานที่จอดรถ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+							<div class="so-field-group">
+								<label style="cursor: pointer; display: block;">
+									<input type="checkbox" name="is_high_roof" value="1" style="display: none;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
+									<div style="background-color: #F4F3F7; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; color: #6e6e6e; font-size: 14px; font-family: 'Prompt', sans-serif; height: 42px; transition: all 0.2s; user-select: none;">รถหลังคาสูงเข้าได้</div>
+								</label>
+							</div>
+						</div>
+
+						<div class="so-grid-3" style="margin-top: 16px;">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">ทางเข้าบ้าน</label>
+								<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="entrance_type" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ทางราบ
+									</label>
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="entrance_type" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> บันไดก่อนเข้าบ้าน
+									</label>
+								</div>
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">จำนวนขั้นบันได</label>
+								<input name="stair_count" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">ชั้นที่ติดตั้ง</label>
+								<input name="install_floor" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+						</div>
+
+						<div class="so-grid-3" style="margin-top: 16px;">
+							<div class="so-field-group" style="min-width: 0;">
+								<label class="so-label" style="color: #612989;">ห้องที่ติดตั้ง</label>
+								<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="room_type" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ห้องโถง
+									</label>
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="room_type" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> ห้องนอน
+									</label>
+								</div>
+							</div>
+							<div class="so-field-group" style="min-width: 0;">
+								<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
+								<div style="display: flex; gap: 16px;">
+									<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+									<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								</div>
+							</div>
+							<div class="so-field-group" style="min-width: 0;">
+								<label class="so-label" style="color: #612989;">ขนาดบันได</label>
+								<div style="display: flex; gap: 16px;">
+									<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+									<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								</div>
+							</div>
+						</div>
+
+						<div class="so-grid-3" style="margin-top: 16px;">
+							<div class="so-field-group" style="min-width: 0;">
+								<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
+								<div style="display: flex; gap: 16px;">
+									<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+									<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								</div>
+							</div>
+							<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
+								<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
+								<div style="display: flex; gap: 16px;">
+									<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+									<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+									<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+								</div>
+							</div>
+							<div class="so-field-group" style="min-width: 0;">
+								<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์</label>
+								<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+						</div>
+
+						<div class="so-grid-3" style="margin-top: 16px;">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">การย้ายเฟอร์นิเจอร์</label>
+								<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="move_furn" value="0" checked style="accent-color: #612989; width: 18px; height: 18px;"> ไม่
+									</label>
+									<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
+										<input type="radio" name="move_furn" value="1" style="accent-color: #612989; width: 18px; height: 18px;"> ย้าย
+									</label>
+								</div>
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">จำนวนชิ้นที่ย้าย</label>
+								<input name="move_furn_count" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+							<div class="so-field-group" style="grid-column: span 1;">
+								<label class="so-label" style="color: #612989;">รายละเอียดเฟอร์นิเจอร์</label>
+								<input name="move_furn_detail" type="text" class="so-input" placeholder="รายละเอียดเฟอร์นิเจอร์" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+							</div>
+						</div>
+
+						<div class="so-field-group" style="margin-top: 16px;">
+							<label class="so-label" style="color: #612989;">หมายเหตุเพิ่มเติม</label>
+							<input name="addr_note" type="text" class="so-input" placeholder="lorem ipsum" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+						</div>
+					</div>
+				</div>
+
+				<script>
+					function openAddrTab(tabId, element) {
+						var contents = document.getElementsByClassName('so-addr-tab-content');
+						for (var i = 0; i < contents.length; i++) {
+							contents[i].style.display = 'none';
+						}
+
+						var container = element.parentElement;
+						var btns = container.getElementsByClassName('so-tab-btn');
+						for (var i = 0; i < btns.length; i++) {
+							btns[i].classList.remove('active');
+						}
+
+						document.getElementById(tabId).style.display = 'block';
+						element.classList.add('active');
+					}
+				</script>
+
+
+
+				<!-- NEW 3 TABS CARD -->
+				<div class="so-tabs-container" style="margin-top: 24px;">
+					<button type="button" class="so-tab-btn active" onclick="open3Tab('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
+					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
+					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_attach_file', this)">แนบไฟล์</button>
+				</div>
+				<div class="so-card" style="padding: 24px;">
+
+					<!-- TAB 1: เอกสารเพิ่มเติม -->
+					<div id="tab_doc_extra" class="so-3tab-content">
+						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">เอกสารเพิ่มเติม</h3>
+						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+						<div class="so-doc-grid">
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_3" value="1">
+								<span>ใบ อย.</span>
+							</label>
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_6" value="1">
+								<span>ใบนำเข้าสินค้า</span>
+							</label>
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_8" value="1">
+								<span>ใบ PM</span>
+							</label>
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_9" value="1">
+								<span>ใบ CAL</span>
+							</label>
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_11" value="1">
+								<span>ใบประเมินสินค้า</span>
+							</label>
+							<label class="so-doc-pill">
+								<input type="checkbox" name="ref_5" value="1">
+								<span>ใบช่างอบรม</span>
+							</label>
+							<label class="so-doc-pill" style="grid-column: span 2;">
+								<input type="checkbox" name="ref_2" value="1">
+								<span>เอกสารตามไฟล์แนบ</span>
+							</label>
+							<label class="so-doc-pill" style="grid-column: span 2;">
+								<input type="checkbox" name="ref_1" value="1">
+								<span>เอกสาร N-Health</span>
+							</label>
+							<label class="so-doc-pill" style="grid-column: span 2;">
+								<input type="checkbox" name="ref_4" value="1">
+								<span>ใบตัวแทนจำหน่าย</span>
+							</label>
+							<label class="so-doc-pill" style="grid-column: span 2;">
+								<input type="checkbox" name="ref_7" value="1">
+								<span>ใบ CER เครื่องมือที่ใช้ทดสอบ</span>
+							</label>
+							<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
+								<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
+								<input type="text" name="ref_des" class="so-input" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('ref_10_hidden').checked = (this.value.trim() !== '');">
+								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;">
+								<!-- Hidden inputs to keep old compatibility if needed -->
+								<input type="checkbox" name="ref_13" value="1" style="display:none;">
+					</div>
+						</div>
+					</div>
+
+					<!-- TAB 2: ข้อความแจ้งแผนก -->
+					<div id="tab_dept_comment" class="so-3tab-content" style="display:none;">
+						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ข้อความแจ้งแผนกที่เกี่ยวข้อง</h3>
+						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+						<div style="display: flex; gap: 16px; align-items: center; margin-bottom: 24px;">
+							<button type="button" onclick="addDeptComment()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+								<img src="img/icons/add_message.png" alt="add_message" style="width: 16px; height: 16px;"> เพิ่มข้อความ
+							</button>
+							<button type="button" onclick="this.classList.toggle('btn-dept-active');" style="background-color: #F4F3F7; border: none; padding: 10px 24px; border-radius: 8px; color: #333; font-size: 16px; font-family: 'Prompt', sans-serif; cursor: pointer; transition: background-color 0.2s, color 0.2s; width: 328px;">
+								ต้องการช่างไปตรวจรับ
+							</button>
+						</div>
+
+						<div id="dept_comment_list">
+							<!-- Dynamic comments will go here -->
+						</div>
+
+						<!-- Hidden textareas to submit to backend -->
+						<textarea name="comment_cs" id="hidden_comment_cs" style="display:none;"></textarea>
+						<textarea name="comment_en" id="hidden_comment_en" style="display:none;"></textarea>
+						<textarea name="comment_st" id="hidden_comment_st" style="display:none;"></textarea>
+						<textarea name="comment_ad" id="hidden_comment_ad" style="display:none;"></textarea>
+					</div>
+
+					<!-- TAB 3: แนบไฟล์ -->
+					<div id="tab_attach_file" class="so-3tab-content" style="display:none;">
+						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">แนบไฟล์เพิ่มเติม</h3>
+						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
+
+						<button type="button" onclick="triggerAttachFile()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
+							<img src="img/icons/import_file.png" alt="import_file" style="width: 16px; height: 16px;"> เพิ่มไฟล์
+						</button>
+
+						<div id="attach_file_list" style="display: flex; flex-wrap: wrap; gap: 16px;">
+							<!-- Dynamic files will go here -->
+						</div>
+
+						<!-- Hidden file inputs to submit to backend -->
+						<input type="file" name="slip1" id="hidden_slip1" style="display:none;" onchange="handleFileSelect(this, 1)">
+						<input type="file" name="slip2" id="hidden_slip2" style="display:none;" onchange="handleFileSelect(this, 2)">
+						<input type="file" name="slip3" id="hidden_slip3" style="display:none;" onchange="handleFileSelect(this, 3)">
+						<input type="file" name="slip4" id="hidden_slip4" style="display:none;" onchange="handleFileSelect(this, 4)">
+						<input type="file" name="slip5" id="hidden_slip5" style="display:none;" onchange="handleFileSelect(this, 5)">
+					</div>
+				</div>
+
+				<style>
+					.btn-dept-active {
+						background-color: #612989 !important;
+						color: #FFFFFF !important;
+					}
+
+					.so-doc-pill {
+						background-color: #F4F3F7;
+						border: 1px solid transparent;
+						border-radius: 8px;
+						padding: 12px;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						cursor: pointer;
+						transition: all 0.2s ease;
+						text-align: center;
+						color: #8E8B94;
+						font-weight: 500;
+					}
+
+					.so-doc-pill:has(input:checked) {
+						background-color: #EFEBFF;
+						border-color: #612989;
+						color: #612989;
+						font-weight: 600;
+					}
+
+					.so-doc-pill input[type="checkbox"] {
+						display: none;
+					}
+
+					.dept-row {
+						display: flex;
+						gap: 16px;
+						margin-bottom: 16px;
+						align-items: flex-end;
+					}
+				</style>
+
+				<script>
+					function open3Tab(tabId, element) {
+						var contents = document.getElementsByClassName('so-3tab-content');
+						for (var i = 0; i < contents.length; i++) {
+							contents[i].style.display = 'none';
+						}
+
+						var container = element.parentElement;
+						var btns = container.getElementsByClassName('so-tab-btn');
+						for (var i = 0; i < btns.length; i++) {
+							btns[i].classList.remove('active');
+							var span = btns[i].querySelector('span');
+							if (span) span.style.display = 'none';
+						}
+
+						document.getElementById(tabId).style.display = 'block';
+
+						element.classList.add('active');
+						var span = element.querySelector('span');
+						if (span) span.style.display = 'inline';
+					}
+
+					// === Department Comments JS ===
+					let commentIdCounter = 0;
+
+					function addDeptComment(defaultDept = '', defaultText = '') {
+						const list = document.getElementById('dept_comment_list');
+						const rowId = 'dept_row_' + commentIdCounter++;
+
+						const row = document.createElement('div');
+						row.className = 'dept-row';
+						row.id = rowId;
+
+						row.innerHTML = `
+        <div style="flex: 0 0 200px;">
+            <label style="color: #612989; font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">แผนก</label>
+            <div class="so-select-wrapper">
+                <select class="so-select" onchange="syncDeptComments()">
+                    <option value="">เลือกแผนก</option>
+                    <option value="cs" ${defaultDept === 'cs' ? 'selected' : ''}>จัดส่ง</option>
+                    <option value="en" ${defaultDept === 'en' ? 'selected' : ''}>ช่าง</option>
+                    <option value="st" ${defaultDept === 'st' ? 'selected' : ''}>คลังสินค้า</option>
+                    <option value="ad" ${defaultDept === 'ad' ? 'selected' : ''}>Admin</option>
+                </select>
+            </div>
+        </div>
+        <div style="flex: 1; position: relative;">
+            <label style="color: #612989; font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">ข้อความ</label>
+            <div style="position: relative; display: flex; align-items: center;">
+                <input type="text" class="so-input dept-text-input" placeholder="กรอกข้อความสำหรับแจ้งแผนก..." style="width: 100%; padding-right: 60px;" value="${defaultText}" oninput="syncDeptComments(); this.nextElementSibling.style.display = this.value ? 'block' : 'none';">
+                <i class="fas fa-times" style="position: absolute; right: 40px; cursor: pointer; color: #8E8B94; display: ${defaultText ? 'block' : 'none'};" onclick="this.previousElementSibling.value=''; syncDeptComments(); this.style.display='none';"></i>
+                <i class="far fa-trash-alt" style="position: absolute; right: 16px; color: #DC3545; cursor: pointer;" onclick="document.getElementById('${rowId}').remove(); syncDeptComments();"></i>
+            </div>
+        </div>
+    `;
+						list.appendChild(row);
+						syncDeptComments();
+					}
+
+					function syncDeptComments() {
+						let cs = '',
+							en = '',
+							st = '',
+							ad = '';
+
+						const rows = document.querySelectorAll('.dept-row');
+						rows.forEach(row => {
+							const dept = row.querySelector('select').value;
+							const text = row.querySelector('.dept-text-input').value;
+
+							if (text.trim() !== '') {
+								if (dept === 'cs') cs += (cs ? '\n' : '') + text;
+								if (dept === 'en') en += (en ? '\n' : '') + text;
+								if (dept === 'st') st += (st ? '\n' : '') + text;
+								if (dept === 'ad') ad += (ad ? '\n' : '') + text;
+							}
+						});
+
+						document.getElementById('hidden_comment_cs').value = cs;
+						document.getElementById('hidden_comment_en').value = en;
+						document.getElementById('hidden_comment_st').value = st;
+						document.getElementById('hidden_comment_ad').value = ad;
+					}
+
+					// Add an initial row
+					document.addEventListener('DOMContentLoaded', function() {
+						addDeptComment();
+					});
+
+					// === Attach Files JS ===
+					function triggerAttachFile() {
+						for (let i = 1; i <= 5; i++) {
+							const input = document.getElementById('hidden_slip' + i);
+							if (!input.value) {
+								input.click();
+								return;
+							}
+						}
+						alert('สามารถแนบไฟล์ได้สูงสุด 5 ไฟล์ครับ');
+					}
+
+					function handleFileSelect(input, index) {
+						if (input.files && input.files[0]) {
+							renderFileList();
+						}
+					}
+
+					function renderFileList() {
+						const list = document.getElementById('attach_file_list');
+						list.innerHTML = '';
+
+						for (let i = 1; i <= 5; i++) {
+							const input = document.getElementById('hidden_slip' + i);
+							if (input.files && input.files[0]) {
+								const fileName = input.files[0].name;
+
+								const fileBox = document.createElement('div');
+								fileBox.style.cssText = 'background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; width: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+
+								fileBox.innerHTML = `
+                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                    <span style="font-size: 12px; color: #612989; font-weight: 600;">ไฟล์</span>
+                    <a href="#" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
+                </div>
+                <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeFile(${i})"></i>
+            `;
+								list.appendChild(fileBox);
+							}
+						}
+					}
+
+					function removeFile(index) {
+						const input = document.getElementById('hidden_slip' + index);
+						input.value = ''; // Clear file
+						renderFileList();
+					}
+				</script>
+				<!-- NEW 3 TABS CARD END -->
+
+
+				<!-- Section: ข้อมูลเพิ่มเติม (ถูกซ่อนไว้) -->
+				<div id="hidden-extra-info" style="display: none;">
+					<div class="so-section-title-container">
+						<h2 class="so-section-title">ข้อมูลเพิ่มเติม</h2>
+						<hr class="so-divider">
+					</div>
+
+					<div class="so-grid-3">
+						<!-- Sale -->
+						<div class="so-field-group">
+							<label class="so-label">Sale</label>
+							<div class="so-select-wrapper">
+								<?php if ($_SESSION['code'] == 'SS1') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else if ($_SESSION['code'] == 'SS2') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else if ($_SESSION['code'] == 'SS3') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_ss3 where ckk_1='0' ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else if ($_SESSION['code'] == 'SS5') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else if ($_SESSION['code'] == 'SUP_MK') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_adm where ckk='1' ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else if ($_SESSION['code'] == 'SUP_EN') { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } else { ?>
+									<select name="sale_code" id="sale_code" class="so-select">
+										<option value="">**Please Select**</option>
+										<?php
+										$strSQL5 = "SELECT * FROM tb_team_adm where ckk = '0' ORDER BY sale_code ASC";
+										$objQuery5 = mysqli_query($com, $strSQL5);
+										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+										?>
+											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
+										<?php } ?>
+									</select>
+								<?php } ?>
+							</div>
+						</div>
+
+						<!-- แนบใบเสนอราคา -->
+						<div class="so-field-group">
+							<label class="so-label">แนบใบเสนอราคา</label>
+							<div class="so-input-with-checkbox">
+								<label class="so-checkbox-label">
+									<input name="with_pr" type="checkbox" value="1"> แนบใบเสนอราคา
+								</label>
+								<input name="pr_no" class="so-input" placeholder="เลขที่ใบเสนอราคา..." style="flex: 1;">
+							</div>
+						</div>
+
+						<!-- ต้องการ SN -->
+						<div class="so-field-group">
+							<label class="so-label">ต้องการ SN</label>
+							<div class="so-input-with-checkbox">
+								<label class="so-checkbox-label">
+									<input type="checkbox" name="sn_ckk" value="1"> ต้องการ SN
+								</label>
+								<input name="sn_no" class="so-input" placeholder="เลขที่ SN..." style="flex: 1;">
+							</div>
+						</div>
+					</div>
+
+					<div class="so-grid-2">
+						<!-- รูปแบบการพิมพ์ -->
+						<div class="so-field-group">
+							<label class="so-label">รูปแบบการพิมพ์</label>
+							<div class="so-radio-group-vertical">
+								<label class="so-radio-label">
+									<input type="radio" name="type_type" checked="checked" value="1" onclick="javascript:ckk_1();" id="object6">
+									<span>พิมพ์ตามคอม</span>
+								</label>
+								<label class="so-radio-label">
+									<input type="radio" name="type_type" value="2" onclick="javascript:ckk_1();" id="object7">
+									<span>พิมพ์ตามใบสั่งซื้อ</span>
+								</label>
+								<label class="so-radio-label">
+									<input type="radio" name="type_type" value="3" onclick="javascript:ckk_1();" id="object5">
+									<span>พิมพ์ตามที่เขียน</span>
+								</label>
+							</div>
+							<div id="dt5" style="display:none; margin-top: 10px;">
+								<textarea name="type_detail" class="so-textarea" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม..."></textarea>
+							</div>
+						</div>
+
+					</div>
+				</div> <!-- End hidden-extra-info -->
+			</div>
+		</div>
+		</div><!-- End Card Container -->
+
+		<script>
+			function openDelTab(tabId, element) {
+				var contents = document.getElementsByClassName('so-del-tab-content');
+				for (var i = 0; i < contents.length; i++) {
+					contents[i].style.display = 'none';
+				}
+
+				var container = element.parentElement;
+				var btns = container.getElementsByClassName('so-tab-btn');
+				for (var i = 0; i < btns.length; i++) {
+					btns[i].classList.remove('active');
+				}
+
+				document.getElementById(tabId).style.display = 'block';
+				element.classList.add('active');
+			}
+		</script>
+
+
+		<!-- ปุ่ม action ติดล่างของฟอร์มหลัก: submit จริงและปุ่ม draft สำหรับต่อยอด logic ภายหลัง -->
+		</div>
+		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
+			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px;">
+				<button type="submit" name="submit" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
+					<i class="far fa-save"></i> บันทึกข้อมูล
+				</button>
+				<button type="button" name="save_draft" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+					<i class="far fa-save"></i> Save Draft
+				</button>
+			</div>
+		</div>
+		<!-- hidden fields กลุ่มนี้ยังคงส่งค่าไปกับ form แม้ไม่มี input ให้ผู้ใช้แก้บนหน้า -->
+		<input type="hidden" name="end_time" value="">
+		<input type="hidden" name="mode_name" id="mode_name" value="">
+		<input type="hidden" name="sale_comment" value="">
+		<input type="hidden" name="head_1" value="">
+		<input type="hidden" name="have_map" value="">
+		<input type="hidden" name="customer_contact" value="">
+		<input type="hidden" name="date_tranfer" value="">
+	</form>
+
+	<!-- Modal รายชื่อลูกค้า: ใช้ค้นหา/เลือก customer เพื่อนำข้อมูลไปเติมในฟอร์มหลัก -->
+	<div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true">
+		<div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="customerPopupTitle">
+			<button type="button" class="customer-popup-close" onclick="closeCustomerPopup()" aria-label="Close">&times;</button>
+
+			<div class="customer-popup-header">
+				<h2 id="customerPopupTitle">ข้อมูลลูกค้า</h2>
+				<div class="customer-popup-toolbar" style="margin-top: 18px;">
+					<div class="customer-popup-search-wrap">
+						<label for="customerPopupSearch">ค้นหาลูกค้า</label>
+						<div class="customer-popup-search">
+							<i class="fas fa-search" aria-hidden="true"></i>
+							<input type="text" id="customerPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
+						</div>
+					</div>
+					<button type="button" class="customer-popup-add" onclick="window.open('customer_add.php', '_blank');">
+						<i class="fas fa-sliders-h" aria-hidden="true"></i>
+						เพิ่มข้อมูลลูกค้า
+					</button>
+				</div>
+			</div>
+
+			<div class="customer-popup-table-wrap">
+				<table class="customer-popup-table">
+					<thead>
+						<tr>
+							<th>ชื่อลูกค้า</th>
+							<th>เบอร์โทร</th>
+							<th>ที่อยู่</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="customerPopupRows">
+						<tr>
+							<td colspan="4" class="customer-popup-empty">พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="customer-popup-pagination" id="customerPopupPagination" style="display:none;">
+				<button type="button" class="customer-popup-loadmore" id="customerPopupLoadMore" onclick="loadMoreCustomerPopupRows()">โหลดเพิ่ม</button>
+			</div>
+
+			<div class="customer-popup-actions">
+				<button type="button" class="customer-popup-confirm" onclick="confirmCustomerPopupSelection()">ตกลง</button>
+				<button type="button" class="customer-popup-cancel" onclick="closeCustomerPopup()">ยกเลิก</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal ข้อมูลออกบิล: แยกข้อมูล billing ออกจาก customer หลัก และให้เลือกมา bind เข้าฟอร์ม -->
+	<div id="fullBillPopupModal" class="customer-popup-modal" aria-hidden="true">
+		<div class="customer-popup-box fullbill-popup-box" role="dialog" aria-modal="true" aria-labelledby="fullBillPopupTitle">
+			<button type="button" class="customer-popup-close" onclick="closeFullBillPopup(false)" aria-label="Close">&times;</button>
+
+			<div class="customer-popup-header">
+				<h2 id="fullBillPopupTitle">ข้อมูลการออกบิล</h2>
+				<div class="customer-popup-toolbar" style="margin-top: 18px;">
+					<div class="customer-popup-search-wrap">
+						<label for="fullBillPopupSearch">ค้นหาข้อมูลออกบิล</label>
+						<div class="customer-popup-search">
+							<i class="fas fa-search" aria-hidden="true"></i>
+							<input type="text" id="fullBillPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
+						</div>
+					</div>
+					<button type="button" class="customer-popup-add" onclick="window.open('billing_info_add.php', '_blank');">
+						<i class="fas fa-sliders-h" aria-hidden="true"></i>
+						เพิ่มข้อมูลออกบิล
+					</button>
+				</div>
+			</div>
+
+			<div class="customer-popup-table-wrap">
+				<table class="customer-popup-table fullbill-popup-table">
+					<thead>
+						<tr>
+							<th>ชื่อลูกค้า</th>
+							<th>เบอร์โทร</th>
+							<th>รายละเอียดการออกบิล</th>
+							<th>เลขที่ผู้เสียภาษี</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="fullBillPopupRows">
+						<tr>
+							<td colspan="5" class="customer-popup-empty">พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="customer-popup-pagination" id="fullBillPopupPagination" style="display:none;">
+				<button type="button" class="customer-popup-loadmore" id="fullBillPopupLoadMore" onclick="loadMoreFullBillPopupRows()">โหลดเพิ่ม</button>
+			</div>
+
+			<div class="customer-popup-actions">
+				<button type="button" class="customer-popup-confirm" onclick="confirmFullBillPopupSelection()">ตกลง</button>
+				<button type="button" class="customer-popup-cancel" onclick="closeFullBillPopup(false)">ยกเลิก</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal ที่อยู่จัดส่ง: ใช้เลือก shipping address ของลูกค้าที่ถูกเลือกอยู่ก่อนหน้า -->
+	<div id="shippingAddressPopupModal" class="customer-popup-modal shipping-popup-modal" aria-hidden="true">
+		<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
+			<button type="button" class="customer-popup-close" onclick="closeShippingAddressPopup()" aria-label="Close">&times;</button>
+
+			<div class="customer-popup-header">
+				<h2 id="shippingAddressPopupTitle">ที่อยู่จัดส่ง</h2>
+				<div class="customer-popup-toolbar shipping-popup-toolbar" style="margin-top: 18px;">
+					<div class="customer-popup-search-wrap">
+						<label for="shippingAddressPopupSearch">ค้นหาที่อยู่จัดส่ง</label>
+						<div class="customer-popup-search">
+							<i class="fas fa-search"></i>
+							<input type="text" id="shippingAddressPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
+						</div>
+					</div>
+					<button type="button" class="customer-popup-add" onclick="openShippingAddressCreatePage(getCurrentShippingPopupCustomerId())">
+						<i class="fas fa-stream"></i> เพิ่มที่อยู่จัดส่ง
+					</button>
+				</div>
+			</div>
+
+			<div class="customer-popup-table-wrap">
+				<table class="customer-popup-table shipping-popup-table">
+					<thead>
+						<tr>
+							<th></th>
+							<th>รหัสลูกค้า</th>
+							<th>ชื่อลูกค้า</th>
+							<th>เบอร์โทร</th>
+							<th>ชื่อผู้รับสินค้า</th>
+							<th>ที่อยู่จัดส่ง</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="shippingAddressPopupRows">
+						<tr>
+							<td colspan="7" class="customer-popup-empty">เลือกลูกค้าก่อนค้นหาที่อยู่จัดส่ง</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="customer-popup-pagination" id="shippingAddressPopupPagination" style="display:none;">
+				<button type="button" class="customer-popup-loadmore" id="shippingAddressPopupLoadMore" onclick="loadMoreShippingAddressPopupRows()">โหลดเพิ่ม</button>
+			</div>
+
+			<div class="customer-popup-actions">
+				<button type="button" class="customer-popup-confirm" onclick="confirmShippingAddressPopupSelection()">ตกลง</button>
+				<button type="button" class="customer-popup-cancel" onclick="closeShippingAddressPopup()">ย้อนกลับ</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// State ของ popup แต่ละตัวถูกแยกชุดกัน เพื่อไม่ให้การค้นหา/การเลือกค่าใน modal หนึ่งไปรบกวนอีก modal
+		var customerPopupSelected = null;
+		var customerPopupTimer = null;
+		var customerPopupData = [];
+		var customerPopupKeyword = '';
+		var customerPopupNextLastId = null;
+		var customerPopupHasMore = false;
+		var customerPopupLoading = false;
+		var customerPopupPageSize = 20;
+		var fullBillPopupSelected = null;
+		var fullBillPopupTimer = null;
+		var fullBillPopupData = [];
+		var fullBillPopupKeyword = '';
+		var fullBillPopupNextLastId = null;
+		var fullBillPopupHasMore = false;
+		var fullBillPopupLoading = false;
+		var fullBillPopupPageSize = 20;
+		var fullBillPopupPreviousChecked = false;
+		var shippingAddressPopupSelected = null;
+		var shippingAddressPopupTimer = null;
+		var shippingAddressPopupData = [];
+		var shippingAddressPopupKeyword = '';
+		var shippingAddressPopupNextLastId = null;
+		var shippingAddressPopupHasMore = false;
+		var shippingAddressPopupLoading = false;
+		var shippingAddressPopupPageSize = 20;
+		var shippingAddressPopupCustomerId = '';
+		var shippingAddressPopupSelectedKeys = [];
+
+		// เปิด modal ลูกค้า พร้อม reset state การเลือกเดิมและยิงค้นหารอบแรกจาก keyword ปัจจุบัน
+		function openCustomerPopup() {
+			var modal = document.getElementById('customerPopupModal');
+			var search = document.getElementById('customerPopupSearch');
+			if (!modal) return;
+
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+			customerPopupSelected = null;
+			customerPopupData = [];
+			customerPopupKeyword = search ? (search.value || '') : '';
+			customerPopupNextLastId = null;
+			customerPopupHasMore = false;
+			toggleCustomerPopupLoadMore(false, false);
+
+			loadCustomerPopupRows(customerPopupKeyword, false);
+			setTimeout(function() {
+				if (search) {
+					search.focus();
+					search.select();
+				}
+			}, 50);
+		}
+
+		// ปิด modal ลูกค้าแบบไม่แก้ค่าที่ฟอร์มหลัก
+		function closeCustomerPopup() {
+			var modal = document.getElementById('customerPopupModal');
+			if (!modal) return;
+
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
+		}
+
+		// เปิด modal ข้อมูลออกบิล และรีเซ็ตผลลัพธ์เพื่อป้องกันข้อมูลค้างจากรอบก่อน
+		function openFullBillPopup() {
+			var modal = document.getElementById('fullBillPopupModal');
+			var search = document.getElementById('fullBillPopupSearch');
+			if (!modal) return;
+
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+			fullBillPopupSelected = null;
+			fullBillPopupData = [];
+			fullBillPopupKeyword = search ? (search.value || '') : '';
+			fullBillPopupNextLastId = null;
+			fullBillPopupHasMore = false;
+			toggleFullBillPopupLoadMore(false, false);
+
+			loadFullBillPopupRows(fullBillPopupKeyword, false);
+
+			setTimeout(function() {
+				if (search) {
+					search.focus();
+					search.select();
+				}
+			}, 50);
+		}
+
+		// เปิดหน้าเพิ่ม/แก้ไข billing info โดยแนบ customer_id/billing_id ไปใน query string เมื่อมีข้อมูล
+		// หมายเหตุ: billing_id ยังใช้เพื่อเปิด record เดิมในหน้าจัดการข้อมูลบิลเท่านั้น
+		// แต่ใน flow บันทึกเอกสารปัจจุบันได้พักการใช้งาน billing_id ไว้ชั่วคราวแล้ว
+		function openBillingInfoCreatePage(customerId, billingId) {
+			var url = 'billing_info_add.php';
+			if (customerId) {
+				url += '?customer_id=' + encodeURIComponent(customerId);
+				if (billingId) {
+					url += '&billing_id=' + encodeURIComponent(billingId);
+				}
+			}
+			window.open(url, '_blank');
+		}
+
+		// บังคับให้มี customer ก่อนจึงจะสร้าง shipping address ใหม่ได้ เพราะ shipping ผูกกับ customer โดยตรง
+		function openShippingAddressCreatePage(customerId) {
+			var resolvedCustomerId = String(customerId || getCurrentShippingPopupCustomerId() || '').trim();
+			if (!resolvedCustomerId) {
+				alert('กรุณาเลือกลูกค้าก่อนเพิ่มที่อยู่จัดส่ง');
+				return;
+			}
+			var url = 'shipping_info_add.php';
+			url += '?customer_id=' + encodeURIComponent(resolvedCustomerId);
+			window.open(url, '_blank');
+		}
+
+		// ปิด modal ข้อมูลออกบิล และคืนสถานะ checkbox full_bill หากผู้ใช้ยกเลิกการเลือก
+		function closeFullBillPopup(keepChecked) {
+			var modal = document.getElementById('fullBillPopupModal');
+			var checkbox = document.getElementById('full_bill');
+			if (!modal) return;
+
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
+
+			if (!keepChecked && checkbox) {
+				checkbox.checked = fullBillPopupPreviousChecked;
+				updateToggleStyle(checkbox);
+			}
+		}
+
+		// รวม logic หา customer_id ปัจจุบันจากหลาย source:
+		// 1) รายการที่เพิ่งเลือกจาก popup
+		// 2) hidden/input ที่ถูก fill ไว้ในฟอร์ม
+		// 3) ข้อความที่แสดงบนหน้าจอ
+		function getCurrentShippingPopupCustomerId() {
+			var hiddenBillId = document.getElementById('h_bill_id');
+			var billId = document.getElementById('bill_id');
+			var displayBillId = document.getElementById('display_bill_id');
+			var popupCustomerId = '';
+			if (window.customerPopupSelected && window.customerPopupSelected.customer_id) {
+				popupCustomerId = window.customerPopupSelected.customer_id;
+			}
+			if (!popupCustomerId && window.fullBillPopupSelected && window.fullBillPopupSelected.customer_id) {
+				popupCustomerId = window.fullBillPopupSelected.customer_id;
+			}
+			return String(
+				popupCustomerId ||
+				(hiddenBillId && hiddenBillId.value) ||
+				(billId && billId.value) ||
+				(displayBillId && displayBillId.textContent) ||
+				''
+			).trim();
+		}
+
+		// เปิดหน้าจัดการที่อยู่จัดส่งเดิม โดยต้องมี customer ปัจจุบันก่อนเสมอ
+		function openShippingAddressManagePage(shippingId) {
+			var customerId = getCurrentShippingPopupCustomerId();
+			if (!customerId) {
+				alert('กรุณาเลือกลูกค้าก่อนจัดการที่อยู่จัดส่ง');
+				return;
+			}
+			var url = 'shipping_info_add.php?customer_id=' + encodeURIComponent(customerId);
+			if (shippingId) {
+				url += '&shipping_id=' + encodeURIComponent(shippingId);
+			}
+			window.open(url, '_blank');
+		}
+
+		// เปิด modal ที่อยู่จัดส่ง:
+		// - เก็บ snapshot ค่าจัดส่งเดิมครั้งแรกไว้ใน window.originalShippingData
+		// - reset state ของ popup
+		// - query ข้อมูล shipping address ของ customer ปัจจุบัน
+		function openShippingAddressPopup() {
+			var customerId = getCurrentShippingPopupCustomerId();
+			var modal = document.getElementById('shippingAddressPopupModal');
+			var search = document.getElementById('shippingAddressPopupSearch');
+			var tbody = document.getElementById('shippingAddressPopupRows');
+			if (!modal || !tbody) return;
+
+			// เก็บค่าเดิมจากฟอร์มไว้เพื่อใช้ revert หรือ fallback เมื่อผู้ใช้ยังไม่เลือกที่อยู่ใหม่
+			if (!window.originalShippingData) {
+				var contactName = document.querySelector('input[name="contact_name"]');
+				var contactTel = document.querySelector('input[name="contact_tel"]');
+				var contactProvince = document.querySelector('select[name="contact_province"]');
+				var shippingAddress = document.querySelector('input[name="shipping_address"]');
+				var installLocation = document.querySelector('input[name="install_location"]');
+
+				window.originalShippingData = {
+					customer_name: contactName ? contactName.value : '',
+					customer_tel: contactTel ? contactTel.value : '',
+					shipping_name: contactName ? contactName.value : '',
+					shipping_province: contactProvince ? contactProvince.value : '',
+					shipping_full_address: shippingAddress ? shippingAddress.value : '',
+					install_location: installLocation ? installLocation.value : ''
+				};
+			}
+
+			shippingAddressPopupCustomerId = customerId;
+			shippingAddressPopupSelected = null;
+			shippingAddressPopupData = [];
+			shippingAddressPopupNextLastId = null;
+			shippingAddressPopupHasMore = false;
+			shippingAddressPopupKeyword = search ? (search.value || '') : '';
+			toggleShippingAddressPopupLoadMore(false, false);
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+
+			loadShippingAddressPopupRows(shippingAddressPopupKeyword, false);
+			setTimeout(function() {
+				if (search) {
+					search.focus();
+					search.select();
+				}
+			}, 50);
+		}
+
+		// ปิด modal ที่อยู่จัดส่งโดยไม่แตะค่าบนฟอร์มหลัก
+		function closeShippingAddressPopup() {
+			var modal = document.getElementById('shippingAddressPopupModal');
+			if (!modal) return;
+
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
+		}
+
+		// Escape HTML ก่อน render string จากฐานข้อมูลลง innerHTML เพื่อลดความเสี่ยง XSS ฝั่ง client
+		function escapeCustomerPopupHtml(value) {
+			return String(value || '').replace(/[&<>"']/g, function(char) {
+				return {
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#039;'
+				} [char];
+			});
+		}
+
+		// ควบคุมปุ่ม "โหลดเพิ่ม" ของ popup ลูกค้า ทั้งสถานะการแสดงผลและสถานะ loading
+		function toggleCustomerPopupLoadMore(visible, loading) {
+			var wrap = document.getElementById('customerPopupPagination');
+			var button = document.getElementById('customerPopupLoadMore');
+			if (!wrap || !button) return;
+
+			wrap.style.display = visible ? 'flex' : 'none';
+			button.disabled = !!loading;
+			button.textContent = loading ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
+		}
+
+		// ควบคุมปุ่ม "โหลดเพิ่ม" ของ popup ข้อมูลออกบิล
+		function toggleFullBillPopupLoadMore(visible, loading) {
+			var wrap = document.getElementById('fullBillPopupPagination');
+			var button = document.getElementById('fullBillPopupLoadMore');
+			if (!wrap || !button) return;
+
+			wrap.style.display = visible ? 'flex' : 'none';
+			button.disabled = !!loading;
+			button.textContent = loading ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
+		}
+
+		// Render ตารางลูกค้า:
+		// - ถ้าไม่มีข้อมูล แสดง empty state
+		// - ถ้ามีข้อมูล สร้าง row และผูก event สำหรับเลือก/แก้ไข
+		// - ถ้ามี customer ที่ถูกเลือกอยู่แล้ว จะ mark แถวเดิมกลับเข้าไป
+		function renderCustomerPopupRows(customers) {
+			var tbody = document.getElementById('customerPopupRows');
+			if (!tbody) return;
+
+			customers = customers || customerPopupData || [];
+
+			if (!customers || customers.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">ไม่พบข้อมูลลูกค้า</td></tr>';
+				toggleCustomerPopupLoadMore(false, false);
+				return;
+			}
+
+			tbody.innerHTML = customers.map(function(customer, index) {
+				var name = customer.customer_name || customer.bill_name || '-';
+				var tel = customer.cus_tel || '-';
+				var address = customer.cus_address || '-';
+
+				return '<tr data-index="' + index + '" onclick="selectCustomerPopupRow(' + index + ')">' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); selectCustomerPopupRow(' + index + ');">' + escapeCustomerPopupHtml(name) + '</button></td>' +
+					'<td>' + escapeCustomerPopupHtml(tel) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(address) + '</td>' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openCustomerPopupEdit(' + index + ');"><img src="img/icons/edit.png?v=20260610" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+					'</tr>';
+			}).join('');
+
+			customerPopupData = customers;
+			window.customerPopupData = customers;
+
+			if (customerPopupSelected && customerPopupSelected.customer_id) {
+				var rows = document.querySelectorAll('#customerPopupRows tr');
+				rows.forEach(function(row) {
+					row.classList.remove('selected');
+				});
+				for (var i = 0; i < customerPopupData.length; i++) {
+					if (String(customerPopupData[i].customer_id) === String(customerPopupSelected.customer_id)) {
+						if (rows[i]) rows[i].classList.add('selected');
+						break;
+					}
+				}
+			}
+
+			toggleCustomerPopupLoadMore(customerPopupHasMore, false);
+		}
+
+		// โหลดลูกค้าจาก backend แบบ initial load หรือ append สำหรับ pagination
+		function loadCustomerPopupRows(keyword, append) {
+			var tbody = document.getElementById('customerPopupRows');
+			if (customerPopupLoading) return;
+			customerPopupLoading = true;
+
+			// initial search จะแสดง loading state ในตาราง ส่วน append จะคงข้อมูลเดิมไว้
+			if (!append && tbody) {
+				tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
+			}
+
+			if (!append) {
+				customerPopupSelected = null;
+				customerPopupData = [];
+				customerPopupNextLastId = null;
+				customerPopupHasMore = false;
+				customerPopupKeyword = keyword || '';
+			}
+
+			toggleCustomerPopupLoadMore(append || customerPopupHasMore, append);
+
+			var requestUrl = 'ajax_customer_popup_search.php?q=' + encodeURIComponent(customerPopupKeyword || '') +
+				'&limit=' + encodeURIComponent(customerPopupPageSize);
+
+			if (append && customerPopupNextLastId) {
+				requestUrl += '&last_id=' + encodeURIComponent(customerPopupNextLastId);
+			}
+
+			// ใช้ last_id เป็น cursor สำหรับ "โหลดเพิ่ม" แทนการ reload ทั้งชุด
+			fetch(requestUrl, {
+					credentials: 'same-origin'
+				})
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(data) {
+					if (!data || !data.success) {
+						customerPopupData = [];
+						customerPopupHasMore = false;
+						customerPopupNextLastId = null;
+						renderCustomerPopupRows([]);
+						return;
+					}
+
+					var newCustomers = data.customers || [];
+					customerPopupData = append ? customerPopupData.concat(newCustomers) : newCustomers;
+					customerPopupHasMore = !!(data.pagination && data.pagination.has_more);
+					customerPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
+					renderCustomerPopupRows(customerPopupData);
+				})
+				.catch(function() {
+					customerPopupHasMore = false;
+					customerPopupNextLastId = null;
+					if (tbody) {
+						tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
+					}
+					toggleCustomerPopupLoadMore(false, false);
+				})
+				.finally(function() {
+					customerPopupLoading = false;
+					if (customerPopupHasMore) {
+						toggleCustomerPopupLoadMore(true, false);
+					}
+				});
+		}
+
+		// เปิดหน้าแก้ไขลูกค้าจากรายการที่เลือกใน popup
+		function openCustomerPopupEdit(index) {
+			var customer = (customerPopupData || [])[index];
+			if (!customer || !customer.customer_id) {
+				alert('ไม่พบรหัสลูกค้า');
+				return;
+			}
+
+			window.open('customer_add.php?customer_id=' + encodeURIComponent(customer.customer_id), '_blank');
+		}
+
+		// wrapper สั้นๆ สำหรับ pagination ของ popup ลูกค้า
+		function loadMoreCustomerPopupRows() {
+			if (!customerPopupHasMore || !customerPopupNextLastId) return;
+			loadCustomerPopupRows(customerPopupKeyword, true);
+		}
+
+		// ควบคุมปุ่ม "โหลดเพิ่ม" ของ popup ที่อยู่จัดส่ง
+		function toggleShippingAddressPopupLoadMore(visible, loading) {
+			var wrap = document.getElementById('shippingAddressPopupPagination');
+			var button = document.getElementById('shippingAddressPopupLoadMore');
+			if (!wrap || !button) return;
+
+			wrap.style.display = visible ? 'flex' : 'none';
+			button.disabled = !!loading;
+			button.textContent = loading ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
+		}
+
+		// Render ตารางที่อยู่จัดส่งและจำแถวที่เลือกไว้ผ่าน selection key ของแต่ละ row
+		function renderShippingAddressPopupRows(addresses) {
+			var tbody = document.getElementById('shippingAddressPopupRows');
+			if (!tbody) return;
+
+			addresses = addresses || shippingAddressPopupData || [];
+			if (!addresses.length) {
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">ไม่พบข้อมูลที่อยู่จัดส่ง</td></tr>';
+				shippingAddressPopupSelected = null;
+				toggleShippingAddressPopupLoadMore(false, false);
+				return;
+			}
+
+			var selectedKey = shippingAddressPopupSelected ? String(shippingAddressPopupSelected.__selectionKey || shippingAddressPopupSelected.row_id) : '';
+			var rowsHtml = [];
+
+			rowsHtml = rowsHtml.concat(addresses.map(function(address, index) {
+				address.__selectionKey = address.row_id ? ('row-' + address.row_id) : ('customer-' + (address.customer_id || '0') + '-' + index);
+				var customerCode = address.customer_code || '-';
+				var customerName = address.customer_name || '-';
+				var phone = address.shipping_tel || address.customer_tel || '-';
+				var shippingName = address.shipping_name || customerName;
+				var fullAddress = address.shipping_full_address || address.shipping_address || '-';
+				var rowClass = selectedKey === address.__selectionKey ? 'selected' : '';
+				var isChecked = selectedKey === address.__selectionKey ? 'checked' : '';
+
+				return '<tr class="' + rowClass + '" data-index="' + index + '" onclick="selectShippingAddressPopupRow(' + index + ')">' +
+					'<td class="shipping-popup-select-cell" style="text-align: center;">' +
+					'<label class="shipping-custom-radio" onclick="event.stopPropagation();">' +
+					'<input type="radio" class="shipping-popup-radio-input" name="shipping_popup_choice" ' + isChecked + ' onclick="selectShippingAddressPopupRow(' + index + ')">' +
+					'<span class="checkmark"></span>' +
+					'</label>' +
+					'</td>' +
+					'<td>' + escapeCustomerPopupHtml(customerCode) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(customerName) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(phone) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(shippingName) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(fullAddress) + '</td>' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openShippingAddressManagePage(\'' + (address.row_id || '') + '\');"><img src="img/icons/edit.png?v=20260610" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+					'</tr>';
+			}));
+
+			tbody.innerHTML = rowsHtml.join('');
+			shippingAddressPopupData = addresses;
+			if (!shippingAddressPopupSelected && addresses.length > 0) {
+				// Select first row by default
+				selectShippingAddressPopupRow(0);
+			}
+
+			toggleShippingAddressPopupLoadMore(shippingAddressPopupHasMore, false);
+		}
+
+		function loadShippingAddressPopupRows(keyword, append) {
+			var tbody = document.getElementById('shippingAddressPopupRows');
+			if (shippingAddressPopupLoading) return;
+			shippingAddressPopupLoading = true;
+
+			if (!append && tbody) {
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
+			}
+
+			if (!append) {
+				shippingAddressPopupSelected = null;
+				shippingAddressPopupData = [];
+				shippingAddressPopupNextLastId = null;
+				shippingAddressPopupHasMore = false;
+				shippingAddressPopupKeyword = keyword || '';
+			}
+
+			toggleShippingAddressPopupLoadMore(append || shippingAddressPopupHasMore, append);
+
+			var requestUrl = 'ajax_shipping_address_popup_search.php?customer_id=' + encodeURIComponent(shippingAddressPopupCustomerId) +
+				'&q=' + encodeURIComponent(shippingAddressPopupKeyword || '') +
+				'&limit=' + encodeURIComponent(shippingAddressPopupPageSize);
+
+			if (append && shippingAddressPopupNextLastId) {
+				requestUrl += '&last_id=' + encodeURIComponent(shippingAddressPopupNextLastId);
+			}
+
+			fetch(requestUrl, {
+					credentials: 'same-origin'
+				})
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(data) {
+					if (!data || !data.success) {
+						shippingAddressPopupData = [];
+						shippingAddressPopupHasMore = false;
+						shippingAddressPopupNextLastId = null;
+						renderShippingAddressPopupRows([]);
+						return;
+					}
+
+					var newAddresses = data.addresses || [];
+					shippingAddressPopupData = append ? shippingAddressPopupData.concat(newAddresses) : newAddresses;
+					shippingAddressPopupHasMore = !!(data.pagination && data.pagination.has_more);
+					shippingAddressPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
+					renderShippingAddressPopupRows(shippingAddressPopupData);
+				})
+				.catch(function() {
+					shippingAddressPopupHasMore = false;
+					shippingAddressPopupNextLastId = null;
+					if (tbody) {
+						tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
+					}
+					toggleShippingAddressPopupLoadMore(false, false);
+				})
+				.finally(function() {
+					shippingAddressPopupLoading = false;
+					if (shippingAddressPopupHasMore) {
+						toggleShippingAddressPopupLoadMore(true, false);
+					}
+				});
+		}
+
+		function loadMoreShippingAddressPopupRows() {
+			if (!shippingAddressPopupHasMore || !shippingAddressPopupNextLastId) return;
+			loadShippingAddressPopupRows(shippingAddressPopupKeyword, true);
+		}
+
+		function selectShippingAddressPopupRow(index) {
+			var rows = document.querySelectorAll('#shippingAddressPopupRows tr');
+			var address = (shippingAddressPopupData || [])[index];
+			if (!address) return;
+
+			rows.forEach(function(row) {
+				row.classList.remove('selected');
+			});
+			var rowPosition = index;
+			if (rows[rowPosition]) rows[rowPosition].classList.add('selected');
+			var radios = document.querySelectorAll('input[name="shipping_popup_choice"]');
+			radios.forEach(function(radio, radioIndex) {
+				radio.checked = radioIndex === rowPosition;
+			});
+			shippingAddressPopupSelected = address;
+		}
+
+		function confirmShippingAddressPopupSelection() {
+			if (!shippingAddressPopupSelected) {
+				alert('กรุณาเลือกที่อยู่จัดส่งก่อน');
+				return;
+			}
+
+			applyShippingSelection(shippingAddressPopupSelected);
+			closeShippingAddressPopup();
+		}
+
+		function renderShippingAddressPopupRowsLegacyMulti(addresses) {
+			var tbody = document.getElementById('shippingAddressPopupRows');
+			var selectAllCheckbox = document.getElementById('shippingAddressSelectAll');
+			if (!tbody) return;
+
+			addresses = addresses || shippingAddressPopupData || [];
+			if (!addresses.length) {
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡</td></tr>';
+				shippingAddressPopupSelected = [];
+				shippingAddressPopupSelectedKeys = [];
+				if (selectAllCheckbox) {
+					selectAllCheckbox.checked = false;
+					selectAllCheckbox.indeterminate = false;
+				}
+				toggleShippingAddressPopupLoadMore(false, false);
+				return;
+			}
+
+			var selectedKeys = Array.isArray(shippingAddressPopupSelectedKeys) ? shippingAddressPopupSelectedKeys.slice() : [];
+			tbody.innerHTML = addresses.map(function(address, index) {
+				address.__selectionKey = address.row_id ? ('row-' + address.row_id) : ('customer-' + (address.customer_id || '0') + '-' + index);
+				var isChecked = selectedKeys.indexOf(address.__selectionKey) !== -1;
+				var customerCode = address.customer_code || '-';
+				var customerName = address.customer_name || '-';
+				var phone = address.shipping_tel || address.customer_tel || '-';
+				var shippingName = address.shipping_name || customerName;
+				var fullAddress = address.shipping_full_address || address.shipping_address || '-';
+
+				return '<tr class="' + (isChecked ? 'selected' : '') + '" data-index="' + index + '" onclick="selectShippingAddressPopupRow(' + index + ')">' +
+					'<td class="shipping-popup-select-cell"><input type="checkbox" class="shipping-popup-checkbox-input" ' + (isChecked ? 'checked' : '') + ' onclick="event.stopPropagation(); selectShippingAddressPopupRow(' + index + ')"></td>' +
+					'<td>' + escapeCustomerPopupHtml(customerCode) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(customerName) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(phone) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(shippingName) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(fullAddress) + '</td>' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openShippingAddressManagePage();"><img src="img/icons/edit.png?v=20260610" alt="à¹à¸à¹‰à¹„à¸‚" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+					'</tr>';
+			}).join('');
+
+			shippingAddressPopupData = addresses;
+			shippingAddressPopupSelectedKeys = shippingAddressPopupData.map(function(address) {
+				return address.__selectionKey;
+			}).filter(function(key) {
+				return selectedKeys.indexOf(key) !== -1;
+			});
+			shippingAddressPopupSelected = shippingAddressPopupData.filter(function(address) {
+				return shippingAddressPopupSelectedKeys.indexOf(address.__selectionKey) !== -1;
+			});
+
+			if (selectAllCheckbox) {
+				var totalCount = shippingAddressPopupData.length;
+				var selectedCount = shippingAddressPopupSelectedKeys.length;
+				selectAllCheckbox.checked = totalCount > 0 && selectedCount === totalCount;
+				selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+			}
+
+			toggleShippingAddressPopupLoadMore(shippingAddressPopupHasMore, false);
+		}
+
+		function loadShippingAddressPopupRowsLegacyMulti(keyword, append) {
+			var tbody = document.getElementById('shippingAddressPopupRows');
+			if (shippingAddressPopupLoading) return;
+			shippingAddressPopupLoading = true;
+
+			if (!append && tbody) {
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¸à¸³à¸¥à¸±à¸‡à¸„à¹‰à¸™à¸«à¸²...</td></tr>';
+			}
+
+			if (!append) {
+				shippingAddressPopupSelected = [];
+				shippingAddressPopupSelectedKeys = [];
+				shippingAddressPopupData = [];
+				shippingAddressPopupNextLastId = null;
+				shippingAddressPopupHasMore = false;
+				shippingAddressPopupKeyword = keyword || '';
+			}
+
+			toggleShippingAddressPopupLoadMore(append || shippingAddressPopupHasMore, append);
+
+			var requestUrl = 'ajax_shipping_address_popup_search.php?customer_id=' + encodeURIComponent(shippingAddressPopupCustomerId) +
+				'&q=' + encodeURIComponent(shippingAddressPopupKeyword || '') +
+				'&limit=' + encodeURIComponent(shippingAddressPopupPageSize);
+
+			if (append && shippingAddressPopupNextLastId) {
+				requestUrl += '&last_id=' + encodeURIComponent(shippingAddressPopupNextLastId);
+			}
+
+			fetch(requestUrl, {
+					credentials: 'same-origin'
+				})
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(data) {
+					if (!data || !data.success) {
+						shippingAddressPopupData = [];
+						shippingAddressPopupHasMore = false;
+						shippingAddressPopupNextLastId = null;
+						renderShippingAddressPopupRows([]);
+						return;
+					}
+
+					var newAddresses = data.addresses || [];
+					shippingAddressPopupData = append ? shippingAddressPopupData.concat(newAddresses) : newAddresses;
+					shippingAddressPopupHasMore = !!(data.pagination && data.pagination.has_more);
+					shippingAddressPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
+					renderShippingAddressPopupRows(shippingAddressPopupData);
+				})
+				.catch(function() {
+					shippingAddressPopupHasMore = false;
+					shippingAddressPopupNextLastId = null;
+					if (tbody) {
+						tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸”à¹‰</td></tr>';
+					}
+					toggleShippingAddressPopupLoadMore(false, false);
+				})
+				.finally(function() {
+					shippingAddressPopupLoading = false;
+					if (shippingAddressPopupHasMore) {
+						toggleShippingAddressPopupLoadMore(true, false);
+					}
+				});
+		}
+
+		function toggleShippingAddressSelectAllLegacyMulti(checked) {
+			var availableKeys = (shippingAddressPopupData || []).map(function(address) {
+				return address.__selectionKey;
+			});
+			shippingAddressPopupSelectedKeys = checked ? availableKeys.slice() : [];
+			shippingAddressPopupSelected = (shippingAddressPopupData || []).filter(function(address) {
+				return shippingAddressPopupSelectedKeys.indexOf(address.__selectionKey) !== -1;
+			});
+			renderShippingAddressPopupRows(shippingAddressPopupData);
+		}
+
+		function selectShippingAddressPopupRowLegacyMulti(index) {
+			var address = (shippingAddressPopupData || [])[index];
+			if (!address) return;
+
+			var selectedKeys = Array.isArray(shippingAddressPopupSelectedKeys) ? shippingAddressPopupSelectedKeys.slice() : [];
+			var keyIndex = selectedKeys.indexOf(address.__selectionKey);
+			if (keyIndex === -1) {
+				selectedKeys.push(address.__selectionKey);
+			} else {
+				selectedKeys.splice(keyIndex, 1);
+			}
+
+			shippingAddressPopupSelectedKeys = selectedKeys;
+			shippingAddressPopupSelected = (shippingAddressPopupData || []).filter(function(item) {
+				return shippingAddressPopupSelectedKeys.indexOf(item.__selectionKey) !== -1;
+			});
+			renderShippingAddressPopupRows(shippingAddressPopupData);
+		}
+
+		function confirmShippingAddressPopupSelectionLegacyMulti() {
+			if (!shippingAddressPopupSelected || !shippingAddressPopupSelected.length) {
+				alert('à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸à¹ˆà¸­à¸™');
+				return;
+			}
+
+			applyShippingSelection(shippingAddressPopupSelected);
+			closeShippingAddressPopup();
+		}
+
+		function renderFullBillPopupRows(customers) {
+			var tbody = document.getElementById('fullBillPopupRows');
+			if (!tbody) return;
+
+			customers = customers || fullBillPopupData || [];
+
+			if (!customers || customers.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="5" class="customer-popup-empty">ไม่พบข้อมูลออกบิล</td></tr>';
+				toggleFullBillPopupLoadMore(false, false);
+				return;
+			}
+
+			tbody.innerHTML = customers.map(function(customer, index) {
+				var name = customer.customer_name || customer.bill_name || '-';
+				var tel = customer.cus_tel || customer.bill_tel || '-';
+				var billDetail = customer.bill_name || '-';
+				if (customer.bill_address) {
+					billDetail += ' ' + customer.bill_address;
+				}
+				var taxId = customer.tax_id || '-';
+
+				return '<tr data-index="' + index + '" onclick="selectFullBillPopupRow(' + index + ')">' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); selectFullBillPopupRow(' + index + ');">' + escapeCustomerPopupHtml(name) + '</button></td>' +
+					'<td>' + escapeCustomerPopupHtml(tel) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(billDetail) + '</td>' +
+					'<td>' + escapeCustomerPopupHtml(taxId) + '</td>' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openFullBillPopupEdit(' + index + ');"><img src="img/icons/edit.png?v=20260610" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+					'</tr>';
+			}).join('');
+
+			fullBillPopupData = customers;
+
+			if (fullBillPopupSelected && fullBillPopupSelected.customer_id) {
+				var rows = document.querySelectorAll('#fullBillPopupRows tr');
+				rows.forEach(function(row) {
+					row.classList.remove('selected');
+				});
+				for (var i = 0; i < fullBillPopupData.length; i++) {
+					if (String(fullBillPopupData[i].customer_id) === String(fullBillPopupSelected.customer_id)) {
+						if (rows[i]) rows[i].classList.add('selected');
+						break;
+					}
+				}
+			}
+
+			toggleFullBillPopupLoadMore(fullBillPopupHasMore, false);
+		}
+
+		function loadFullBillPopupRows(keyword, append) {
+			var tbody = document.getElementById('fullBillPopupRows');
+			if (fullBillPopupLoading) return;
+			fullBillPopupLoading = true;
+
+			if (!append && tbody) {
+				tbody.innerHTML = '<tr><td colspan="5" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
+			}
+
+			if (!append) {
+				fullBillPopupSelected = null;
+				fullBillPopupData = [];
+				fullBillPopupNextLastId = null;
+				fullBillPopupHasMore = false;
+				fullBillPopupKeyword = keyword || '';
+			}
+
+			toggleFullBillPopupLoadMore(append || fullBillPopupHasMore, append);
+
+			var requestUrl = 'ajax_fullbill_popup_search.php?q=' + encodeURIComponent(fullBillPopupKeyword || '') +
+				'&limit=' + encodeURIComponent(fullBillPopupPageSize);
+
+			if (append && fullBillPopupNextLastId) {
+				requestUrl += '&last_id=' + encodeURIComponent(fullBillPopupNextLastId);
+			}
+
+			fetch(requestUrl, {
+					credentials: 'same-origin'
+				})
+				.then(function(response) {
+					return response.json();
+				})
+				.then(function(data) {
+					if (!data || !data.success) {
+						fullBillPopupData = [];
+						fullBillPopupHasMore = false;
+						fullBillPopupNextLastId = null;
+						renderFullBillPopupRows([]);
+						return;
+					}
+
+					var newCustomers = data.customers || [];
+					fullBillPopupData = append ? fullBillPopupData.concat(newCustomers) : newCustomers;
+					fullBillPopupHasMore = !!(data.pagination && data.pagination.has_more);
+					fullBillPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
+					renderFullBillPopupRows(fullBillPopupData);
+				})
+				.catch(function() {
+					fullBillPopupHasMore = false;
+					fullBillPopupNextLastId = null;
+					if (tbody) {
+						tbody.innerHTML = '<tr><td colspan="5" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
+					}
+					toggleFullBillPopupLoadMore(false, false);
+				})
+				.finally(function() {
+					fullBillPopupLoading = false;
+					if (fullBillPopupHasMore) {
+						toggleFullBillPopupLoadMore(true, false);
+					}
+				});
+		}
+
+		function loadMoreFullBillPopupRows() {
+			if (!fullBillPopupHasMore || !fullBillPopupNextLastId) return;
+			loadFullBillPopupRows(fullBillPopupKeyword, true);
+		}
+
+		function selectFullBillPopupRow(index) {
+			var rows = document.querySelectorAll('#fullBillPopupRows tr');
+			var customer = (fullBillPopupData || [])[index];
+			if (!customer) return;
+
+			rows.forEach(function(row) {
+				row.classList.remove('selected');
+			});
+			if (rows[index]) rows[index].classList.add('selected');
+			fullBillPopupSelected = customer;
+		}
+
+		function openFullBillPopupEdit(index) {
+			var customer = (fullBillPopupData || [])[index];
+			if (!customer || !customer.customer_id) {
+				alert('ไม่พบรหัสลูกค้า');
+				return;
+			}
+
+			// billing_id ตรงนี้ใช้เพื่อเปิดรายการ billing address เดิมให้แก้ไขได้ตรง record
+			// ไม่ได้ถูกส่งต่อไปใช้บันทึกลง tb_register_data ใน flow ปัจจุบัน
+			openBillingInfoCreatePage(customer.customer_id, customer.billing_id || '');
+		}
+
+		function confirmFullBillPopupSelection() {
+			if (!fullBillPopupSelected) {
+				alert('กรุณาเลือกข้อมูลออกบิลก่อน');
+				return;
+			}
+
+			if (!String(fullBillPopupSelected.customer_id || '').trim()) {
+				alert('ข้อมูลออกบิลที่เลือกไม่มีรหัสลูกค้า');
+				return;
+			}
+
+			var selectedCustId = fullBillPopupSelected.customer_id || '';
+
+			doCallAjax1(selectedCustId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', 'billing', function(success, missingFields) {
+				if (!success) {
+					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลออกบิลไม่ครบถ้วน';
+					alert('ไม่สามารถดึงข้อมูลออกบิลได้ครบ: ' + missingMessage);
+					return;
+				}
+				var checkbox = document.getElementById('full_bill');
+				if (checkbox) {
+					checkbox.checked = true;
+					updateToggleStyle(checkbox);
+				}
+				closeFullBillPopup(true);
+			});
+		}
+
+		function handleBillingInfoCreated(customerId) {
+			var resolvedId = String(customerId || '').trim();
+			var checkbox = document.getElementById('full_bill');
+
+			if (!resolvedId) {
+				loadFullBillPopupRows('', false);
+				return;
+			}
+
+			if (checkbox) {
+				checkbox.checked = true;
+				updateToggleStyle(checkbox);
+			}
+
+			doCallAjax1(resolvedId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', 'billing', function(success) {
+				if (success) {
+					closeFullBillPopup(true);
+				}
+				loadFullBillPopupRows('', false);
+			});
+		}
+
+		function selectCustomerPopupRow(index) {
+			var rows = document.querySelectorAll('#customerPopupRows tr');
+			var customer = (customerPopupData || [])[index];
+			if (!customer) return;
+
+			rows.forEach(function(row) {
+				row.classList.remove('selected');
+			});
+			if (rows[index]) rows[index].classList.add('selected');
+			customerPopupSelected = customer;
+		}
+
+		function confirmCustomerPopupSelection() {
+			if (!customerPopupSelected) {
+				alert('กรุณาเลือกลูกค้าก่อน');
+				return;
+			}
+
+			if (!String(customerPopupSelected.customer_id || '').trim()) {
+				alert('ข้อมูลลูกค้าที่เลือกไม่มีรหัสลูกค้า');
+				return;
+			}
+
+			var billId = document.getElementById('bill_id');
+			if (billId) {
+				billId.value = customerPopupSelected.customer_id || '';
+			}
+			var hiddenBillId = document.getElementById('h_bill_id');
+			if (hiddenBillId) {
+				hiddenBillId.value = customerPopupSelected.customer_id || '';
+			}
+			var displayBillId = document.getElementById('display_bill_id');
+			if (displayBillId) {
+				displayBillId.textContent = customerPopupSelected.customer_id || '';
+			}
+
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
+				if (!success) {
+					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลลูกค้าไม่ครบถ้วน';
+					alert('ไม่สามารถดึงข้อมูลลูกค้าได้ครบ: ' + missingMessage);
+					return;
+				}
+				closeCustomerPopup();
+			});
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			var search = document.getElementById('customerPopupSearch');
+			var customerModal = document.getElementById('customerPopupModal');
+			var fullBillCheckbox = document.getElementById('full_bill');
+			var fullBillSearch = document.getElementById('fullBillPopupSearch');
+			var fullBillModal = document.getElementById('fullBillPopupModal');
+			var shippingAddressSearch = document.getElementById('shippingAddressPopupSearch');
+			var shippingAddressModal = document.getElementById('shippingAddressPopupModal');
+
+			bindShippingFieldMirrors();
+
+			if (search) {
+				search.addEventListener('input', function() {
+					clearTimeout(customerPopupTimer);
+					customerPopupTimer = setTimeout(function() {
+						customerPopupSelected = null;
+						loadCustomerPopupRows(search.value, false);
+					}, 250);
+				});
+			}
+
+			if (fullBillSearch) {
+				fullBillSearch.addEventListener('input', function() {
+					clearTimeout(fullBillPopupTimer);
+					fullBillPopupTimer = setTimeout(function() {
+						fullBillPopupSelected = null;
+						loadFullBillPopupRows(fullBillSearch.value, false);
+					}, 250);
+				});
+			}
+
+			if (shippingAddressSearch) {
+				shippingAddressSearch.addEventListener('input', function() {
+					clearTimeout(shippingAddressPopupTimer);
+					shippingAddressPopupTimer = setTimeout(function() {
+						shippingAddressPopupSelected = null;
+						loadShippingAddressPopupRows(shippingAddressSearch.value, false);
+					}, 250);
+				});
+			}
+
+
+			if (fullBillCheckbox) {
+				fullBillCheckbox.addEventListener('change', function() {
+					fullBillPopupPreviousChecked = !this.checked;
+					updateToggleStyle(this);
+					if (this.checked) {
+						openFullBillPopup();
+					}
+				});
+			}
+
+			var haveOrderCheckbox = document.getElementById('have_order');
+			var deliveryContractInput = document.getElementById('delivery_contract');
+			if (haveOrderCheckbox && deliveryContractInput) {
+				haveOrderCheckbox.addEventListener('change', updateDeliveryContractRequirement);
+				deliveryContractInput.addEventListener('input', function() {
+					if (deliveryContractInput.value !== '') {
+						deliveryContractInput.setCustomValidity('');
+					}
+				});
+				updateDeliveryContractRequirement();
+			}
+
+			['que_ckk', 'have_order', 'plan_ckk', 'repeat_cus', 'full_bill'].forEach(function(id) {
+				var cb = document.getElementById(id);
+				if (cb) {
+					updateToggleStyle(cb);
+				}
+			});
+
+			[{
+					modal: customerModal,
+					onClose: closeCustomerPopup
+				},
+				{
+					modal: fullBillModal,
+					onClose: function() {
+						closeFullBillPopup(false);
+					}
+				},
+				{
+					modal: shippingAddressModal,
+					onClose: closeShippingAddressPopup
+				}
+			].forEach(function(entry) {
+				if (!entry.modal) return;
+				entry.modal.addEventListener('click', function(event) {
+					if (event.target === entry.modal) {
+						entry.onClose();
+					}
+				});
+			});
+		});
+
+		function switchSoTab(evt, tabId) {
+			evt.preventDefault();
+			var i, tabcontent, tablinks;
+
+			tabcontent = document.getElementsByClassName("so-tab-content");
+			for (i = 0; i < tabcontent.length; i++) {
+				tabcontent[i].classList.remove("active");
+			}
+
+			tablinks = document.getElementsByClassName("so-tab-btn");
+			for (i = 0; i < tablinks.length; i++) {
+				tablinks[i].classList.remove("active");
+			}
+
+			document.getElementById(tabId).classList.add("active");
+			evt.currentTarget.classList.add("active");
+		}
+
+		function toggleClearSection() {}
+
+		function updateToggleStyle(checkbox) {
+			var label = document.getElementById('lbl-' + checkbox.id);
+			if (!label) return;
+
+			if (checkbox.checked) {
+				label.classList.add('active');
+			} else {
+				label.classList.remove('active');
+			}
+		}
+
+		var originalOpenCity1 = openCity1;
+		openCity1 = function(cityName, elem) {
+			if (typeof originalOpenCity1 === 'function') {
+				var i;
+				var x = document.getElementsByClassName("city1");
+				for (i = 0; i < x.length; i++) {
+					x[i].style.display = "none";
+				}
+				var target = document.getElementById(cityName);
+				if (target) target.style.display = "block";
+			}
+
+			var buttons = document.querySelectorAll('.bottom-tab-btn');
+			buttons.forEach(function(btn) {
+				btn.classList.remove('active');
+			});
+			if (elem) {
+				elem.classList.add('active');
+			} else {
+				var targetBtn = document.querySelector('.bottom-tab-btn[onclick*="' + cityName + '"]');
+				if (targetBtn) targetBtn.classList.add('active');
+			}
+		};
+	</script>
+
+
+	<div id="cr_bar"> <?php include "foot.php"; ?></div>
+</body>
+
+
+
+<script type="text/javascript">
+	function make_autocom(autoObj, showObj) {
+		var mkAutoObj = autoObj;
+		var mkSerValObj = showObj;
+		new Autocomplete(mkAutoObj, function() {
+			this.setValue = function(id) {
+				document.getElementById(mkSerValObj).value = id;
+			}
+			if (this.isModified)
+				this.setValue("");
+			if (this.value.length < 1 && this.isNotClick)
+				return;
+			return "data_bill_name.php?bill_search=" + encodeURIComponent(this.value);
+		});
+	}
+
+	// การใช้งาน
+	// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+</script>
+
+
+<script type="text/javascript">
+	function make_autocom(autoObj, showObj) {
+		var mkAutoObj = autoObj;
+		var mkSerValObj = showObj;
+		new Autocomplete(mkAutoObj, function() {
+			this.setValue = function(id) {
+				document.getElementById(mkSerValObj).value = id;
+			}
+			if (this.isModified)
+				this.setValue("");
+			if (this.value.length < 1 && this.isNotClick)
+				return;
+			return "data_sale1.php?employee_name_search=" + encodeURIComponent(this.value);
+		});
+	}
+
+	// การใช้งาน
+	// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+	make_autocom("employee_name", "h_employee_name");
+</script>
+
+
+<script>
+	/*
+	$('#more').click(function() {
+				if ($(this).is(":checke
+						if (search) {
+							search.addEventListener('input', function() {
+								clearTimeout(customerPopupTimer);
+								customerPopupTimer = setTimeout(function() {
+									customerPopupSelected = null;
+									loadCustomerPopupRows(search.value, false);
+								}, 250);
+							});
+						}
+
+						if (fullBillCheckbox) {
+							fullBillCheckbox.addEventListener('change', function() {
+									fullBillPopupPreviousChecked = !this.checked;
+									updateToggleStyle(this);
+									if (this.checked) {
+										openFullBillPopup();
+									}
+									tring(v || "").replace(/,/g, '')) || 0;
+							}
+
+							function calcTotal() {
+								let total = 0;
+								for (let i = 1; i <= 20; i++) {
+									const el = document.getElementById('sum_amount' + i);
+									if (el) total += num(el.value);
+								}
+								document.getElementById('sum_amount_total').value = total.toFixed(2);
+								return total;
+							}
+
+							function checkOverLimit(changedId) {
+								setTimeout(() => {
+									const total = calcTotal();
+									const limit = num(document.getElementById('sum_ca')?.value);
+
+									if (limit > 0 && total > limit) {
+
+										// โชว์ Popup แทน alert
+										showOverLimitPopup(total, limit);
+
+										// (เลือกได้) จะย้อนค่าเดิมหรือไม่ก็ได้
+										const el = document.getElementById(changedId);
+										if (el && lastOkValues[changedId] !== undefined) {
+											el.value = lastOkValues[changedId];
+										}
+										calcTotal();
+										if (el) {
+											el.focus();
+											el.select?.();
+										}
+
+									} else {
+										const el = document.getElementById(changedId);
+										if (el) lastOkValues[changedId] = el.value;
+									}
+								}, 30);
+							}
+
+
+							function bindRow(i) {
+								const ids = ['sale_count', 'product_price', 'discount_unit'].map(x => x + i);
+								ids.forEach(id => {
+									const el = document.getElementById(id);
+									if (!el) return;
+
+									// เก็บค่าเริ่มต้นไว้ก่อน
+									lastOkValues[id] = el.value;
+
+									el.addEventListener('focus', () => lastOkValues[id] = el.value);
+									el.addEventListener('input', () => checkOverLimit(id));
+									el.addEventListener('change', () => checkOverLimit(id));
+								});
+							}
+
+							document.addEventListener('DOMContentLoaded', () => {
+								for (let i = 1; i <= 20; i++) bindRow(i);
+								calcTotal();
+							});
+*/
+</script>
+
+<script>
+	let modalLock = false;
+
+	function fmt2(n) {
+		return (Number(n) || 0).toLocaleString('th-TH', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+	}
+
+
+	function showOverLimitPopup(total, limit) {
+		if (modalLock) return;
+		modalLock = true;
+
+		document.getElementById('ol_total').textContent = fmt2(total);
+		document.getElementById('ol_limit').textContent = fmt2(limit);
+
+		document.getElementById('overLimitModal').style.display = 'block';
+	}
+
+	function goMainSuphos() {
+		window.location.href = 'main_suphos_so.php';
+	}
+</script>
+
+<style>
+	/*
+	.customer-popup-modal {
+		display: none;
+		position: fixed;
+		z-index: 99998;
+		inset: 0;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, .45);
+		padding: 24px;
+		box-sizing: border-box;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.customer-popup-box {
+		width: min(1096px, 96vw);
+		height: min(1226px, 92vh);
+		background: #fff;
+		border-radius: 10px;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
+	}
+
+	.fullbill-popup-box {
+		.fullbill-popup-box {
+			width .customer-popup-close {
+				position: absolute;
+				top: 4px;
+				right: 18px;
+				width: 28px;
+				height: 28px;
+				border: 0;
+				background: transparent;
+				color: #3B3B3B;
+				font-size: 52px;
+				line-height: 1;
+				cursor: pointer;
+				z-index: 1;
+			}
+
+			.customer-popup-header {
+				padding: 24px 32px 10px;
+				border-bottom: 1px solid #EEE7F4;
+			}
+
+			.customer-popup-header h2 {
+				margin: 0;
+				color: #3B3B3B;
+				font-size: 20px;
+				font-weight: 500;
+				line-height: 1.35;
+			}
+
+			.customer-popup-toolbar {
+				display: flex;
+				align-items: flex-end;
+				gap: 20px;
+				padding: 14px 32px 18px;
+			}
+
+			.customer-popup-search-wrap {
+				flex: 1;
+				max-width: 562px;
+			}
+
+			.customer-popup-search-wrap label {
+				display: block;
+				margin-bottom: 4px;
+				color: #612989;
+				font-size: 14px;
+				font-weight: 400;
+			}
+
+			.customer-popup-search {
+				height: 42px;
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				background: #F5F6F8;
+				border-radius: 10px;
+				padding: 0 14px;
+				box-sizing: border-box;
+			}
+
+			.customer-popup-search i {
+				color: #2F3337;
+				font-size: 16px;
+			}
+
+			.customer-popup-search input {
+				width: 100%;
+				border: 0;
+				outline: none;
+				background: transparent;
+				color: #3B3B3B;
+				font-size: 16px;
+				font-family: 'Prompt', sans-serif;
+			}
+
+			.customer-popup-add {
+				height: 42px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 10px;
+				border: 0;
+				border-radius: 25px;
+				background: #fff;
+				color: #612989;
+				font-family: 'Prompt', sans-serif;
+				font-size: 14px;
+				font-weight: 500;
+				padding: 0 24px;
+				cursor: pointer;
+				box-shadow: 0 0 4px rgba(0, 0, 0, .25);
+				white-space: nowrap;
+			}
+
+			.customer-popup-table-wrap {
+				flex: 1;
+				overflow: auto;
+				border-top: 1px solid #612989;
+				border-bottom: 1px solid #F0EDF2;
+			}
+
+			.customer-popup-table {
+				width: 100%;
+				border-collapse: collapse;
+				table-layout: fixed;
+				color: #3B3B3B;
+				font-family: 'Prompt', sans-serif;
+			}
+
+			.customer-popup-table th {
+				height: 40px;
+				padding: 0 36px;
+				text-align: left;
+				color: #612989;
+				font-size: 16px;
+				font-weight: 500;
+				border-bottom: 1px solid #612989;
+				white-space: nowrap;
+			}
+
+			.customer-popup-table th:nth-child(1) {
+				width: 20%;
+			}
+
+			.customer-popup-table th:nth-child(2) {
+				width: 16%;
+			}
+
+			.customer-popup-table th:nth-child(3) {
+				width: 46%;
+			}
+
+			.customer-popup-table th:nth-child(4) {
+				width: 18%;
+			}
+
+			.customer-popup-table td {
+				height: 63px;
+				padding: 0 36px;
+				font-size: 16px;
+				font-weight: 300;
+				border-bottom: 1px solid #EBEBEB;
+				vertical-align: middle;
+			}
+
+			.customer-popup-table tbody tr {
+				cursor: pointer;
+			}
+
+			.customer-popup-table tbody tr:hover,
+			.customer-popup-table tbody tr.selected {
+				background: #F1E1FF;
+			}
+
+			.customer-popup-name {
+				border: 0;
+				background: transparent;
+				color: #612989;
+				font-family: 'Prompt', sans-serif;
+				font-size: 16px;
+				font-weight: 300;
+				text-decoration: underline;
+				cursor: pointer;
+				padding: 0;
+				text-align: left;
+			}
+
+			.customer-popup-empty {
+				text-align: center;
+				color: #696969;
+				cursor: default;
+			}
+
+			.customer-popup-pagination {
+				display: flex;
+				justify-content: center;
+				padding: 4px 32px 0;
+			}
+
+			.customer-popup-loadmore {
+				min-width: 152px;
+				height: 40px;
+				border: 1px solid #D9C8EA;
+				border-radius: 20px;
+				background: #FFFFFF;
+				color: #612989;
+				font-family: 'Prompt', sans-serif;
+				font-size: 14px;
+				font-weight: 500;
+				cursor: pointer;
+				box-shadow: 0 0 4px rgba(0, 0, 0, .10);
+				transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+			}
+
+			.customer-popup-loadmore:hover:not(:disabled) {
+				background: #612989;
+				color: #FFFFFF;
+				border-color: #612989;
+				box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2);
+			}
+
+			.customer-popup-loadmore:disabled {
+				opacity: .7;
+				cursor: wait;
+			}
+
+			.customer-popup-actions {
+				display: flex;
+				justify-content: flex-end;
+				gap: 24px;
+				padding: 22px 32px;
+			}
+
+			.customer-popup-actions button {
+				width: 152px;
+				height: 42px;
+				border-radius: 21px;
+				font-family: 'Prompt', sans-serif;
+				font-size: 14px;
+				font-weight: 500;
+				cursor: pointer;
+				box-shadow: 0 0 4px rgba(0, 0, 0, .25);
+				transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+			}
+
+			.customer-popup-confirm {
+				border: 0;
+				background: #612989;
+				color: #fff;
+			}
+
+			.customer-popup-confirm:hover {
+				background: #54237a;
+				box-shadow: 0 4px 12px rgba(97, 41, 137, 0.3);
+			}
+
+			.customer-popup-cancel {
+				border: 0;
+				background: #fff;
+				color: #3B3B3B;
+			}
+
+			.customer-popup-cancel:hover {
+				background: #f6effd;
+				color: #612989;
+			}
+
+			@media (max-width: 768px) {
+				.customer-popup-modal {
+					padding: 12px;
+				}
+
+				.customer-popup-box {
+					width: 100%;
+					height: 94vh;
+				}
+
+				.customer-popup-toolbar {
+					align-items: stretch;
+					flex-direction: column;
+					gap: 12px;
+					padding: 14px 18px 18px;
+				}
+
+				.customer-popup-header {
+					padding: 22px 18px 10px;
+				}
+
+				.customer-popup-search-wrap {
+					max-width: none;
+				}
+
+				.customer-popup-table {
+					min-width: 780px;
+				}
+
+				.customer-popup-table th,
+				.customer-popup-table td {
+					padding: 0 18px;
+				}
+
+				.customer-popup-actions {
+					gap: 12px;
+					padding: 16px 18px;
+				}
+
+				.customer-popup-actions button {
+					flex: 1;
+					width: auto;
+					ay: none;
+					position: fixed;
+					z-index: 99999;
+					left: 0;
+					top: 0;
+					width: 100%;
+					height: 100%;
+					background: rgba(0, 0, 0, .45);
+				}
+
+				/* Modal box */
+	#overLimitModal .box {
+		width: min(520px, 92vw);
+		background: #fff;
+		border-radius: 14px;
+		margin: 7vh auto;
+		padding: 26px 22px 22px;
+		position: relative;
+		text-align: center;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+		font-family: Arial, sans-serif;
+	}
+
+	#overLimitModal .closeX {
+		position: absolute;
+		right: 14px;
+		top: 10px;
+		font-size: 28px;
+		cursor: pointer;
+		color: #333;
+		line-height: 1;
+	}
+
+	#overLimitModal .icon {
+		width: 86px;
+		height: 86px;
+		margin: 6px auto 10px;
+	}
+
+	#overLimitModal .title {
+		font-size: 28px;
+		margin: 10px 0 18px;
+	}
+
+	#overLimitModal .row {
+		font-size: 18px;
+		margin: 10px 0;
+	}
+
+	#overLimitModal .btnBack {
+		margin-top: 18px;
+		padding: 12px 26px;
+		border: none;
+		border-radius: 22px;
+		background: #612989;
+		color: #fff;
+		font-size: 16px;
+		cursor: pointer;
+	}
+
+	#overLimitModal .btnBack:hover {
+		opacity: .92;
+	}
+
+	/* ถ้าอยากให้ทั้งหน้าเป็น Prompt */
+	body {
+		font-family: 'Prompt', sans-serif;
+	}
+
+	/* หรือกำหนดเฉพาะ popup */
+	.overlimitModal,
+	.overlimitModal * {
+		font-family: 'Prompt', sans-serif !important;
+	}
+
+	/* ปุ่มกลับ */
+	.btnBack {
+		font-family: 'Prompt', sans-serif !important;
+		font-weight: 500;
+	}
+
+	*/
+</style>
+
+<style>
+	.customer-popup-modal {
+		display: none;
+		position: fixed;
+		z-index: 99998;
+		inset: 0;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.45);
+		padding: 24px;
+		box-sizing: border-box;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.customer-popup-box {
+		width: min(1096px, 96vw);
+		height: min(1226px, 92vh);
+		background: #fff;
+		border-radius: 10px;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+	}
+
+	.customer-popup-close {
+		position: absolute;
+		top: 4px;
+		right: 18px;
+		width: 28px;
+		height: 28px;
+		border: 0;
+		background: transparent;
+		color: #3b3b3b;
+		font-size: 52px;
+		line-height: 1;
+		cursor: pointer;
+		z-index: 1;
+	}
+
+	.customer-popup-header {
+		padding: 24px 32px 10px;
+		border-bottom: 1px solid #eee7f4;
+	}
+
+	.customer-popup-header h2 {
+		margin: 0;
+		color: #3b3b3b;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: 1.35;
+		border-bottom: 1px solid #eee7f4;
+		padding-bottom: 14px;
+	}
+
+	.customer-popup-toolbar {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 20px;
+		flex-wrap: nowrap;
+		width: 100%;
+	}
+
+	.customer-popup-search-wrap {
+		flex: 1 1 auto;
+		max-width: none;
+		min-width: 0;
+	}
+
+	.customer-popup-search-wrap label {
+		display: block;
+		margin-bottom: 4px;
+		color: #612989;
+		font-size: 14px;
+		font-weight: 400;
+	}
+
+	.customer-popup-search {
+		height: 42px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		background: #f5f6f8;
+		border-radius: 10px;
+		padding: 0 14px;
+		box-sizing: border-box;
+	}
+
+	.customer-popup-search i {
+		color: #2f3337;
+		font-size: 16px;
+	}
+
+	.customer-popup-search input {
+		width: 100%;
+		border: 0;
+		outline: none;
+		background: transparent;
+		color: #3b3b3b;
+		font-size: 16px;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.customer-popup-add {
+		height: 42px;
+		display: inline-flex;
+		flex: 0 0 auto;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		border: 0;
+		border-radius: 25px;
+		background: #fff;
+		color: #612989;
+		font-family: 'Prompt', sans-serif;
+		font-size: 14px;
+		font-weight: 500;
+		padding: 0 24px;
+		cursor: pointer;
+		box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+		white-space: nowrap;
+	}
+
+	.customer-popup-table-wrap {
+		flex: 1;
+		overflow: auto;
+		border-top: 1px solid #612989;
+		border-bottom: 1px solid #f0edf2;
+	}
+
+	.customer-popup-table {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		color: #3b3b3b;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.customer-popup-table th {
+		height: 40px;
+		padding: 0 36px;
+		text-align: left;
+		color: #612989;
+		font-size: 16px;
+		font-weight: 500;
+		border-bottom: 1px solid #612989;
+		white-space: nowrap;
+	}
+
+	.customer-popup-table th:nth-child(1) {
+		width: 20%;
+	}
+
+	.customer-popup-table th:nth-child(2) {
+		width: 16%;
+	}
+
+	.customer-popup-table th:nth-child(3) {
+		width: 46%;
+	}
+
+	.customer-popup-table th:nth-child(4) {
+		width: 18%;
+	}
+
+	.fullbill-popup-table th:nth-child(1) {
+		width: 16%;
+	}
+
+	.fullbill-popup-table th:nth-child(2) {
+		width: 14%;
+	}
+
+	.fullbill-popup-table th:nth-child(3) {
+		width: 42%;
+	}
+
+	.fullbill-popup-table th:nth-child(4) {
+		width: 20%;
+	}
+
+	.fullbill-popup-table th:nth-child(5) {
+		width: 8%;
+	}
+
+	.shipping-popup-box {
+		width: min(1120px, 96vw);
+		height: min(980px, 92vh);
+	}
+
+	.shipping-popup-toolbar {
+		align-items: end;
+	}
+
+	.shipping-popup-table th:nth-child(1) {
+		width: 4.5%;
+	}
+
+	.shipping-popup-table th:nth-child(2) {
+		width: 10.5%;
+	}
+
+	.shipping-popup-table th:nth-child(3) {
+		width: 14%;
+	}
+
+	.shipping-popup-table th:nth-child(4) {
+		width: 13%;
+	}
+
+	.shipping-popup-table th:nth-child(5) {
+		width: 12%;
+	}
+
+	.shipping-popup-table th:nth-child(6) {
+		width: 39%;
+	}
+
+	.shipping-popup-table th:nth-child(7) {
+		width: 7%;
+	}
+
+	.shipping-popup-checkall {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.shipping-popup-select-cell {
+		padding-inline-end: 0;
+		text-align: center;
+	}
+
+	.shipping-popup-checkbox-input,
+	.shipping-popup-checkall input {
+		width: 18px;
+		height: 18px;
+		accent-color: #6f33a3;
+		cursor: pointer;
+		margin: 0;
+	}
+
+	.shipping-popup-table tbody tr.selected {
+		background: #f1e1ff;
+	}
+
+	.shipping-popup-table tbody tr[data-index="-1"] td {
+		font-weight: 500;
+	}
+
+	.customer-popup-table td {
+		height: 63px;
+		padding: 0 36px;
+		font-size: 14px;
+		font-weight: 300;
+		border-bottom: 1px solid #ebebeb;
+		vertical-align: middle;
+	}
+
+	.customer-popup-table tbody tr {
+		cursor: pointer;
+	}
+
+	.customer-popup-table tbody tr:hover,
+	.customer-popup-table tbody tr.selected {
+		background: #f1e1ff;
+	}
+
+	.customer-popup-name {
+		border: 0;
+		background: transparent;
+		color: #3B3B3B;
+		font-family: 'Prompt', sans-serif;
+		font-size: 14px;
+		font-weight: 300;
+		text-decoration: underline;
+		cursor: pointer;
+		padding: 0;
+		text-align: left;
+	}
+
+	.customer-popup-empty {
+		text-align: center;
+		color: #696969;
+		cursor: default;
+	}
+
+	.customer-popup-pagination {
+		display: flex;
+		justify-content: center;
+		padding: 4px 32px 0;
+	}
+
+	.customer-popup-loadmore {
+		min-width: 152px;
+		height: 40px;
+		border: 1px solid #d9c8ea;
+		border-radius: 20px;
+		background: #fff;
+		color: #612989;
+		font-family: 'Prompt', sans-serif;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+		transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+	}
+
+	.customer-popup-loadmore:hover:not(:disabled) {
+		background: #612989;
+		color: #fff;
+		border-color: #612989;
+		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2);
+	}
+
+	.customer-popup-loadmore:disabled {
+		opacity: 0.7;
+		cursor: wait;
+	}
+
+	.customer-popup-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 24px;
+		padding: 22px 32px;
+	}
+
+	.customer-popup-actions button {
+		width: 152px;
+		height: 42px;
+		border-radius: 21px;
+		font-family: 'Prompt', sans-serif;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+		transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+	}
+
+	.customer-popup-confirm {
+		border: 0;
+		background: #612989;
+		color: #fff;
+	}
+
+	.customer-popup-confirm:hover {
+		background: #54237a;
+		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.3);
+	}
+
+	.customer-popup-cancel {
+		border: 0;
+		background: #fff;
+		color: #3b3b3b;
+	}
+
+	.customer-popup-cancel:hover {
+		background: #f6effd;
+		color: #612989;
+	}
+
+	.fullbill-popup-box {
+		width: min(1096px, 96vw);
+		height: min(1226px, 92vh);
+		max-height: none;
+	}
+
+	.fullbill-popup-body {
+		padding: 24px 32px 8px;
+		overflow: auto;
+	}
+
+	.fullbill-popup-note {
+		margin-bottom: 18px;
+		padding: 14px 16px;
+		border-radius: 12px;
+		background: #f7f3fb;
+		color: #612989;
+		font-size: 14px;
+		line-height: 1.6;
+	}
+
+	.fullbill-popup-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 16px;
+	}
+
+	.fullbill-popup-item {
+		padding: 16px 18px;
+		border: 1px solid #ece3f4;
+		border-radius: 14px;
+		background: #fff;
+	}
+
+	.fullbill-popup-item-wide {
+		grid-column: 1 / -1;
+	}
+
+	.fullbill-popup-item label {
+		display: block;
+		margin-bottom: 8px;
+		color: #7a6d86;
+		font-size: 13px;
+	}
+
+	.fullbill-popup-value {
+		color: #2f3337;
+		font-size: 16px;
+		line-height: 1.6;
+		word-break: break-word;
+	}
+
+	.fullbill-popup-value-multiline {
+		white-space: pre-wrap;
+	}
+
+	#overLimitModal {
+		display: none;
+		position: fixed;
+		z-index: 99999;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.45);
+	}
+
+	#overLimitModal .box {
+		width: min(520px, 92vw);
+		background: #fff;
+		border-radius: 14px;
+		margin: 7vh auto;
+		padding: 26px 22px 22px;
+		position: relative;
+		text-align: center;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+		font-family: 'Prompt', sans-serif;
+	}
+
+	#overLimitModal .closeX {
+		position: absolute;
+		right: 14px;
+		top: 10px;
+		font-size: 28px;
+		cursor: pointer;
+		color: #333;
+		line-height: 1;
+	}
+
+	#overLimitModal .icon {
+		width: 86px;
+		height: 86px;
+		margin: 6px auto 10px;
+	}
+
+	#overLimitModal .title {
+		font-size: 28px;
+		margin: 10px 0 18px;
+	}
+
+	#overLimitModal .row {
+		font-size: 18px;
+		margin: 10px 0;
+	}
+
+	#overLimitModal .btnBack {
+		margin-top: 18px;
+		padding: 12px 26px;
+		border: none;
+		border-radius: 22px;
+		background: #612989;
+		color: #fff;
+		font-size: 16px;
+		cursor: pointer;
+		font-family: 'Prompt', sans-serif;
+		font-weight: 500;
+	}
+
+	#overLimitModal .btnBack:hover {
+		opacity: 0.92;
+	}
+
+	@media (max-width: 768px) {
+		.customer-popup-modal {
+			padding: 12px;
+		}
+
+		.customer-popup-box,
+		.fullbill-popup-box,
+		.shipping-popup-box {
+			width: 100%;
+			height: auto;
+			max-height: 94vh;
+		}
+
+		.customer-popup-header {
+			padding: 22px 18px 10px;
+		}
+
+		.customer-popup-table {
+			min-width: 780px;
+		}
+
+		.shipping-popup-table {
+			min-width: 980px;
+		}
+
+		.customer-popup-table th,
+		.customer-popup-table td {
+			padding: 0 18px;
+		}
+
+		.customer-popup-actions {
+			gap: 12px;
+			padding: 16px 18px;
+		}
+
+		.customer-popup-actions button {
+			flex: 1;
+			width: auto;
+		}
+
+		.fullbill-popup-body {
+			padding: 20px 18px 8px;
+		}
+
+		.fullbill-popup-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	body,
+	#overLimitModal,
+	#overLimitModal * {
+		font-family: 'Prompt', sans-serif;
+	}
+</style>
+
+<div id="overLimitModal">
+	<div class="box">
+		<div class="closeX" onclick="goMainSuphos()">×</div>
+
+		<!-- icon (SVG) -->
+		<svg class="icon" viewBox="0 0 64 64" aria-hidden="true">
+			<path d="M32 6 L60 58 H4 Z" fill="#ff3b30" />
+			<rect x="29" y="22" width="6" height="18" rx="3" fill="#fff" />
+			<circle cx="32" cy="46" r="3.2" fill="#fff" />
+		</svg>
+
+		<div class="title">กรุณาติดต่อบัญชี</div>
+		<div class="row">เพื่อขอเพิ่มวงเงิน เนื่องจากยอดรวมสินค้าเกินวงเงินคงเหลือ</div>
+
+
+		<div class="row">ยอดรวมสินค้า : <b id="ol_total">0</b></div>
+		<div class="row">วงเงินคงเหลือ : <b id="ol_limit">0</b></div>
+
+		<button type="button" class="btnBack" onclick="goMainSuphos()">กลับสู่หน้าหลัก</button>
+	</div>
+</div>

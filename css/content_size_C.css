@@ -1,0 +1,31 @@
+
+.container_main{
+    width: 90%;
+    margin: 5.5% 4% 5% 4%;
+    background-color: #ffffff;
+    min-height: 600px;
+    border-radius: 25px;
+   
+}
+.content_main{
+    width: 90%;
+    left: 4%;
+    right: 5%;
+    min-height: 450px;
+    border-radius: 10px;
+}
+.legend_header_content1{
+    font-size: 24px;
+}
+.item_header_content1{
+    width: 80%;
+    margin: 10% 10%;
+}
+input{
+    padding: 5px;
+    border-radius: 10px;
+}
+select{
+    padding: 5px;
+    border-radius: 10px;
+}

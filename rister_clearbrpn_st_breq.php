@@ -1,0 +1,361 @@
+<?php include ("head.php"); ?>
+
+
+
+<style type="text/css">
+
+.button {
+    background-color: #339900;
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+}
+
+.button1 {border-radius: 2px;}
+.button2 {border-radius: 4px;}
+.button3 {border-radius: 8px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+
+</style>
+<style type="text/css">
+.style15 {
+	font-size: 18px; color: #000000;
+}
+.style30 {font-size: 12; }
+.style32 {font-size: 11px}
+.style33 {font-size: 12px; }
+.style34 {color: #FF0000}
+.style35 {font-size: 12px; color: #f2f2f2; }
+.style37 {color: #FF0000; font-size: 14px; }
+.style38 {color: #f2f2f2}
+.style39 {font-size: 14px}
+.style40 {font-size: 16px; color: #FF0000; }
+</style>
+
+<body>
+<?php
+
+$sql1 = "select * from hos__receive order by id_auto desc limit 1";
+$query1 = mysqli_query($conn,$sql1);
+$fetch1 = mysqli_fetch_array($query1,MYSQLI_ASSOC); 
+
+
+
+$ref_id_br =$_GET["ref_id_br"];
+
+$strSQL = "SELECT *   FROM in__br where ref_id_br ='".$ref_id_br."' ";
+$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
+$objResult = mysqli_fetch_assoc($objQuery);
+
+
+	 ?>
+
+
+	<!--action="register_office1.php"-->
+	<form action='rister_clearbrpn_st1_breg.php' method="post" name="frmMain" enctype="multipart/form-data"  onSubmit="JavaScript:return fncSubmit();">
+		
+		<?php /*<script language="javascript"> onSubmit="JavaScript:return fncSubmit();"
+function fncSubmit()   //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
+{
+	
+	if(document.frmMain.receive_ckk.value == "2" and document.frmMain.receive_name.value == ""){
+			
+		alert('กรุณาใส่ชื่อบุคคลที่ฝาก');
+		document.frmMain.receive_name.focus();
+		return false;
+		}
+		
+	document.frmMain.submit();
+}
+
+</script>*/ ?>
+		
+		<div class="w3-white w3-container w3-padding-large">
+			<div class="w3-panel w3-light-gray"><h4>Register Sale Order</h4></div>
+
+<div class="w3-bar">
+		
+	<?php if ($objResult['company']=='1'){
+		?>
+<input type="radio" checked='checked' name="type_company" value = "3">&nbsp; AWL
+<input type="radio" name="type_company"  value="4" >&nbsp;NBM
+<?php }else{ ?>
+
+<input type="radio"  name="type_company" value = "3">&nbsp; AWL
+<input type="radio" name="type_company" checked='checked' value="4" >&nbsp;NBM
+
+			<?php } ?>
+
+		<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php echo $fetch1['ref_id']+1; ?></span>
+		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $fetch1['ref_id']+1; ?>">
+	<input type="hidden" name="ref_id_br" id='ref_id_br' class="w3-input" value="<?php echo $objResult['ref_id_br']; ?>">
+	</div>
+
+</p>
+<?php
+date_default_timezone_set("Asia/Bangkok");
+
+$month = date('m');
+$day = date('d');
+$year = date('Y');
+
+$today = $year . '-' . $month . '-' . $day;
+
+
+?>
+
+<main style="display:flex; justify-content: space-between;">
+	<section style="width:50%;">
+
+	<?php if ($objResult['receive_ckk']=='1'){?>
+	<input type="radio" checked='checked' name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+	<input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+	<?php }else if($objResult['receive_ckk']=='2'){ ?>
+	<input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+	<input type="radio" name="receive_ckk" checked='checked' value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+	<?php }else{ ?>
+	<input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+	<input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+	<?php } ?> : <input type="text" name="receive_name" class="button4" style="width:15%;" > 
+	<br>
+	วันที่ : <input type="date" name = "date_receive" id="date_receive"  class = "button4">
+	<br>
+	ชื่อลูกค้า  : <input type="text" name="customer_name" class="button4" value = '<?php echo $objResult['customer'];?>' style="width:30%;" required>
+	<br>
+	เขตการขาย : <input type="text" name="sale_code" class="button4" style="width:30%;" value = '<?php echo $objResult['sale_code'];?>' required>
+	<br>
+	หมายเหตุ :</p> <textarea rows="2" name="remark_st" class="button4" style="width:30%"  ></textarea>
+	</section>
+	<section style="width:50%;">
+
+	ช่วงวันที่ : <input type="text" name="receive_between" value = '<?php echo $objResult['receive_between'];?>' class="button4" style="width:15%;">
+	ช่วงเวลา : <input type="text" name="time_between" value = '<?php echo $objResult['time_between'];?>' class="button4" style="width:15%;">
+	<br>
+	เลขที่ใบยืม : <input type="text" name="iv_no" value = '<?php echo $objResult['iv_no'];?>' class="button4" style="width:30%;">
+	<br>
+	เลขที่ใบสั่งซื้อ : <input type="text" name="po_no" value = '<?php echo $objResult['po_no'];?>' class="button4" style="width:30%;">
+	<br>
+	ที่อยู่ : <textarea rows="2" name="customer_address" class="button4" style="width:30%"  ><?php echo $objResult["address"]; ?></textarea>
+	<br>
+	ชื่อผู้ยืม : <input type="text" name="sale_name" value = '<?php echo $objResult['add_by']; ?>' class="button4" style="width:30%;">
+	</section>
+</main>
+
+<br>
+<div class="w3-bar w3-light-grey w3-border"><a class="w3-bar-item w3-button" onclick="openCity1('pd')"><font color="#404040"><b>รายการสินค้า</b></font></a></div>
+<div id="pd" class="w3-container city1">
+<?php //include ('product_rister_st.php') ?>
+
+<table width="100%" border="0" class="w3-table">
+	<font color='red'>**กรุณาเลือกสินค้าที่ต้องการเคลียร์เท่านั้น !!!</font>
+<thead>
+	<th>เลือกสินค้าคืน</th>
+    <th>รหัสสินค้า</th>
+    <th>ชื่อสินค้า</th>
+    <th>หน่วย</th>
+    <th>จำนวนค้างคืน</th>
+    <th>ใส่ยอดคืน</th>
+    <th>จำนวนคืนแล้ว</th>
+    <th>หมายเลขเครื่อง</th>
+    <th>หมายเหตุ</th>
+
+</thead>
+<tbody>
+<?php
+
+
+
+$strSQL1 = "SELECT * FROM  (in__subbr LEFT JOIN tb_product ON in__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$objResult["ref_id_br"]."' ";
+$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+$Num_Rows1 = mysqli_num_rows($objQuery1);
+
+echo $Num_Rows1;
+
+while($objResult1 = mysqli_fetch_array($objQuery1)) {
+
+$strSQL_count = "SELECT *,(count - return_product)as return_product_s FROM in__subbr where ref_idd_br = '".$objResult["ref_id_br"]."' and product_id = '".$objResult1['product_id']."' ";
+$objQuery_count = mysqli_query($conn,$strSQL_count);
+$objResult_count = mysqli_fetch_array($objQuery_count);
+
+if($objResult1["sn"] !=''){
+$sn_number =  $objResult1["sn"];
+$str_arr = explode("\n",$sn_number);
+$i = 1;
+foreach ($str_arr as $test =>$value){
+$product_sn = $str_arr[$test];
+$product_sn1 =  trim($product_sn);
+
+$strSQL2 = "SELECT sn FROM   hos__subso  WHERE clear_ivno = '".$objResult["iv_no"]."' and product_id = '".$objResult1['product_id']."' and sn = '".$product_sn1."' and status_so ='Approve'";
+$objQuery2 = mysqli_query($conn,$strSQL2) or die ("Error Query [".$strSQL2."]");
+$Num_Rows2 = mysqli_num_rows($objQuery2);
+
+$strSQL3 = "SELECT sn FROM  (hos__receive LEFT JOIN hos__subreceive ON hos__receive.ref_id=hos__subreceive.ref_idd) WHERE iv_no = '".$objResult["iv_no"]."' and product_id = '".$objResult1['product_id']."' and sn = '".$product_sn1."' ";
+
+$objQuery3 = mysqli_query($conn,$strSQL3) or die ("Error Query [".$strSQL3."]");
+$Num_Rows3 = mysqli_num_rows($objQuery3);
+
+$sql2 = "SELECT sn  FROM   hos__subsmp   where  product_id = '".$objResult1["product_id"]."' and clear_br = '1' and br_no ='".$objResult["iv_no"]."' and sn ='".$product_sn1."'  and status_smp ='Approve'";
+$qry2 = mysqli_query($conn,$sql2) or die(mysqli_error());
+$Num_Rows19 = mysqli_num_rows($qry2);
+	
+$sql5 = "SELECT sn  FROM   hos__subspr   where  product_id = '".$objResult1["product_id"]."' and clear_br = '1' and clear_ivno ='".$objResult["iv_no"]."' and sn ='".$product_sn1."'  and status_spr ='Approve'";
+$qry5 = mysqli_query($conn,$sql5) or die(mysqli_error());
+$Num_Rows20 = mysqli_num_rows($qry5);
+
+
+if($Num_Rows2 > 0){
+
+}else if ($Num_Rows3 > 0){
+
+}else if ($Num_Rows19 > 0){
+
+}else if ($Num_Rows20 > 0){
+
+}else{
+
+if($product_sn1 !=''){
+
+$q = $objResult1['product_id'];	
+$o = "$q$i";		
+?>
+
+<tr>
+<td style="width:5%;"><input type='checkbox' name = "clear_br[<?php echo $o;?>]" value="1" id = "clear_br[<?php echo $o;?>]" ></td>
+<td style="width:10%;">
+<input type="text"  class="w3-input w3-center" size="1%" value="<?php echo $objResult1['access_code']; ?>">
+<input type="hidden" name="id[<?php echo $o;?>]" class="w3-input w3-center" size="1%" value="<?php echo $o; ?>">
+<input type="hidden" name="product_id[<?php echo $o;?>]" class="w3-input w3-center" size="1%" value="<?php echo $objResult1['product_id']; ?>">
+<input type='hidden' name ="product_code[<?php echo $o;?>]" value="<?php echo $objResult1["access_code"];?>" id ="product_code[<?php echo $o;?>]"  size="7"  class="button4"><?php echo $objResult1['product_id']; ?>
+</td>
+<td  style="width:12%;"><textarea name = "product_name[<?php echo $o;?>]"   id = "product_name[<?php echo $o;?>]"  class="w3-input" readonly><?php echo $objResult1["sol_name"];  echo $objResult1["sale_remark"];?></textarea></td>	
+<td style="width:5%;"><input type='text' name = "unit_name[<?php echo $o;?>]" value="<?php echo $objResult1["unit_name"];?>" id = "unit_name[<?php echo $o;?>]"  class="w3-input"    readonly/></td>
+<td style="width:5%;"><input type='text' name = "sale_count[<?php echo $o;?>]" value="<?php echo "1";?>" id = "sale_count[<?php echo $o;?>]"  class="w3-input" style="color:black;text-align:center"    /></td>
+<td style="width:5%;"><input type='text' value="<?php echo "1";?>" class="w3-input" style="color:black;text-align:center"    /></td>
+<td style="width:10%;"><textarea name = "sn[<?php echo $o;?>]"  id = "sn[<?php echo $o;?>]"  class="w3-input" ><?php echo $product_sn1;?></textarea></td>
+<td style="width:10%;"><input type='text' name = "sale_remarkk[<?php echo $o;?>]"  id = "sale_remarkk[<?php echo $o;?>]" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input" /></td>
+</tr>
+
+<?php
+
+}
+}
+	
+$i++;	
+}
+}
+
+else if($objResult1["sn"]=='' ){
+
+	$sql3 = "SELECT sum(sale_count) as count3   FROM   hos__subspr   where  product_id = '".$objResult1['product_id']."' and clear_br = '1' and clear_ivno ='".$objResult["iv_no"]."'  and status_spr ='Approve'";
+	
+$qry3 = mysqli_query($conn,$sql3) or die(mysqli_error());
+$rs3 = mysqli_fetch_array($qry3);
+		
+$sql13 = "SELECT sum(count) as count3   FROM   hos__subso   where  product_id = '".$objResult1['product_id']."' and clear_br = '1' and clear_ivno ='".$objResult["iv_no"]."'  and status_so ='Approve'";
+$qry13 = mysqli_query($conn,$sql13) or die(mysqli_error());
+$rs13 = mysqli_fetch_array($qry13);
+	
+$sql41 = "SELECT ref_id   FROM  hos__receive  where iv_no = '".$objResult["iv_no"]."' ";
+$qry41 = mysqli_query($conn,$sql41) or die(mysqli_error());
+$rs41 = mysqli_fetch_array($qry41);
+
+$sql4 = "SELECT sum(count) as count4   FROM  hos__subreceive  where ref_idd = '".$rs41['ref_id']."' and product_id = '".$objResult1['product_id']."'";
+$qry4 = mysqli_query($conn,$sql4) or die(mysqli_error());
+$rs4 = mysqli_fetch_array($qry4);
+
+$sql12 = "SELECT sum(sale_count) as count3   FROM   hos__subsmp   where  product_id = '".$objResult1['product_id']."' and clear_br = '1' and br_no ='".$objResult["iv_no"]."'  and status_smp ='Approve'";
+$qry12 = mysqli_query($conn,$sql12) or die(mysqli_error());
+$rs12 = mysqli_fetch_array($qry12);
+
+$count3 =  $rs3["count3"]; 
+$count13 =  $rs13["count3"]; 
+$count4 =  $rs4["count4"]; 
+$count5 =  $rs12["count3"];
+
+	
+$count2 = $objResult1["count"] - ($count3+$count4+$count5+$count13);
+		
+if($count2=='0' or $count2<'0'){
+
+}else{
+
+	?>
+<tr>
+<td style="width:5%;"><input type='checkbox' name = "clear_br[<?php echo $objResult1["id"];?>]" value="1" id = "clear_br[<?php echo $objResult1["id"];?>]" checked></td>
+
+<td style="width:10%;">
+<input type="hidden" name="id[<?php echo $objResult1["id"];?>]" class="w3-input w3-center" size="1%" value="<?php echo $objResult1["id"]; ?>">
+<input type="hidden" name="product_id[<?php echo $objResult1["id"];?>]" class="w3-input w3-center" size="1%" value="<?php echo $objResult1['product_id']; ?>">
+<input type="text"  class="w3-input w3-center" size="1%" value="<?php echo $objResult1['access_code']; ?>">
+<input type='hidden' name ="product_code[<?php echo $objResult1["id"];?>]" value="<?php echo $objResult1["access_code"];?>" id ="product_code[<?php echo $objResult1["id"];?>]"  size="7"  class="button4" >
+</td>
+
+<td  style="width:12%;"><textarea name = "product_name[<?php echo $objResult1["id"];?>]"   id = "product_name[<?php echo $objResult1["id"];?>]"  class="w3-input" readonly><?php echo $objResult1["sol_name"]; echo $objResult1["sale_remark"]; ?></textarea></td>	
+<td style="width:5%;"><input type='text' name = "unit_name[<?php echo $objResult1["id"];?>]" value="<?php echo $objResult1["unit_name"];?>" id = "unit_name[<?php echo $objResult1["id"];?>]"  class="w3-input"    readonly/></td>
+<td style="width:5%;"><?php echo $objResult_count['return_product_s'];?></td>
+<td style="width:5%;">
+
+	<input type='number' name = "sale_count[<?php echo $objResult1["id"];?>]"  id = "sale_count[<?php echo $objResult1["id"];?>]"  class="w3-input" style="color:black;text-align:center"  
+	<?php if($objResult_count['return_product_s'] < 1) { ?> placeholder="ครบแล้ว" readonly <?php } else { ?> placeholder="จำนวน" <?php } ?> />
+</td>
+<td style="width:5%;"><?php echo $objResult_count['return_product'];?>
+<input type='hidden' name = "return_product[<?php echo $objResult1["id"];?>]"  id = "return_product[<?php echo $objResult1["id"];?>]" value="<?php echo $objResult_count['return_product'];?>" class="w3-input" style="color:black;text-align:center"/></td>
+<td style="width:10%;"><textarea name = "sn[<?php echo $objResult1["id"];?>]"  id = "sn[<?php echo $objResult1["id"];?>]"  class="w3-input" ><?php echo $objResult1["sn"];?></textarea></td>
+<td style="width:10%;"><input type='text' name = "sale_remarkk[<?php echo $objResult1["id"];?>]"  id = "sale_remarkk[<?php echo $objResult1["id"];?>]" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input" /></td>
+</tr>
+<?php }
+}
+?>
+
+
+
+
+<?php
+	
+	
+
+}
+
+
+?>
+</tbody>
+</table>
+
+</div>
+
+
+
+<center>
+<input type="submit" name="submit" value="บันทึก" class="w3-button w3-teal" >
+</center>
+
+
+</form></div></div>
+<div id="cr_bar"> <?php include "foot.php"; ?></div>
+  
+  <!--/div-->
+
+  
+ 
+
+
+
+
+
+<script>
+$('#more').click(function() {
+  if($(this).is(":checked")){
+   $("#more-2").show();
+  }
+  else{
+   $("#more-2").hide();
+  }
+});
+</script>

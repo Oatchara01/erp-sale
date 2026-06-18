@@ -1,0 +1,84 @@
+<?php 
+include('inc/header.php');
+?>
+<title>phpzag.com : Demo Live Add Edit Delete datatables Records with Ajax, PHP and MySQL</title>
+<script src="js/jquery.dataTables.min.js"></script>
+<script src="js/dataTables.bootstrap.min.js"></script>		
+<link rel="stylesheet" href="css/dataTables.bootstrap.min.css" />
+<link rel="stylesheet" href="../css/w3.css" />
+<script src="js/ajax.js"></script>	
+<?php include('../dbconnect.php');?>
+<div class="w3-container">	
+	<h2>ข้อมูลสินค้า</h2>	
+		<div class="w3-bar w3-right">
+			<button type="button" name="add" id="addRecord" class="w3-button w3-pale-green w3-right">Add New Record</button>
+		</div>
+		<table id="recordListing" class="w3-table">
+			<thead>
+				<tr>
+					<th>#</th>
+					<th>รหัสสินค้า</th>					
+					<th>ชื่อสินค้า</th>					
+					<th>หน่วย</th>
+					<th>จำนวน</th>
+					<th>ราคา</th>					
+					<th>ส่วนลด</th>
+					<th>รวม</th>
+					<th>รับประกัน</th>	
+					<th>CAL</th>
+					<th>PM</th>
+					<th>Serials</th>
+					<th>หมายเหตุ</th>
+					<th>Admin</th>
+					<th></th>
+					<th></th>	
+				</tr>
+			</thead>
+		</table>
+	</div>
+	<div id="recordModal" class="modal fade">
+    	<div class="modal-dialog">
+    		<form method="post" id="recordForm">
+    			<div class="modal-content">
+    				<div class="modal-header">
+    					<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title"><i class="fa fa-plus"></i> Edit Record</h4>
+    				</div>
+    				<div class="modal-body">
+						<div class="form-group">
+							<label for="access_code" class="control-label">รหัสสินค้า</label>							
+							<input type="text" class="form-control" id="access_code" name="access_code" placeholder="รหัสสินค้า">							
+						</div>
+						<div class="form-group"
+							<label for="name" class="control-label">Name</label>
+							<input type="text" class="form-control" id="name" name="name" placeholder="Name" required>			
+						</div>
+						<div class="form-group">
+							<label for="age" class="control-label">Age</label>							
+							<input type="number" class="form-control" id="age" name="age" placeholder="Age">							
+						</div>	   	
+						<div class="form-group">
+							<label for="lastname" class="control-label">Skills</label>							
+							<input type="text" class="form-control"  id="skills" name="skills" placeholder="Skills" required>							
+						</div>	 
+						<div class="form-group">
+							<label for="address" class="control-label">Address</label>							
+							<textarea class="form-control" rows="5" id="address" name="address"></textarea>							
+						</div>
+						<div class="form-group">
+							<label for="lastname" class="control-label">Designation</label>							
+							<input type="text" class="form-control" id="designation" name="designation" placeholder="Designation">			
+						</div>						
+    				</div>
+    				<div class="modal-footer">
+    					<input type="hidden" name="id" id="id" />
+    					<input type="hidden" name="action" id="action" value="" />
+    					<input type="submit" name="save" id="save" class="btn btn-info" value="Save" />
+    					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    				</div>
+    			</div>
+    		</form>
+    	</div>
+    </div>
+</div>	
+<?php include('inc/footer.php');?>

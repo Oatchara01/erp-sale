@@ -1,0 +1,13 @@
+body{
+    margin: 0;
+	padding: 10;
+	font-size: 14px;
+	line-height: 1.5em;
+	background-color: #5c1b70;
+    background-image: url(css/bg-lines.jpg);
+	background-repeat: no-repeat;
+	background-size: 100% auto;
+	/*background-position: top;*/
+	background-position: right top;
+	background-attachment: fixed;
+}

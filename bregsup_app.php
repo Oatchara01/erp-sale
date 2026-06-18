@@ -1,0 +1,100 @@
+<?php
+include "dbconnect.php";
+include "head.php";
+
+$ref_id = $_GET['ref_id'];
+$customer_name = $_GET['customer_name'];
+$add_date = date('Y-m-d H:i:s');
+$name =  $_SESSION['name'];
+$surname =	$_SESSION['surname'];
+$add_by = $_GET['add_by'];
+$sup_name = "$name $surname";
+ 
+
+$save="Update  hos__breg set status_doc='Request',sup_name='".$sup_name."',sup_date='".$add_date."',send_dm='1'  where ref_id = '".$ref_id."' ";
+$qsave=mysqli_query($conn,$save);
+ 
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+date_default_timezone_set("Asia/Bangkok");
+
+$sToken = "I9fEDAgfYAuSbsHACVyUDUPbAJhVMB9LY554hBZiNWH"; //พี่โจ้
+$sMessage = "มีใบขอเบิกอะไหล่จากสินค้าขาย
+			เลขที่อ้างอิง : $ref_id 
+			ลูกค้า : $customer_name
+			เปิดโดย : $add_by
+			อนุมัติโดย : $name $surname
+			รบกวนทำการตรวจสอบข้อมูล และทำการอนุมัติ
+			ตามลิงค์ด้านล่างได้เลยคะ
+			https://sol.allwellcenter.com			
+";
+$chOne = curl_init();
+curl_setopt( $chOne, CURLOPT_URL, "https://notify-api.line.me/api/notify");
+curl_setopt( $chOne, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt( $chOne, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt( $chOne, CURLOPT_POST, 1);
+curl_setopt( $chOne, CURLOPT_POSTFIELDS, "message=".$sMessage);
+$headers = array( 'Content-type: application/x-www-form-urlencoded', 'Authorization: Bearer '.$sToken.'', );
+curl_setopt($chOne, CURLOPT_HTTPHEADER, $headers);
+curl_setopt( $chOne, CURLOPT_RETURNTRANSFER, 1);
+$result = curl_exec( $chOne );
+if(curl_error($chOne))
+{
+echo 'error:' . curl_error($chOne);
+}
+else {
+$result_ = json_decode($result, true);
+//echo "status : ".$result_['status']; echo "message : ". $result_['message'];
+}
+curl_close( $chOne );  	
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+date_default_timezone_set("Asia/Bangkok");
+
+$sToken = "gCe7s6XlzcHFCtuVNBF2D2g6xbZZS7PrmPz5vpQBc6G"; //พี่เปิ้ล
+$sMessage = "มีใบขอเบิกอะไหล่จากสินค้าขาย
+			เลขที่อ้างอิง : $ref_id 
+			ลูกค้า : $customer_name
+			เปิดโดย : $add_by
+			อนุมัติโดย : $name $surname
+			รบกวนทำการตรวจสอบข้อมูล และทำการอนุมัติ
+			ตามลิงค์ด้านล่างได้เลยคะ
+			https://sol.allwellcenter.com			
+";
+$chOne = curl_init();
+curl_setopt( $chOne, CURLOPT_URL, "https://notify-api.line.me/api/notify");
+curl_setopt( $chOne, CURLOPT_SSL_VERIFYHOST, 0);
+curl_setopt( $chOne, CURLOPT_SSL_VERIFYPEER, 0);
+curl_setopt( $chOne, CURLOPT_POST, 1);
+curl_setopt( $chOne, CURLOPT_POSTFIELDS, "message=".$sMessage);
+$headers = array( 'Content-type: application/x-www-form-urlencoded', 'Authorization: Bearer '.$sToken.'', );
+curl_setopt($chOne, CURLOPT_HTTPHEADER, $headers);
+curl_setopt( $chOne, CURLOPT_RETURNTRANSFER, 1);
+$result = curl_exec( $chOne );
+if(curl_error($chOne))
+{
+echo 'error:' . curl_error($chOne);
+}
+else {
+$result_ = json_decode($result, true);
+//echo "status : ".$result_['status']; echo "message : ". $result_['message'];
+}
+curl_close( $chOne );  	
+
+
+
+ 
+ if($qsave){
+   echo "<script language=\"JavaScript\">";
+echo "alert('อนุมัติเอกสาร และส่งข้อมูลให้ผู้บริหารเรียบร้อยแล้วค่ะ');window.location='status_supbreg_app.php';";
+echo "</script>";
+  } else {
+   echo "Cannot";
+  }
+  ?>

@@ -1,0 +1,5 @@
+.w3-table,.w3-table-all{border-collapse:separate;border-spacing:0;width:100%;display:table}.w3-table-all{border:1px solid #ccc}
+.w3-table          { overflow: auto;  }
+.w3-table thead th { position: sticky;
+					top:0; background-color: #edecec;}
+

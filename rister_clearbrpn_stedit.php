@@ -1,0 +1,418 @@
+<?php include ("head.php"); ?>
+
+
+<style type="text/css">
+
+.button {
+    background-color: #339900;
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+}
+
+.button1 {border-radius: 2px;}
+.button2 {border-radius: 4px;}
+.button3 {border-radius: 8px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+
+</style>
+<style type="text/css">
+<!--
+.style15 {
+	font-size: 18px; color: #000000;
+}
+.style30 {font-size: 12; }
+.style32 {font-size: 11px}
+.style33 {font-size: 12px; }
+.style34 {color: #FF0000}
+.style35 {font-size: 12px; color: #f2f2f2; }
+.style37 {color: #FF0000; font-size: 14px; }
+.style38 {color: #f2f2f2}
+.style39 {font-size: 14px}
+.style40 {font-size: 16px; color: #FF0000; }
+-->
+</style>
+
+<body>
+<?php
+
+
+
+
+
+$ref_id =$_GET["ref_id"];
+
+$strSQL = "SELECT *   FROM hos__receive where ref_id ='".$ref_id."' ";
+$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
+$objResult = mysqli_fetch_assoc($objQuery);
+
+
+	 ?>
+
+
+	<!--action="register_office1.php"-->
+	<form action='rister_clearbrpn_stedit1.php' method="post" name="frmMain" enctype="multipart/form-data">
+		<div class="w3-white w3-container w3-padding-large"><!-- main div -->
+			<div class="w3-panel w3-light-gray">
+				<div class="w3-half">
+				<h4>รับคืนสินค้า</h4>
+				
+				</div><div class="w3-half">
+				<?php if($objResult["send_stock"]=='0'){ ?>
+				<a href="send_streceive.php?ref_id=<?php echo $objResult["ref_id"];?>&allwell_ckk=<?php echo $objResult["allwell_ckk"];?>" class="w3-button w3-grey w3-right"><font color="FF000">ส่งข้อมูลให้ Stock</font></a>
+				<?php } ?>
+				</div></div>
+
+<div class="w3-bar">
+		
+	<?php if ($objResult['type_company']=='3'){
+		?>
+<input type="radio" checked='checked' name="type_company" value = "3">&nbsp; AWL
+<input type="radio" name="type_company"  value="4" >&nbsp;NBM
+<?php }else{ ?>
+
+<input type="radio"  name="type_company" value = "3">&nbsp; AWL
+<input type="radio" name="type_company" checked='checked' value="4" >&nbsp;NBM
+
+			<?php } ?>
+
+		<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php  echo $objResult['ref_id'];  ?></span>
+		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $objResult['ref_id']; ?>">
+	</div>
+
+</p>
+<?php
+date_default_timezone_set("Asia/Bangkok");
+
+$month = date('m');
+$day = date('d');
+$year = date('Y');
+
+$today = $year . '-' . $month . '-' . $day;
+
+
+?>
+<div class="w3-half 1">
+		<div class="w3-bar w3-margin-bottom">
+
+<?php if ($objResult['receive_ckk']=='1'){
+		?>
+<input type="radio" checked='checked' name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+<input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+<?php }else if($objResult['receive_ckk']=='2'){ ?>
+
+<input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+<input type="radio" name="receive_ckk" checked='checked' value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+
+			<?php }else{ ?>
+
+<input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
+<input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
+
+			<?php } ?>
+  : &nbsp;<input type="text" name="receive_name"  value="<?php echo $objResult['receive_name'];?>" class="w3-input" style="width:90%;" > 
+
+</div><div class="w3-bar w3-margin-bottom">
+		วันที่ : 
+<input type="date" name = "date_receive" id="date_receive" value="<?php echo $objResult['date_receive'];?>" class = "w3-input" style="width:90%;"> 
+</div><div class="w3-bar w3-margin-bottom">
+		วันที่ช่วงเวลา : 
+<input type="text" name = "receive_between" id="receive_between" value="<?php echo $objResult['receive_between'];?>" class = "w3-input" style="width:90%;"> 
+</div><div class="w3-bar w3-margin-bottom">
+		ช่วงเวลา : 
+<input type="text" name = "time_between" id="time_between" value="<?php echo $objResult['time_between'];?>" class = "w3-input" style="width:90%;"> 
+</div>
+<div class="w3-bar w3-margin-bottom">
+
+ที่อยู่ : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <textarea rows="2" name="customer_address" class="w3-input" style="width:90%"  ><?php echo $objResult["customer_address"]; ?></textarea>
+</div>
+
+<div class="w3-bar w3-margin-bottom">
+			
+เขตการขาย : &nbsp;<input type="text" name="sale_code" class="w3-input" style="width:90%;" value = '<?php echo $objResult['sale_code'];?>' required> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</div>
+<div class="w3-bar w3-margin-bottom">
+		วันที่รับคืน : 
+<input type="date" name = "stock_date" id="stock_date" value="<?php echo $objResult['stock_date'];?>" class = "w3-input" style="width:90%;" > 
+</div>		
+
+<?php /*<div class="w3-bar w3-margin-bottom">
+<input type="checkbox" name="send_erpst"  value="1" required>&nbsp;<font color="red"><b>สมบูรณ์ </b></font>&nbsp;
+
+</div>	*/ ?>	
+</div>
+<div class="w3-half 1">
+		<div class="w3-bar w3-margin-bottom">
+
+เลขที่ใบยืม : <input type="text" name="iv_no" value = '<?php echo $objResult['iv_no'];?>' class="w3-input" style="width:90%;" 	>
+
+</div>
+<div class="w3-bar w3-margin-bottom">
+
+ชื่อลูกค้า  : &nbsp;<input type="text" name="customer_name" class="w3-input" value = '<?php echo $objResult['customer_name'];?>' style="width:90%;" required> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+</div><div class="w3-bar w3-margin-bottom">
+
+หมายเลขคำสั่งซื้อ  : &nbsp;<input type="text" name="order_id" class="w3-input" value = '<?php echo $objResult['order_id'];?>' style="width:90%;" required> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+</div>
+	<div class="w3-bar w3-margin-bottom">
+				ชื่อผู้ยืม :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="sale_name" value = '<?php echo $objResult['sale_name'];?>' class="w3-input" style="width:90%;" 	>
+				</div>
+				<div class="w3-bar w3-margin-bottom">	
+สาเหตุรับคืน<br>
+<?php if($objResult['type_remark']=='1'){ ?>					
+<input type="radio" name="type_remark" id='type_remark' checked='checked' value = '1' required>	
+			<?php }else{ ?>
+<input type="radio" name="type_remark" id='type_remark' value = '1' required>						
+					<?php } ?>
+					ลูกค้าปฏิเสธการรับพัสดุกับขนส่ง<br>	
+					
+<?php if($objResult['type_remark']=='2'){ ?>					
+<input type="radio" name="type_remark" id='type_remark' checked='checked' value = '2' required>	
+			<?php }else{ ?>
+<input type="radio" name="type_remark" id='type_remark' value = '2' required>						
+					<?php } ?>					
+					ลูกค้าคืนสินค้าผ่านระบบ<br>	
+					
+<?php if($objResult['type_remark']=='3'){ ?>					
+<input type="radio" name="type_remark" id='type_remark' checked='checked' value = '3' required>	
+			<?php }else{ ?>
+<input type="radio" name="type_remark" id='type_remark' value = '3' required>						
+					<?php } ?>
+					
+					ลูกค้าคืนสินค้านอกระบบ<br>	
+					
+<?php if($objResult['type_remark']=='4'){ ?>					
+<input type="radio" name="type_remark" id='type_remark' checked='checked' value = '4' required>	
+			<?php }else{ ?>
+<input type="radio" name="type_remark" id='type_remark' value = '4' required>						
+					<?php } ?>
+					อื่นๆ<br>	
+	หมายเหตุ : <textarea rows="2" name="remark_st" class="w3-input" style="width:90%"  ><?php echo $objResult['remark_st'];?></textarea>
+</div>
+<div class="w3-bar w3-margin-bottom">
+				ผู้รับคืน : <input type="text" name="stock_name" value ="<?php echo $objResult["stock_name"];?>" class="w3-input" style="width:90%;" >
+				</div>
+	
+	</div>
+<div class="w3-bar w3-margin-bottom">	
+</p>
+แนบไฟล์ </p>
+<input type='hidden' name='h_img_re1' id='h_img_re1' value ="<?php echo $objResult['img_re1']; ?>"  />
+<input type='hidden' name='h_img_re2' id='h_img_re2' value ="<?php echo $objResult['img_re2']; ?>"  />
+<input type='hidden' name='h_img_re3' id='h_img_re3' value ="<?php echo $objResult['img_re3']; ?>"  />
+
+<input name="img_re1"  class="w3-input" style="width:30%" type="file"><?php if($objResult['img_re1']!=''){ ?><a href="up_return/<?php echo $objResult['img_re1']; ?>" target="_blank">ดูไฟล์แนบ</a><?php } ?>
+
+
+
+<input name="img_re2"  class="w3-input" style="width:30%" type="file"><?php if($objResult['img_re2']!=''){ ?><a href="up_return/<?php echo $objResult['img_re2']; ?>" target="_blank">ดูไฟล์แนบ</a><?php } ?>
+
+<input name="img_re3"  class="w3-input" style="width:30%" type="file"><?php if($objResult['img_re3']!=''){ ?><a href="up_return/<?php echo $objResult['img_re3']; ?>" target="_blank">ดูไฟล์แนบ</a><?php } ?>
+</div>
+	
+	<br><br>			
+<div class="w3-bar ">
+
+<fieldset><legend ><b><font color="red">ส่วนของ Stock</font></b></legend><br>
+
+&nbsp;&nbsp; ได้รับสินค้าข้างต้นคืนคลังสินค้าแล้วโดยสภาพสินค้า<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;
+
+<?php 
+
+if($objResult["stock_complete"]=='1'){ ?>
+<input type="radio" name="stock_complete" id="stock_complete" value = '1' checked='checked' class="button4"  >&nbsp;&nbsp; สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '2' class="button4"  >&nbsp;&nbsp; ไม่สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="wait_product" value = '3' class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
+
+<?php }else if($objResult["stock_complete"]=='2'){ ?>
+<input type="radio" name="stock_complete" id="stock_complete" value = '1'  class="button4"  >&nbsp;&nbsp; สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '2' checked='checked' class="button4"  >&nbsp;&nbsp; ไม่สมบูรณ์&nbsp;&nbsp;
+
+<input type="radio" name="stock_complete" id="stock_complete" value = '3' class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
+
+	<?php }else  if($objResult["wait_product"]=='3'){ ?>
+<input type="radio" name="stock_complete" id="stock_complete" value = '1' class="button4"  >&nbsp;&nbsp; สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '2' class="button4"  >&nbsp;&nbsp; ไม่สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '3' checked='checked' class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
+
+		<?php }else { ?>
+<input type="radio" name="stock_complete" id="stock_complete" value = '1' class="button4"  >&nbsp;&nbsp; สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '2' class="button4"  >&nbsp;&nbsp; ไม่สมบูรณ์&nbsp;&nbsp;
+<input type="radio" name="stock_complete" id="stock_complete" value = '3'  class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
+
+		<?php } ?>
+
+&nbsp;&nbsp;หมายเหตุ :&nbsp;
+<textarea name="stock_des" id="stock_des"  class="button4" style="width:20%;"  ><?php echo $objResult["stock_des"];?></textarea> &nbsp;&nbsp;
+
+
+
+คลังสินค้า :&nbsp;
+<input type="text" name="stock_name" id="stock_name" value ="<?php  echo $objResult["stock_name"]; ?>" class="button4" style="width:12%;"  > &nbsp;&nbsp;
+
+
+วันที่ :&nbsp;
+<input type="date" name="stock_date" id="stock_date" value =" <?php echo $objResult["stock_date"]; ?>" class="button4" style="width:12%;"  >
+<br>
+	<?php if($objResult["warraty_ckk"]=='1'){ ?>
+
+&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" name="warraty_ckk" id="warraty_ckk" value = '1' checked='checked' class="button4"  >&nbsp;&nbsp; ดำเนินการปรับปุรงข้อมูลใบรับประกันสินค้าแล้ว&nbsp;&nbsp;
+<?php }else{ ?>
+&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" name="warraty_ckk" id="warraty_ckk" value = '1'  class="button4"  >&nbsp;&nbsp; ดำเนินการปรับปุรงข้อมูลใบรับประกันสินค้าแล้ว&nbsp;&nbsp;
+
+	<?php } 
+	
+	?>
+	<br>
+	<?php
+	if($objResult["stock_complete"]=='2'){ 
+	
+	
+	if($objResult["edit_ckk"]=='1'){ ?>
+
+&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" name="edit_ckk" id="edit_ckk" value = '1' checked='checked' class="button4"  >&nbsp;&nbsp; <font color='red'>ดำเนินการแก้ไขปรับปุรงสินค้าแล้ว </font>&nbsp;&nbsp;
+<?php }else{ ?>
+&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" name="edit_ckk" id="edit_ckk" value = '1'  class="button4"  >&nbsp;&nbsp; <font color='red'>ดำเนินการแก้ไขปรับปุรงสินค้าแล้ว </font>&nbsp;&nbsp;
+
+	<?php } 
+	
+	?><br>
+	รายละเอียด  :&nbsp;
+	<textarea name="edit_des" id="edit_des"  class="w3-input" style="width:20%;"  ><?php echo $objResult["edit_des"];?></textarea> 
+	
+	<br>
+	
+	<?php 
+										 
+	}
+	?>
+	<br>
+	<br></fieldset>	
+	</div><br><br>				
+
+
+<div class="w3-bar w3-light-grey w3-border">
+ <a class="w3-bar-item w3-button" onclick="openCity1('pd')"><font color="#404040"><b>รายการสินค้า</b></font></a>
+
+</div>
+
+<div id="pd" class="w3-container city1" >
+
+
+	<table width="100%" border="0" class="w3-table">
+<thead>
+    <th>ID สินค้า</th>
+    <th>ชื่อสินค้า</th>
+    <th>หน่วย</th>
+    <th>จำนวน</th>
+    <th>หมายเลขเครื่อง</th>
+    <th>หมายเหตุ</th>
+
+</thead>
+<tbody>
+<?php
+
+$i = 1;
+
+
+$strSQL1 = "SELECT * FROM  (hos__subreceive LEFT JOIN tb_product ON hos__subreceive.product_ID=tb_product.product_id) WHERE ref_idd = '".$objResult["ref_id"]."' ";
+//echo $strSQL;
+//exit();
+$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+$Num_Rows1 = mysqli_num_rows($objQuery1);
+
+
+while($objResult1 = mysqli_fetch_array($objQuery1))
+{
+
+?>
+<tr>
+
+<td style="width:10%;">
+
+<input type="hidden" name="id[]<?php echo $objResult1["id"];?>" class="w3-input w3-center" size="1%" value="<?php echo $objResult1['id']; ?>">
+
+<input type="hidden" name="product_id[]<?php echo $objResult1["id"];?>" class="w3-input w3-center" size="1%" value="<?php echo $objResult1['product_id']; ?>">
+
+<input type='text' name ="product_code[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["access_code"];?>" id ="product_code[]<?php echo $objResult1["id"];?>"  size="7"   class="w3-input w3-center" OnChange="JavaScript:doCallAjax('product_code[]<?php echo $objResult1["id"];?>','product_name[]<?php echo $objResult1["id"];?>','unit_name[]<?php echo $objResult1["id"];?>','product_price[]<?php echo $objResult1["id"];?>','discount_unit[]<?php echo $objResult1["id"];?>');"/></td>
+
+<td  style="width:12%;">
+<textarea name = "product_name[]<?php echo $objResult1["id"];?>"   id = "product_name[]<?php echo $objResult1["id"];?>"  class="w3-input" readonly><?php echo $objResult1["sol_name"];?></textarea></td>	
+	
+<td style="width:5%;"><input type='text' name = "unit_name[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["unit_name"];?>" id = "unit_name[]<?php echo $objResult1["id"];?>"  class="w3-input"    readonly/></td>
+
+<td style="width:5%;"><input type='text' name = "sale_count[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["count"];?>" id = "sale_count[]<?php echo $objResult1["id"];?>"  class="w3-input" style="color:black;text-align:center"    /></td>
+
+
+<td style="width:10%;">
+
+<textarea name = "sn[]<?php echo $objResult1["id"];?>"  id = "sn[]<?php echo $objResult1["id"];?>"  class="w3-input" /><?php echo $objResult1["sn"];?></textarea>
+</td>
+
+
+<td style="width:10%;">
+<input type='text' name = "sale_remarkk[]<?php echo $objResult1["id"];?>"  id = "sale_remarkk[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input" />
+</td>
+</tr>
+
+
+
+<?php
+	$i++;
+	
+
+}
+
+
+?>
+</tbody>
+</table>
+
+
+
+</div>
+
+
+
+<center>
+	<?php if($objResult["send_stock"]=='0'){ ?>
+<input type="submit" name="submit" value="บันทึก" class="w3-button w3-teal" >
+	<?php } ?>
+</center><br>
+  </div>  </div>
+</form>
+<div id="cr_bar"> <?php include "foot.php"; ?></div>		
+
+
+  <!--/div-->
+
+  
+ 
+
+
+
+
+
+<script>
+$('#more').click(function() {
+  if($(this).is(":checked")){
+   $("#more-2").show();
+  }
+  else{
+   $("#more-2").hide();
+  }
+});
+</script>

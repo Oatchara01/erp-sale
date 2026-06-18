@@ -1,0 +1,217 @@
+@charset "utf-8";
+/* CSS Document */
+
+/***************index.php**************************************/
+#login_form { 
+	padding: 0; 
+	width: 430px;
+}
+
+#login_form form { 
+	margin: 0px; 
+	padding: 0px; 
+}
+
+#login_form form .input_field { 
+    border-radius: 25px;
+	width: 200px; 
+	padding: 5px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+
+#login_form form label { 
+	display: block; 
+	width: 100px; 
+	margin-right: 12px; 
+	font-size: 13px; 
+}
+
+
+#login_form form .submit_btn { 
+    border-radius: 25px;
+	padding: 5px 14px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-size:14px; 
+	margin: 20px 0px;
+}
+#changepass_form form link { 
+	display: block; 
+	width: 200px; 
+	margin-right: 12px; 
+	
+}
+/****************************************************************************/
+#contact_form { 
+	padding: 0; 
+	width: 430px;
+}
+
+#contact_form form { 
+	margin: 0px; 
+	padding: 0px; 
+}
+
+#contact_form form .input_field { 
+    border-radius: 25px;
+	width: 270px; 
+	padding: 5px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+
+#contact_form form label { 
+	display: block; 
+	width: 100px; 
+	margin-right: 12px; 
+	font-size: 13px; 
+}
+
+#contact_form form textarea {
+    border-radius: 25px;
+	width: 420px;
+	height: 80px;
+	padding: 5px;
+	color: #222;
+	background: #f4f6f9;
+	border: 1px solid #d3dae3;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+#contact_form form .submit_btn { 
+	border-radius: 25px;
+	padding: 5px 14px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-size:14px; 
+	margin: 10px 0px;
+}
+/************************Start Of Product In Stock Form************************************/
+#pro_reg_form { 
+	padding: 0; 
+	width: 430px;
+}
+
+#pro_reg_form form { 
+	margin: 0px; 
+	padding: 0px; 
+}
+
+#pro_reg_form form .input_field { 
+    border-radius: 25px;
+	width: 270px; 
+	padding: 5px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+
+#pro_reg_form form label {
+	display: block;
+	width: 150px;
+	margin-right: 12px;
+	font-size: 14px;
+}
+
+#pro_reg_form form textarea {
+    border-radius: 25px;
+	width: 420px;
+	height: 50px;
+	padding: 5px;
+	color: #222;
+	background: #f4f6f9;
+	border: 1px solid #d3dae3;
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+
+#pro_reg_form form .submit_btn { 
+    border-radius: 25px;
+	padding: 5px 14px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-size:14px; 
+	margin: 10px 0px;
+}
+/************************End Of Product In Stock Form**************************************/
+/*************************Add Form  no-use ********************************/
+#add_form {
+	padding: 0;
+	width: 500px;
+}
+
+#add_form form { 
+	margin: 0px; 
+	padding: 0px; 
+}
+
+#add_form form .input_field { 
+    border-radius: 25px;
+	width: 270px; 
+	padding: 5px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+#add_form form textarea {
+    border-radius: 25px;
+	width: 420px;
+	height: 50px;
+	padding: 5px;
+	color: #222;
+	background: #f4f6f9;
+	border: 1px solid #d3dae3;
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 12px;
+	margin-top: 5px;
+}
+
+#add_form form .submit_btn { 
+    border-radius: 25px;
+	padding: 5px 14px; 
+	color: #222;  
+	background: #f4f6f9; 
+	border: 1px solid #d3dae3; 
+	font-size:14px; 
+	margin: 10px 0px;
+}
+/****************************************************************************/
+/****************************************************************************/
+
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/

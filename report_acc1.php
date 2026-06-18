@@ -1,0 +1,255 @@
+<link rel="stylesheet" href="css/w32.css">
+<style type="text/css">
+<!--
+
+.style15 {
+	font-size: 18px; color: #000000;
+}
+.style16 {font-size: 18px; color: #FF0000;}
+.style17 {font-size: 18px; color: #3333FF;}
+.style32 {font-size: 11px}
+.style33 {font-size: 12px; }
+.style34 {color: #FF0000}
+.style35 {font-size: 12px; color: #f2f2f2; }
+.style37 {color: #FF0000; font-size: 14px; }
+.style38 {color: #f2f2f2 }
+.style39 {font-size: 14px; color: #000000;}
+.style40 {font-size: 15px; color: #000000; }
+-->
+
+.button {
+    background-color: #339900;
+    border: none;
+    color: white;
+    padding: 14px 16px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+}
+
+.button1 {border-radius: 2px; background-color:#FF9999;  padding: 0.1px 0.1px; margin: 0.5px 0.5px;}
+.button2 {border-radius: 2px; background-color:#CCFF66;  padding: 0.1px 0.1px; margin: 0.5px 0.5px;}
+.button3 {border-radius: 2px; background-color:#FF3333;  padding: 0.1px 0.1px; margin: 0.5px 0.5px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+
+
+
+</style>
+
+
+
+<?php
+
+
+include "src/BarcodeGenerator.php";
+include "src/BarcodeGeneratorHTML.php";
+include "src/BarcodeGeneratorPNG.php";
+
+
+
+
+date_default_timezone_set("Asia/Bangkok");
+function DateThai($strDate)
+	{
+		$strYear = date("Y",strtotime($strDate))+543;
+		$strMonth= date("n",strtotime($strDate));
+		$strDay= date("j",strtotime($strDate));
+		$strMonthCut = Array("","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค.");
+		$strMonthThai=$strMonthCut[$strMonth];
+		return "$strDay $strMonthThai $strYear";
+	}
+
+$start_date = $_GET["start_date"];
+$end_date = $_GET["end_date"];
+$sale_code = $_GET["sale_code"];
+$payment = $_GET["payment"];
+$h_product_code = $_GET["h_product_code"];
+$sale_channel = $_GET["sale_channel"];
+include"dbconnect.php";
+include "dbconnect_sale.php";
+
+
+
+
+?>
+<body>
+
+
+
+<center>
+<span class="style15">รายงานยอดขายประจำวัน</span></p>
+
+<span class="style15"><?php echo Datethai($start_date); ?>&nbsp;ถึง&nbsp;<?php echo Datethai($end_date); ?></span><br>
+
+
+</center>
+</p>
+
+
+
+
+
+</p>
+
+<table border= "1" width="100%" class='w3-table'>
+<tr>
+<td width="10%" align="center" class="style30">วันที่ออกเอกสาร</td>
+<td width="10%" align="center" class="style30">เลขที่เอกสาร</td>
+<td width="20%" align="center" class="style30">ชื่อลูกค้า</td> 
+<td width="10%" align="center" class="style30">การชำระเงิน</td> 
+<td width="8%" align="center" class="style30">เขตการขาย</td> 
+<td width="15%" align="center" class="style30">รายการสินค้า</td> 
+<td width="10%" align="center" class="style30">จำนวน</td>
+<td width="10%" align="center" class="style30">ยอดรวม</td> 
+	</tr>
+
+
+
+
+
+<?php
+
+$sql1 = "SELECT iv_date,iv_no,payment,bill_name,sol_name,count,amount,unit_name,sale_code  FROM ((hos__so LEFT JOIN hos__subso ON hos__so.ref_id=hos__subso.ref_idd) LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) where status_doc ='Approve' ";
+	
+
+
+if($start_date !=""){ 
+    $sql1 .= ' AND iv_date >= "'.$start_date.'"'; 
+}
+
+if($end_date !=""){ 
+    $sql1 .= ' AND iv_date <= "'.$end_date.'"'; 
+}
+
+if($sale_code !=""){ 
+    $sql1 .= ' AND sale_code = "'.$sale_code.'"'; 
+}
+
+if($payment !=""){ 
+    $sql1 .= ' AND payment = "'.$payment.'"'; 
+}
+
+if($h_product_code !=""){ 
+    $sql1 .= ' AND product_code = "'.$h_product_code.'"'; 
+}
+
+
+$sql1 .=" order  by iv_no ASC   ";
+	
+//echo $sql1;
+
+$query1 = mysqli_query($conn,$sql1) or die(mysqli_error());
+
+
+
+	while($result1 = mysqli_fetch_array($query1)){
+
+$strSQL5 = "select credit_name from tb_credit where credit_id ='".$result1["payment"]."'";
+$objQuery5 = mysqli_query($conn,$strSQL5);
+$objResuut5 = mysqli_fetch_array($objQuery5,MYSQLI_ASSOC);
+
+?>
+
+
+<tr>
+<td  align="center" class="style30"><?php echo  DateThai($result1["iv_date"]); ?></td>
+<td  align="center" class="style30"><?php echo  $result1["iv_no"]; ?> </td>
+<td align="center" class="style30"><?php echo $result1["bill_name"];  ?></td> 
+<td  align="center" class="style30"><?php echo  $objResuut5["credit_name"]; ?> </td> 
+	<td align="center" class="style30"><?php echo $result1["sale_code"];  ?></td> 
+<td  align="left" class="style30"><?php echo  $result1["sol_name"]; ?></td> 
+<td  align="center" class="style30"><?php echo  $result1["count"]; ?> <?php echo  $result1["unit_name"]; ?></td> 
+<td  align="right" class="style30"><?php echo   number_format( $result1["amount"],2).""; ?></td> 
+	</tr>
+
+
+
+<?php } ?>
+	
+	
+	
+
+</table>
+
+<?php
+
+$sql2 = "SELECT SUM(amount) As sum_amount  FROM (hos__so LEFT JOIN hos__subso ON hos__so.ref_id=hos__subso.ref_idd)  where status_doc = 'Approve' ";
+	
+
+
+if($start_date !=""){ 
+    $sql2 .= ' AND iv_date >= "'.$start_date.'"'; 
+}
+
+if($end_date !=""){ 
+    $sql2 .= ' AND iv_date <= "'.$end_date.'"'; 
+}
+
+if($sale_code !=""){ 
+    $sql2 .= ' AND sale_code = "'.$sale_code.'"'; 
+}
+
+if($payment !=""){ 
+    $sql2 .= ' AND payment = "'.$payment.'"'; 
+}
+
+if($h_product_code !=""){ 
+    $sql2 .= ' AND product_code = "'.$h_product_code.'"'; 
+}
+
+
+
+$query2 = mysqli_query($conn,$sql2) or die(mysqli_error());
+$result2 = mysqli_fetch_array($query2);
+
+
+$sql3 = "SELECT SUM(count) As sale_count  FROM (hos__so LEFT JOIN hos__subso ON hos__so.ref_id=hos__subso.ref_idd)  where status_doc ='Approve' ";
+	
+
+
+if($start_date !=""){ 
+    $sql3 .= ' AND iv_date >= "'.$start_date.'"'; 
+}
+
+if($end_date !=""){ 
+    $sql3 .= ' AND iv_date <= "'.$end_date.'"'; 
+}
+
+if($sale_code !=""){ 
+    $sql3 .= ' AND sale_code = "'.$sale_code.'"'; 
+}
+
+if($payment !=""){ 
+    $sql3 .= ' AND payment = "'.$payment.'"'; 
+}
+
+if($h_product_code !=""){ 
+    $sql3 .= ' AND product_code = "'.$h_product_code.'"'; 
+}
+
+
+
+$query3 = mysqli_query($conn,$sql3) or die(mysqli_error());
+$result3 = mysqli_fetch_array($query3);
+		
+		?>
+
+<table border= "1" width="100%" class='w3-table'>
+<tr>
+<td width="73%" align="center" class="style16">ยอดรวมทั้งหมด</td>
+
+<td width="10%" align="right" class="style16"><?php echo number_format( $result3["sale_count"],2).""; ?></td>
+<td width="10%" align="right" class="style16"><?php echo number_format( $result2["sum_amount"],2).""; ?></td> 
+	</tr>
+</table>
+
+
+
+
+</p>
+</body>
+</html>

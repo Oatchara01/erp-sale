@@ -1,0 +1,121 @@
+<?php
+require('inc/config.php');
+class Records extends Dbconfig {	
+    protected $hostName;
+    protected $userName;
+    protected $password;
+	protected $dbName;
+	private $recordsTable = 'hos__subso';
+	private $dbConnect = false;
+    public function __construct(){
+        if(!$this->dbConnect){ 		
+			$database = new dbConfig();            
+            $this -> hostName = $database -> serverName;
+            $this -> userName = $database -> userName;
+            $this -> password = $database ->password;
+			$this -> dbName = $database -> dbName;			
+            $conn = new mysqli($this->hostName, $this->userName, $this->password, $this->dbName);
+            if($conn->connect_error){
+                die("Error failed to connect to MySQL: " . $conn->connect_error);
+            } else{
+                $this->dbConnect = $conn;
+            }
+        }
+    }
+	private function getData($sqlQuery) {
+		$result = mysqli_query($this->dbConnect, $sqlQuery);
+		if(!$result){
+			die('Error in query: '. mysqli_error());
+		}
+		$data= array();
+		while ($row = mysqli_fetch_array($result, MYSQLI_ASSOC)) {
+			$data[]=$row;            
+		}
+		return $data;
+	}
+	private function getNumRows($sqlQuery) {
+		$result = mysqli_query($this->dbConnect, $sqlQuery);
+		if(!$result){
+			die('Error in query: '. mysqli_error());
+		}
+		$numRows = mysqli_num_rows($result);
+		return $numRows;
+	}   	
+	public function listRecords(){		
+		$sqlQuery = "SELECT hos__subso.* FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID";
+		if(!empty($_POST["search"]["value"])){
+			$sqlQuery .= 'where(id LIKE "%'.$_POST["search"]["value"].'%" ';
+			$sqlQuery .= ' OR product_id LIKE "%'.$_POST["search"]["value"].'%" ';			
+			$sqlQuery .= ' OR product_name LIKE "%'.$_POST["search"]["value"].'%" ';		
+		}
+		if(!empty($_POST["order"])){
+			$sqlQuery .= 'ORDER BY '.$_POST['order']['0']['column'].' '.$_POST['order']['0']['dir'].' ';
+		} else {
+			$sqlQuery .= 'ORDER BY id DESC ';
+		}
+		if($_POST["length"] != -1){
+			$sqlQuery .= 'LIMIT ' . $_POST['start'] . ', ' . $_POST['length'];
+		}	
+		$result = mysqli_query($this->dbConnect, $sqlQuery);
+		$numRows = mysqli_num_rows($result);
+		$records = array();	
+		while( $record = mysqli_fetch_assoc($result) ) {		
+			$rows = array();			
+			$rows[] = $record['no'];
+			$rows[] = $record['access_code'];
+			$rows[] = $record['access_name'];		
+			$rows[] = $record['unit'];	
+			$rows[] = $record['count'];
+			$rows[] = $record['price'];
+			$rows[] = $record['discount'];
+			$rows[] = $record['amount'];
+			$rows[] = $record['cal'];
+			$rows[] = $record['pm'];
+			$rows[] = $record['sn'];
+			$rows[] = $record['sale_remark'];
+			$rows[] = $record['admin_remark'];
+			$rows[] = '<button type="button" name="update" id="'.$record["id"].'" class="btn btn-warning btn-xs update">Update</button>';
+			$rows[] = '<button type="button" name="delete" id="'.$record["id"].'" class="btn btn-danger btn-xs delete" >Delete</button>';
+			$records[] = $rows;
+		}
+		$output = array(
+			"draw"				=>	intval($_POST["draw"]),
+			"recordsTotal"  	=>  $numRows,
+			"recordsFiltered" 	=> 	$numRows,
+			"data"    			=> 	$records
+		);
+		echo json_encode($output);
+	}
+	public function getRecord(){
+		if($_POST["id"]) {
+			$sqlQuery = "SELECT hos__subso.* FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID";
+			$result = mysqli_query($this->dbConnect, $sqlQuery);	
+			$row = mysqli_fetch_array($result, MYSQLI_ASSOC);
+			echo json_encode($row);
+		}
+	}
+	public function updateRecord(){
+		if($_POST['id']) {	
+			$updateQuery = "UPDATE ".$this->recordsTable." 
+			SET name = '".$_POST["name"]."', age = '".$_POST["age"]."', skills = '".$_POST["skills"]."', address = '".$_POST["address"]."' , designation = '".$_POST["designation"]."'
+			WHERE id ='".$_POST["id"]."'";
+			mysqli_query($this->dbConnect, $updateQuery);		
+		}	
+	}
+	public function addRecord(){
+		if($_POST["name"]) {
+			$insertQuery = "INSERT INTO ".$this->recordsTable." (name, age, skills, address, designation) 
+				VALUES ('".$_POST["name"]."', '".$_POST["age"]."', '".$_POST["skills"]."', '".$_POST["address"]."', '".$_POST["designation"]."')";
+			mysqli_query($this->dbConnect, $insertQuery);		
+		}
+	}
+	public function deleteRecord(){
+		if($_POST["id"]) {
+			$sqlDelete = "
+				DELETE FROM ".$this->recordsTable."
+				WHERE id = '".$_POST["id"]."'";		
+			mysqli_query($this->dbConnect, $sqlDelete);		
+		}
+	}
+}
+?>

@@ -1,0 +1,69 @@
+<?php include('head.php'); 
+
+include "dbconnect.php";
+include "dbconnect_sale.php";
+
+?>
+
+<form name="frmSearch" method="GET" action="report_enivall.php">
+<div class="w3-panel w3-light-gray"><h4>ดึงข้อมูลรายการเลขที่เอกสารทั้งหมด</h4></div>
+
+<div class="w3-container w3-padding-large">
+
+<div class="w3-half">
+
+<div class="w3-container w3-third">
+
+<input name="code" type="hidden" id="code" class="w3-input w3-light-gray" value="<?php echo $_SESSION['code'];?>">
+
+
+วันที่ :
+<input name="start_date" type="date" id="start_date" class="w3-input w3-light-gray" value="<?php echo $_GET["start_date"];?>">
+</div>
+<div class="w3-container w3-third">
+
+
+  ถึง
+  <input name="end_date" type="date" id="end_date" class="w3-input w3-light-gray" value="<?php echo $_GET["end_date"];?>">
+
+</div>
+<div class="w3-container w3-third">
+
+  บริษัท
+
+<select name="company" id="company" style="width:160px" class="w3-input"   required>
+<option  value="">**โปรดเลือกหน่วยงาน**</option>
+<option  value="3">ออลล์เวล ไลฟ์ บจก.</option>
+<option  value="4">โนเบิล เมด บจก.</option>
+
+</select>
+
+</div>
+
+</div>
+
+<div class="w3-half">
+
+<div class="w3-container w3-third">
+
+  ประเภทการขาย
+
+<select name="type_1" id="type_1" style="width:160px" class="w3-input"   required>
+<option  value="">**โปรดเลือกประเภทการขาย**</option>
+<option  value="1">ออนไลน์</option>
+<option  value="2">โรงพยาบาล</option>
+
+</select>
+
+</div>
+<div class="w3-container w3-third">
+
+  <input type="submit" value="Search" class="w3-button w3-teal">
+
+
+</div>
+</div>
+</div>
+
+</form>
+<?php require_once('foot.php'); ?>

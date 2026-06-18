@@ -1,0 +1,655 @@
+<html>
+<head>
+<link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
+<script type="text/javascript" src="js/autocomplete.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+
+
+</head>
+
+<script type="text/javascript">
+function ck_frm(){
+var ck = document.getElementById('ckk');
+if(ck.checked == true){
+document.getElementById('frm_txt').style.display = "";
+}else{
+document.getElementById('frm_txt').style.display = "none";
+}
+
+}
+
+
+</script>
+
+
+
+<script language="JavaScript">
+var HttPRequest = false;
+function doCallAjax(product_code,product_id,product_name,unit_name,product_price,discount_unit) {
+HttPRequest = false;
+if (window.XMLHttpRequest) { // Mozilla, Safari,...
+HttPRequest = new XMLHttpRequest();
+
+if (HttPRequest.overrideMimeType) {
+HttPRequest.overrideMimeType('text/html');
+}
+} else if (window.ActiveXObject) { // IE
+try {
+HttPRequest = new ActiveXObject("Msxml2.XMLHTTP");
+} catch (e) {
+try {
+HttPRequest = new ActiveXObject("Microsoft.XMLHTTP");
+} catch (e) {}
+}
+}
+
+if (!HttPRequest) {
+
+alert('Cannot create XMLHTTP instance');
+return false;
+}
+var url = 'data_product_hos1.php';
+var pmeters = "product_code=" + encodeURI( document.getElementById(product_code).value);
+HttPRequest.open('POST',url,true);
+
+HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+HttPRequest.setRequestHeader("Content-length", pmeters.length);
+HttPRequest.setRequestHeader("Connection", "close");
+HttPRequest.send(pmeters);
+
+HttPRequest.onreadystatechange = function()
+{
+if(HttPRequest.readyState == 4) // Return Request
+{
+var myProduct = HttPRequest.responseText;
+
+if(myProduct != "")
+{
+
+var myArr = myProduct.split("|");
+
+document.getElementById(product_id).value = myArr[0];
+document.getElementById(product_name).value = myArr[1];
+document.getElementById(unit_name).value = myArr[2];
+document.getElementById(product_price).value = myArr[3];
+document.getElementById(discount_unit).value = myArr[4];
+
+}
+}
+}
+}
+
+
+function chkNumber(ele)
+
+{
+
+var vchar = String.fromCharCode(event.keyCode);
+if ((vchar<'0' || vchar>'9') && (vchar != '.')) return false;
+ele.onKeyPress=vchar;
+}
+
+
+</script>
+
+<script src="dist/jautocalc.js"></script></head>
+
+<body>
+
+ &nbsp;&nbsp;&nbsp;<input type="checkbox" name="ckk" id="ckk" onClick="ck_frm();" value="1"/>เพิ่มเติม<br/>
+<div id="frm_txt" style="display:none;">
+
+<table width="100%" border="0" class="w3-table">
+
+    <th>รหัสสินค้า</th>
+    <th>ชื่อสินค้า</th>
+    <th>หน่วย</th>
+    <th>จำนวน</th>
+    <th>ราคาต่อหน่วย</th>
+	<th>ส่วนลด/หน่วย</th>
+    <th>ยอดรวม</th>
+	<th>รับประกัน (ปี)</th>
+	<th>Cal(ครั้ง/ปี)</th>
+	<th>PM (ครั้ง/ปี)</th>
+    <th>หมายเหตุ</th>
+
+<tbody>
+<tr>
+<td style="width:10%;">
+<input type='text' name = "product_codet1"  id = "product_codet1" class="w3-input" placeholder="Search รหัสสินค้า..." OnChange="JavaScript:doCallAjax('product_codet1','product_id1','product_name1','unit_name1','product_price1','discount_unit1');"/> 
+
+<input type='hidden' name = "h_product_codet1"  id = "h_product_codet1"  class="button4" readonly>
+
+<input type='text' name = "product_code1"  id = "product_code1" class="w3-input" placeholder="Search ชื่อสินค้า..."   OnChange="JavaScript:doCallAjax('product_code1','product_id1','product_name1','unit_name1','product_price1','discount_unit1');"/> 
+<input type='hidden' name = "h_product_code1"  id = "h_product_code1"  class="button4" readonly>
+<input type='hidden' name = "product_id1"  id = "product_id1" class="w3-input" />
+
+</td>
+<td  style="width:8%;">
+<textarea  name = "product_name1"  id = "product_name1"  rows="2" class="w3-input" readonly></textarea>
+</td>
+<td style="width:5%;">
+<input type='text' name = "unit_name1"  id = "unit_name1"  class="w3-input" />
+</td>
+<td style="width:5%;">
+<input type='text' name = "sale_count1" id = "sale_count1"  class="w3-input" style="color:black;text-align:center"  />
+</td>
+<td style="width:8%;">
+<input type='text' name = "product_price1"  id = "product_price1"  class="w3-input"  style="color:black;text-align:right" />
+</td >
+
+<td style="width:8%;"><input type='text' name = "discount_unit1"  id = "discount_unit1" class="w3-input"  style="color:black;text-align:right" /></td>
+
+
+<td style="width:8%;"><input type='text' name = "sum_amount1"  id = "sum_amount1"  class="w3-input"  style="color:black;text-align:right" value="" jAutoCalc= '{sale_count1} * {product_price1} - {discount_unit1} * {sale_count1}'readonly/>
+</td>
+
+<td style="width:5%;" ><input type='text' name = "warranty1"  id = "warranty1"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td style="width:5%;" ><input type='text' name = "cal1"  id = "cal1"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td style="width:5%;" ><input type='text' name = "pm1"  id = "pm1"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+
+
+<td style="width:10%;">
+<textarea name = "sale_remarkk1"  id = "sale_remarkk1"  class="w3-input" ></textarea>
+</td>
+
+<td style="width:2%;"><a onclick="document.getElementById('product_code1').value = '';
+
+document.getElementById('product_name1').value  = ''; 
+document.getElementById('unit_name1').value  = '';
+document.getElementById('product_price1').value  = '';
+document.getElementById('sale_count1').value  = '';
+
+document.getElementById('sum_amount1').value  = '';
+document.getElementById('discount_unit1').value  = '';
+document.getElementById('product_codet1').value  = '';
+document.getElementById('product_id1').value  = '';
+
+"><img src="img/false.png" width="16" height="16" border="16" /></a></td>
+
+
+
+
+</tr>
+
+<tr>
+<td style="width:10%;">
+<input type='text' name = "product_codet2"  id = "product_codet2" class="w3-input" placeholder="Search รหัสสินค้า..." OnChange="JavaScript:doCallAjax('product_codet2','product_id2','product_name2','unit_name2','product_price2','discount_unit2');"/> 
+<input type='hidden' name = "h_product_codet2"  id = "h_product_codet2"  class="button4" readonly>
+
+<input type='text' name = "product_code2"  id = "product_code2" class="w3-input" placeholder="Search ชื่อสินค้า..."  OnChange="JavaScript:doCallAjax('product_code2','product_id2','product_name2','unit_name2','product_price2','discount_unit2');"/> 
+<input type='hidden' name = "h_product_code2"  id = "h_product_code2"  class="w3-input" readonly>
+<input type='hidden' name = "product_id2"  id = "product_id2" class="w3-input" />
+
+</td>
+<td style="width:15%;">
+<textarea name = "product_name2"  id = "product_name2"  class="w3-input" rows="2" readonly></textarea>
+</td>
+<td style="width:5%;">
+<input type='text' name = "unit_name2"  id = "unit_name2"  class="w3-input" />
+</td>
+<td style="width:5%;">
+<input type='text' name = "sale_count2"  id = "sale_count2"  class="w3-input" style="color:black;text-align:center"  />
+</td>
+<td style="width:8%;">
+<input type='text' name = "product_price2"  id = "product_price2"  class="w3-input"  style="color:black;text-align:right" />
+</td style="width:8%;">
+<td><input type='text' name = "discount_unit2"  id = "discount_unit2"  class="w3-input"  style="color:black;text-align:right" /></td>
+
+<td style="width:8%;"><input type='text' name = "sum_amount2"  id = "sum_amount2"  class="w3-input" style="color:black;text-align:right" value="" jAutoCalc= '{sale_count2} * {product_price2} - {discount_unit2} * {sale_count2}'readonly/>
+</td>
+
+
+<td style="width:5%;"><input type='text' name = "warranty2"  id = "warranty2"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td style="width:5%;"><input type='text' name = "cal2"  id = "cal2"  class="w3-input"   OnKeyPress="return chkNumber(this)"/></td>
+
+<td style="width:5%;"><input type='text' name = "pm2"  id = "pm2"  class="w3-input"   OnKeyPress="return chkNumber(this)"/></td>
+
+
+
+<td style="width:10%;">
+<textarea name = "sale_remarkk2"  id = "sale_remarkk2"  class="w3-input" ></textarea>
+</td>
+
+<td><a onclick="document.getElementById('product_code2').value = '';
+document.getElementById('product_name2').value  = ''; 
+document.getElementById('unit_name2').value  = '';
+document.getElementById('product_price2').value  = '';
+document.getElementById('sale_count2').value  = '';
+
+document.getElementById('sum_amount2').value  = '';
+document.getElementById('discount_unit2').value  = '';
+document.getElementById('product_id2').value  = '';
+
+"><img src="img/false.png" width="16" height="16" border="16" /></a></td>
+
+
+
+</tr>
+
+<tr>
+<td >
+
+<input type='text' name = "product_codet3"  id = "product_codet3" class="w3-input" placeholder="Search รหัสสินค้า..." OnChange="JavaScript:doCallAjax('product_codet3','product_id3','product_name3','unit_name3','product_price3','discount_unit3');"/> 
+<input type='hidden' name = "h_product_codet3"  id = "h_product_codet3"  class="button4" readonly>
+
+<input type='text' name = "product_code3"  id = "product_code3" class="w3-input" placeholder="Search ชื่อสินค้า..."   OnChange="JavaScript:doCallAjax('product_code3','product_id3','product_name3','unit_name3','product_price3','discount_unit3');"/> 
+
+<input type='hidden' name = "h_product_code3"  id = "h_product_code3"  class="w3-input" readonly>
+<input type='hidden' name = "product_id3"  id = "product_id3" class="w3-input" />
+
+</td>
+<td>
+<textarea name = "product_name3"  id = "product_name3"  class="w3-input" readonly></textarea>
+</td>
+<td>
+<input type='text' name = "unit_name3"  id = "unit_name3"  class="w3-input" />
+</td>
+<td>
+<input type='text' name = "sale_count3"  id = "sale_count3"  class="w3-input" style="color:black;text-align:center"  />
+</td>
+<td>
+<input type='text' name = "product_price3"  id = "product_price3"  class="w3-input"  style="color:black;text-align:right" />
+</td>
+<td><input type='text' name = "discount_unit3"  id = "discount_unit3"  class="w3-input"  style="color:black;text-align:right" /></td>
+
+<td><input type='text' name = "sum_amount3"  id = "sum_amount3"  class="w3-input" style="color:black;text-align:right" value="" jAutoCalc= '{sale_count3} * {product_price3} - {discount_unit3} * {sale_count3}'readonly/>
+</td>
+
+<td><input type='text' name = "warranty3"  id = "warranty3"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "cal3"  id = "cal3"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "pm3"  id = "pm3"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+
+<td>
+<textarea name = "sale_remarkk3"  id = "sale_remarkk3"  class="w3-input" ></textarea>
+</td>
+
+<td><a onclick="document.getElementById('product_code3').value = '';
+document.getElementById('product_name3').value  = ''; 
+document.getElementById('unit_name3').value  = '';
+document.getElementById('product_price3').value  = '';
+document.getElementById('sale_count3').value  = '';
+
+document.getElementById('sum_amount3').value  = '';
+document.getElementById('discount_unit3').value  = '';
+document.getElementById('product_id3').value  = '';
+
+"><img src="img/false.png" width="16" height="16" border="16" /></a></td>
+
+
+</tr>
+
+<tr>
+<td >
+
+<input type='text' name = "product_codet4"  id = "product_codet4" class="w3-input" placeholder="Search รหัสสินค้า..." OnChange="JavaScript:doCallAjax('product_codet4','product_id4','product_name4','unit_name4','product_price4','discount_unit4');"/> 
+<input type='hidden' name = "h_product_codet4"  id = "h_product_codet4"  class="button4" readonly>
+
+<input type='text' name = "product_code4"  id = "product_code4" class="w3-input" placeholder="Search ชื่อสินค้า..."  OnChange="JavaScript:doCallAjax('product_code4','product_id4','product_name4','unit_name4','product_price4','discount_unit4');"/> 
+<input type='hidden' name = "h_product_code4"  id = "h_product_code4"  class="w3-input" readonly>
+<input type='hidden' name = "product_id4"  id = "product_id4" class="w3-input" />
+
+</td>
+<td>
+<textarea  name = "product_name4"  id = "product_name4"  class="w3-input" readonly></textarea>
+</td>
+<td>
+<input type='text' name = "unit_name4"  id = "unit_name4"  class="w3-input" />
+</td>
+<td>
+<input type='text' name = "sale_count4"  id = "sale_count4"  class="w3-input" style="color:black;text-align:center"  />
+</td>
+<td>
+<input type='text' name = "product_price4"  id = "product_price4"  class="w3-input"  style="color:black;text-align:right" />
+</td>
+<td><input type='text' name = "discount_unit4"  id = "discount_unit4" class="w3-input"  style="color:black;text-align:right" /></td>
+
+<td><input type='text' name = "sum_amount4"  id = "sum_amount4"  class="w3-input" style="color:black;text-align:right" value="" jAutoCalc= '{sale_count4} * {product_price4} - {discount_unit4} * {sale_count4}'readonly/>
+</td>
+
+<td><input type='text' name = "warranty4"  id = "warranty4"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "cal4"  id = "cal4"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "pm4"  id = "pm4"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+
+<td>
+<textarea  name = "sale_remarkk4"  id = "sale_remarkk4"  class="w3-input" ></textarea>
+</td>
+
+<td><a onclick="document.getElementById('product_code4').value = '';
+document.getElementById('product_name4').value  = ''; 
+document.getElementById('unit_name4').value  = '';
+document.getElementById('product_price4').value  = '';
+document.getElementById('sale_count4').value  = '';
+
+document.getElementById('sum_amount4').value  = '';
+document.getElementById('discount_unit4').value  = '';
+document.getElementById('product_id4').value  = '';
+
+"><img src="img/false.png" width="16" height="16" border="16" /></a></td>
+
+
+</tr>
+
+<tr>
+<td >
+
+<input type='text' name = "product_codet5"  id = "product_codet5" class="w3-input" placeholder="Search รหัสสินค้า..." OnChange="JavaScript:doCallAjax('product_codet5','product_id5','product_name5','unit_name5','product_price5','discount_unit5');"/> 
+<input type='hidden' name = "h_product_codet5"  id = "h_product_codet5"  class="button4" readonly>
+
+<input type='text' name = "product_code5"  id = "product_code5" class="w3-input" placeholder="Search ชื่อสินค้า..."   OnChange="JavaScript:doCallAjax('product_code5','product_id5','product_name5','unit_name5','product_price5','discount_unit5');"/> 
+
+<input type='hidden' name = "h_product_code5"  id = "h_product_code5"  class="w3-input" readonly>
+<input type='hidden' name = "product_id5"  id = "product_id5" class="w3-input" />
+
+</td>
+<td>
+<textarea  name = "product_name5"  id = "product_name5"  class="w3-input" readonly></textarea>
+</td>
+<td>
+<input type='text' name = "unit_name5"  id = "unit_name5"  class="w3-input" />
+</td>
+<td>
+<input type='text' name = "sale_count5"  id = "sale_count5"  class="w3-input" style="color:black;text-align:center"  />
+</td>
+<td>
+<input type='text' name = "product_price5"  id = "product_price5"  class="w3-input"  style="color:black;text-align:right" />
+</td>
+
+<td><input type='text' name = "discount_unit5"  id = "discount_unit5" class="w3-input" style="color:black;text-align:right" /></td>
+
+
+<th><input type='text' name = "sum_amount5"  id = "sum_amount5"  class="w3-input" style="color:black;text-align:right" value="" jAutoCalc= '{sale_count5} * {product_price5} - {discount_unit5} * {sale_count5}'readonly/>
+</td>
+
+<td><input type='text' name = "warranty5"  id = "warranty5"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "cal5"  id = "cal5"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+<td><input type='text' name = "pm5"  id = "pm5"  class="w3-input"  OnKeyPress="return chkNumber(this)" /></td>
+
+
+<td>
+<textarea  name = "sale_remarkk5"  id = "sale_remarkk5"  class="w3-input" ></textarea>
+</td>
+
+<td><a onclick="document.getElementById('product_code5').value = '';
+document.getElementById('product_name5').value  = ''; 
+document.getElementById('unit_name5').value  = '';
+document.getElementById('product_price5').value  = '';
+document.getElementById('sale_count5').value  = '';
+
+document.getElementById('sum_amount5').value  = '';
+document.getElementById('discount_unit5').value  = '';
+document.getElementById('product_id5').value  = '';
+
+"><img src="img/false.png" width="16" height="16" border="16" /></a></td>
+
+
+</tr>
+</tbody>
+</table>
+
+</div>
+
+
+
+
+</body>
+</html>
+<script>
+$('form').jAutoCalc({
+  attribute: 'jAutoCalc',
+  thousandOpts: [',', '.', ' '],
+  decimalOpts: ['.', ','],
+  decimalPlaces: -1,
+  initFire: true,
+  chainFire: true,
+  keyEventsFire: false,
+  readOnlyResults: true,
+  showParseError: true,
+  emptyAsZero: false,
+  smartIntegers: false,
+  onShowResult: null,
+  funcs: {},
+  vars: {}
+});
+</script>
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_code1","h_product_code1");
+        </script>
+
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_code2","h_product_code2");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_code3","h_product_code3");
+        </script>
+
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_code4","h_product_code4");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_code5","h_product_code5");
+        </script>
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo1.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_codet1","h_product_codet1");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo1.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_codet2","h_product_codet2");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo1.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_codet3","h_product_codet3");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo1.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_codet4","h_product_codet4");
+        </script>
+
+
+<script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_pro_engdemo1.php?product_code_search=" +encodeURIComponent(this.value);
+    });	
+}	
+ 
+// การใช้งาน
+// make_autocom(" id ของ input ตัวที่ต้องการกำหนด "," id ของ input ตัวที่ต้องการรับค่า");
+make_autocom("product_codet5","h_product_codet5");
+        </script>
+
+

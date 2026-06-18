@@ -1,0 +1,454 @@
+<?php include('head.php'); ?>
+<?php include('dbconnect_sale.php'); ?>
+
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+<link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
+<script type="text/javascript" src="js/autocomplete.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script language="JavaScript">
+
+var HttPRequest = false;
+function doCallAjax1(bill_id,customer_name,customer_tel,address_name,customer_typename) {
+HttPRequest = false;
+if (window.XMLHttpRequest) { // Mozilla, Safari,...
+HttPRequest = new XMLHttpRequest();
+
+if (HttPRequest.overrideMimeType) {
+HttPRequest.overrideMimeType('text/html');
+}
+} else if (window.ActiveXObject) { // IE
+try {
+HttPRequest = new ActiveXObject("Msxml2.XMLHTTP");
+} catch (e) {
+try {
+HttPRequest = new ActiveXObject("Microsoft.XMLHTTP");
+} catch (e) {}
+}
+}
+
+if (!HttPRequest) {
+
+alert('Cannot create XMLHTTP instance');
+return false;
+}
+var url = 'data_smp_name.php';
+var pmeters = "bill_id=" + encodeURI( document.getElementById(bill_id).value);
+HttPRequest.open('POST',url,true);
+
+HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+HttPRequest.setRequestHeader("Content-length", pmeters.length);
+HttPRequest.setRequestHeader("Connection", "close");
+HttPRequest.send(pmeters);
+
+HttPRequest.onreadystatechange = function()
+{
+if(HttPRequest.readyState == 4) // Return Request
+{
+var myProduct = HttPRequest.responseText;
+
+if(myProduct != "")
+{
+
+var myArr = myProduct.split("|");
+
+//document.getElementById(bill_id).value = myArr[0];
+document.getElementById(customer_name).value = myArr[0];
+document.getElementById(customer_tel).value = myArr[1];
+document.getElementById(address_name).value = myArr[2];
+document.getElementById(customer_typename).value = myArr[3];
+
+}
+}
+}
+}
+
+    
+</script>
+
+<style type="text/css">
+<!--
+.style15 {
+	font-size: 18px; color: #000000;
+}
+.style30 {font-size: 12; }
+.style32 {font-size: 11px}
+.style33 {font-size: 12px; }
+.style34 {color: #FF0000}
+.style35 {font-size: 14px; color: #f2f2f2; }
+.style37 {color: #FF0000; font-size: 14px; }
+.style38 {color: #f2f2f2}
+.style39 {font-size: 14px; color: #000000;}
+.style40 {font-size: 14px; color: #FF0000; }
+-->
+
+.button {
+    background-color: #339900;
+    border: none;
+    color: white;
+    padding: 14px 16px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+}
+
+.button1 {border-radius: 2px;}
+.button2 {border-radius: 4px;}
+.button3 {border-radius: 8px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+</style>
+
+	
+<style>
+	.none {
+    display:none;
+	}
+</style>
+
+<div class="w3-white w3-container">
+	<div class="w3-panel w3-light-grey"><h3>ใบเบิกสินค้าเพื่อสนับสนุนการขาย</h3></p>	
+	<h5>(Sample Request)</h5>
+	</div>
+	<form action="register_adminsmp1.php" method="post" name="frmMain" enctype="multipart/form-data">
+	<div class="w3-bar">
+		
+		<?php
+			include('dbconnect.php');
+
+			$yearMonth = substr(date("Y")+543, -2).date("m");
+$sql = "SELECT MAX(ref_idsmp) AS MAXID FROM hos__smp";
+$qry = mysqli_query($conn,$sql) or die(mysqli_error());
+$rs = mysqli_fetch_assoc($qry);
+$maxId = substr($rs['MAXID'], -4);
+$maxId3 = substr($rs['MAXID'],-8);
+
+$maxId1 = substr($maxId3,0,-4);
+$so = "RSMP";
+
+if($maxId1 == $yearMonth)
+{
+$maxId1 = ($maxId + 1);
+$maxId2 = substr("00000".$maxId1, -4);
+$nextId = $yearMonth.$maxId2;
+}
+else 
+{
+$maxId1 = "0001"; 
+$nextId = $yearMonth.$maxId1;
+
+}
+
+
+		
+date_default_timezone_set("Asia/Bangkok");
+
+$month = date('m');
+$day = date('d');
+$year = date('Y');
+
+$today = $year . '-' . $month . '-' . $day;
+
+$sql12 = "SELECT * FROM so__main  where  ref_id = '".$_GET['ref_id']."'";
+$qry12 = mysqli_query($conn,$sql12) or die(mysqli_error());
+$rs12 = mysqli_fetch_array($qry12);
+
+
+		?>
+	<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php echo $so; echo $nextId; ?></span>
+		<input type="hidden" name="ref_idsmp" class="w3-input" value="<?php echo $so; echo $nextId; ?>">
+	</div>
+
+	<div class="w3-bar w3-padding-small"></div><!-- bar -->
+		<div class="w3-half 1">
+	<div class="w3-bar w3-margin-bottom">
+			<input type="radio" name="type_company" value="1">&nbsp;AWL
+<input type="radio" name="type_company"  checked ='checked'  value="2" >&nbsp;NBM
+				</div>		
+	
+		<div class="w3-bar w3-margin-bottom">
+			วันที่คลัง  :<input type="date" name="smp_date" value = "<?php echo $today; ?>" style="width:30%;" class="w3-input"  required>
+</div>
+			<div class="w3-bar w3-margin-bottom">
+ที่อยุ่ :<textarea name="address_name" id="address_name" class="w3-input" style="width:90%;"  required><?php echo $rs12["delivery_place"]; ?></textarea>
+</div>
+
+<div class="w3-bar w3-margin-bottom">
+เขตการขาย :
+
+<select name="sale_code" id="sale_code" style="width:330px" class="w3-input" >
+<option value="">**Please Select**</option>
+<?php
+
+$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
+//echo $strSQL5;
+//exit();
+$objQuery5 = mysqli_query($com,$strSQL5);
+while($objResuut5 = mysqli_fetch_array($objQuery5)){
+if($rs12["employee_name"] == $objResuut5["sale_code"])
+{
+$sel = "selected";
+}
+else
+{
+$sel = "";
+}
+?>
+<option value="<?php echo $objResuut5["sale_code"];?>" <?php echo $sel;?>><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
+<?php
+}
+?>
+</select>
+
+</div>
+
+			<div class="w3-bar w3-margin-bottom">			
+			แนบไฟล์
+<input name="up_img1" style="width:90%;"  class="w3-input"  type="file">
+</div>
+
+<div class="w3-bar w3-margin-bottom">			
+			
+<input name="up_img2" style="width:90%;"  class="w3-input"  type="file">
+</div>
+<div class="w3-bar w3-margin-bottom">			
+			
+<input name="up_img3" style="width:90%;"  class="w3-input"  type="file">
+</div>		
+			
+</div>
+<div class="w3-half 1">
+<div class="w3-bar w3-margin-bottom">
+			ชื่อลูกค้า 
+			<input type="text" name="customer_name" id="customer_name" class="w3-input" style="width:90%;"  value="<?php echo $rs12["customer_name"]; ?>" required>
+	<input type="hidden" name="bill_id" id="bill_id" class="w3-input" style="width:90%;"  value="<?php echo $rs12["bill_id"]; ?>" >
+	<input type="hidden" name="ref_idsale" id="ref_idsale" class="w3-input" style="width:90%;"  value="<?php echo $rs12["ref_id"]; ?>" >
+</div>
+
+<div class="w3-bar w3-margin-bottom">
+			เบอร์โทร 
+			<input type="text" name="customer_tel" id="customer_tel" class="w3-input" style="width:90%;"  required>
+</div>	
+
+<div class="w3-bar w3-margin-bottom">
+			หมายเลขคำสั่งซื้อ 
+			<input type="text" name="order_id" id="order_id" class="w3-input" style="width:90%;"  >
+</div>	
+
+<div class="w3-bar w3-margin-bottom">
+			Comment Sale:&nbsp;
+			<textarea name="comment_sale" id="comment_sale" class="w3-input" style="width:90%;"  required>คำสั่งซื้อ : <?php echo $rs12["order_id"]; ?></textarea>
+</div>
+<div class="w3-bar w3-margin-bottom">
+			Comment Sup :&nbsp;
+			<textarea name="comment_sup" id="comment_sup" class="w3-input" style="width:90%;"  required></textarea>
+</div>
+<div class="w3-bar w3-margin-bottom">
+	<input type="checkbox" name="brnp_ckk" id="brnp_ckk"  value ='1'>
+			เคลียร์ใบยืม เลขที่  
+			<input type="text" name="brnp_no" id="brnp_no" class="w3-input" style="width:90%;"  >
+</div>		
+<div class="w3-bar w3-margin-bottom">
+	<input type="checkbox" name="crm_ckk" id="crm_ckk"  value ='1'>
+			แลกสินค้าระบบ CRM เลขที่อ้างอิง  
+			<input type="text" name="crm_ref" id="crm_ref" class="w3-input" style="width:90%;"  >
+</div>		
+</div>
+		
+		
+
+		
+
+	</p>
+	<div class="w3-bar w3-light-grey w3-border">
+  <a class="w3-bar-item w3-button" onclick="openCity1('pd')"><font color="#404040"><b>รายการสินค้า</b></font></a>
+ <a class="w3-bar-item w3-button" onclick="openCity1('cs')"><font color="#404040"><b>รายละเอียดการจัดส่ง</b></font></a>
+</div>
+
+
+<div id="pd" class="w3-container city1">
+
+
+<?php
+	
+	include ('detail_salesmpnb.php');
+		
+		?>
+</div>
+
+<div id="cs" class="w3-container city1" style="display:none">
+
+<input type="radio" name="delivery_type" value="1" >&nbsp;Sale รับเอง
+<input type="radio" name="delivery_type" value="2" checked='checked' >&nbsp;บริษัทจัดส่ง 
+
+</p>
+
+
+
+
+ วันที่ รับ-ส่ง :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <input name="start_date" type='date' id="start_date"   class="button4" style="width:20%" /></p>
+
+
+วันที่ต้องการโดยประมาณ :
+	  <input name="between_date"  class="button4" type='text' id="between_date" style="width:20%" />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ เวลา :&nbsp;&nbsp;&nbsp;&nbsp;
+<input id="start_time"  name="start_time"  class="button4" type="text" style="width:10%"/>
+ถึง
+<input id="end_time" name="end_time"  class="button4" type="text" style="width:10%"/></p>
+
+
+
+สถานะการทำงาน : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+<input type='radio'  name='status' id = 'status' value='ส่ง' checked='checked'/>ส่ง
+&nbsp; <input type='radio'  name='status' id = 'status' value='รับ' />รับ
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+สถานะ :&nbsp;&nbsp;
+      <input name="status_comment" type='text' id="status_comment"  style="width:22%" class="button4"/></p>
+
+
+<input type="checkbox"  name="fix_datetime" id = "fix_datetime" value="1">นัดวันและเวลาเรียบร้อยแล้ว &nbsp;&nbsp;
+<input type="checkbox"  id = "on_time" name="on_time" value="1">งานสำคัญต้องตรงเวลา&nbsp;&nbsp;
+
+
+<input type="checkbox"  id = "call_customer" name="call_customer" value="1">โทรแจ้งลูกค้าก่อนไป
+		
+&nbsp;&nbsp;<input type="checkbox"  id = "call_back" name="call_back" value="1">ต้องการให้โทรกลับเมื่อส่งสินค้าเสร็จแล้ว&nbsp;&nbsp;
+<input type="checkbox"  id = "no_money" name="no_money" value="1">ไม่ต้องเก็บเงิน&nbsp;&nbsp;
+<input type="checkbox"   name="want_bus" value="1">ต้องการรถใหญ่</p>
+		
+	 
+
+
+<?php
+if($_SESSION['department']=="วิศวกรรม"){
+	$department="ฝ่ายวิศวกรรม";
+}else{
+	$department="ฝ่ายขาย";	
+}
+?>
+
+แผนก - ฝ่าย :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input name="department_show" value="<?php echo $department; ?>" class="button4" type='text' id="department_show">
+
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+       ประเภทลูกค้า :
+<input name="customer_typename" value="<?php echo "ลูกค้าทั่วไป"; ?>" class="button4" type='text' id="customer_typename">
+</p>
+
+
+       หน่วยงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input name="company_name" value="<?php echo "ออลล์เวล ไลฟ์ บจก."; ?>" class="button4" type='text' id="company_name">
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;
+<?php
+if($_SESSION['department']=="วิศวกรรม"){
+$sale='วิศวกรรม';
+	}else{
+$sale='Sale';	
+}
+?>
+       ประเภทงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	   <input name="department_name" value="<?php echo $sale; ?>"  class="button4" type='text' id="department_name">
+
+</p>
+ชื่อผู้ติดต่อ  :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input name="customer_name1"  class="button4" type='text'  value="<?php echo $rs12["customer_name"]; ?>" id="customer_name">
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ ผู้รับสินค้า :&nbsp;&nbsp;
+<input name="customer_contact"  value="<?php echo $rs12["customer_name"]; ?>" class="button4" type='text' id="customer_contact">
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ เบอร์โทรลูกค้า :
+<input name="customer_tel1"  class="button4" type='text'  value="<?php echo $rs12["tel"]; ?>" id="customer_tel1" >
+</p>
+ชื่อพนักงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input name="employee_name"  class="button4" type='text' value="<?php echo $_SESSION['name']; ?>" id="employee_name" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ เบอร์โทรพนักงาน :&nbsp;
+<input name="employee_tel"  class="button4" type='text' id="employee_tel" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ ผู้ลงงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input name="add_by" value="<?php echo $_SESSION['name']; ?>&nbsp;<?php echo $_SESSION['surname']; ?>" type='text' class="button4" >
+
+
+
+</p>
+สถานที่ส่งสินค้า :</p>
+<textarea  class="button4" name="address_1" style="width:50%" ><?php echo "SPX Express"; ?></textarea>            
+
+
+</p>
+ที่อยู่ในการส่งสินค้า :</p>
+<textarea  class="button4" name="address_name1"  style="width:50%" ><?php echo $rs12["delivery_place"]; ?></textarea>            
+</p>
+
+  สถานที่ติดตั้งเครื่อง :</p>
+<textarea   class="button4" name="address_send" style="width:50%" rows="2"><?php echo $rs12["delivery_place"]; ?></textarea>
+
+</p>
+เลขที่เอกสาร/เลขที่เครื่อง : </p>
+<textarea name="product_sn"  class="button4" id="product_sn" style="width:50%" rows="2"></textarea>
+</p>
+สินค้า/เอกสาร :</p>
+<textarea name="product"  class="button4" id="product" style="width:50%" rows="2"></textarea>
+
+
+</p>
+รายละเอียดเพิ่มเติม :</p> 
+     <textarea name="description"  class="button4" id="description" style="width:50%" rows="2"></textarea>
+
+
+
+	
+</div><!-- cs -->
+
+
+	<div class="w3-bar w3-center">
+			<input type="submit" name="submit" class="w3-button w3-teal be-border" value="บันทึกข้อมูล">
+	</div>
+	</div>
+	</form>
+</div>
+<?php include('foot.php'); ?>
+
+
+ <script type="text/javascript">
+function make_autocom(autoObj,showObj){
+	var mkAutoObj=autoObj; 
+	var mkSerValObj=showObj; 
+	new Autocomplete(mkAutoObj, function() {
+		this.setValue = function(id) {		
+			document.getElementById(mkSerValObj).value = id;
+		}
+		if ( this.isModified )
+			this.setValue("");
+		if ( this.value.length < 1 && this.isNotClick ) 
+			return ;	
+		return "data_bill_name2.php?bill_search=" +encodeURIComponent(this.value);
+    });	
+}	
+make_autocom("bill_id","h_bill_id");
+</script> 
+
+		<script>
+$('#more').click(function() {
+  if($(this).is(":checked")){
+   $("#more-2").show();
+  }
+  else{
+   $("#more-2").hide();
+  }
+});
+</script>
