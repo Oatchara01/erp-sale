@@ -369,102 +369,212 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(34, 23, 49, 0.18);
             z-index: 9999;
             display: none;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
+            padding: 32px 20px;
+            box-sizing: border-box;
         }
 
         .so-modal-content {
             background: #FFF;
-            border-radius: 12px;
-            padding: 24px;
-            width: 600px;
-            max-width: 90%;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 16px;
+            padding: 26px 32px 24px;
+            width: 1100px;
+            max-width: 100%;
+            box-shadow: 0 12px 40px rgba(62, 26, 91, 0.12);
+            border: 1px solid #F1EAF7;
         }
 
         .so-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #E8E1F0;
         }
 
         .so-modal-title {
             font-size: 18px;
             font-weight: 600;
-            color: #612989;
+            color: #3D3A42;
             margin: 0;
         }
 
         .so-modal-close {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 30px;
+            line-height: 1;
             cursor: pointer;
-            color: #8E8B94;
+            color: #6E6678;
+            padding: 0;
         }
 
-        /* Flex Grid for Modal */
+        .so-modal-grid-5 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1.15fr 2.2fr;
+            gap: 16px 24px;
+            margin-bottom: 18px;
+        }
+
         .so-modal-grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .so-modal-grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 16px 24px;
+            margin-bottom: 10px;
         }
 
         .so-modal-field label {
             display: block;
-            font-size: 13px;
-            color: #4A4A4A;
-            margin-bottom: 4px;
-            font-weight: 500;
+            font-size: 14px;
+            color: #6A2E96;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .so-modal-required {
+            color: #E24B7A;
+        }
+
+        .so-modal-input-wrap {
+            position: relative;
         }
 
         .so-modal-field input[type="text"],
         .so-modal-field textarea {
             width: 100%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #D9D9D9;
-            background: #FFF;
+            height: 42px;
+            padding: 0 44px 0 16px;
+            border-radius: 12px;
+            border: 1px solid #EFEAF4;
+            background: #F4F5F8;
             font-size: 13px;
+            color: #4A4453;
             font-family: 'Prompt', sans-serif;
             outline: none;
             box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .so-modal-field textarea {
+            resize: vertical;
+            min-height: 42px;
+            padding-top: 9px;
+            padding-bottom: 9px;
+        }
+
+        .so-modal-field input[type="text"]::placeholder,
+        .so-modal-field textarea::placeholder {
+            color: #9C96A5;
+        }
+
+        .so-modal-field input[type="text"]:focus,
+        .so-modal-field textarea:focus {
+            border-color: #CBA8E1;
+            box-shadow: 0 0 0 3px rgba(106, 46, 150, 0.08);
+            background: #F8F7FB;
+        }
+
+        .so-modal-clear {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: transparent;
+            color: #726C7B;
+            font-size: 24px;
+            line-height: 18px;
+            cursor: pointer;
+            padding: 0;
+            display: none;
+        }
+
+        .so-modal-clear.is-visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .so-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+            margin-top: 44px;
         }
 
         .so-btn-primary {
             background: #612989;
             color: #FFF;
             border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 0 34px;
+            min-width: 174px;
+            height: 42px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             font-family: 'Prompt';
+            box-shadow: 0 6px 16px rgba(97, 41, 137, 0.22);
         }
 
         .so-btn-outline {
             background: #FFF;
-            color: #612989;
-            border: 1px solid #612989;
-            padding: 8px 16px;
-            border-radius: 8px;
+            color: #4D4954;
+            border: 1px solid #DED8E6;
+            padding: 0 34px;
+            min-width: 174px;
+            height: 42px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             font-family: 'Prompt';
+            box-shadow: 0 2px 8px rgba(51, 40, 69, 0.08);
+        }
+
+        .so-btn-primary:hover,
+        .so-btn-outline:hover {
+            opacity: 0.96;
+        }
+
+        @media (max-width: 1100px) {
+            .so-modal-content {
+                padding: 22px 20px;
+            }
+
+            .so-modal-grid-5 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .so-modal-overlay {
+                padding: 14px;
+            }
+
+            .so-modal-grid-5,
+            .so-modal-grid-2 {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .so-modal-actions {
+                flex-direction: column-reverse;
+                gap: 12px;
+                margin-top: 28px;
+            }
+
+            .so-btn-primary,
+            .so-btn-outline {
+                width: 100%;
+            }
         }
 
         .so-btn-add-row {
@@ -571,12 +681,14 @@
                         <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
                         <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
                         <input type="hidden" name="cal<?php echo $i; ?>" id="cal<?php echo $i; ?>">
+                        <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
                         <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
                         <input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
                         <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="1">
                         <input type="hidden" name="clear_ivno<?php echo $i; ?>" id="clear_ivno<?php echo $i; ?>">
                         <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="1">
                         <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
+                        <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
                     </td>
                     <td>
                         <!-- รหัสสินค้า: แสดงผลอย่างเดียว (readonly) ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหาด้านบน -->
@@ -618,46 +730,71 @@
     <div class="so-modal-overlay" id="productEditModal">
         <div class="so-modal-content">
             <div class="so-modal-header">
-                <h3 class="so-modal-title">ข้อมูลเพิ่มเติม (แถวที่ <span id="modal_row_number"></span>)</h3>
+                <h3 class="so-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
                 <button type="button" class="so-modal-close" onclick="closeEditModal()">&times;</button>
             </div>
 
             <input type="hidden" id="current_editing_row">
+            <input type="hidden" id="modal_row_number">
 
-            <div class="so-modal-grid-3">
+            <div class="so-modal-grid-5">
                 <div class="so-modal-field">
-                    <label>รับประกัน (ปี)</label>
-                    <input type="text" id="m_warranty">
+                    <label>รับประกัน(ปี)<span class="so-modal-required">*</span></label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
                 </div>
                 <div class="so-modal-field">
-                    <label>Cal(ครั้ง/ปี)</label>
-                    <input type="text" id="m_cal" onkeypress="return chkNumber(this)">
+                    <label>CAL/ปี</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
                 </div>
                 <div class="so-modal-field">
-                    <label>PM (ครั้ง/ปี)</label>
-                    <input type="text" id="m_pm" onkeypress="return chkNumber(this)">
+                    <label>PM(ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
                 </div>
-            </div>
-
-            <div class="so-modal-field" style="margin-bottom:16px;">
-                <label>หมายเหตุ</label>
-                <textarea id="m_sale_remarkk" rows="2"></textarea>
+                <div class="so-modal-field">
+                    <label>PM (จำนวนครั้ง/ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_pm" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>เลขที่ของ/ใบยืม</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_clear_ivno" placeholder="กรอกข้อมูล" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_clear_ivno" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
             </div>
 
             <div class="so-modal-grid-2">
                 <div class="so-modal-field">
-                    <label>เคลียร์ยืม (ใบแจ้ง/รหัส)</label>
-                    <input type="text" id="m_clear_ivno">
+                    <label>หมายเหตุสินค้า</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
                 </div>
                 <div class="so-modal-field">
-                    <label>เคลียร์จอง (ใบจอง/รหัส)</label>
-                    <input type="text" id="m_jong_no">
+                    <label>ชื่อที่แสดงในใบส่งสินค้า</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_display_name" placeholder="กรอกข้อมูล" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_display_name" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
                 </div>
             </div>
 
-            <div style="text-align: right; margin-top: 24px;">
+            <div class="so-modal-actions">
                 <button type="button" class="so-btn-outline" onclick="closeEditModal()">ยกเลิก</button>
-                <button type="button" class="so-btn-primary" onclick="saveEditModal()" style="margin-left: 8px;">บันทึกข้อมูล</button>
+                <button type="button" class="so-btn-primary" onclick="saveEditModal()">อัพเดท</button>
             </div>
         </div>
     </div>
@@ -667,7 +804,7 @@
         let dragSourceIndex = null;
         const rowFields = [
             'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name',
-            'warranty', 'cal', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no',
+            'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name',
             'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount'
         ];
 
@@ -885,16 +1022,18 @@
 
         function openEditModal(rowIndex) {
             document.getElementById('current_editing_row').value = rowIndex;
-            document.getElementById('modal_row_number').innerText = rowIndex;
+            document.getElementById('modal_row_number').value = rowIndex;
 
             // Load data from hidden inputs
             document.getElementById('m_warranty').value = document.getElementById('warranty' + rowIndex).value;
             document.getElementById('m_cal').value = document.getElementById('cal' + rowIndex).value;
+            document.getElementById('m_pm_year').value = document.getElementById('pm_year' + rowIndex).value;
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
             document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
             document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
-            document.getElementById('m_jong_no').value = document.getElementById('jong_no' + rowIndex).value;
+            document.getElementById('m_display_name').value = document.getElementById('display_name' + rowIndex).value || document.getElementById('jong_no' + rowIndex).value;
 
+            syncModalClearButtons();
             document.getElementById('productEditModal').style.display = 'flex';
         }
 
@@ -908,13 +1047,39 @@
             // Save data back to hidden inputs
             document.getElementById('warranty' + rowIndex).value = document.getElementById('m_warranty').value;
             document.getElementById('cal' + rowIndex).value = document.getElementById('m_cal').value;
+            document.getElementById('pm_year' + rowIndex).value = document.getElementById('m_pm_year').value;
             document.getElementById('pm' + rowIndex).value = document.getElementById('m_pm').value;
             document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('m_sale_remarkk').value;
             document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
-            document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_jong_no').value;
+            document.getElementById('display_name' + rowIndex).value = document.getElementById('m_display_name').value;
+            document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_display_name').value;
 
             closeEditModal();
         }
+
+        function syncModalClearButtons() {
+            document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
+                var target = document.getElementById(btn.getAttribute('data-target'));
+                if (!target) return;
+                btn.classList.toggle('is-visible', target.value !== '');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-clearable="true"]').forEach(function(input) {
+                input.addEventListener('input', syncModalClearButtons);
+            });
+
+            document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var target = document.getElementById(btn.getAttribute('data-target'));
+                    if (!target) return;
+                    target.value = '';
+                    target.focus();
+                    syncModalClearButtons();
+                });
+            });
+        });
 
         function formatNumberInput(el) {
             let raw = parseFloat(el.value.replace(/,/g, '')) || 0;
