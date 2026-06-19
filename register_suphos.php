@@ -1,4 +1,4 @@
-<?php include("head.php"); ?>
+﻿<?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
@@ -80,6 +80,32 @@
 		setFieldValueBySelector('input[name="shipping_id"]', value || '');
 	}
 
+	function ensureHiddenField(name, id) {
+		var form = document.forms['frmMain'];
+		if (!form) return null;
+
+		var field = form.elements[name];
+		if (!field || (field.length && !field.tagName)) {
+			field = document.createElement('input');
+			field.type = 'hidden';
+			field.name = name;
+			form.appendChild(field);
+		}
+
+		if (id && !field.id) {
+			field.id = id;
+		}
+
+		return field;
+	}
+
+	function setLegacyFieldValue(name, value, id) {
+		var field = ensureHiddenField(name, id);
+		if (field) {
+			field.value = value || '';
+		}
+	}
+
 	function updateDeliveryContractRequirement() {
 		var haveOrderCheckbox = document.getElementById('have_order');
 		var deliveryContractInput = document.getElementById('delivery_contract');
@@ -117,11 +143,72 @@
 		var shippingAddress = document.querySelector('input[name="shipping_address"]');
 		var installLocation = document.querySelector('input[name="install_location"]');
 
-		setFieldValueBySelector('#customer_name', contactName ? contactName.value : '');
-		setFieldValueBySelector('#customer_tel', contactTel ? contactTel.value : '');
-		setFieldValueBySelector('#province_name', contactProvince ? contactProvince.value : '');
-		setFieldValueBySelector('textarea[name="address_name"]', shippingAddress ? shippingAddress.value : '');
-		setFieldValueBySelector('textarea[name="address_send"]', installLocation ? installLocation.value : '');
+		setLegacyFieldValue('customer_name', contactName ? contactName.value : '', 'customer_name');
+		setLegacyFieldValue('customer_tel', contactTel ? contactTel.value : '', 'customer_tel');
+		setLegacyFieldValue('province_name', contactProvince ? contactProvince.value : '', 'province_name');
+		setLegacyFieldValue('address_name', shippingAddress ? shippingAddress.value : '', 'address_name');
+		setLegacyFieldValue('address_1', shippingAddress ? shippingAddress.value : '', 'address_1');
+		setLegacyFieldValue('address_send', installLocation ? installLocation.value : '', 'address_send');
+	}
+
+	function getCheckedValue(name, fallback) {
+		var checked = document.querySelector('input[name="' + name + '"]:checked');
+		return checked ? checked.value : (fallback || '');
+	}
+
+	function joinSizeParts() {
+		var parts = Array.prototype.slice.call(arguments).filter(function(value) {
+			return value !== undefined && value !== null && String(value).trim() !== '';
+		});
+		return parts.join(' x ');
+	}
+
+	function syncExtraAddressFieldsToLegacy() {
+		var rows = document.querySelectorAll('.extra-addr-row');
+		for (var i = 1; i <= 9; i++) {
+			var row = rows[i - 1];
+			setLegacyFieldValue('customer_name' + i, row ? (row.querySelector('input[name^="extra_contact_name"]') || {}).value : '');
+			setLegacyFieldValue('customer_tel' + i, row ? (row.querySelector('input[name^="extra_contact_tel"]') || {}).value : '');
+			setLegacyFieldValue('address_name' + i, row ? (row.querySelector('input[name^="extra_shipping_address"]') || {}).value : '');
+		}
+	}
+
+	function syncAddressDetailFieldsToLegacy() {
+		var parkFront = getCheckedValue('park_front', '1');
+		var entranceType = getCheckedValue('entrance_type', '1');
+		var moveFurniture = getCheckedValue('move_furn', '0');
+
+		var valueOf = function(selector) {
+			var el = document.querySelector(selector);
+			return el ? el.value : '';
+		};
+
+		setLegacyFieldValue('car_home', parkFront === '1' ? '1' : '0');
+		setLegacyFieldValue('car_road', parkFront === '0' ? '1' : '0');
+		setLegacyFieldValue('car_park', valueOf('input[name="park_location"]'));
+		setLegacyFieldValue('height_ltd', document.querySelector('input[name="is_high_roof"]') && document.querySelector('input[name="is_high_roof"]').checked ? '1' : '0');
+		setLegacyFieldValue('slope', entranceType === '1' ? '1' : '0');
+		setLegacyFieldValue('bundai', entranceType === '2' ? '1' : '0');
+		setLegacyFieldValue('unit_bundai', valueOf('input[name="stair_count"]'));
+		setLegacyFieldValue('install', valueOf('input[name="install_floor"]'));
+		setLegacyFieldValue('home_type', getCheckedValue('room_type', '1'));
+		setLegacyFieldValue('room_bigger', valueOf('input[name="door_width"]'));
+		setLegacyFieldValue('room_longer', valueOf('input[name="door_height"]'));
+		setLegacyFieldValue('bundai_big', joinSizeParts(valueOf('input[name="stair_width"]'), valueOf('input[name="stair_height"]')));
+		setLegacyFieldValue('lip_big', joinSizeParts(valueOf('input[name="elev_door_width"]'), valueOf('input[name="elev_door_height"]')));
+		setLegacyFieldValue('lip_long', joinSizeParts(valueOf('input[name="elev_width"]'), valueOf('input[name="elev_height"]'), valueOf('input[name="elev_depth"]')));
+		setLegacyFieldValue('lip_weight', valueOf('input[name="elev_capacity"]'));
+		setLegacyFieldValue('want_employee', moveFurniture === '1' ? '1' : '0');
+		setLegacyFieldValue('employee_unit', valueOf('input[name="move_furn_count"]'));
+		setLegacyFieldValue('ferniger_name', valueOf('input[name="move_furn_detail"]'));
+		setLegacyFieldValue('description_ja', valueOf('input[name="addr_note"]'));
+	}
+
+	function syncFormCompatibilityFields() {
+		ensureHiddenField('customer_typename', 'customer_typename');
+		syncShippingFieldsToLegacy();
+		syncExtraAddressFieldsToLegacy();
+		syncAddressDetailFieldsToLegacy();
 	}
 
 	function applyShippingSelection(data) {
@@ -701,9 +788,6 @@
 			document.getElementById('dt5').style.display = 'none';
 		}
 	}
-
-
-
 </script>
 
 <style type="text/css">
@@ -2095,18 +2179,317 @@
 		$nextId = $yearMonth . $maxId1;
 	}
 
+	$savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+	$savedSo = null;
+	$savedRegister = null;
+	$savedProducts = array();
+	$savedProductsForForm = array();
+	$savedOtherBill = null;
+	$savedCommentSo = null;
+	$savedTransaction = null;
+	$savedDeliveryPrint = null;
+	$savedFormSession = null;
+
+	if ($savedRefId !== "") {
+		if (isset($_SESSION['register_suphos_saved_form'][$savedRefId])) {
+			$savedFormSession = $_SESSION['register_suphos_saved_form'][$savedRefId];
+			unset($_SESSION['register_suphos_saved_form'][$savedRefId]);
+		}
+
+		$savedSoQuery = mysqli_query($conn, "SELECT * FROM hos__so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedSoQuery) {
+			$savedSo = mysqli_fetch_assoc($savedSoQuery);
+		}
+
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedRegisterQuery) {
+			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
+		}
+
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedOtherBillQuery) {
+			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
+		}
+
+		$savedCommentSoQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedCommentSoQuery) {
+			$savedCommentSo = mysqli_fetch_assoc($savedCommentSoQuery);
+		}
+
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedTransactionQuery) {
+			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
+		}
+
+		$savedDeliveryPrintQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_print WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedDeliveryPrintQuery) {
+			$savedDeliveryPrint = mysqli_fetch_assoc($savedDeliveryPrintQuery);
+		}
+
+		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1'");
+		if ($savedProductQuery) {
+			while ($savedProduct = mysqli_fetch_assoc($savedProductQuery)) {
+				$savedProducts[] = $savedProduct;
+			}
+		}
+	}
+
+	if (count($savedProducts) > 0) {
+		foreach ($savedProducts as $savedProduct) {
+			$savedProductsForForm[] = array(
+				'product_id' => (string)($savedProduct["product_id"] ?? ""),
+				'product_code' => (string)($savedProduct["master_access_code"] ?? ""),
+				'product_name' => (string)($savedProduct["master_product_name"] ?? $savedProduct["display_name"] ?? $savedProduct["product_code"] ?? ""),
+				'unit_name' => (string)($savedProduct["master_unit_name"] ?? ""),
+				'sale_count' => (string)($savedProduct["count"] ?? ""),
+				'product_price' => (string)($savedProduct["price"] ?? ""),
+				'discount_unit' => (string)($savedProduct["discount"] ?? ""),
+				'sum_amount' => (string)($savedProduct["amount"] ?? ""),
+				'warranty' => (string)($savedProduct["warranty"] ?? ""),
+				'cal' => (string)($savedProduct["cal"] ?? ""),
+				'pm_year' => (string)($savedProduct["pm_year"] ?? ""),
+				'pm' => (string)($savedProduct["pm"] ?? ""),
+				'sale_remarkk' => (string)($savedProduct["sale_remark"] ?? ""),
+				'clear_br' => (string)($savedProduct["clear_br"] ?? ""),
+				'clear_ivno' => (string)($savedProduct["clear_ivno"] ?? ""),
+				'jong_ckk' => (string)($savedProduct["jong_ckk"] ?? ""),
+				'jong_no' => (string)($savedProduct["jong_no"] ?? ""),
+				'display_name' => (string)($savedProduct["display_name"] ?? $savedProduct["jong_no"] ?? ""),
+				'subso_db_id' => (string)($savedProduct["id"] ?? "")
+			);
+		}
+	}
+
+	if (!empty($savedFormSession['products']) && is_array($savedFormSession['products'])) {
+		$savedProductsForForm = $savedFormSession['products'];
+	}
+
+	function so_saved_h($value)
+	{
+		return htmlspecialchars((string)($value ?? ""), ENT_QUOTES, "UTF-8");
+	}
+
+	function so_saved_display($value)
+	{
+		$value = trim((string)($value ?? ""));
+		return $value !== "" ? so_saved_h($value) : "-";
+	}
+
+	function so_saved_money($value)
+	{
+		if ($value === null || $value === "") {
+			return "-";
+		}
+
+		return is_numeric($value) ? number_format((float)$value, 2) : so_saved_h($value);
+	}
+
+	function so_saved_checked($row, $key)
+	{
+		return isset($row[$key]) && trim((string)$row[$key]) === "1";
+	}
+
+	function so_saved_time_value($value)
+	{
+		$value = trim((string)($value ?? ""));
+		if (preg_match('/\b([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/', $value, $matches)) {
+			return sprintf('%02d:%02d', (int)$matches[1], (int)$matches[2]);
+		}
+		return "";
+	}
+
+	function so_saved_delivery_time_part($savedSo, $savedRegister, $partIndex)
+	{
+		$deliveryTime = (string)($savedSo["delivery_time"] ?? "");
+		if ($deliveryTime !== "") {
+			preg_match_all('/\b([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/', $deliveryTime, $matches, PREG_SET_ORDER);
+			if (isset($matches[$partIndex])) {
+				return sprintf('%02d:%02d', (int)$matches[$partIndex][1], (int)$matches[$partIndex][2]);
+			}
+		}
+
+		$fallbackKey = $partIndex === 0 ? "start_time" : "end_time";
+		return so_saved_time_value($savedRegister[$fallbackKey] ?? "");
+	}
+
 
 
 
 
 	?>
 
+	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				if (typeof Swal === 'undefined') {
+					alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+					return;
+				}
+
+				Swal.fire({
+					title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+					text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+					icon: 'success',
+					confirmButtonColor: '#612989',
+					confirmButtonText: 'ตกลง'
+				});
+			});
+		</script>
+	<?php } ?>
+
+	<?php if (false && ($savedSo || $savedRegister)) { ?>
+		<div style="max-width: 1200px; margin: 24px auto 0; padding: 0 16px; box-sizing: border-box;">
+			<div style="background: #fff; border: 1px solid #EBEBEB; border-left: 5px solid #612989; border-radius: 8px; padding: 20px 24px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); font-family: 'Prompt', sans-serif;">
+				<div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 16px;">
+					<div>
+						<div style="font-size: 13px; color: #7a7280; margin-bottom: 4px;">ข้อมูลที่บันทึกแล้ว</div>
+						<div style="font-size: 22px; font-weight: 600; color: #2d2533;">เลขที่อ้างอิง <?php echo so_saved_display($savedRefId); ?></div>
+					</div>
+					<a href="register_suphos_edit.php?ref_id=<?php echo urlencode($savedRefId); ?>" style="background: #612989; color: #fff; text-decoration: none; border-radius: 22px; padding: 10px 20px; font-size: 14px;">เปิดหน้าแก้ไข</a>
+				</div>
+
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px;">
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">ลูกค้า/ออกบิล</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedSo["bill_name"] ?? ""); ?></div>
+					</div>
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">ผู้ติดต่อจัดส่ง</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedRegister["customer_name"] ?? ($savedSo["delivery_contact"] ?? "")); ?></div>
+					</div>
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">เบอร์โทร</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedRegister["customer_tel"] ?? ($savedSo["delivery_tel"] ?? "")); ?></div>
+					</div>
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">วันที่ส่ง</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedSo["delivery_date"] ?? ($savedRegister["start_date"] ?? "")); ?></div>
+					</div>
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">เวลาส่ง</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedSo["delivery_time"] ?? (($savedRegister["start_time"] ?? "") . " " . ($savedRegister["end_time"] ?? ""))); ?></div>
+					</div>
+					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
+						<div style="font-size: 12px; color: #7a7280;">พนักงาน</div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedRegister["employee_name"] ?? ($savedSo["sale"] ?? "")); ?></div>
+					</div>
+				</div>
+
+				<div style="margin-bottom: 16px;">
+					<div style="font-size: 13px; color: #7a7280; margin-bottom: 4px;">ที่อยู่จัดส่ง</div>
+					<div style="font-size: 15px; color: #2d2533;"><?php echo so_saved_display($savedRegister["address_name"] ?? ($savedSo["delivery_address"] ?? "")); ?></div>
+				</div>
+
+				<?php if (count($savedProducts) > 0) { ?>
+					<div style="overflow-x: auto;">
+						<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+							<thead>
+								<tr style="background: #F4F3F7; color: #4A4A4A;">
+									<th style="text-align: left; padding: 10px; border-bottom: 1px solid #EBEBEB;">สินค้า</th>
+									<th style="text-align: right; padding: 10px; border-bottom: 1px solid #EBEBEB;">จำนวน</th>
+									<th style="text-align: right; padding: 10px; border-bottom: 1px solid #EBEBEB;">ราคา</th>
+									<th style="text-align: right; padding: 10px; border-bottom: 1px solid #EBEBEB;">รวม</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ($savedProducts as $savedProduct) { ?>
+									<tr>
+										<td style="padding: 10px; border-bottom: 1px solid #F0EEF2;">
+											<div style="font-weight: 500; color: #2d2533;"><?php echo so_saved_display($savedProduct["product_name"] ?? ($savedProduct["product_code"] ?? "")); ?></div>
+											<?php if (!empty($savedProduct["sale_remark"])) { ?>
+												<div style="font-size: 12px; color: #7a7280;"><?php echo so_saved_h($savedProduct["sale_remark"]); ?></div>
+											<?php } ?>
+										</td>
+										<td style="padding: 10px; border-bottom: 1px solid #F0EEF2; text-align: right;"><?php echo so_saved_display($savedProduct["count"] ?? ""); ?></td>
+										<td style="padding: 10px; border-bottom: 1px solid #F0EEF2; text-align: right;"><?php echo so_saved_money($savedProduct["price"] ?? ""); ?></td>
+										<td style="padding: 10px; border-bottom: 1px solid #F0EEF2; text-align: right;"><?php echo so_saved_money($savedProduct["amount"] ?? ""); ?></td>
+									</tr>
+								<?php } ?>
+							</tbody>
+						</table>
+					</div>
+				<?php } ?>
+			</div>
+		</div>
+	<?php } ?>
+
+	<?php if (count($savedProductsForForm) > 0) { ?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var savedProductsForForm = <?php echo json_encode($savedProductsForForm, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+				savedProductsForForm.forEach(function(product, index) {
+					var rowIndex = index + 1;
+					var row = document.getElementById('product_row_' + rowIndex);
+					if (!row) {
+						return;
+					}
+
+					row.style.display = '';
+
+					var setValue = function(prefix, value) {
+						var element = document.getElementById(prefix + rowIndex);
+						if (element) {
+							element.value = value || '';
+						}
+					};
+
+					setValue('product_id', product.product_id);
+					setValue('product_codet', product.product_code);
+					setValue('h_product_codet', product.product_code);
+					setValue('product_name', product.product_name);
+					setValue('unit_name', product.unit_name);
+					setValue('sale_count', product.sale_count);
+					setValue('product_price', product.product_price);
+					setValue('discount_unit', product.discount_unit);
+					setValue('sum_amount', product.sum_amount);
+					setValue('warranty', product.warranty);
+					setValue('cal', product.cal);
+					setValue('pm_year', product.pm_year);
+					setValue('pm', product.pm);
+					setValue('sale_remarkk', product.sale_remarkk);
+					setValue('clear_br', product.clear_br);
+					setValue('clear_ivno', product.clear_ivno);
+					setValue('jong_ckk', product.jong_ckk);
+					setValue('jong_no', product.jong_no || product.display_name);
+					setValue('display_name', product.display_name);
+					setValue('subso_db_id', product.subso_db_id);
+
+					var productNameLabel = document.getElementById('product_name_label' + rowIndex);
+					if (productNameLabel) {
+						productNameLabel.textContent = product.product_name || product.product_code || '';
+					}
+
+					if (typeof formatNumberInput === 'function') {
+						var priceElement = document.getElementById('product_price' + rowIndex);
+						var discountElement = document.getElementById('discount_unit' + rowIndex);
+						if (priceElement && priceElement.value !== '') {
+							formatNumberInput(priceElement);
+						}
+						if (discountElement && discountElement.value !== '') {
+							formatNumberInput(discountElement);
+						}
+					}
+
+					if (typeof updateRowTotal === 'function') {
+						updateRowTotal(rowIndex);
+					}
+				});
+
+				if (typeof calculateSummary === 'function') {
+					calculateSummary();
+				}
+			});
+		</script>
+	<?php } ?>
+
 	<!--action="register_office1.php"-->
-	<form action='register_suphos1.php' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action='<?php echo ($savedSo !== null) ? "register_suphos_edit1.php" : "register_suphos1.php"; ?>' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
+				syncFormCompatibilityFields();
 				updateDeliveryContractRequirement();
 				if (!validateDeliveryContractRequirement()) {
 					return false;
@@ -2182,7 +2565,42 @@
 					return false;
 				}
 
-				return true;
+				if (window.soSubmitConfirmed) {
+					return true;
+				}
+
+				if (typeof Swal === 'undefined') {
+					return confirm('ยืนยันการบันทึกข้อมูลใช่หรือไม่?');
+				}
+
+				Swal.fire({
+					title: 'ยืนยันการบันทึกข้อมูล',
+					text: 'ตรวจสอบข้อมูลเรียบร้อยแล้ว ต้องการบันทึกข้อมูลนี้ใช่หรือไม่?',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonColor: '#612989',
+					cancelButtonColor: '#8a8a8a',
+					confirmButtonText: 'ยืนยันบันทึก',
+					cancelButtonText: 'ยกเลิก'
+				}).then(function(result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					var form = document.forms['frmMain'];
+					var submitValue = form.querySelector('input[type="hidden"][name="submit"]');
+					if (!submitValue) {
+						submitValue = document.createElement('input');
+						submitValue.type = 'hidden';
+						submitValue.name = 'submit';
+						form.appendChild(submitValue);
+					}
+					submitValue.value = 'submit';
+					window.soSubmitConfirmed = true;
+					HTMLFormElement.prototype.submit.call(form);
+				});
+
+				return false;
 			}
 		</script>
 
@@ -2194,7 +2612,7 @@
 					<h1 class="so-title">Register Sale Order</h1>
 					<div class="so-ref-info">
 						<span class="so-ref-label">เลขที่อ้างอิง</span>
-						<span class="so-ref-value"><?php echo $so . $nextId; ?></span>
+						<span class="so-ref-value"><?php echo ($savedSo !== null) ? $savedSo['ref_id'] : ($so . $nextId); ?></span>
 					</div>
 
 				</div>
@@ -2210,7 +2628,8 @@
 				<button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tab-admin-info')">Admin</button>
 			</div>
 
-			<input type="hidden" name="ref_id" value="<?php echo $ffirst['ref_id'] + 1; ?>">
+			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? $savedSo['ref_id'] : ($ffirst['ref_id'] + 1); ?>">
+			<input type="hidden" name="redirect_to" value="register_suphos.php">
 
 			<!-- Card Container -->
 			<div>
@@ -2257,11 +2676,9 @@
 							<div class="so-field-group">
 								<label class="so-label">บริษัท<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<!-- Keeping original radio checked and named type_doc hidden so it submits correctly -->
-									<input type="radio" checked='checked' name="type_doc" value="3" style="display:none;">
-									<select class="so-select">
+									<select class="so-select" name="type_doc" id="type_doc_select" onchange="var r=document.querySelector('input[name=type_doc]'); if(r)r.value=this.value;">
 										<option value="3">AWL</option>
-										<option value="3">NBM</option>
+										<option value="4">NBM</option>
 									</select>
 								</div>
 							</div>
@@ -2270,7 +2687,7 @@
 							<div class="so-field-group">
 								<label class="so-label">ประเภท<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<select class="so-select" onchange="
+									<select class="so-select" id="doc_type_select" onchange="
 									document.getElementById('ic_ckk').checked = false;
 									document.getElementById('et_ckk').checked = false;
 									if(this.value == '2') document.getElementById('et_ckk').checked = true;
@@ -2356,16 +2773,16 @@
 							<div class="so-field-group">
 								<label class="so-label">&nbsp;</label>
 								<div class="so-toggle-group">
-									<label class="so-toggle-pill" id="lbl-que_ckk">
-										<input type="checkbox" name="que_ckk" id="que_ckk" value="1">
+									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'que_ckk') ? ' active' : ''; ?>" id="lbl-que_ckk">
+										<input type="checkbox" name="que_ckk" id="que_ckk" value="1"<?php echo so_saved_checked($savedSo, 'que_ckk') ? ' checked' : ''; ?>>
 										<span>งานด่วน</span>
 									</label>
-									<label class="so-toggle-pill" id="lbl-have_order">
-										<input type="checkbox" name="have_order" id="have_order" value="1">
+									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'have_order') ? ' active' : ''; ?>" id="lbl-have_order">
+										<input type="checkbox" name="have_order" id="have_order" value="1"<?php echo so_saved_checked($savedSo, 'have_order') ? ' checked' : ''; ?>>
 										<span>ออเดอร์ฝาก</span>
 									</label>
-									<label class="so-toggle-pill" id="lbl-plan_ckk">
-										<input type="checkbox" name="plan_ckk" id="plan_ckk" value="1">
+									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'plan_ckk') ? ' active' : ''; ?>" id="lbl-plan_ckk">
+										<input type="checkbox" name="plan_ckk" id="plan_ckk" value="1"<?php echo so_saved_checked($savedSo, 'plan_ckk') ? ' checked' : ''; ?>>
 										<span>ไม่ได้ประมาณการ</span>
 									</label>
 								</div>
@@ -3177,7 +3594,7 @@
 							<div class="so-field-group" style="grid-column: span 1;">
 								<label class="so-label">เวลาในการจัดส่ง<span style="color:red">*</span></label>
 								<div class="time-wrapper">
-									<input id="start_time" name="start_time" class="so-input" type="time" style="padding-right: 40px;" />
+									<input id="start_time" name="start_time" class="so-input" type="time" value="<?php echo so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 0)); ?>" style="padding-right: 40px;" />
 								</div>
 							</div>
 
@@ -3202,12 +3619,12 @@
 
 						<div style="display: flex; gap: 16px; margin-top: 24px;">
 							<label class="so-toggle-btn">
-								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;" onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;"<?php echo so_saved_checked($savedRegister, 'call_customer') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ต้องการให้โทรแจ้ง</span>
 							</label>
 
 							<label class="so-toggle-btn">
-								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;" onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;"<?php echo so_saved_checked($savedOtherBill, 'ref_12') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)</span>
 							</label>
 						</div>
@@ -3318,7 +3735,7 @@
 						<div class="so-field-group" style="margin-top: 16px;">
 							<label class="so-label" style="color: #612989;">สถานที่ติดตั้งเครื่อง<span style="color:red">*</span></label>
 							<div style="position: relative; display: flex; align-items: center;">
-								<input name="install_location" type="text" class="so-input" placeholder="ใส่ที่ติดตั้งเครื่อง" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+								<input name="install_location" id="install_location" type="text" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['install_place'] ?? '') : ''; ?>" placeholder="ใส่ที่ติดตั้งเครื่อง" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 							</div>
 						</div>
@@ -3603,52 +4020,52 @@
 
 						<div class="so-doc-grid">
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_3" value="1">
+								<input type="checkbox" name="ref_3" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_3') ? ' checked' : ''; ?>>
 								<span>ใบ อย.</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_6" value="1">
+								<input type="checkbox" name="ref_6" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_6') ? ' checked' : ''; ?>>
 								<span>ใบนำเข้าสินค้า</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_8" value="1">
+								<input type="checkbox" name="ref_8" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_8') ? ' checked' : ''; ?>>
 								<span>ใบ PM</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_9" value="1">
+								<input type="checkbox" name="ref_9" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_9') ? ' checked' : ''; ?>>
 								<span>ใบ CAL</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_11" value="1">
+								<input type="checkbox" name="ref_11" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_11') ? ' checked' : ''; ?>>
 								<span>ใบประเมินสินค้า</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_5" value="1">
+								<input type="checkbox" name="ref_5" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_5') ? ' checked' : ''; ?>>
 								<span>ใบช่างอบรม</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_2" value="1">
+								<input type="checkbox" name="ref_2" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_2') ? ' checked' : ''; ?>>
 								<span>เอกสารตามไฟล์แนบ</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_1" value="1">
+								<input type="checkbox" name="ref_1" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_1') ? ' checked' : ''; ?>>
 								<span>เอกสาร N-Health</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_4" value="1">
+								<input type="checkbox" name="ref_4" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_4') ? ' checked' : ''; ?>>
 								<span>ใบตัวแทนจำหน่าย</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_7" value="1">
+								<input type="checkbox" name="ref_7" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_7') ? ' checked' : ''; ?>>
 								<span>ใบ CER เครื่องมือที่ใช้ทดสอบ</span>
 							</label>
 							<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
 								<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
-								<input type="text" name="ref_des" class="so-input" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('ref_10_hidden').checked = (this.value.trim() !== '');">
-								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;">
+								<input type="text" name="ref_des" class="so-input" value="<?php echo so_saved_h($savedOtherBill['ref_des'] ?? ''); ?>" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('ref_10_hidden').checked = (this.value.trim() !== '');">
+								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;"<?php echo (so_saved_checked($savedOtherBill, 'ref_10') || trim((string)($savedOtherBill['ref_des'] ?? '')) !== '') ? ' checked' : ''; ?>>
 								<!-- Hidden inputs to keep old compatibility if needed -->
-								<input type="checkbox" name="ref_13" value="1" style="display:none;">
-					</div>
+								<input type="checkbox" name="ref_13" value="1" style="display:none;"<?php echo so_saved_checked($savedOtherBill, 'ref_13') ? ' checked' : ''; ?>>
+							</div>
 						</div>
 					</div>
 
@@ -3721,10 +4138,9 @@
 					}
 
 					.so-doc-pill:has(input:checked) {
-						background-color: #EFEBFF;
+						background-color: #612989;
 						border-color: #612989;
-						color: #612989;
-						font-weight: 600;
+						color: #ffffff;
 					}
 
 					.so-doc-pill input[type="checkbox"] {
@@ -3852,6 +4268,8 @@
 
 						for (let i = 1; i <= 5; i++) {
 							const input = document.getElementById('hidden_slip' + i);
+							const hiddenVal = document.getElementById('hidden_slip_val' + i);
+							
 							if (input.files && input.files[0]) {
 								const fileName = input.files[0].name;
 
@@ -3860,10 +4278,24 @@
 
 								fileBox.innerHTML = `
                 <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <span style="font-size: 12px; color: #612989; font-weight: 600;">ไฟล์</span>
-                    <a href="#" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
+                    <span style="font-size: 12px; color: #612989; font-weight: 600;">ไฟล์ใหม่</span>
+                    <span style="color: #612989; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</span>
                 </div>
                 <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeFile(${i})"></i>
+            `;
+								list.appendChild(fileBox);
+							} else if (hiddenVal && hiddenVal.value) {
+								const fileName = hiddenVal.value;
+
+								const fileBox = document.createElement('div');
+								fileBox.style.cssText = 'background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; width: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+
+								fileBox.innerHTML = `
+                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                    <span style="font-size: 12px; color: #28a745; font-weight: 600;">ไฟล์เดิม</span>
+                    <a href="upload/${fileName}" target="_blank" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
+                </div>
+                <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeExistingFile(${i})"></i>
             `;
 								list.appendChild(fileBox);
 							}
@@ -3873,6 +4305,14 @@
 					function removeFile(index) {
 						const input = document.getElementById('hidden_slip' + index);
 						input.value = ''; // Clear file
+						renderFileList();
+					}
+
+					function removeExistingFile(index) {
+						const hiddenVal = document.getElementById('hidden_slip_val' + index);
+						if (hiddenVal) {
+							hiddenVal.value = ''; // Clear file reference to delete from DB
+						}
 						renderFileList();
 					}
 				</script>
@@ -4056,13 +4496,21 @@
 			</div>
 		</div>
 		<!-- hidden fields กลุ่มนี้ยังคงส่งค่าไปกับ form แม้ไม่มี input ให้ผู้ใช้แก้บนหน้า -->
-		<input type="hidden" name="end_time" value="">
+		<input type="hidden" name="end_time" value="<?php echo so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 1)); ?>">
 		<input type="hidden" name="mode_name" id="mode_name" value="">
 		<input type="hidden" name="sale_comment" value="">
 		<input type="hidden" name="head_1" value="">
 		<input type="hidden" name="have_map" value="">
 		<input type="hidden" name="customer_contact" value="">
+		<input type="hidden" name="address_send" id="address_send" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['install_place'] ?? '') : ''; ?>">
+		<input type="hidden" name="customer_typename" id="customer_typename" value="">
 		<input type="hidden" name="date_tranfer" value="">
+		<input type="hidden" name="redirect_to" value="register_suphos.php">
+		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip1']) : ''; ?>">
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip2']) : ''; ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip3']) : ''; ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip4']) : ''; ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip5']) : ''; ?>">
 	</form>
 
 	<!-- Modal รายชื่อลูกค้า: ใช้ค้นหา/เลือก customer เพื่อนำข้อมูลไปเติมในฟอร์มหลัก -->
@@ -5296,6 +5744,25 @@
 			}
 		}
 
+		function applySavedToggleState(checkbox, value) {
+			if (!checkbox) return;
+
+			var normalizedValue = String(value === undefined || value === null ? '' : value).trim();
+			checkbox.checked = normalizedValue === '1';
+			updateToggleStyle(checkbox);
+
+			if (checkbox.id === 'have_order') {
+				updateDeliveryContractRequirement();
+			}
+		}
+
+		function normalizeTimeInputValue(value) {
+			var match = String(value === undefined || value === null ? '' : value).match(/\b([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/);
+			if (!match) return '';
+
+			return String(match[1]).padStart(2, '0') + ':' + match[2];
+		}
+
 		var originalOpenCity1 = openCity1;
 		openCity1 = function(cityName, elem) {
 			if (typeof originalOpenCity1 === 'function') {
@@ -6446,3 +6913,408 @@
 		<button type="button" class="btnBack" onclick="goMainSuphos()">กลับสู่หน้าหลัก</button>
 	</div>
 </div>
+
+<?php if ($savedSo !== null): ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var savedSo = <?php echo json_encode($savedSo); ?>;
+			var savedRegister = <?php echo json_encode($savedRegister); ?>;
+			var savedOtherBill = <?php echo json_encode($savedOtherBill); ?>;
+			var savedCommentSo = <?php echo json_encode($savedCommentSo); ?>;
+			var savedTransaction = <?php echo json_encode($savedTransaction); ?>;
+			var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
+			var savedProducts = <?php echo json_encode($savedProducts); ?>;
+
+			// 1. Populate simple text/select inputs by name or id
+			var simpleMappings = {
+				'date_so': savedSo.date_so,
+				'suggest': savedSo.suggest,
+				'bill_id': savedSo.bill_id,
+				'pre_name': savedSo.pre_name,
+				'bill_name': savedSo.bill_name,
+				'bill_address': savedSo.bill_address,
+				'bill_tel': savedSo.bill_tel,
+				'tax_id': savedSo.tax_id,
+				'email': savedSo.email,
+				'payment': savedSo.payment,
+				'payment_des': savedSo.payment_des,
+				'cm_no': savedSo.cm_no,
+				'date_tranfer': savedSo.date_tranfer,
+				'po_no': savedSo.po_no,
+				'delivery_contract': savedSo.delivery_contract,
+				'shipping_ref1': savedSo.order_refer_code1 || '',
+				'shipping_ref2': savedSo.order_refer_code2 || '',
+				'shipping_cost': savedSo.ker_bath || '',
+				'book_no': savedSo.book_no,
+				'brn_no': savedSo.brn_no,
+				'brnp_no': savedSo.brnp_no,
+				'sn_no': savedSo.sn_no,
+				'pr_no': savedSo.pr_no,
+				'type_detail': savedSo.type_detail,
+				'delivery_type': savedSo.delivery_type,
+				'start_date': savedSo.delivery_date,
+				'address_name': savedSo.delivery_address,
+				'customer_name': savedSo.delivery_contact,
+				'customer_tel': savedSo.delivery_tel,
+				'address_send': savedSo.install_place,
+				'address_1': savedSo.address_1,
+				'sale_code': savedSo.sale_code,
+				// Address main:
+				'contact_name': savedSo.delivery_contact || (savedRegister && savedRegister.customer_name) || '',
+				'contact_tel': savedSo.delivery_tel || (savedRegister && savedRegister.customer_tel) || '',
+				'contact_province': savedSo.province_name || (savedRegister && savedRegister.province_name) || '',
+				'shipping_address': savedSo.delivery_address || (savedRegister && savedRegister.address_name) || '',
+				'install_location': savedSo.install_place || (savedRegister && savedRegister.address_send) || '',
+				// Address details (mapped from tb_transaction):
+				'park_location': savedTransaction ? (savedTransaction.car_park || '') : '',
+				'stair_count': savedTransaction ? (savedTransaction.unit_bundai || '') : '',
+				'install_floor': savedTransaction ? (savedTransaction.install || '') : '',
+				'door_width': savedTransaction ? (savedTransaction.room_bigger || '') : '',
+				'elev_capacity': savedTransaction ? (savedTransaction.lip_weight || '') : '',
+				'move_furn_count': savedTransaction ? (savedTransaction.employee_unit || '') : '',
+				'move_furn_detail': savedTransaction ? (savedTransaction.ferniger_name || '') : '',
+				'addr_note': savedTransaction ? (savedTransaction.description || '') : '',
+				// Autocomplete employee mappings:
+				'employee_name': (savedRegister && savedRegister.employee_name) || '',
+				'h_employee_name': (savedRegister && savedRegister.h_employee_name) || '',
+				// Delivery schedule fields:
+				'between_date': savedSo.date_send_key || (savedRegister && savedRegister.between_date) || '',
+				'status_comment': savedSo.status_comment || (savedRegister && savedRegister.status_comment) || '',
+				// Shipping extras:
+				'transport_company': savedSo.transport_company || '',
+				'time_range': savedSo.time_range || ''
+			};
+
+			// Set simple field values
+			Object.keys(simpleMappings).forEach(function(key) {
+				var val = simpleMappings[key];
+				if (val !== undefined && val !== null) {
+					var inputs = document.querySelectorAll('[name="' + key + '"], #' + key);
+					inputs.forEach(function(input) {
+						if (input.type !== 'radio' && input.type !== 'checkbox') {
+							input.value = val;
+						}
+					});
+				}
+			});
+
+			// Populate customer card display inputs
+			var savedBillId = savedSo.bill_id || '';
+			if (savedBillId !== '') {
+				var hBillIdElem = document.getElementById('h_bill_id');
+				if (hBillIdElem) hBillIdElem.value = savedBillId;
+				var displayBillId = document.getElementById('display_bill_id');
+				if (displayBillId) displayBillId.textContent = savedBillId;
+				setElementValue('display_bill_name', savedSo.bill_name || '');
+				setElementValue('display_bill_tel', savedSo.bill_tel || '');
+				setElementValue('display_mode_name', savedSo.mode_cus || '');
+
+				doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
+					if (success) {
+						// Restore specific saved order overrides
+						if (savedSo.bill_name) document.getElementById('bill_name').value = savedSo.bill_name;
+						if (savedSo.bill_address) document.getElementById('bill_address').value = savedSo.bill_address;
+						if (savedSo.bill_tel) document.getElementById('bill_tel').value = savedSo.bill_tel;
+						if (savedSo.tax_id) document.getElementById('tax_id').value = savedSo.tax_id;
+						if (savedSo.pre_name) document.getElementById('pre_name').value = savedSo.pre_name;
+						if (savedSo.email) document.getElementById('email').value = savedSo.email;
+						if (savedSo.install_place) {
+							setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
+							setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');
+						}
+
+						var isCreditPayment = (savedSo.payment !== '0' && savedSo.payment !== '');
+						if (isCreditPayment) {
+							switchPaymentMode('credit');
+							setTimeout(function() {
+								var sel = document.getElementById('payment');
+								if (sel) {
+									sel.value = savedSo.payment;
+									updateCreditDisplay();
+								}
+							}, 500);
+						} else {
+							switchPaymentMode('cash');
+							setTimeout(function() {
+								var sel = document.getElementById('payment');
+								if (sel) {
+									sel.value = savedSo.payment;
+									var cashSel = document.getElementById('payment_cash_select');
+									if (cashSel) cashSel.value = savedSo.payment;
+								}
+							}, 500);
+						}
+					}
+				});
+			}
+
+			// 2. Handle type_doc (company) select and doc_type_select
+			if (savedSo.type_doc) {
+				// Set company select (AWL=3, NBM=4)
+				var typeDocSel = document.getElementById('type_doc_select');
+				if (typeDocSel) {
+					typeDocSel.value = savedSo.type_doc;
+				}
+				// Also sync hidden radio if exists
+				var typeDocRadio = document.querySelector('input[name="type_doc"][value="' + savedSo.type_doc + '"]');
+				if (typeDocRadio) { typeDocRadio.checked = true; }
+			}
+			// Set document type select based on ic_ckk/et_ckk
+			(function() {
+				var docTypeSel = document.getElementById('doc_type_select');
+				if (!docTypeSel) return;
+				if (savedSo.ic_ckk === '1') {
+					docTypeSel.value = '3';
+				} else if (savedSo.et_ckk === '1') {
+					docTypeSel.value = '2';
+				} else {
+					docTypeSel.value = '1';
+				}
+			})();
+
+			// 3. Handle type_type radio buttons (รูปแบบการพิมพ์)
+			if (savedSo.type_type) {
+				var typeTypeRadio = document.querySelector('input[name="type_type"][value="' + savedSo.type_type + '"]');
+				if (typeTypeRadio) {
+					typeTypeRadio.checked = true;
+					if (typeof ckk_1 === 'function') {
+						ckk_1();
+					}
+				}
+			}
+
+			// 4. Handle address details radio buttons
+			var parkFrontVal = '';
+			if (savedTransaction) {
+				parkFrontVal = savedTransaction.car_home === '1' ? '1' : (savedTransaction.car_road === '1' ? '0' : '');
+			}
+			if (parkFrontVal !== '') {
+				var pfRadio = document.querySelector('input[name="park_front"][value="' + parkFrontVal + '"]');
+				if (pfRadio) pfRadio.checked = true;
+			}
+
+			var entTypeVal = '';
+			if (savedTransaction) {
+				entTypeVal = savedTransaction.slope === '1' ? '1' : (savedTransaction.bundai === '1' ? '2' : '');
+			}
+			if (entTypeVal !== '') {
+				var entRadio = document.querySelector('input[name="entrance_type"][value="' + entTypeVal + '"]');
+				if (entRadio) {
+					entRadio.checked = true;
+					if (typeof ckk_2 === 'function') {
+						ckk_2();
+					}
+				}
+			}
+
+			if (savedTransaction && savedTransaction.home_type) {
+				var rtRadio = document.querySelector('input[name="room_type"][value="' + savedTransaction.home_type + '"]');
+				if (rtRadio) rtRadio.checked = true;
+			}
+
+			if (savedTransaction && savedTransaction.want_employee) {
+				var mfRadio = document.querySelector('input[name="move_furn"][value="' + savedTransaction.want_employee + '"]');
+				if (mfRadio) {
+					mfRadio.checked = true;
+					if (typeof object === 'function') {
+						object();
+					}
+				}
+			}
+
+			// 5. Handle checkboxes (รวม toggle pills)
+			var checkboxes = ['with_pr', 'sn_ckk', 'book_clear', 'brn_clear', 'brnp_clear', 'full_bill', 'ic_ckk', 'et_ckk', 'que_ckk', 'have_order', 'plan_ckk', 'repeat_cus'];
+			checkboxes.forEach(function(cbName) {
+				var checkedVal = savedSo[cbName];
+				var cb = document.getElementById(cbName) || document.querySelector('input[type="checkbox"][name="' + cbName + '"]');
+				if (cb) {
+					if (typeof applySavedToggleState === 'function') {
+						applySavedToggleState(cb, checkedVal);
+					} else {
+						cb.checked = (String(checkedVal).trim() === '1');
+						if (typeof updateToggleStyle === 'function') {
+							updateToggleStyle(cb);
+						}
+					}
+				}
+			});
+
+			var callCustomerCheckbox = document.querySelector('input[name="call_customer"]');
+			if (callCustomerCheckbox && savedRegister) {
+				callCustomerCheckbox.checked = (savedRegister.call_customer === '1');
+				callCustomerCheckbox.dispatchEvent(new Event('change'));
+			}
+
+			var ref12Checkbox = document.querySelector('input[name="ref_12"]');
+			if (ref12Checkbox && savedOtherBill) {
+				ref12Checkbox.checked = (savedOtherBill.ref_12 === '1');
+				ref12Checkbox.dispatchEvent(new Event('change'));
+			}
+
+			var hrCb = document.querySelector('input[name="is_high_roof"]');
+			if (hrCb && savedTransaction) {
+				hrCb.checked = (savedTransaction.height_ltd === '1');
+			}
+
+			// 6. Handle comments from savedCommentSo
+			if (savedCommentSo) {
+				if (document.getElementById('hidden_comment_cs')) document.getElementById('hidden_comment_cs').value = savedCommentSo.comment_cs || '';
+				if (document.getElementById('hidden_comment_en')) document.getElementById('hidden_comment_en').value = savedCommentSo.comment_en || '';
+				if (document.getElementById('hidden_comment_st')) document.getElementById('hidden_comment_st').value = savedCommentSo.comment_st || '';
+				if (document.getElementById('hidden_comment_ad')) document.getElementById('hidden_comment_ad').value = savedCommentSo.comment_ad || '';
+
+				if (typeof addDeptComment === 'function' && typeof syncDeptComments === 'function') {
+					var list = document.getElementById('dept_comment_list');
+					if (list) list.innerHTML = '';
+
+					var depts = ['cs', 'en', 'st', 'ad'];
+					var addedAny = false;
+					depts.forEach(function(dept) {
+						var commentText = savedCommentSo['comment_' + dept];
+						if (commentText && commentText.trim() !== '') {
+							var lines = commentText.split('\n');
+							lines.forEach(function(line) {
+								addDeptComment(dept, line);
+								addedAny = true;
+							});
+						}
+					});
+					if (!addedAny) {
+						addDeptComment();
+					}
+				}
+			}
+
+			// 7. Handle checkboxed other fields in tb_other_bill
+			if (savedOtherBill) {
+				var otherCheckboxes = ['ref_1', 'ref_2', 'ref_3', 'ref_4', 'ref_5', 'ref_6', 'ref_7', 'ref_8', 'ref_9', 'ref_10', 'ref_11', 'ref_12', 'ref_13', 'head_1'];
+				otherCheckboxes.forEach(function(cbName) {
+					var cbVal = savedOtherBill[cbName];
+					var cb = document.querySelector('input[name="' + cbName + '"]');
+					if (cb) {
+						cb.checked = (cbVal === '1');
+					}
+				});
+				if (savedOtherBill.ref_des) {
+					var refDesInput = document.querySelector('input[name="ref_des"]');
+					if (refDesInput) {
+						refDesInput.value = savedOtherBill.ref_des;
+					}
+				}
+			}
+
+			// 8. Handle start_time and end_time
+			if (savedSo.delivery_time && savedSo.delivery_time.trim() !== '') {
+				var timeParts = savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || [];
+				if (timeParts.length > 0 && document.querySelector('input[name="start_time"]')) {
+					document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(timeParts[0]);
+				}
+				if (timeParts.length > 1 && document.querySelector('input[name="end_time"]')) {
+					document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(timeParts[1]);
+				}
+			} else if (savedRegister) {
+				// Fallback: ดึงเวลาจาก tb_register_data
+				if (savedRegister.start_time && document.querySelector('input[name="start_time"]')) {
+					document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(savedRegister.start_time);
+				}
+				if (savedRegister.end_time && document.querySelector('input[name="end_time"]')) {
+					document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(savedRegister.end_time);
+				}
+			}
+
+			// 9. Restore extra delivery addresses from tb_delivery_print
+			if (savedDeliveryPrint) {
+				var extraAddressItems = [];
+				for (var extraIndex = 1; extraIndex <= 9; extraIndex++) {
+					var nameValue = savedDeliveryPrint['customer_name' + extraIndex] || '';
+					var telValue = savedDeliveryPrint['customer_tel' + extraIndex] || '';
+					var addressValue = savedDeliveryPrint['address_name' + extraIndex] || '';
+
+					if (nameValue || telValue || addressValue) {
+						extraAddressItems.push({
+							name: nameValue,
+							tel: telValue,
+							address: addressValue
+						});
+					}
+				}
+
+				if (extraAddressItems.length > 0) {
+					var existingExtraRows = document.querySelectorAll('#extra_address_list .extra-addr-row').length;
+					while (existingExtraRows < extraAddressItems.length && typeof addExtraAddress === 'function') {
+						addExtraAddress();
+						existingExtraRows++;
+					}
+
+					extraAddressItems.forEach(function(item, index) {
+						var displayIndex = index + 1;
+						var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
+						var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
+						var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
+
+						if (extraNameInput) extraNameInput.value = item.name;
+						if (extraTelInput) extraTelInput.value = item.tel;
+						if (extraAddressInput) extraAddressInput.value = item.address;
+					});
+				}
+			}
+
+			// 10. Handle Products table
+			if (Array.isArray(savedProducts) && savedProducts.length > 0) {
+				savedProducts.forEach(function(prod, index) {
+					var i = index + 1;
+					if (i <= 30) {
+						var rowFields = {
+							'subso_db_id': prod.id || prod.ID || '',
+							'product_id': prod.product_id || prod.product_ID || '',
+							'unit_name': prod.unit_name,
+							'warranty': prod.warranty,
+							'cal': prod.cal,
+							'pm': prod.pm,
+							'sale_remarkk': prod.sale_remark,
+							'clear_br': prod.clear_br,
+							'clear_ivno': prod.clear_ivno,
+							'jong_ckk': prod.jong_ckk,
+							'jong_no': prod.jong_no,
+							'display_name': prod.display_name,
+							'product_codet': prod.product_code || prod.product_codet,
+							'product_name': prod.product_name,
+							'sale_count': prod.count,
+							'product_price': prod.price,
+							'discount_unit': prod.discount,
+							'sum_amount': prod.amount
+						};
+
+						Object.keys(rowFields).forEach(function(key) {
+							var el = document.getElementById(key + i) || document.querySelector('input[name="' + key + i + '"]');
+							if (el) {
+								el.value = rowFields[key] || '';
+							}
+						});
+
+						var labelEl = document.getElementById('product_name_label' + i);
+						if (labelEl) {
+							labelEl.textContent = prod.product_name || '';
+						}
+
+						var row = document.getElementById('product_row_' + i);
+						if (row) {
+							row.style.display = '';
+						}
+					}
+				});
+			}
+
+			// 11. Sync compatibility fields and calculate grand total
+			if (typeof syncFormCompatibilityFields === 'function') {
+				syncFormCompatibilityFields();
+			}
+			if (typeof calculateSummary === 'function') {
+				calculateSummary();
+			}
+			if (typeof renderFileList === 'function') {
+				renderFileList();
+			}
+		});
+	</script>
+<?php endif; ?>

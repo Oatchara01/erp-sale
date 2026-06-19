@@ -3,6 +3,8 @@
 include("dbconnect.php");
 include ("error_page.php"); 
 
+$redirect_to = isset($_POST["redirect_to"]) ? $_POST["redirect_to"] : "register_suphos_edit.php"; 
+
 date_default_timezone_set("Asia/Bangkok");
 if ($_POST["submit"] = "submit") {
 
@@ -84,6 +86,9 @@ $comment_ad = $_POST["comment_ad"];
 
 $ic_ckk = $_POST["ic_ckk"];	
 $et_ckk = $_POST["et_ckk"];
+$repeat_cus = $_POST["repeat_cus"] ?? '';
+$time_range = $_POST["time_range"] ?? '';
+$status_comment = $_POST["status_comment"] ?? '';
 	
 /*if($po_no!=''){	
 $strSQL23 = "SELECT * FROM hos__so WHERE po_no = '".$po_no."'";
@@ -162,6 +167,62 @@ move_uploaded_file($_FILES["slip5"]["tmp_name"], "upload/" . $slip5);
 }
 
 
+// Flat format to array format mapping layer for register_suphos.php edit compatibility
+if (!isset($_POST["id"]) || !is_array($_POST["id"])) {
+	$mapped_id = array();
+	$mapped_sale_count = array();
+	$mapped_product_price = array();
+	$mapped_sum_amount = array();
+	$mapped_sale_remarkk = array();
+	$mapped_warranty = array();
+	$mapped_pm = array();
+	$mapped_cal = array();
+	$mapped_product_id = array();
+	$mapped_discount_unit = array();
+	$mapped_clear_br = array();
+	$mapped_sn = array();
+	$mapped_clear_ivno = array();
+	$mapped_jong_ckk = array();
+	$mapped_jong_no = array();
+
+	for ($i = 1; $i <= 30; $i++) {
+		if (isset($_POST["subso_db_id$i"]) && $_POST["subso_db_id$i"] !== '') {
+			$db_id = $_POST["subso_db_id$i"];
+			$mapped_id[$db_id] = $db_id;
+			$mapped_sale_count[$db_id] = $_POST["sale_count$i"] ?? '';
+			$mapped_product_price[$db_id] = $_POST["product_price$i"] ?? '';
+			$mapped_sum_amount[$db_id] = $_POST["sum_amount$i"] ?? '';
+			$mapped_sale_remarkk[$db_id] = $_POST["sale_remarkk$i"] ?? '';
+			$mapped_warranty[$db_id] = $_POST["warranty$i"] ?? '';
+			$mapped_pm[$db_id] = $_POST["pm$i"] ?? '';
+			$mapped_cal[$db_id] = $_POST["cal$i"] ?? '';
+			$mapped_product_id[$db_id] = $_POST["product_id$i"] ?? '';
+			$mapped_discount_unit[$db_id] = $_POST["discount_unit$i"] ?? '';
+			$mapped_clear_br[$db_id] = $_POST["clear_br$i"] ?? '';
+			$mapped_sn[$db_id] = $_POST["product_sn$i"] ?? $_POST["sn$i"] ?? '';
+			$mapped_clear_ivno[$db_id] = $_POST["clear_ivno$i"] ?? '';
+			$mapped_jong_ckk[$db_id] = $_POST["jong_ckk$i"] ?? '';
+			$mapped_jong_no[$db_id] = $_POST["jong_no$i"] ?? '';
+		}
+	}
+
+	$_POST["id"] = $mapped_id;
+	$_POST["sale_count"] = $mapped_sale_count;
+	$_POST["product_price"] = $mapped_product_price;
+	$_POST["sum_amount"] = $mapped_sum_amount;
+	$_POST["sale_remarkk"] = $mapped_sale_remarkk;
+	$_POST["warranty"] = $mapped_warranty;
+	$_POST["pm"] = $mapped_pm;
+	$_POST["cal"] = $mapped_cal;
+	$_POST["product_id"] = $mapped_product_id;
+	$_POST["discount_unit"] = $mapped_discount_unit;
+	$_POST["clear_br"] = $mapped_clear_br;
+	$_POST["sn"] = $mapped_sn;
+	$_POST["clear_ivno"] = $mapped_clear_ivno;
+	$_POST["jong_ckk"] = $mapped_jong_ckk;
+	$_POST["jong_no"] = $mapped_jong_no;
+}
+
 $id = $_POST["id"];
 $sale_count = $_POST["sale_count"];
 $product_price = $_POST["product_price"];
@@ -181,17 +242,88 @@ $jong_no = $_POST["jong_no"];
 	
 	
 $save="Update  hos__so set
-bill_name ='".$bill_name."',bill_tel ='".$bill_tel."',bill_address  ='".$bill_address."',full_bill ='".$full_bill."',date_so ='".$date_so."',suggest ='".$suggest."',payment ='".$payment."',sale_comment ='".$sale_comment."',po_no ='".$po_no."',delivery_contract ='".$delivery_contract."',book_clear ='".$book_clear."',book_no ='".$book_no."',brn_clear ='".$brn_clear."',brn_no ='".$brn_no."',brnp_clear ='".$brnp_clear."',brnp_no ='".$brnp_no."',sn_ckk ='".$sn_ckk."',sn_no ='".$sn_no."',install_place ='".$install_place."',with_pr ='".$with_pr."',type_type ='".$type_type."',type_detail ='".$type_detail."',delivery_type ='".$delivery_type."',delivery_date ='".$delivery_date."',delivery_time ='".$delivery_time."',delivery_address ='".$delivery_address."',delivery_contact ='".$delivery_contact."',delivery_tel ='".$delivery_tel."',pr_no ='".$pr_no."',add_by ='".$add_by."',payment_des ='".$payment_des."',slip1 = '".$slip1."',slip2 = '".$slip2."',slip3 = '".$slip3."',slip4 = '".$slip4."',slip5 = '".$slip5."',date_send_key='".$date_send_key."',have_order='".$have_order."',bill_id = '".$bill_id."',date_tranfer = '".$date_tranfer."',cm_no='".$cm_no."',send_sup='1',status_doc = 'Request',pre_name='".$pre_name."',que_ckk='".$que_ckk."',mode_cus ='".$mode_cus."',plan_ckk='".$plan_ckk."',email='".$email."',sale_code='".$sale_code."',tax_id='".$tax_id."',ic_ckk='".$ic_ckk."',et_ckk='".$et_ckk."'  where ref_id='".$ref_id."'";
+bill_name ='".$bill_name."',bill_tel ='".$bill_tel."',bill_address  ='".$bill_address."',full_bill ='".$full_bill."',date_so ='".$date_so."',suggest ='".$suggest."',payment ='".$payment."',sale_comment ='".$sale_comment."',po_no ='".$po_no."',delivery_contract ='".$delivery_contract."',book_clear ='".$book_clear."',book_no ='".$book_no."',brn_clear ='".$brn_clear."',brn_no ='".$brn_no."',brnp_clear ='".$brnp_clear."',brnp_no ='".$brnp_no."',sn_ckk ='".$sn_ckk."',sn_no ='".$sn_no."',install_place ='".$install_place."',with_pr ='".$with_pr."',type_type ='".$type_type."',type_detail ='".$type_detail."',delivery_type ='".$delivery_type."',delivery_date ='".$delivery_date."',delivery_time ='".$delivery_time."',delivery_address ='".$delivery_address."',delivery_contact ='".$delivery_contact."',delivery_tel ='".$delivery_tel."',pr_no ='".$pr_no."',add_by ='".$add_by."',payment_des ='".$payment_des."',slip1 = '".$slip1."',slip2 = '".$slip2."',slip3 = '".$slip3."',slip4 = '".$slip4."',slip5 = '".$slip5."',date_send_key='".$date_send_key."',have_order='".$have_order."',bill_id = '".$bill_id."',date_tranfer = '".$date_tranfer."',cm_no='".$cm_no."',send_sup='1',status_doc = 'Request',pre_name='".$pre_name."',que_ckk='".$que_ckk."',mode_cus ='".$mode_cus."',plan_ckk='".$plan_ckk."',email='".$email."',sale_code='".$sale_code."',tax_id='".$tax_id."',ic_ckk='".$ic_ckk."',et_ckk='".$et_ckk."',repeat_cus='".$repeat_cus."',time_range='".$time_range."',status_comment='".$status_comment."'  where ref_id='".$ref_id."'";
 
 $qsave=mysqli_query($conn,$save);
+
+if (!function_exists('updateHosSoColumnIfExists')) {
+	function updateHosSoColumnIfExists($conn, $ref_id, $column, $value)
+	{
+		if ($value === null || $value === '') {
+			return;
+		}
+
+		$safeColumn = mysqli_real_escape_string($conn, $column);
+		$columnCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__so LIKE '" . $safeColumn . "'");
+		if (!$columnCheck || mysqli_num_rows($columnCheck) == 0) {
+			return;
+		}
+
+		$safeValue = mysqli_real_escape_string($conn, $value);
+		$safeRefId = mysqli_real_escape_string($conn, $ref_id);
+		mysqli_query($conn, "UPDATE hos__so SET " . $safeColumn . " = '" . $safeValue . "' WHERE ref_id = '" . $safeRefId . "'");
+	}
+}
+
+if (!function_exists('normalizeOptionalDateValue')) {
+	function normalizeOptionalDateValue($value)
+	{
+		$value = trim($value);
+		if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $matches)) {
+			$year = (int)$matches[3];
+			if ($year > 2400) {
+				$year -= 543;
+			}
+			return sprintf('%04d-%02d-%02d', $year, (int)$matches[2], (int)$matches[1]);
+		}
+		return $value;
+	}
+}
+
+$optionalHosSoFieldMap = array(
+	'admin_doc_no' => 'iv_no',
+	'admin_work_no' => 'job_no',
+	'admin_sr_no' => 'sr_no',
+	'admin_deposit_no' => 'order_no',
+	'admin_doc_date' => 'iv_date',
+	'admin_edit_count' => 'new_bill',
+	'admin_old_doc_date' => 'date_oldbill',
+	'admin_edit_reason' => 'desnew_bill',
+	'admin_cancel_reason' => 'remark_cancel',
+	'shipping_ref1' => 'order_refer_code1',
+	'shipping_ref2' => 'order_refer_code2',
+	'shipping_cost' => 'ker_bath',
+	'transport_company' => 'transport_company'
+);
+
+foreach ($optionalHosSoFieldMap as $postField => $columnName) {
+	if (isset($_POST[$postField])) {
+		$optionalValue = $_POST[$postField];
+		if ($postField === 'admin_doc_date' || $postField === 'admin_old_doc_date') {
+			$optionalValue = normalizeOptionalDateValue($optionalValue);
+		}
+		updateHosSoColumnIfExists($conn, $ref_id, $columnName, $optionalValue);
+	}
+}
 	
-$save56="Update tb_other_bill SET
-head_1='".$head_1."',ref_1='".$ref_1."',ref_2='".$ref_2."',ref_3='".$ref_3."',ref_4='".$ref_4."',ref_5='".$ref_5."',ref_6='".$ref_6."',ref_7='".$ref_7."',ref_8='".$ref_8."',ref_9='".$ref_9."',ref_10='".$ref_10."',ref_des='".$ref_des."',ref_12='".$ref_12."',ref_13='".$ref_13."'	 where  ref_id ='".$ref_id."'";
-$qsave56=mysqli_query($conn,$save56);	
-	
-	
-$save57="Update tb_comment_so  SET comment_cs='".$comment_cs."',comment_en='".$comment_en."',comment_st='".$comment_st."',comment_ad='".$comment_ad."'	where  ref_id ='".$ref_id."'";
-$qsave57=mysqli_query($conn,$save57);		
+// Upsert tb_other_bill: ถ้ายังไม่มีเรคคอร์ดให้ INSERT, ถ้ามีแล้วให้ UPDATE
+$checkOtherBill = mysqli_query($conn, "SELECT id FROM tb_other_bill WHERE ref_id = '".$ref_id."' LIMIT 1");
+if ($checkOtherBill && mysqli_num_rows($checkOtherBill) > 0) {
+	$save56 = "Update tb_other_bill SET
+head_1='".$head_1."',ref_1='".$ref_1."',ref_2='".$ref_2."',ref_3='".$ref_3."',ref_4='".$ref_4."',ref_5='".$ref_5."',ref_6='".$ref_6."',ref_7='".$ref_7."',ref_8='".$ref_8."',ref_9='".$ref_9."',ref_10='".$ref_10."',ref_11='".$ref_11."',ref_des='".$ref_des."',ref_12='".$ref_12."',ref_13='".$ref_13."'	 where  ref_id ='".$ref_id."'";
+} else {
+	$save56 = "INSERT INTO tb_other_bill (ref_id,head_1,ref_1,ref_2,ref_3,ref_4,ref_5,ref_6,ref_7,ref_8,ref_9,ref_10,ref_11,ref_des,ref_12,ref_13) VALUES ('".$ref_id."','".$head_1."','".$ref_1."','".$ref_2."','".$ref_3."','".$ref_4."','".$ref_5."','".$ref_6."','".$ref_7."','".$ref_8."','".$ref_9."','".$ref_10."','".$ref_11."','".$ref_des."','".$ref_12."','".$ref_13."')";
+}
+$qsave56 = mysqli_query($conn, $save56);
+
+// Upsert tb_comment_so
+$checkCommentSo = mysqli_query($conn, "SELECT id FROM tb_comment_so WHERE ref_id = '".$ref_id."' LIMIT 1");
+if ($checkCommentSo && mysqli_num_rows($checkCommentSo) > 0) {
+	$save57 = "Update tb_comment_so  SET comment_cs='".$comment_cs."',comment_en='".$comment_en."',comment_st='".$comment_st."',comment_ad='".$comment_ad."'	where  ref_id ='".$ref_id."'";
+} else {
+	$save57 = "INSERT INTO tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad) VALUES ('".$ref_id."','".$comment_cs."','".$comment_en."','".$comment_st."','".$comment_ad."')";
+}
+$qsave57 = mysqli_query($conn, $save57);
 	
 	
 	/*if($book_clear=='1'){
@@ -354,7 +486,7 @@ $count_sn =  number_format($count3+$count4+$count5+$count13,0)."";
 if($count_sn!='0'){
 
 echo "<script language=\"JavaScript\">";
-echo "alert('หมายเลขเครื่อง : $sn_new มีการเคลียร์ยืมไปแล้วค่ะ');window.location='register_suphos_edit.php?ref_id=$ref_id';";
+echo "alert('หมายเลขเครื่อง : $sn_new มีการเคลียร์ยืมไปแล้วค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
 echo "</script>";
 exit();	
 	
@@ -368,7 +500,7 @@ exit();
 if($count2 < 0){
 
 echo "<script language=\"JavaScript\">";
-echo "alert('สินค้าในใบยืมนี้มีไม่พอในการเคลียร์ยืมครั้งนี้ค่ะ');window.location='register_salehos_edit.php?ref_id=$ref_id';";
+echo "alert('สินค้าในใบยืมนี้มีไม่พอในการเคลียร์ยืมครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
 echo "</script>";
 exit();
 	
@@ -416,7 +548,7 @@ $objQuery1 = mysqli_query($conn,$strSQL1);
 if($count2 < 0){
 
 echo "<script language=\"JavaScript\">";
-echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='register_salehos_edit.php?ref_id=$ref_id';";
+echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
 echo "</script>";
 exit();
 	
@@ -2787,6 +2919,12 @@ $strSQL66 =  "Update tb_register_data set start_date = '".$start_date."',between
 
 $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 
+$shippingColumnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_register_data LIKE 'shipping_id'");
+if ($shippingColumnCheck && mysqli_num_rows($shippingColumnCheck) > 0) {
+	$shipping_id_val = isset($_POST["shipping_id"]) && $_POST["shipping_id"] !== '' ? (int)$_POST["shipping_id"] : 0;
+	mysqli_query($conn, "UPDATE tb_register_data SET shipping_id = '".$shipping_id_val."' WHERE ref_id = '".mysqli_real_escape_string($conn, $ref_id)."'");
+}
+
 
 $strSQL33 =  "Update tb_transaction set runway='".$runway."',road='".$road."',soy='".$soy."',soy_long='".$soy_long."',soy_big='".$soy_big."',car_load='".$car_load."',car_park='".$car_park."',car_road='".$car_road."',no_car_road='".$no_car_road."',car_home='".$car_home."',door_long='".$door_long."',slope='".$slope."',bundai='".$bundai."',unit_bundai='".$unit_bundai."',door_big='".$door_big."',door_longer='".$door_longer."',type_door='".$type_door."',home_type='".$home_type."',install='".$install."',bundai_install='".$bundai_install."',bundai_big='".$bundai_big."',lip='".$lip."',lip_big='".$lip_big."',lip_long='".$lip_long."',lip_weight='".$lip_weight."',want_employee='".$want_employee."',employee_unit='".$employee_unit."',ferniger_name='".$ferniger_name."',ferniger_address='".$ferniger_address."',want_ex='".$want_ex."',want_credit='".$want_credit."',want_prem='".$want_prem."',add_date='$add_date',add_by='".$add_by."',room_bigger='".$room_bigger."',room_longer='".$room_longer."',bundai_hug='".$bundai_hug."',bank='".$bank."',description='".$description_ja."',type_bundai='".$type_bundai."',head_bad='".$head_bad."',height_ltd='".$height_ltd."',up='".$up."',no_up='".$no_up."'   where ref_id = '".$ref_id."' ";
 
@@ -2857,8 +2995,12 @@ $objQuery15 = mysqli_query($conn,$strSQL15) or die(mysqli_error());
 	
  if($qsave){
    echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_suphos_edit.php?ref_id=$ref_id';";
-echo "</script>";
+   $redirect_url = $redirect_to . "?ref_id=" . urlencode($ref_id);
+   if (strpos($redirect_to, "register_suphos.php") !== false) {
+       $redirect_url .= "&saved=1";
+   }
+   echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='" . $redirect_url . "';";
+   echo "</script>";
   } else {
    echo "Cannot";
   }

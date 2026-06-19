@@ -677,6 +677,7 @@
                         <input type="hidden" name="h_product_c<?php echo $i; ?>" id="h_product_c<?php echo $i; ?>">
                         <input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
                         <input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
+                        <input type="hidden" name="subso_db_id<?php echo $i; ?>" id="subso_db_id<?php echo $i; ?>">
 
                         <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
                         <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
