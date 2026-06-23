@@ -30,6 +30,22 @@ function esc($connection, $value)
     return mysqli_real_escape_string($connection, $value);
 }
 
+function updateTableColumnIfExists($connection, $tableName, $columnName, $value, $whereField, $whereValue)
+{
+    $safeTable = mysqli_real_escape_string($connection, $tableName);
+    $safeColumn = mysqli_real_escape_string($connection, $columnName);
+    $columnCheck = mysqli_query($connection, "SHOW COLUMNS FROM `{$safeTable}` LIKE '{$safeColumn}'");
+    if (!$columnCheck || mysqli_num_rows($columnCheck) === 0) {
+        return true;
+    }
+
+    $safeValue = mysqli_real_escape_string($connection, $value);
+    $safeWhereField = mysqli_real_escape_string($connection, $whereField);
+    $safeWhereValue = mysqli_real_escape_string($connection, $whereValue);
+    $sql = "UPDATE `{$safeTable}` SET `{$safeColumn}`='{$safeValue}' WHERE `{$safeWhereField}`='{$safeWhereValue}'";
+    return mysqli_query($connection, $sql) ? true : false;
+}
+
 function ensureCustomerChildTables($connection)
 {
     $billingSql = "
@@ -353,20 +369,15 @@ if (isset($_POST["submit"])) {
     }
 
     if ($allOk) {
-        $save2 = "UPDATE tb__buypro SET mode_cus='" . esc($conn, $mode_name) . "' WHERE bill_id='" . esc($conn, $customer_id) . "'";
-        $save3 = "UPDATE tb__discash SET mode_cus='" . esc($conn, $mode_name) . "' WHERE bill_id='" . esc($conn, $customer_id) . "'";
-        $save4 = "UPDATE hos__so SET mode_cus='" . esc($conn, $mode_name) . "' WHERE bill_id='" . esc($conn, $customer_id) . "'";
-        $save5 = "UPDATE tb_credit_note SET mode_cus='" . esc($conn, $mode_name) . "' WHERE bill_id='" . esc($conn, $customer_id) . "'";
-
-        $allOk = mysqli_query($conn, $save2) ? true : false;
+        $allOk = updateTableColumnIfExists($conn, 'tb__buypro', 'mode_cus', $mode_name, 'bill_id', $customer_id);
         if ($allOk) {
-            $allOk = mysqli_query($conn, $save3) ? true : false;
+            $allOk = updateTableColumnIfExists($conn, 'tb__discash', 'mode_cus', $mode_name, 'bill_id', $customer_id);
         }
         if ($allOk) {
-            $allOk = mysqli_query($conn, $save4) ? true : false;
+            $allOk = updateTableColumnIfExists($conn, 'hos__so', 'mode_cus', $mode_name, 'bill_id', $customer_id);
         }
         if ($allOk) {
-            $allOk = mysqli_query($conn, $save5) ? true : false;
+            $allOk = updateTableColumnIfExists($conn, 'tb_credit_note', 'mode_cus', $mode_name, 'bill_id', $customer_id);
         }
     }
 

@@ -1029,7 +1029,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="credit_ckk">วิธีชำระเงิน</label>
                                 <div class="select-shell">
                                     <select name="credit_ckk" id="credit_ckk" class="form-select">
-                                        <option value="">เลือกวิธีชำระเงิน</option>
+                                        <option value="">เลือกวิธีชำระเงิน</option>                
                                         <?php foreach ($creditBanks as $creditBank) { ?>
                                             <option value="<?php echo h($creditBank['id']); ?>" <?php echo ((string)$customerData['credit_ckk'] === (string)$creditBank['id']) ? 'selected' : ''; ?>><?php echo h($creditBank['pay_in']); ?></option>
                                         <?php } ?>

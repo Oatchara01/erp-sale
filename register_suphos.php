@@ -359,17 +359,45 @@
 				var myProduct = HttPRequest.responseText || '';
 				if (myProduct !== "") {
 					var myArr = myProduct.split("|");
+					var customerData = {
+						bill_name: myArr[0] || '',
+						bill_address_full: myArr[1] || '',
+						bill_tel: myArr[2] || '',
+						tax_id: myArr[3] || '',
+						customer_no: myArr[4] || '',
+						customer_tel: myArr[5] || '',
+						bill_address: myArr[6] || '',
+						bill_ampher: myArr[7] || '',
+						bill_province: myArr[8] || '',
+						bill_postcode: myArr[9] || '',
+						preface_name: myArr[10] || '',
+						tax_id_repeat: myArr[11] || '',
+						delivery_name: myArr[12] || '',
+						delivery_address: myArr[13] || '',
+						delivery_ampher: myArr[14] || '',
+						delivery_province: myArr[15] || '',
+						delivery_postcode: myArr[16] || '',
+						delivery_tel: myArr[17] || '',
+						contact_name: myArr[18] || '',
+						delivery_full_address: myArr[19] || '',
+						mode_name: myArr[20] || '',
+						email: myArr[21] || '',
+						customer_type_name: myArr[22] || '',
+						credit_ckk: myArr[23] || '',
+						credit_thb: myArr[24] || '',
+						vip_ckk: myArr[25] || ''
+					};
 
 					var isCustomerMode = (mode === 'customer' || mode === undefined);
 					var isBillingMode = (mode === 'billing' || mode === undefined);
 
 					if (isBillingMode) {
-						setElementValue(bill_name, myArr[0]);
-						setElementValue(bill_address, myArr[1]);
-						setElementValue(bill_tel, myArr[2]);
-						setElementValue(tax_id, myArr[3]);
+						setElementValue(bill_name, customerData.bill_name);
+						setElementValue(bill_address, customerData.bill_address_full);
+						setElementValue(bill_tel, customerData.bill_tel);
+						setElementValue(tax_id, customerData.tax_id);
 
-						var preNameVal = (myArr[10] || "").trim();
+						var preNameVal = customerData.preface_name.trim();
 						var preNameSelect = document.getElementById(pre_name);
 						if (preNameSelect) {
 							var exists = false;
@@ -390,17 +418,17 @@
 					}
 
 					if (isCustomerMode) {
-						setElementValue('display_bill_name', myArr[0]);
-						setElementValue('display_bill_tel', myArr[2]);
+						setElementValue('display_bill_name', customerData.bill_name);
+						setElementValue('display_bill_tel', customerData.bill_tel);
 
-						setElementValue(mode_name, myArr[20]);
-						setElementValue('display_mode_name', myArr[20]);
-						setElementValue(email, myArr[21]);
-						setElementValue(customer_typename, myArr[22]);
-						setElementValue('display_customer_typename', myArr[22]);
-						setElementValue('display_credit_thb', myArr[24]);
+						setElementValue(mode_name, customerData.mode_name);
+						setElementValue('display_mode_name', customerData.mode_name);
+						setElementValue(email, customerData.email);
+						setElementValue(customer_typename, customerData.customer_type_name);
+						setElementValue('display_customer_typename', customerData.customer_type_name);
+						setElementValue('display_credit_thb', customerData.credit_thb);
 
-						var vipCkk = (myArr[25] || "").trim();
+						var vipCkk = customerData.vip_ckk.trim();
 						var vipIcon = document.getElementById('display_vip_icon');
 						if (vipIcon) {
 							if (vipCkk === "1") {
@@ -420,32 +448,31 @@
 					}
 
 					if (isCustomerMode) {
-						setElementValue(payment, myArr[23]);
-						setElementValue(credit_thb, myArr[24]);
+						setElementValue(payment, customerData.credit_ckk);
+						setElementValue(credit_thb, customerData.credit_thb);
 						var defaultShipping = {
-							customer_name: myArr[0],
-							customer_tel: myArr[17] || myArr[5],
-							shipping_name: myArr[18] || myArr[12] || myArr[0],
-							shipping_province: myArr[15],
-							shipping_full_address: myArr[19] || myArr[13] || ''
+							customer_name: customerData.bill_name,
+							customer_tel: customerData.delivery_tel || customerData.customer_tel,
+							shipping_name: customerData.contact_name || customerData.delivery_name || customerData.bill_name,
+							shipping_province: customerData.delivery_province,
+							shipping_full_address: customerData.delivery_full_address || customerData.delivery_address || ''
 						};
 						window.originalShippingData = defaultShipping;
 						applyShippingSelection(defaultShipping);
 
-						// เก็บค่า credit_ckk ของลูกค้าไว้ใน hidden
-						var cusCkk = (myArr[23] || "").trim();
+						// เก็บ bank id ของลูกค้าไว้ใน hidden เพื่อ restore dropdown ภายหลัง
+						var cusCkk = customerData.credit_ckk.trim();
 						var hCreditCkk = document.getElementById('h_credit_ckk_value');
 						if (hCreditCkk) hCreditCkk.value = cusCkk;
 
-						// อัปเดตโหมดชำระเงินและการแสดงผลอัตโนมัติ
-						if (cusCkk !== '0' && cusCkk !== "") {
-							switchPaymentMode('credit');
-						} else {
-							switchPaymentMode('cash');
-						}
-
-						// ประเมินการแสดง/ซ่อนตารางหนี้ตามเงื่อนไขใหม่
-						evaluateDebtPanel();
+						resolveBankPaymentMode(cusCkk, function(resolvedMode) {
+							var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
+							if (customerPaymentModeInput) {
+								customerPaymentModeInput.value = resolvedMode;
+							}
+							switchPaymentMode(resolvedMode);
+							evaluateDebtPanel();
+						});
 					}
 
 					if (typeof onComplete === 'function') {
@@ -480,6 +507,88 @@
 		}
 	}
 
+	function hasSelectedCustomerForPaymentMode() {
+		var hBillId = document.getElementById('h_bill_id');
+		return !!(hBillId && String(hBillId.value || '').trim() !== '');
+	}
+
+	function getResolvedCustomerPaymentMode() {
+		var modeInput = document.getElementById('h_customer_payment_mode');
+		return modeInput ? String(modeInput.value || '').trim() : '';
+	}
+
+	function resolveBankPaymentMode(bankId, onComplete) {
+		var normalizedBankId = String(bankId === undefined || bankId === null ? '' : bankId).trim();
+		if (normalizedBankId === '') {
+			if (typeof onComplete === 'function') {
+				onComplete('cash', '');
+			}
+			return;
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'get_bank_credit_flag.php?id=' + encodeURIComponent(normalizedBankId), true);
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState !== 4) {
+				return;
+			}
+
+			var resolvedMode = 'cash';
+			var resolvedFlag = '';
+			if (xhr.status === 200) {
+				try {
+					var response = JSON.parse(xhr.responseText || '{}');
+					console.log('😊', response)
+					resolvedFlag = String(response.credit_ckk || '').trim();
+					if (response.success && resolvedFlag === '1') {
+						resolvedMode = 'credit';
+					}
+				} catch (error) {
+					console.error('resolveBankPaymentMode parse error', error);
+				}
+			}
+
+			if (typeof onComplete === 'function') {
+				onComplete(resolvedMode, resolvedFlag);
+			}
+		};
+		xhr.send();
+	}
+
+	function loadTypeBankOptions(callback) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'typebank_options.php', true);
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState !== 4) {
+				return;
+			}
+
+			var paymentMethodSelect = document.getElementById('payment_method');
+			if (!paymentMethodSelect) {
+				if (typeof callback === 'function') {
+					callback();
+				}
+				return;
+			}
+
+			if (xhr.status === 200) {
+				paymentMethodSelect.innerHTML = '<option value="0">เลือกวิธีชำระเงิน</option>' + (xhr.responseText || '');
+				var savedValue = paymentMethodSelect.getAttribute('data-saved-value') || paymentMethodSelect.value || '0';
+				if (savedValue && Array.prototype.some.call(paymentMethodSelect.options, function(option) { return option.value === savedValue; })) {
+					paymentMethodSelect.value = savedValue;
+				}
+			} else {
+				console.error('โหลดรายการวิธีชำระเงินไม่สำเร็จ');
+				paymentMethodSelect.innerHTML = '<option value="0">เลือกวิธีชำระเงิน</option>';
+			}
+
+			if (typeof callback === 'function') {
+				callback();
+			}
+		};
+		xhr.send();
+	}
+
 	// โหลด options ช่องทางชำระเงิน
 	function loadBankOptions(creditOnly, callback) {
 		var xhr = new XMLHttpRequest();
@@ -489,7 +598,7 @@
 				if (xhr.status === 200) {
 					var sel = document.getElementById('payment');
 					var prev = sel.value; // เก็บค่าเดิมไว้ (กันเด้ง reset กรณีโหลดใหม่)
-					sel.innerHTML = '<option value="">**Please Select Item**</option>' + xhr.responseText;
+					sel.innerHTML = '<option value="">เลือกวิธีชำระเงิน</option>' + xhr.responseText;
 					// พยายาม restore ค่าเดิม ถ้ายังอยู่ใน options ใหม่
 					if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
 
@@ -606,7 +715,8 @@
 	// กรณีผู้ใช้แก้ไขค่า payment เองภายหลัง
 	document.addEventListener('DOMContentLoaded', function() {
 		// เริ่มต้นโหลดในโหมดเงินสด/เครดิตตามค่าเริ่มต้น
-		switchPaymentMode('cash');
+		loadTypeBankOptions();
+		switchPaymentMode('credit');
 
 		// ผู้ใช้แก้ไขวงเงิน -> ประเมินใหม่ (ถ้าวงเงินเป็น 0 จะซ่อน)
 		document.getElementById('credit_thb').addEventListener('input', function() {
@@ -621,8 +731,13 @@
 
 		var radCredit = document.getElementById('pay_mode_credit');
 		var radCash = document.getElementById('pay_mode_cash');
+		var creditLabel = document.getElementById('lbl-pay_mode_credit');
+		var creditDaysInput = document.getElementById('display_credit_days');
 
 		if (isCredit) {
+			if (radCredit) radCredit.disabled = false;
+			if (creditDaysInput) creditDaysInput.disabled = false;
+			if (creditLabel) creditLabel.classList.remove('is-disabled');
 			if (radCredit) radCredit.checked = true;
 			document.getElementById('lbl-pay_mode_credit')?.classList.add('active');
 			document.getElementById('lbl-pay_mode_cash')?.classList.remove('active');
@@ -636,14 +751,18 @@
 				if (savedCusCkk && savedCusCkk !== '0') {
 					sel.value = savedCusCkk;
 				} else {
-					if (sel.options.length > 1) {
-						sel.selectedIndex = 1;
-					}
+					sel.value = '';
 				}
+				var cashSel = document.getElementById('payment_cash_select');
+				if (cashSel) cashSel.value = sel.value;
 				updateCreditDisplay();
 				evaluateDebtPanel();
 			});
 		} else {
+			var shouldDisableCredit = hasSelectedCustomerForPaymentMode() && getResolvedCustomerPaymentMode() === 'cash';
+			if (radCredit) radCredit.disabled = shouldDisableCredit;
+			if (creditDaysInput) creditDaysInput.disabled = true;
+			if (creditLabel) creditLabel.classList.toggle('is-disabled', shouldDisableCredit);
 			if (radCash) radCash.checked = true;
 			document.getElementById('lbl-pay_mode_cash')?.classList.add('active');
 			document.getElementById('lbl-pay_mode_credit')?.classList.remove('active');
@@ -654,10 +773,10 @@
 			loadBankOptions(true, function() {
 				var sel = document.getElementById('payment');
 				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
-				if (savedCusCkk === '0' || !savedCusCkk) {
-					if (sel.options.length > 1) {
-						sel.selectedIndex = 1;
-					}
+				if (savedCusCkk && [...sel.options].some(function(option) { return option.value === savedCusCkk; })) {
+					sel.value = savedCusCkk;
+				} else if (savedCusCkk === '0' || !savedCusCkk) {
+					sel.value = '';
 				} else {
 					sel.value = '';
 				}
@@ -1756,6 +1875,12 @@
 		color: #612989;
 	}
 
+	.so-payment-radio-label.is-disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+		pointer-events: none;
+	}
+
 	/* Customer Info custom grid */
 	.so-customer-grid {
 		display: grid;
@@ -2490,6 +2615,9 @@
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
 				syncFormCompatibilityFields();
+				if (typeof syncDeliveryTimeRange === 'function') {
+					syncDeliveryTimeRange();
+				}
 				updateDeliveryContractRequirement();
 				if (!validateDeliveryContractRequirement()) {
 					return false;
@@ -3292,8 +3420,8 @@
 						<!-- ลูกค้าซื้อซ้ำ -->
 						<div class="so-field-group" style="justify-content: flex-end;">
 							<div style="display: flex; align-items: center; height: 42px;">
-								<label class="so-toggle-pill" id="lbl-repeat_cus">
-									<input type="checkbox" name="repeat_cus" id="repeat_cus" value="1">
+								<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'repeat_cus') ? ' active' : ''; ?>" id="lbl-repeat_cus">
+									<input type="checkbox" name="repeat_cus" id="repeat_cus" value="1"<?php echo so_saved_checked($savedSo, 'repeat_cus') ? ' checked' : ''; ?>>
 									<span>ลูกค้าซื้อซ้ำ</span>
 								</label>
 							</div>
@@ -3322,6 +3450,7 @@
 
 					<!-- Hidden inputs for mapping and state -->
 					<input type="hidden" id="h_credit_ckk_value" value="">
+					<input type="hidden" id="h_customer_payment_mode" value="">
 
 					<!-- Hidden actual select dropdown which is required by the form -->
 					<select name="payment" id="payment" style="display:none;">
@@ -3349,8 +3478,8 @@
 						<div class="so-field-group">
 							<label class="so-label">วิธีชำระเงิน</label>
 							<div class="so-select-wrapper">
-								<select id="payment_method" name="payment_method" class="so-select">
-									<option value="">เลือกวิธีชำระเงิน</option>
+								<select id="payment_method" name="payment_method" class="so-select" data-saved-value="<?php echo ($savedSo !== null && isset($savedSo['payment_method'])) ? (int)$savedSo['payment_method'] : 0; ?>">
+									<option value="0">เลือกวิธีชำระเงิน</option>
 								</select>
 							</div>
 						</div>
@@ -3370,10 +3499,10 @@
 							<label class="so-label">หลักฐานการโอนเงิน</label>
 							<div class="so-file-upload">
 								<label for="slip_upload" class="so-input" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #333333;">
-									<span id="file_name_display">Choose File</span>
+									<span id="file_name_display"><?php echo ($savedSo !== null && !empty($savedSo['slip1'])) ? so_saved_h($savedSo['slip1']) : 'Choose File'; ?></span>
 									<i class="far fa-image" style="color: #333333; font-size: 18px;"></i>
 								</label>
-								<input type="file" name="slip_upload" id="slip_upload" style="display: none;" onchange="document.getElementById('file_name_display').textContent = this.files[0] ? this.files[0].name : 'Choose File'">
+								<input type="file" id="slip_upload" style="display: none;" onchange="syncSlipUploadToSlip1(this)">
 							</div>
 						</div>
 					</div>
@@ -4262,9 +4391,68 @@
 						}
 					}
 
+					function syncSlipUploadToSlip1(input) {
+						const fileNameDisplay = document.getElementById('file_name_display');
+						const slip1Input = document.getElementById('hidden_slip1');
+						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
+						const maxFileSize = 1100000;
+
+						fileNameDisplay.textContent = input.files && input.files[0] ? input.files[0].name : 'Choose File';
+
+						if (!slip1Input) {
+							return;
+						}
+
+						if (input.files && input.files.length > 0) {
+							if (input.files[0].size > maxFileSize) {
+								input.value = '';
+								slip1Input.value = '';
+								if (slip1HiddenVal) {
+									slip1HiddenVal.value = '';
+								}
+								fileNameDisplay.textContent = 'Choose File';
+								if (typeof Swal !== 'undefined') {
+									Swal.fire({
+										icon: 'warning',
+										title: 'ไฟล์มีขนาดเกินกำหนด',
+										text: 'กรุณาแนบไฟล์ที่มีขนาดไม่เกิน 1 MB'
+									});
+								} else {
+									alert('กรุณาแนบไฟล์ที่มีขนาดไม่เกิน 1 MB');
+								}
+								renderFileList();
+								return;
+							}
+
+							const dt = new DataTransfer();
+							dt.items.add(input.files[0]);
+							slip1Input.files = dt.files;
+							if (slip1HiddenVal) {
+								slip1HiddenVal.value = '';
+							}
+						} else {
+							slip1Input.value = '';
+						}
+
+						renderFileList();
+					}
+
 					function renderFileList() {
 						const list = document.getElementById('attach_file_list');
+						const fileNameDisplay = document.getElementById('file_name_display');
+						const slip1Input = document.getElementById('hidden_slip1');
+						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
 						list.innerHTML = '';
+
+						if (fileNameDisplay) {
+							if (slip1Input && slip1Input.files && slip1Input.files[0]) {
+								fileNameDisplay.textContent = slip1Input.files[0].name;
+							} else if (slip1HiddenVal && slip1HiddenVal.value) {
+								fileNameDisplay.textContent = slip1HiddenVal.value;
+							} else {
+								fileNameDisplay.textContent = 'Choose File';
+							}
+						}
 
 						for (let i = 1; i <= 5; i++) {
 							const input = document.getElementById('hidden_slip' + i);
@@ -4305,6 +4493,16 @@
 					function removeFile(index) {
 						const input = document.getElementById('hidden_slip' + index);
 						input.value = ''; // Clear file
+						if (index === 1) {
+							const slipUploadInput = document.getElementById('slip_upload');
+							const fileNameDisplay = document.getElementById('file_name_display');
+							if (slipUploadInput) {
+								slipUploadInput.value = '';
+							}
+							if (fileNameDisplay) {
+								fileNameDisplay.textContent = 'Choose File';
+							}
+						}
 						renderFileList();
 					}
 
@@ -4465,6 +4663,45 @@
 		</div><!-- End Card Container -->
 
 		<script>
+			function syncDeliveryTimeRange() {
+				var timeRange = document.getElementById('time_range');
+				var startTime = document.querySelector('input[name="start_time"]');
+				var endTime = document.querySelector('input[name="end_time"]');
+				if (!timeRange || !startTime || !endTime) {
+					return;
+				}
+
+				var timeRangeMap = {
+					morning: ['08:00', '12:00'],
+					afternoon: ['13:00', '17:00'],
+					allday: ['08:00', '17:00']
+				};
+
+				if (timeRangeMap[timeRange.value]) {
+					startTime.value = timeRangeMap[timeRange.value][0];
+					endTime.value = timeRangeMap[timeRange.value][1];
+				}
+			}
+
+			document.addEventListener('DOMContentLoaded', function() {
+				var timeRange = document.getElementById('time_range');
+				var startTime = document.querySelector('input[name="start_time"]');
+				var form = document.forms['frmMain'];
+				if (timeRange) {
+					timeRange.addEventListener('change', syncDeliveryTimeRange);
+				}
+				if (timeRange && startTime) {
+					startTime.addEventListener('input', function() {
+						if (timeRange.value !== '' && timeRange.value !== 'specific') {
+							timeRange.value = 'specific';
+						}
+					});
+				}
+				if (form) {
+					form.addEventListener('submit', syncDeliveryTimeRange);
+				}
+			});
+
 			function openDelTab(tabId, element) {
 				var contents = document.getElementsByClassName('so-del-tab-content');
 				for (var i = 0; i < contents.length; i++) {
@@ -5595,7 +5832,7 @@
 				return;
 			}
 
-			var billId = document.getElementById('bill_id');
+			var billId = document.getElementById('bill_id');			
 			if (billId) {
 				billId.value = customerPopupSelected.customer_id || '';
 			}
@@ -6924,6 +7161,29 @@
 			var savedTransaction = <?php echo json_encode($savedTransaction); ?>;
 			var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
 			var savedProducts = <?php echo json_encode($savedProducts); ?>;
+			var inferredTimeRange = (function() {
+				var startTime = '';
+				var endTime = '';
+
+				if (savedRegister) {
+					startTime = ((savedRegister.start_time || '') + '').trim().substring(0, 5);
+					endTime = ((savedRegister.end_time || '') + '').trim().substring(0, 5);
+				}
+
+				if ((!startTime || !endTime) && savedSo && savedSo.delivery_time) {
+					var timeParts = (savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || []).map(function(part) {
+						return part.substring(0, 5);
+					});
+					startTime = startTime || (timeParts[0] || '');
+					endTime = endTime || (timeParts[1] || '');
+				}
+
+				if (startTime === '08:00' && endTime === '12:00') return 'morning';
+				if (startTime === '13:00' && endTime === '17:00') return 'afternoon';
+				if (startTime === '08:00' && endTime === '17:00') return 'allday';
+				if (startTime || endTime) return 'specific';
+				return '';
+			})();
 
 			// 1. Populate simple text/select inputs by name or id
 			var simpleMappings = {
@@ -6937,6 +7197,7 @@
 				'tax_id': savedSo.tax_id,
 				'email': savedSo.email,
 				'payment': savedSo.payment,
+				'payment_method': savedSo.payment_method,
 				'payment_des': savedSo.payment_des,
 				'cm_no': savedSo.cm_no,
 				'date_tranfer': savedSo.date_tranfer,
@@ -6979,10 +7240,10 @@
 				'h_employee_name': (savedRegister && savedRegister.h_employee_name) || '',
 				// Delivery schedule fields:
 				'between_date': savedSo.date_send_key || (savedRegister && savedRegister.between_date) || '',
-				'status_comment': savedSo.status_comment || (savedRegister && savedRegister.status_comment) || '',
+				'status_comment': (savedRegister && savedRegister.description) || (savedRegister && savedRegister.status_comment) || savedSo.status_comment || '',
 				// Shipping extras:
 				'transport_company': savedSo.transport_company || '',
-				'time_range': savedSo.time_range || ''
+				'time_range': inferredTimeRange
 			};
 
 			// Set simple field values
@@ -7021,6 +7282,15 @@
 						if (savedSo.install_place) {
 							setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
 							setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');
+						}
+
+						var paymentMethodSelect = document.getElementById('payment_method');
+						if (paymentMethodSelect) {
+							var savedPaymentMethod = savedSo.payment_method ? String(savedSo.payment_method) : '';
+							paymentMethodSelect.setAttribute('data-saved-value', savedPaymentMethod);
+							if (savedPaymentMethod) {
+								paymentMethodSelect.value = savedPaymentMethod;
+							}
 						}
 
 						var isCreditPayment = (savedSo.payment !== '0' && savedSo.payment !== '');

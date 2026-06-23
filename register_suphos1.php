@@ -5,6 +5,22 @@ include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
+
+function applyDeliveryTimeRangeToPost()
+{
+	$timeRange = $_POST["time_range"] ?? "";
+	$timeRangeMap = array(
+		"morning" => array("08:00", "12:00"),
+		"afternoon" => array("13:00", "17:00"),
+		"allday" => array("08:00", "17:00")
+	);
+
+	if (isset($timeRangeMap[$timeRange])) {
+		$_POST["start_time"] = $timeRangeMap[$timeRange][0];
+		$_POST["end_time"] = $timeRangeMap[$timeRange][1];
+	}
+}
+
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 	$defaultPostFields = array(
@@ -17,6 +33,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		'date_so',
 		'suggest',
 		'payment',
+		'payment_method',
 		'que_ckk',
 		'sale_comment',
 		'po_no',
@@ -192,6 +209,8 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		}
 	}
 
+	applyDeliveryTimeRangeToPost();
+
 	$type_doc = $_POST["type_doc"];
 	$bill_name = $_POST["bill_name"];
 	$bill_address = $_POST["bill_address"];
@@ -212,6 +231,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$date_so = $_POST["date_so"];
 	$suggest = $_POST["suggest"];
 	$payment = $_POST["payment"];
+	$payment_method = (int)($_POST["payment_method"] ?? 0);
 	$que_ckk = $_POST["que_ckk"];
 	$sale_comment = $_POST["sale_comment"];
 	$po_no = $_POST["po_no"];
@@ -432,9 +452,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 
 	$save = "insert into hos__so
-(ref_id,type_doc,bill_name,bill_address,bill_tel,full_bill,date_so,suggest,payment,sale_comment,po_no,delivery_contract,book_clear,book_no,brn_clear,brn_no,brnp_clear,brnp_no,sn_ckk,sn_no,install_place,with_pr,type_type,type_detail,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,sale_date,sale,sale_code,pr_no,add_date,add_by,status_doc,approve,approve_code,approve_date,payment_des,slip1,slip2,slip3,slip4,slip5,date_send_key,have_order,send_sup,iv_no,tax_id,approve_time,bill_id,cm_no,pre_name,que_ckk,mode_cus,plan_ckk,email,adm_ckk,ic_ckk,et_ckk,repeat_cus,time_range,status_comment)
+(ref_id,type_doc,bill_name,bill_address,bill_tel,full_bill,date_so,suggest,payment,payment_method,sale_comment,po_no,delivery_contract,book_clear,book_no,brn_clear,brn_no,brnp_clear,brnp_no,sn_ckk,sn_no,install_place,with_pr,type_type,type_detail,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,sale_date,sale,sale_code,pr_no,add_date,add_by,status_doc,approve,approve_code,approve_date,payment_des,slip1,slip2,slip3,slip4,slip5,date_send_key,have_order,send_sup,iv_no,tax_id,approve_time,bill_id,cm_no,pre_name,que_ckk,mode_cus,plan_ckk,email,adm_ckk,ic_ckk,et_ckk,repeat_cus)
 values
-('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','Request','" . $approve . "','" . $sup_code . "','" . $sale_date . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','1','" . $iv_no . "','" . $tax_id . "','" . $approve_time . "','" . $bill_id . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "','" . $time_range . "','" . $status_comment_val . "')";
+('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $payment_method . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','Request','" . $approve . "','" . $sup_code . "','" . $sale_date . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','1','" . $iv_no . "','" . $tax_id . "','" . $approve_time . "','" . $bill_id . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "')";
 
 	$qsave = mysqli_query($conn, $save);
 
@@ -3392,7 +3412,7 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 	$h_employee_name = $_POST["h_employee_name"];
 	$employee_tel = $_POST["employee_tel"];
 	$add_by = $_POST["add_by"];
-	$description = $_POST["description"];
+	$description = $_POST["status_comment"];
 	$havemap = $_POST['have_map'];
 	$department_show = $_POST["department_show"];
 
@@ -3596,7 +3616,6 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		'dept',
 		'department_show',
 		'customer_contact',
-		'status_comment',
 		'on_time',
 		'address_1',
 		'add_code',
@@ -3646,7 +3665,6 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		$dept,
 		$department_show,
 		$customer_contact,
-		$status_comment,
 		$on_time,
 		$address_1,
 		$h_employee_name,
