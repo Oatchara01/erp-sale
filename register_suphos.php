@@ -163,12 +163,30 @@
 		return parts.join(' x ');
 	}
 
+	function splitSizeParts(value, expectedParts) {
+		var parts = String(value || '')
+			.split(/\s*x\s*/i)
+			.map(function(part) {
+				return String(part || '').trim();
+			})
+			.filter(function(part) {
+				return part !== '';
+			});
+
+		while (parts.length < expectedParts) {
+			parts.push('');
+		}
+
+		return parts.slice(0, expectedParts);
+	}
+
 	function syncExtraAddressFieldsToLegacy() {
 		var rows = document.querySelectorAll('.extra-addr-row');
 		for (var i = 1; i <= 9; i++) {
 			var row = rows[i - 1];
 			setLegacyFieldValue('customer_name' + i, row ? (row.querySelector('input[name^="extra_contact_name"]') || {}).value : '');
 			setLegacyFieldValue('customer_tel' + i, row ? (row.querySelector('input[name^="extra_contact_tel"]') || {}).value : '');
+			setLegacyFieldValue('province_name' + i, row ? (row.querySelector('select[name^="extra_contact_province"]') || {}).value : '');
 			setLegacyFieldValue('address_name' + i, row ? (row.querySelector('input[name^="extra_shipping_address"]') || {}).value : '');
 		}
 	}
@@ -192,6 +210,7 @@
 		setLegacyFieldValue('unit_bundai', valueOf('input[name="stair_count"]'));
 		setLegacyFieldValue('install', valueOf('input[name="install_floor"]'));
 		setLegacyFieldValue('home_type', getCheckedValue('room_type', '1'));
+		setLegacyFieldValue('install_room', getCheckedValue('room_type', '1'));
 		setLegacyFieldValue('room_bigger', valueOf('input[name="door_width"]'));
 		setLegacyFieldValue('room_longer', valueOf('input[name="door_height"]'));
 		setLegacyFieldValue('bundai_big', joinSizeParts(valueOf('input[name="stair_width"]'), valueOf('input[name="stair_height"]')));
@@ -538,7 +557,6 @@
 			if (xhr.status === 200) {
 				try {
 					var response = JSON.parse(xhr.responseText || '{}');
-					console.log('😊', response)
 					resolvedFlag = String(response.credit_ckk || '').trim();
 					if (response.success && resolvedFlag === '1') {
 						resolvedMode = 'credit';
@@ -2313,6 +2331,8 @@
 	$savedCommentSo = null;
 	$savedTransaction = null;
 	$savedDeliveryPrint = null;
+	$savedDeliveryBill = null;
+	$savedShippingAddresses = array();
 	$savedFormSession = null;
 
 	if ($savedRefId !== "") {
@@ -2349,6 +2369,24 @@
 		$savedDeliveryPrintQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_print WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
 		if ($savedDeliveryPrintQuery) {
 			$savedDeliveryPrint = mysqli_fetch_assoc($savedDeliveryPrintQuery);
+		}
+
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedDeliveryBillQuery) {
+			$savedDeliveryBill = mysqli_fetch_assoc($savedDeliveryBillQuery);
+		}
+
+		$savedShippingAddressOrderBy = "";
+		$savedShippingAddressIdColumnQuery = mysqli_query($conn, "SHOW COLUMNS FROM tb_shipping_address LIKE 'id'");
+		if ($savedShippingAddressIdColumnQuery && mysqli_num_rows($savedShippingAddressIdColumnQuery) > 0) {
+			$savedShippingAddressOrderBy = " ORDER BY id ASC";
+		}
+
+		$savedShippingAddressQuery = mysqli_query($conn, "SELECT ref_id, contact_name, telephone, province, address FROM tb_shipping_address WHERE ref_id = '" . $savedRefId . "'" . $savedShippingAddressOrderBy);
+		if ($savedShippingAddressQuery) {
+			while ($savedShippingAddressRow = mysqli_fetch_assoc($savedShippingAddressQuery)) {
+				$savedShippingAddresses[] = $savedShippingAddressRow;
+			}
 		}
 
 		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1'");
@@ -2388,6 +2426,49 @@
 	if (!empty($savedFormSession['products']) && is_array($savedFormSession['products'])) {
 		$savedProductsForForm = $savedFormSession['products'];
 	}
+
+	$savedExtraAddressRows = array();
+
+	if (!empty($savedShippingAddresses) && is_array($savedShippingAddresses)) {
+		foreach ($savedShippingAddresses as $savedShippingAddress) {
+			$savedExtraAddressRows[] = array(
+				'contact_name' => (string)($savedShippingAddress['contact_name'] ?? ''),
+				'telephone' => (string)($savedShippingAddress['telephone'] ?? ''),
+				'province' => (string)($savedShippingAddress['province'] ?? ''),
+				'address' => (string)($savedShippingAddress['address'] ?? '')
+			);
+		}
+	} elseif (!empty($savedDeliveryPrint) && is_array($savedDeliveryPrint)) {
+		for ($extraIndex = 1; $extraIndex <= 9; $extraIndex++) {
+			$legacyExtraAddress = array(
+				'contact_name' => (string)($savedDeliveryPrint['customer_name' . $extraIndex] ?? ''),
+				'telephone' => (string)($savedDeliveryPrint['customer_tel' . $extraIndex] ?? ''),
+				'province' => (string)($savedDeliveryPrint['province_name' . $extraIndex] ?? ''),
+				'address' => (string)($savedDeliveryPrint['address_name' . $extraIndex] ?? '')
+			);
+
+			if ($legacyExtraAddress['contact_name'] !== '' || $legacyExtraAddress['telephone'] !== '' || $legacyExtraAddress['province'] !== '' || $legacyExtraAddress['address'] !== '') {
+				$savedExtraAddressRows[] = $legacyExtraAddress;
+			}
+		}
+	}
+
+	if (count($savedExtraAddressRows) === 0) {
+		$savedExtraAddressRows[] = array(
+			'contact_name' => '',
+			'telephone' => '',
+			'province' => '',
+			'address' => ''
+		);
+	}
+
+	$savedFirstExtraAddress = $savedExtraAddressRows[0];
+	$savedDeliveryBillAddress = array(
+		'contact_name' => (string)($savedDeliveryBill['customer_nameb'] ?? ''),
+		'telephone' => (string)($savedDeliveryBill['customer_telb'] ?? ''),
+		'province' => (string)($savedDeliveryBill['province'] ?? ''),
+		'address' => (string)($savedDeliveryBill['address_nameb'] ?? '')
+	);
 
 	function so_saved_h($value)
 	{
@@ -3881,14 +3962,14 @@
 									<div class="so-field-group">
 										<label class="so-label extra-contact-name-label" style="color: #612989;">ชื่อผู้ติดต่อ (เพิ่มเติม1)</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="extra_contact_name_1" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="extra_contact_name_1" type="text" class="so-input" value="<?php echo so_saved_h($savedFirstExtraAddress['contact_name']); ?>" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
 									<div class="so-field-group">
 										<label class="so-label extra-contact-tel-label" style="color: #612989;">เบอร์โทร (เพิ่มเติม1)</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="extra_contact_tel_1" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="extra_contact_tel_1" type="text" class="so-input" value="<?php echo so_saved_h($savedFirstExtraAddress['telephone']); ?>" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
@@ -3902,8 +3983,10 @@
 												$objQuery_prov_extra = mysqli_query($conn, $strSQL_prov_extra);
 												if ($objQuery_prov_extra) {
 													while ($objResuut_prov_extra = mysqli_fetch_array($objQuery_prov_extra, MYSQLI_ASSOC)) {
+														$extraProvinceName = (string)$objResuut_prov_extra['province_name'];
+														$extraProvinceSelected = $extraProvinceName === (string)$savedFirstExtraAddress['province'] ? ' selected' : '';
 												?>
-														<option value="<?php echo $objResuut_prov_extra['province_name']; ?>"><?php echo $objResuut_prov_extra['province_name']; ?></option>
+														<option value="<?php echo so_saved_h($extraProvinceName); ?>"<?php echo $extraProvinceSelected; ?>><?php echo so_saved_h($extraProvinceName); ?></option>
 												<?php
 													}
 												}
@@ -3917,7 +4000,7 @@
 									<div class="so-field-group" style="flex: 1;">
 										<label class="so-label extra-shipping-address-label" style="color: #612989;">ที่อยู่ส่งสินค้า (เพิ่มเติม1)</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="extra_shipping_address_1" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="extra_shipping_address_1" type="text" class="so-input" value="<?php echo so_saved_h($savedFirstExtraAddress['address']); ?>" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
@@ -3928,10 +4011,69 @@
 							</div>
 						</div>
 
-						<div style="margin-top: 24px;">
+						<div style="margin-top: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
 							<button type="button" onclick="addExtraAddress()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 								<img src="img/icons/add_address.png" alt="add_address" style="width: 16px; height: 16px;"> เพิ่มที่อยู่
 							</button>
+							<button type="button" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+								<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์ใบปะ
+							</button>
+						</div>
+
+						<div style="margin-top: 28px;">
+							<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 12px;">ที่อยู่ส่งบิล</h3>
+							<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 18px;">
+
+							<div class="so-grid-3">
+								<div class="so-field-group">
+									<label class="so-label" style="color: #612989;">ชื่อผู้ติดต่อ</label>
+									<div style="position: relative; display: flex; align-items: center;">
+										<input name="bill_extra_contact_name_2" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" value="<?php echo so_saved_h($savedDeliveryBillAddress['contact_name']); ?>" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+										<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+									</div>
+								</div>
+								<div class="so-field-group">
+									<label class="so-label" style="color: #612989;">เบอร์โทร</label>
+									<div style="position: relative; display: flex; align-items: center;">
+										<input name="bill_extra_contact_tel_2" type="text" class="so-input" placeholder="เบอร์โทร" value="<?php echo so_saved_h($savedDeliveryBillAddress['telephone']); ?>" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+										<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+									</div>
+								</div>
+								<div class="so-field-group">
+									<label class="so-label" style="color: #612989;">จังหวัด</label>
+									<div class="so-select-wrapper">
+										<select name="bill_extra_contact_province_2" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
+											<option value="">เลือกจังหวัด</option>
+											<?php
+											$strSQL_prov_bill_extra = "select * from tb_province order by province_ID ";
+											$objQuery_prov_bill_extra = mysqli_query($conn, $strSQL_prov_bill_extra);
+											if ($objQuery_prov_bill_extra) {
+												while ($objResuut_prov_bill_extra = mysqli_fetch_array($objQuery_prov_bill_extra, MYSQLI_ASSOC)) {
+													$billExtraProvinceName = (string)$objResuut_prov_bill_extra['province_name'];
+													$billExtraProvinceSelected = $billExtraProvinceName === $savedDeliveryBillAddress['province'] ? ' selected' : '';
+											?>
+													<option value="<?php echo so_saved_h($billExtraProvinceName); ?>"<?php echo $billExtraProvinceSelected; ?>><?php echo so_saved_h($billExtraProvinceName); ?></option>
+											<?php
+												}
+											}
+											?>
+										</select>
+									</div>
+								</div>
+							</div>
+
+							<div style="display: flex; gap: 20px; margin-top: 16px; align-items: flex-end;">
+								<div class="so-field-group" style="flex: 1;">
+									<label class="so-label" style="color: #612989;">ที่อยู่ส่งสินค้า</label>
+									<div style="position: relative; display: flex; align-items: center;">
+										<input name="bill_extra_shipping_address_2" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" value="<?php echo so_saved_h($savedDeliveryBillAddress['address']); ?>" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+										<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+									</div>
+								</div>
+								<button type="button" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; height: 42px; min-width: 146px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+									<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์
+								</button>
+							</div>
 						</div>
 
 						<script>
@@ -3981,6 +4123,35 @@
 									if (shippingAddress) shippingAddress.name = 'extra_shipping_address_' + displayIndex;
 								});
 							}
+
+							(function restoreRenderedExtraAddresses() {
+								const savedExtraAddressRows = <?php echo json_encode($savedExtraAddressRows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+								if (!Array.isArray(savedExtraAddressRows) || savedExtraAddressRows.length === 0) {
+									return;
+								}
+
+								const list = document.getElementById('extra_address_list');
+								if (!list) {
+									return;
+								}
+
+								while (list.querySelectorAll('.extra-addr-row').length < savedExtraAddressRows.length) {
+									addExtraAddress();
+								}
+
+								savedExtraAddressRows.forEach((item, index) => {
+									const displayIndex = index + 1;
+									const nameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
+									const telInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
+									const provinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
+									const addressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
+
+									if (nameInput) nameInput.value = item.contact_name || '';
+									if (telInput) telInput.value = item.telephone || '';
+									if (provinceInput) provinceInput.value = item.province || '';
+									if (addressInput) addressInput.value = item.address || '';
+								});
+							})();
 						</script>
 					</div>
 
@@ -4007,8 +4178,8 @@
 							</div>
 							<div class="so-field-group">
 								<label style="cursor: pointer; display: block;">
-									<input type="checkbox" name="is_high_roof" value="1" style="display: none;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
-									<div style="background-color: #F4F3F7; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; color: #6e6e6e; font-size: 14px; font-family: 'Prompt', sans-serif; height: 42px; transition: all 0.2s; user-select: none;">รถหลังคาสูงเข้าได้</div>
+									<input type="checkbox" name="is_high_roof" value="1" style="display: none;"<?php echo so_saved_checked($savedTransaction, 'height_ltd') ? ' checked' : ''; ?> onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
+									<div style="background-color: <?php echo so_saved_checked($savedTransaction, 'height_ltd') ? '#612989' : '#F4F3F7'; ?>; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; color: <?php echo so_saved_checked($savedTransaction, 'height_ltd') ? 'white' : '#6e6e6e'; ?>; font-size: 14px; font-family: 'Prompt', sans-serif; height: 42px; transition: all 0.2s; user-select: none;">รถหลังคาสูงเข้าได้</div>
 								</label>
 							</div>
 						</div>
@@ -7160,6 +7331,7 @@
 			var savedCommentSo = <?php echo json_encode($savedCommentSo); ?>;
 			var savedTransaction = <?php echo json_encode($savedTransaction); ?>;
 			var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
+			var savedShippingAddresses = <?php echo json_encode($savedShippingAddresses); ?>;
 			var savedProducts = <?php echo json_encode($savedProducts); ?>;
 			var inferredTimeRange = (function() {
 				var startTime = '';
@@ -7203,8 +7375,9 @@
 				'date_tranfer': savedSo.date_tranfer,
 				'po_no': savedSo.po_no,
 				'delivery_contract': savedSo.delivery_contract,
-				'shipping_ref1': savedSo.order_refer_code1 || '',
-				'shipping_ref2': savedSo.order_refer_code2 || '',
+				'shipping_date': savedSo.date_ker || '',
+				'shipping_ref1': savedSo.order_refer_code || '',
+				'shipping_ref2': savedSo.order_refer_code1 || '',
 				'shipping_cost': savedSo.ker_bath || '',
 				'book_no': savedSo.book_no,
 				'brn_no': savedSo.brn_no,
@@ -7231,6 +7404,7 @@
 				'stair_count': savedTransaction ? (savedTransaction.unit_bundai || '') : '',
 				'install_floor': savedTransaction ? (savedTransaction.install || '') : '',
 				'door_width': savedTransaction ? (savedTransaction.room_bigger || '') : '',
+				'door_height': savedTransaction ? (savedTransaction.room_longer || '') : '',
 				'elev_capacity': savedTransaction ? (savedTransaction.lip_weight || '') : '',
 				'move_furn_count': savedTransaction ? (savedTransaction.employee_unit || '') : '',
 				'move_furn_detail': savedTransaction ? (savedTransaction.ferniger_name || '') : '',
@@ -7258,6 +7432,21 @@
 					});
 				}
 			});
+
+			if (savedTransaction) {
+				var stairParts = splitSizeParts(savedTransaction.bundai_big, 2);
+				setFieldValueBySelector('input[name="stair_width"]', stairParts[0]);
+				setFieldValueBySelector('input[name="stair_height"]', stairParts[1]);
+
+				var elevDoorParts = splitSizeParts(savedTransaction.lip_big, 2);
+				setFieldValueBySelector('input[name="elev_door_width"]', elevDoorParts[0]);
+				setFieldValueBySelector('input[name="elev_door_height"]', elevDoorParts[1]);
+
+				var elevRoomParts = splitSizeParts(savedTransaction.lip_long, 3);
+				setFieldValueBySelector('input[name="elev_width"]', elevRoomParts[0]);
+				setFieldValueBySelector('input[name="elev_height"]', elevRoomParts[1]);
+				setFieldValueBySelector('input[name="elev_depth"]', elevRoomParts[2]);
+			}
 
 			// Populate customer card display inputs
 			var savedBillId = savedSo.bill_id || '';
@@ -7377,8 +7566,12 @@
 				}
 			}
 
-			if (savedTransaction && savedTransaction.home_type) {
-				var rtRadio = document.querySelector('input[name="room_type"][value="' + savedTransaction.home_type + '"]');
+			var roomTypeVal = '';
+			if (savedTransaction) {
+				roomTypeVal = savedTransaction.install_room || savedTransaction.home_type || '';
+			}
+			if (roomTypeVal) {
+				var rtRadio = document.querySelector('input[name="room_type"][value="' + roomTypeVal + '"]');
 				if (rtRadio) rtRadio.checked = true;
 			}
 
@@ -7424,6 +7617,7 @@
 			var hrCb = document.querySelector('input[name="is_high_roof"]');
 			if (hrCb && savedTransaction) {
 				hrCb.checked = (savedTransaction.height_ltd === '1');
+				hrCb.dispatchEvent(new Event('change'));
 			}
 
 			// 6. Handle comments from savedCommentSo
@@ -7492,18 +7686,39 @@
 				}
 			}
 
-			// 9. Restore extra delivery addresses from tb_delivery_print
-			if (savedDeliveryPrint) {
+			// 9. Restore extra delivery addresses from tb_shipping_address first, then fallback to tb_delivery_print
+			if (Array.isArray(savedShippingAddresses) && savedShippingAddresses.length > 0) {
+				var existingExtraRows = document.querySelectorAll('#extra_address_list .extra-addr-row').length;
+				while (existingExtraRows < savedShippingAddresses.length && typeof addExtraAddress === 'function') {
+					addExtraAddress();
+					existingExtraRows++;
+				}
+
+				savedShippingAddresses.forEach(function(item, index) {
+					var displayIndex = index + 1;
+					var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
+					var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
+					var extraProvinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
+					var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
+
+					if (extraNameInput) extraNameInput.value = item.contact_name || '';
+					if (extraTelInput) extraTelInput.value = item.telephone || '';
+					if (extraProvinceInput) extraProvinceInput.value = item.province || '';
+					if (extraAddressInput) extraAddressInput.value = item.address || '';
+				});
+			} else if (savedDeliveryPrint) {
 				var extraAddressItems = [];
 				for (var extraIndex = 1; extraIndex <= 9; extraIndex++) {
 					var nameValue = savedDeliveryPrint['customer_name' + extraIndex] || '';
 					var telValue = savedDeliveryPrint['customer_tel' + extraIndex] || '';
+					var provinceValue = savedDeliveryPrint['province_name' + extraIndex] || '';
 					var addressValue = savedDeliveryPrint['address_name' + extraIndex] || '';
 
-					if (nameValue || telValue || addressValue) {
+					if (nameValue || telValue || provinceValue || addressValue) {
 						extraAddressItems.push({
 							name: nameValue,
 							tel: telValue,
+							province: provinceValue,
 							address: addressValue
 						});
 					}
@@ -7520,10 +7735,12 @@
 						var displayIndex = index + 1;
 						var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
 						var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
+						var extraProvinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
 						var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
 
 						if (extraNameInput) extraNameInput.value = item.name;
 						if (extraTelInput) extraTelInput.value = item.tel;
+						if (extraProvinceInput) extraProvinceInput.value = item.province;
 						if (extraAddressInput) extraAddressInput.value = item.address;
 					});
 				}

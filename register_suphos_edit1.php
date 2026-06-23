@@ -309,8 +309,9 @@ $optionalHosSoFieldMap = array(
 	'admin_old_doc_date' => 'date_oldbill',
 	'admin_edit_reason' => 'desnew_bill',
 	'admin_cancel_reason' => 'remark_cancel',
-	'shipping_ref1' => 'order_refer_code1',
-	'shipping_ref2' => 'order_refer_code2',
+	'shipping_date' => 'date_ker',
+	'shipping_ref1' => 'order_refer_code',
+	'shipping_ref2' => 'order_refer_code1',
 	'shipping_cost' => 'ker_bath',
 	'transport_company' => 'transport_company'
 );
@@ -2910,6 +2911,7 @@ $door_big = $_POST["door_bigger"];
 $door_longer = $_POST["door_longer"];
 $type_door = $_POST["type_door"];
 $home_type = $_POST["home_type"];
+$install_room = $_POST["install_room"] ?? $home_type;
 $install = $_POST["install"];
 $bundai_big = $_POST["bundai_big"];
 $lip_big = $_POST["lip_big"];
@@ -2949,40 +2951,66 @@ $strSQL33 =  "Update tb_transaction set runway='".$runway."',road='".$road."',so
 
 $objQuery33 = mysqli_query($conn,$strSQL33) or die(mysqli_error());
 
+if (!function_exists('updateTbTransactionColumnIfExists')) {
+	function updateTbTransactionColumnIfExists($conn, $ref_id, $column, $value)
+	{
+		$safeColumn = mysqli_real_escape_string($conn, $column);
+		$columnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_transaction LIKE '" . $safeColumn . "'");
+		if (!$columnCheck || mysqli_num_rows($columnCheck) == 0) {
+			return;
+		}
+
+		$safeValue = mysqli_real_escape_string($conn, $value);
+		$safeRefId = mysqli_real_escape_string($conn, $ref_id);
+		mysqli_query($conn, "UPDATE tb_transaction SET " . $safeColumn . " = '" . $safeValue . "' WHERE ref_id = '" . $safeRefId . "'");
+	}
+}
+
+updateTbTransactionColumnIfExists($conn, $ref_id, 'install_room', $install_room);
+
 $customer_name1 = $_POST["customer_name1"];
 $customer_tel1 = $_POST["customer_tel1"];
+$province_name1 = isset($_POST["province_name1"]) ? $_POST["province_name1"] : '';
 $address_name1 = $_POST["address_name1"];
 	
 $customer_name2 = $_POST["customer_name2"];
 $customer_tel2 = $_POST["customer_tel2"];
+$province_name2 = isset($_POST["province_name2"]) ? $_POST["province_name2"] : '';
 $address_name2 = $_POST["address_name2"];
 
 $customer_name3 = $_POST["customer_name3"];
 $customer_tel3 = $_POST["customer_tel3"];
+$province_name3 = isset($_POST["province_name3"]) ? $_POST["province_name3"] : '';
 $address_name3 = $_POST["address_name3"];
 
 $customer_name4 = $_POST["customer_name4"];
 $customer_tel4 = $_POST["customer_tel4"];
+$province_name4 = isset($_POST["province_name4"]) ? $_POST["province_name4"] : '';
 $address_name4 = $_POST["address_name4"];
 	
 $customer_name5 = $_POST["customer_name5"];
 $customer_tel5 = $_POST["customer_tel5"];
+$province_name5 = isset($_POST["province_name5"]) ? $_POST["province_name5"] : '';
 $address_name5 = $_POST["address_name5"];
 
 $customer_name6 = $_POST["customer_name6"];
 $customer_tel6 = $_POST["customer_tel6"];
+$province_name6 = isset($_POST["province_name6"]) ? $_POST["province_name6"] : '';
 $address_name6 = $_POST["address_name6"];
 
 $customer_name7 = $_POST["customer_name7"];
 $customer_tel7 = $_POST["customer_tel7"];
+$province_name7 = isset($_POST["province_name7"]) ? $_POST["province_name7"] : '';
 $address_name7 = $_POST["address_name7"];
 
 $customer_name8 = $_POST["customer_name8"];
 $customer_tel8 = $_POST["customer_tel8"];
+$province_name8 = isset($_POST["province_name8"]) ? $_POST["province_name8"] : '';
 $address_name8 = $_POST["address_name8"];
 
 $customer_name9 = $_POST["customer_name9"];
 $customer_tel9 = $_POST["customer_tel9"];
+$province_name9 = isset($_POST["province_name9"]) ? $_POST["province_name9"] : '';
 $address_name9 = $_POST["address_name9"];
 	
 $strSQL22 = "SELECT * FROM tb_delivery_print WHERE ref_id = '".$ref_id."' ";
@@ -3011,7 +3039,46 @@ $objQuery15 = mysqli_query($conn,$strSQL15) or die(mysqli_error());
 	}
 
 
-	
+mysqli_query($conn, "DELETE FROM tb_shipping_address WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
+
+for ($shippingIndex = 1; $shippingIndex <= 9; $shippingIndex++) {
+	$shippingContactName = trim((string)$_POST['customer_name' . $shippingIndex]);
+	$shippingTelephone = trim((string)$_POST['customer_tel' . $shippingIndex]);
+	$shippingProvince = trim((string)(isset($_POST['province_name' . $shippingIndex]) ? $_POST['province_name' . $shippingIndex] : ''));
+	$shippingAddress = trim((string)$_POST['address_name' . $shippingIndex]);
+
+	if ($shippingContactName === '' && $shippingTelephone === '' && $shippingProvince === '' && $shippingAddress === '') {
+		continue;
+	}
+
+	$strShippingInsert = "INSERT INTO tb_shipping_address (ref_id, contact_name, telephone, province, address) VALUES ('" .
+		mysqli_real_escape_string($conn, $ref_id) . "','" .
+		mysqli_real_escape_string($conn, $shippingContactName) . "','" .
+		mysqli_real_escape_string($conn, $shippingTelephone) . "','" .
+		mysqli_real_escape_string($conn, $shippingProvince) . "','" .
+		mysqli_real_escape_string($conn, $shippingAddress) . "')";
+
+	mysqli_query($conn, $strShippingInsert) or die(mysqli_error($conn));
+}
+
+$deliveryBillContactName = trim((string)(isset($_POST['bill_extra_contact_name_2']) ? $_POST['bill_extra_contact_name_2'] : ''));
+$deliveryBillTelephone = trim((string)(isset($_POST['bill_extra_contact_tel_2']) ? $_POST['bill_extra_contact_tel_2'] : ''));
+$deliveryBillProvince = trim((string)(isset($_POST['bill_extra_contact_province_2']) ? $_POST['bill_extra_contact_province_2'] : ''));
+$deliveryBillAddress = trim((string)(isset($_POST['bill_extra_shipping_address_2']) ? $_POST['bill_extra_shipping_address_2'] : ''));
+
+mysqli_query($conn, "DELETE FROM tb_delivery_bill WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
+
+if ($deliveryBillContactName !== '' || $deliveryBillTelephone !== '' || $deliveryBillProvince !== '' || $deliveryBillAddress !== '') {
+	$strDeliveryBillInsert = "INSERT INTO tb_delivery_bill (ref_id, customer_nameb, customer_telb, province, address_nameb) VALUES ('" .
+		mysqli_real_escape_string($conn, $ref_id) . "','" .
+		mysqli_real_escape_string($conn, $deliveryBillContactName) . "','" .
+		mysqli_real_escape_string($conn, $deliveryBillTelephone) . "','" .
+		mysqli_real_escape_string($conn, $deliveryBillProvince) . "','" .
+		mysqli_real_escape_string($conn, $deliveryBillAddress) . "')";
+
+	mysqli_query($conn, $strDeliveryBillInsert) or die(mysqli_error($conn));
+}
+
  if($qsave){
    echo "<script language=\"JavaScript\">";
    $redirect_url = $redirect_to . "?ref_id=" . urlencode($ref_id);
