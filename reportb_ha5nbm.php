@@ -2,7 +2,7 @@
 <?php
 
 
-define('FPDF_FONTPATH','font/');
+define('FPDF_FONTPATH', __DIR__ . '/font/');
  
 require('fpdf.php');
 

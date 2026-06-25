@@ -3825,6 +3825,21 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 		}
 	}
 
+	if (!function_exists('tbDeliveryPrintColumnExists')) {
+		function tbDeliveryPrintColumnExists($conn, $columnName)
+		{
+			static $columnCache = array();
+			if (array_key_exists($columnName, $columnCache)) {
+				return $columnCache[$columnName];
+			}
+
+			$safeColumnName = mysqli_real_escape_string($conn, $columnName);
+			$query = mysqli_query($conn, "SHOW COLUMNS FROM tb_delivery_print LIKE '" . $safeColumnName . "'");
+			$columnCache[$columnName] = ($query && mysqli_num_rows($query) > 0);
+			return $columnCache[$columnName];
+		}
+	}
+
 	updateTbTransactionColumnIfExists($conn, $ref_id, 'install_room', $install_room);
 
 	$customer_name1 = $_POST["customer_name1"];
@@ -3872,15 +3887,50 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 	$province_name9 = $_POST["province_name9"];
 	$address_name9 = $_POST["address_name9"];
 
+	$deliveryPrintRows = array(
+		1 => array('name' => $customer_name1, 'tel' => $customer_tel1, 'province' => $province_name1, 'address' => $address_name1),
+		2 => array('name' => $customer_name2, 'tel' => $customer_tel2, 'province' => $province_name2, 'address' => $address_name2),
+		3 => array('name' => $customer_name3, 'tel' => $customer_tel3, 'province' => $province_name3, 'address' => $address_name3),
+		4 => array('name' => $customer_name4, 'tel' => $customer_tel4, 'province' => $province_name4, 'address' => $address_name4),
+		5 => array('name' => $customer_name5, 'tel' => $customer_tel5, 'province' => $province_name5, 'address' => $address_name5),
+		6 => array('name' => $customer_name6, 'tel' => $customer_tel6, 'province' => $province_name6, 'address' => $address_name6),
+		7 => array('name' => $customer_name7, 'tel' => $customer_tel7, 'province' => $province_name7, 'address' => $address_name7),
+		8 => array('name' => $customer_name8, 'tel' => $customer_tel8, 'province' => $province_name8, 'address' => $address_name8),
+		9 => array('name' => $customer_name9, 'tel' => $customer_tel9, 'province' => $province_name9, 'address' => $address_name9)
+	);
 
+	$hasDeliveryPrintData = false;
+	foreach ($deliveryPrintRows as $deliveryPrintRow) {
+		if (
+			trim((string)$deliveryPrintRow['name']) !== '' ||
+			trim((string)$deliveryPrintRow['tel']) !== '' ||
+			trim((string)$deliveryPrintRow['province']) !== '' ||
+			trim((string)$deliveryPrintRow['address']) !== ''
+		) {
+			$hasDeliveryPrintData = true;
+			break;
+		}
+	}
 
-	if ($customer_name1 != '') {
+	if ($hasDeliveryPrintData) {
+		$deliveryPrintColumns = array('ref_id');
+		$deliveryPrintValues = array("'" . mysqli_real_escape_string($conn, $ref_id) . "'");
 
-		$strSQL15 =  "insert into tb_delivery_print (ref_id,customer_name1,customer_tel1,address_name1,customer_name2,customer_tel2,address_name2,customer_name3,customer_tel3,address_name3,customer_name4,customer_tel4,address_name4,customer_name5,customer_tel5,address_name5,customer_name6,customer_tel6,address_name6,customer_name7,customer_tel7,address_name7,customer_name8,customer_tel8,address_name8,customer_name9,customer_tel9,address_name9) 
+		foreach ($deliveryPrintRows as $deliveryIndex => $deliveryPrintRow) {
+			$deliveryPrintColumns[] = 'customer_name' . $deliveryIndex;
+			$deliveryPrintValues[] = "'" . mysqli_real_escape_string($conn, $deliveryPrintRow['name']) . "'";
+			$deliveryPrintColumns[] = 'customer_tel' . $deliveryIndex;
+			$deliveryPrintValues[] = "'" . mysqli_real_escape_string($conn, $deliveryPrintRow['tel']) . "'";
+			if (tbDeliveryPrintColumnExists($conn, 'province_name' . $deliveryIndex)) {
+				$deliveryPrintColumns[] = 'province_name' . $deliveryIndex;
+				$deliveryPrintValues[] = "'" . mysqli_real_escape_string($conn, $deliveryPrintRow['province']) . "'";
+			}
+			$deliveryPrintColumns[] = 'address_name' . $deliveryIndex;
+			$deliveryPrintValues[] = "'" . mysqli_real_escape_string($conn, $deliveryPrintRow['address']) . "'";
+		}
 
-values('" . $ref_id . "','" . $customer_name1 . "','" . $customer_tel1 . "','" . $address_name1 . "','" . $customer_name2 . "','" . $customer_tel2 . "','" . $address_name2 . "','" . $customer_name3 . "','" . $customer_tel3 . "','" . $address_name3 . "','" . $customer_name4 . "','" . $customer_tel4 . "','" . $address_name4 . "','" . $customer_name5 . "','" . $customer_tel5 . "','" . $address_name5 . "','" . $customer_name6 . "','" . $customer_tel6 . "','" . $address_name6 . "','" . $customer_name7 . "','" . $customer_tel7 . "','" . $address_name7 . "','" . $customer_name8 . "','" . $customer_tel8 . "','" . $address_name8 . "','" . $customer_name9 . "','" . $customer_tel9 . "','" . $address_name9 . "')";
-
-		$objQuery15 = mysqli_query($conn, $strSQL15) or die(mysqli_error());
+		$strSQL15 = "insert into tb_delivery_print (" . implode(',', $deliveryPrintColumns) . ") values(" . implode(',', $deliveryPrintValues) . ")";
+		$objQuery15 = mysqli_query($conn, $strSQL15) or die(mysqli_error($conn));
 	}
 
 	mysqli_query($conn, "DELETE FROM tb_shipping_address WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");

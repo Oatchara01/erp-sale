@@ -2476,6 +2476,34 @@
 		'province' => (string)($savedDeliveryBill['province'] ?? ''),
 		'address' => (string)($savedDeliveryBill['address_nameb'] ?? '')
 	);
+	$printCoverRefId = ($savedSo !== null && !empty($savedSo['ref_id'])) ? (string)$savedSo['ref_id'] : '';
+	$coverSheetMainReports = array(
+		array('label' => '99std', 'file' => 'report_h99std.php'),
+		array('label' => '99std+k', 'file' => 'report_h99std_k.php'),
+		array('label' => 'a5ptl', 'file' => 'report_ha5ptl.php'),
+		array('label' => 'a5ptl+k', 'file' => 'report_ha5ptl_k.php'),
+		array('label' => 'a4ptl', 'file' => 'report_ha4ptl.php'),
+		array('label' => 'a4ptl+k', 'file' => 'report_ha4ptl_k.php'),
+		array('label' => 'a5nbm', 'file' => 'report_ha5nbm.php'),
+		array('label' => 'a5nbm+k', 'file' => 'report_ha5nbm_k.php'),
+		array('label' => 'a4nbm', 'file' => 'report_ha4nbm.php'),
+		array('label' => 'a4nbm+k', 'file' => 'report_ha4nbm_k.php')
+	);
+	$coverSheetExtraReports = array(
+		array('label' => '99std', 'file_pattern' => 'report_h99std%s.php'),
+		array('label' => '99std+k', 'file_pattern' => 'report_h99std_k%s.php'),
+		array('label' => 'a5', 'file_pattern' => 'report_ha5all%s.php'),
+		array('label' => 'a5+k', 'file_pattern' => 'report_ha5all_k%s.php'),
+		array('label' => 'a4', 'file_pattern' => 'report_ha4all%s.php'),
+		array('label' => 'a4+k', 'file_pattern' => 'report_ha4all_k%s.php')
+	);
+	$billDeliveryReports = array(
+		array('label' => '99std', 'file' => 'reportb_h99std.php'),
+		array('label' => 'a5ptl', 'file' => 'reportb_ha5ptl.php'),
+		array('label' => 'a4ptl', 'file' => 'reportb_ha4ptl.php'),
+		array('label' => 'a5nbm', 'file' => 'reportb_ha5nbm.php'),
+		array('label' => 'a4nbm', 'file' => 'reportb_ha4nbm.php')
+	);
 
 	function so_saved_h($value)
 	{
@@ -4002,9 +4030,37 @@
 							<button type="button" onclick="addExtraAddress()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 								<img src="img/icons/add_address.png" alt="add_address" style="width: 16px; height: 16px;"> เพิ่มที่อยู่
 							</button>
-							<button type="button" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+							<button type="button" onclick="toggleDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 								<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์ใบปะ
 							</button>
+						</div>
+
+						<div id="delivery_print_panel" style="display:none; margin-top: 20px; border: 1px solid #EBEBEB; border-radius: 12px; padding: 18px; background-color: #FCFBFD;">
+							<div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+								<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin: 0;">ชุดพิมพ์ใบปะหน้า</h3>
+								<span style="font-size: 13px; color: #7A6F85;">
+									<?php echo $printCoverRefId !== '' ? 'เลขที่อ้างอิง: ' . so_saved_h($printCoverRefId) : 'ยังไม่มี ref_id สำหรับพิมพ์'; ?>
+								</span>
+							</div>
+							<p style="margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: #6C6772;">
+								การพิมพ์ใบปะหน้าใช้ข้อมูลจากฐานข้อมูลที่บันทึกแล้ว หากเพิ่งแก้ไขที่อยู่เพิ่มเติมหรือที่อยู่ส่งบิล กรุณากดบันทึกก่อนพิมพ์
+							</p>
+
+							<div style="margin-top: 18px;">
+								<h4 style="margin: 0 0 12px; font-size: 15px; color: #3B3B3B;">ใบปะหน้ากล่องหลัก</h4>
+								<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+									<?php foreach ($coverSheetMainReports as $reportConfig) { ?>
+										<button type="button" onclick="openDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
+											<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
+										</button>
+									<?php } ?>
+								</div>
+							</div>
+
+							<div style="margin-top: 18px;">
+								<h4 style="margin: 0 0 12px; font-size: 15px; color: #3B3B3B;">ใบปะหน้าที่อยู่เพิ่มเติม</h4>
+								<div id="delivery_print_extra_groups" style="display: flex; flex-direction: column; gap: 14px;"></div>
+							</div>
 						</div>
 
 						<div style="margin-top: 28px;">
@@ -4057,13 +4113,158 @@
 										<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 									</div>
 								</div>
-								<button type="button" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; height: 42px; min-width: 146px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+								<button type="button" onclick="toggleBillDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; height: 42px; min-width: 146px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
 									<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์
 								</button>
+							</div>
+
+							<div id="bill_delivery_print_panel" style="display:none; margin-top: 18px; border: 1px solid #EBEBEB; border-radius: 12px; padding: 18px; background-color: #FCFBFD;">
+								<div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+									<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin: 0;">ชุดพิมพ์ใบปะจัดส่งบิล</h3>
+									<span style="font-size: 13px; color: #7A6F85;">
+										<?php echo $printCoverRefId !== '' ? 'เลขที่อ้างอิง: ' . so_saved_h($printCoverRefId) : 'ยังไม่มี ref_id สำหรับพิมพ์'; ?>
+									</span>
+								</div>
+								<p style="margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: #6C6772;">
+									ใบปะจัดส่งบิลมีรายการเดียว โดยดึงข้อมูลจากเอกสารที่บันทึกแล้ว
+								</p>
+								<div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+									<?php foreach ($billDeliveryReports as $reportConfig) { ?>
+										<button type="button" onclick="openBillDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
+											<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
+										</button>
+									<?php } ?>
+								</div>
 							</div>
 						</div>
 
 						<script>
+							const deliveryPrintRefId = <?php echo json_encode($printCoverRefId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+							const deliveryPrintCanOpen = <?php echo $printCoverRefId !== '' ? 'true' : 'false'; ?>;
+							const deliveryPrintExtraReports = <?php echo json_encode($coverSheetExtraReports, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+							function getExtraAddressRowCount() {
+								return Math.min(document.querySelectorAll('#extra_address_list .extra-addr-row').length, 9);
+							}
+
+							function toggleDeliveryPrintPanel() {
+								const panel = document.getElementById('delivery_print_panel');
+								if (!panel) {
+									return;
+								}
+
+								const shouldShow = panel.style.display === 'none' || panel.style.display === '';
+								panel.style.display = shouldShow ? 'block' : 'none';
+								if (shouldShow) {
+									renderDeliveryPrintExtraGroups();
+								}
+							}
+
+							function openDeliveryPrintReport(fileName) {
+								if (!deliveryPrintCanOpen || !deliveryPrintRefId) {
+									const message = 'กรุณาบันทึกใบสั่งขายก่อนพิมพ์ใบปะหน้า เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
+									if (typeof Swal !== 'undefined') {
+										Swal.fire({
+											icon: 'info',
+											title: 'ยังพิมพ์ไม่ได้',
+											text: message,
+											confirmButtonColor: '#612989'
+										});
+									} else {
+										alert(message);
+									}
+									return;
+								}
+
+								window.open(fileName + '?ref_id=' + encodeURIComponent(deliveryPrintRefId), '_blank');
+							}
+
+							function renderDeliveryPrintExtraGroups() {
+								const container = document.getElementById('delivery_print_extra_groups');
+								if (!container) {
+									return;
+								}
+
+								const rowCount = getExtraAddressRowCount();
+								container.innerHTML = '';
+
+								if (rowCount === 0) {
+									container.innerHTML = '<div style="font-size: 13px; color: #7A6F85;">ยังไม่มีรายการที่อยู่เพิ่มเติม</div>';
+									return;
+								}
+
+								for (let index = 1; index <= rowCount; index++) {
+									const group = document.createElement('div');
+									group.style.border = '1px solid #EFE7F5';
+									group.style.borderRadius = '10px';
+									group.style.padding = '14px';
+									group.style.backgroundColor = '#FFFFFF';
+
+									const title = document.createElement('div');
+									title.textContent = 'ที่อยู่เพิ่มเติม ' + index;
+									title.style.fontSize = '14px';
+									title.style.fontWeight = '600';
+									title.style.color = '#3B3B3B';
+									title.style.marginBottom = '10px';
+									group.appendChild(title);
+
+									const buttonWrap = document.createElement('div');
+									buttonWrap.style.display = 'grid';
+									buttonWrap.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
+									buttonWrap.style.gap = '10px';
+
+									deliveryPrintExtraReports.forEach(function(reportConfig) {
+										const button = document.createElement('button');
+										button.type = 'button';
+										button.textContent = reportConfig.label;
+										button.style.backgroundColor = '#FFFFFF';
+										button.style.color = '#612989';
+										button.style.border = '1px solid #E5D8EF';
+										button.style.borderRadius = '10px';
+										button.style.padding = '11px 14px';
+										button.style.fontFamily = "'Prompt', sans-serif";
+										button.style.fontSize = '14px';
+										button.style.fontWeight = '500';
+										button.style.cursor = 'pointer';
+										button.onclick = function() {
+											openDeliveryPrintReport(reportConfig.file_pattern.replace('%s', index));
+										};
+										buttonWrap.appendChild(button);
+									});
+
+									group.appendChild(buttonWrap);
+									container.appendChild(group);
+								}
+							}
+
+							function toggleBillDeliveryPrintPanel() {
+								const panel = document.getElementById('bill_delivery_print_panel');
+								if (!panel) {
+									return;
+								}
+
+								panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+							}
+
+							function openBillDeliveryPrintReport(fileName) {
+								if (!deliveryPrintCanOpen || !deliveryPrintRefId) {
+									const message = 'กรุณาบันทึกใบสั่งขายก่อนพิมพ์ใบปะจัดส่งบิล เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
+									if (typeof Swal !== 'undefined') {
+										Swal.fire({
+											icon: 'info',
+											title: 'ยังพิมพ์ไม่ได้',
+											text: message,
+											confirmButtonColor: '#612989'
+										});
+									} else {
+										alert(message);
+									}
+									return;
+								}
+
+								window.open(fileName + '?ref_id=' + encodeURIComponent(deliveryPrintRefId), '_blank');
+							}
+
 							function addExtraAddress() {
 								const list = document.getElementById('extra_address_list');
 								const template = list.querySelector('.extra-addr-row').cloneNode(true);
@@ -4109,6 +4310,8 @@
 									const shippingAddress = row.querySelector('input[name^="extra_shipping_address"]');
 									if (shippingAddress) shippingAddress.name = 'extra_shipping_address_' + displayIndex;
 								});
+
+								renderDeliveryPrintExtraGroups();
 							}
 
 							(function restoreRenderedExtraAddresses() {
@@ -4138,6 +4341,8 @@
 									if (provinceInput) provinceInput.value = item.province || '';
 									if (addressInput) addressInput.value = item.address || '';
 								});
+
+								renderDeliveryPrintExtraGroups();
 							})();
 						</script>
 					</div>
@@ -4292,11 +4497,12 @@
 
 
 
-				<!-- NEW 3 TABS CARD -->
+				<!-- NEW DOCUMENT TABS CARD -->
 				<div class="so-tabs-container" style="margin-top: 24px;">
 					<button type="button" class="so-tab-btn active" onclick="open3Tab('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
 					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
 					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_attach_file', this)">แนบไฟล์</button>
+					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
 				</div>
 				<div class="so-card" style="padding: 24px;">
 
@@ -4403,6 +4609,20 @@
 						<input type="file" name="slip4" id="hidden_slip4" style="display:none;" onchange="handleFileSelect(this, 4)">
 						<input type="file" name="slip5" id="hidden_slip5" style="display:none;" onchange="handleFileSelect(this, 5)">
 					</div>
+
+					<!-- TAB 4: เอกสารที่เกี่ยวข้อง -->
+					<div id="tab_related_docs" class="so-3tab-content" style="display:none;">
+						<div class="so-related-doc-table">
+							<div class="so-related-doc-header">
+								<div>ชื่อเอกสาร</div>
+								<div>หมายเลข SN</div>
+								<div></div>
+							</div>
+							<div id="related_doc_rows">
+								<div class="so-related-doc-empty">ยังไม่มีเอกสารที่เกี่ยวข้อง</div>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<style>
@@ -4442,6 +4662,85 @@
 						margin-bottom: 16px;
 						align-items: flex-end;
 					}
+
+					.so-related-doc-table {
+						background-color: #FFFFFF;
+						border-radius: 8px;
+						overflow: hidden;
+						min-height: 330px;
+						margin: -24px;
+						font-family: 'Prompt', sans-serif;
+					}
+
+					.so-related-doc-header,
+					.so-related-doc-row {
+						display: grid;
+						grid-template-columns: minmax(260px, 1fr) minmax(180px, 280px) 96px;
+						align-items: center;
+					}
+
+					.so-related-doc-header {
+						color: #612989;
+						font-size: 16px;
+						font-weight: 600;
+						border-bottom: 1px solid #612989;
+					}
+
+					.so-related-doc-header > div,
+					.so-related-doc-row > div {
+						padding: 18px 46px;
+					}
+
+					.so-related-doc-row {
+						color: #3B3B3B;
+						font-size: 18px;
+						border-bottom: 1px solid #EBEBEB;
+						min-height: 78px;
+					}
+
+					.so-related-doc-action {
+						width: 32px;
+						height: 32px;
+						border: none;
+						background-color: transparent;
+						color: #612989;
+						cursor: pointer;
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						font-size: 24px;
+						padding: 0;
+					}
+
+					.so-related-doc-action img {
+						width: 30px;
+						height: 30px;
+						object-fit: contain;
+					}
+
+					.so-related-doc-empty {
+						color: #8E8B94;
+						font-size: 16px;
+						padding: 32px 46px;
+					}
+
+					@media (max-width: 768px) {
+						.so-related-doc-table {
+							margin: -16px;
+							overflow-x: auto;
+						}
+
+						.so-related-doc-header,
+						.so-related-doc-row {
+							grid-template-columns: minmax(220px, 1fr) minmax(150px, 180px) 70px;
+							min-width: 560px;
+						}
+
+						.so-related-doc-header > div,
+						.so-related-doc-row > div {
+							padding: 14px 18px;
+						}
+					}
 				</style>
 
 				<script>
@@ -4455,16 +4754,99 @@
 						var btns = container.getElementsByClassName('so-tab-btn');
 						for (var i = 0; i < btns.length; i++) {
 							btns[i].classList.remove('active');
-							var span = btns[i].querySelector('span');
-							if (span) span.style.display = 'none';
 						}
 
 						document.getElementById(tabId).style.display = 'block';
 
 						element.classList.add('active');
-						var span = element.querySelector('span');
-						if (span) span.style.display = 'inline';
+						if (tabId === 'tab_related_docs' && typeof renderRelatedDocuments === 'function') {
+							renderRelatedDocuments();
+						}
 					}
+
+					function escapeRelatedDocValue(value) {
+						return String(value || '')
+							.replace(/&/g, '&amp;')
+							.replace(/"/g, '&quot;')
+							.replace(/</g, '&lt;')
+							.replace(/>/g, '&gt;');
+					}
+
+					function getRelatedDocFieldValue(prefix, rowIndex) {
+						const element = document.getElementById(prefix + rowIndex);
+						return element ? String(element.value || '').trim() : '';
+					}
+
+					function getRelatedDocSn(rowIndex) {
+						const rowSn = getRelatedDocFieldValue('product_sn', rowIndex) || getRelatedDocFieldValue('sn', rowIndex);
+						if (rowSn !== '') {
+							return rowSn;
+						}
+
+						const documentSn = document.querySelector('input[name="sn_no"]');
+						return documentSn ? String(documentSn.value || '').trim() : '';
+					}
+
+					function renderRelatedDocuments() {
+						const rowsContainer = document.getElementById('related_doc_rows');
+						if (!rowsContainer) return;
+
+						const rows = [];
+						for (let i = 1; i <= 30; i++) {
+							const deleted = getRelatedDocFieldValue('row_deleted', i) === '1';
+							const productId = getRelatedDocFieldValue('product_id', i);
+							const productCode = getRelatedDocFieldValue('product_codet', i) || getRelatedDocFieldValue('h_product_codet', i);
+							const productName = getRelatedDocFieldValue('display_name', i) || getRelatedDocFieldValue('product_name', i) || productCode;
+
+							if (!deleted && (productId !== '' || productCode !== '' || productName !== '')) {
+								rows.push({
+									name: productName,
+									sn: getRelatedDocSn(i),
+									rowIndex: i
+								});
+							}
+						}
+
+						if (rows.length === 0) {
+							rowsContainer.innerHTML = '<div class="so-related-doc-empty">ยังไม่มีเอกสารที่เกี่ยวข้อง</div>';
+							return;
+						}
+
+						rowsContainer.innerHTML = rows.map(function(row) {
+							const safeName = escapeRelatedDocValue(row.name);
+							const safeSn = escapeRelatedDocValue(row.sn);
+							return `
+								<div class="so-related-doc-row">
+									<div>${safeName}</div>
+									<div>${safeSn || '-'}</div>
+									<div>
+										<button type="button" class="so-related-doc-action" title="ดูเอกสาร" aria-label="ดูเอกสารแถวที่ ${row.rowIndex}">
+											<img src="img/icons/doc.png" alt="">
+										</button>
+									</div>
+								</div>
+							`;
+						}).join('');
+					}
+
+					document.addEventListener('DOMContentLoaded', function() {
+						renderRelatedDocuments();
+
+						const snInput = document.querySelector('input[name="sn_no"]');
+						if (snInput) {
+							snInput.addEventListener('input', renderRelatedDocuments);
+						}
+
+						for (let i = 1; i <= 30; i++) {
+							['product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_id', 'row_deleted'].forEach(function(prefix) {
+								const element = document.getElementById(prefix + i);
+								if (element) {
+									element.addEventListener('input', renderRelatedDocuments);
+									element.addEventListener('change', renderRelatedDocuments);
+								}
+							});
+						}
+					});
 
 					// === Department Comments JS ===
 					let commentIdCounter = 0;
