@@ -22,6 +22,96 @@ function applyDeliveryTimeRangeToPost()
 	}
 }
 
+function getDeptCommentItemsFromPost()
+{
+	$itemsJson = $_POST["dept_comment_items"] ?? "[]";
+	$decodedItems = json_decode($itemsJson, true);
+	if (!is_array($decodedItems)) {
+		return array();
+	}
+
+	$items = array();
+	$allowedDepartments = array(1, 2, 3, 4);
+	foreach ($decodedItems as $index => $item) {
+		$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
+		$message = isset($item["message"]) ? trim($item["message"]) : "";
+		if (!in_array($departmentId, $allowedDepartments, true) || $message === "") {
+			continue;
+		}
+
+		$items[] = array(
+			"department_id" => $departmentId,
+			"message" => $message,
+			"sort_order" => isset($item["sort_order"]) ? (int)$item["sort_order"] : ($index + 1)
+		);
+	}
+
+	return $items;
+}
+
+function saveDeptCommentItems($conn, $commentSoId, $refId, $items)
+{
+	$commentSoId = (int)$commentSoId;
+	$refIdEscaped = mysqli_real_escape_string($conn, $refId);
+	mysqli_query($conn, "DELETE FROM tb_comment_so_item WHERE comment_so_id = " . $commentSoId . " OR ref_id = '" . $refIdEscaped . "'");
+
+	foreach ($items as $item) {
+		$departmentId = (int)$item["department_id"];
+		$message = mysqli_real_escape_string($conn, $item["message"]);
+		$sortOrder = (int)$item["sort_order"];
+		$sql = "INSERT INTO tb_comment_so_item (comment_so_id, ref_id, department_id, message, sort_order) VALUES (" . $commentSoId . ", '" . $refIdEscaped . "', " . $departmentId . ", '" . $message . "', " . $sortOrder . ")";
+		mysqli_query($conn, $sql);
+	}
+}
+
+function hosSubsoColumnExists($conn, $columnName)
+{
+	static $columnCache = array();
+	if (array_key_exists($columnName, $columnCache)) {
+		return $columnCache[$columnName];
+	}
+
+	$safeColumnName = mysqli_real_escape_string($conn, $columnName);
+	$sql = "SHOW COLUMNS FROM hos__subso LIKE '" . $safeColumnName . "'";
+	$query = mysqli_query($conn, $sql);
+	$columnCache[$columnName] = ($query && mysqli_num_rows($query) > 0);
+	return $columnCache[$columnName];
+}
+
+function buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new)
+{
+	$setParts = array(
+		"ref_idd='$ref_id'",
+		"count='$sale_count_new'",
+		"countref='$sale_count_new'",
+		"price='$product_price_new'",
+		"price_ref='$product_price_new'",
+		"amount='$sum_amount_new'",
+		"sale_remark='$sale_remarkk_new'",
+		"warranty='$warranty_new'",
+		"pm='$pm_new'",
+		"cal='$cal_new'",
+		"product_id='$product_id_new'",
+		"product_code ='$product_id_new'",
+		"discount ='$discount_unit_new'",
+		"ckk_order='".$have_order."'",
+		"clear_br ='".$clear_br_new."'",
+		"clear_ivno='".$clear_ivno_new."'",
+		"sn='".$sn_new."'",
+		"jong_ckk='".$jong_ckk_new."'",
+		"jong_no='".$jong_no_new."'"
+	);
+
+	if (hosSubsoColumnExists($conn, 'pm_year')) {
+		$setParts[] = "pm_year='$pm_year_new'";
+	}
+	if (hosSubsoColumnExists($conn, 'admin_remark')) {
+		$setParts[] = "admin_remark='".$admin_remark_new."'";
+	}
+
+	return "Update hos__subso set " . implode(',', $setParts) . " Where id= '$id_new' ";
+}
+
 if ($_POST["submit"] = "submit") {
 
 applyDeliveryTimeRangeToPost();
@@ -102,6 +192,8 @@ $comment_cs = $_POST["comment_cs"];
 $comment_en = $_POST["comment_en"];	
 $comment_st = $_POST["comment_st"];	
 $comment_ad = $_POST["comment_ad"];	
+$technician_required = isset($_POST["technician_required"]) && $_POST["technician_required"] === "1" ? 1 : 0;
+$deptCommentItems = getDeptCommentItemsFromPost();
 
 $ic_ckk = $_POST["ic_ckk"];	
 $et_ckk = $_POST["et_ckk"];
@@ -203,6 +295,10 @@ if (!isset($_POST["id"]) || !is_array($_POST["id"])) {
 	$mapped_clear_ivno = array();
 	$mapped_jong_ckk = array();
 	$mapped_jong_no = array();
+	$mapped_pm_year = array();
+	$mapped_admin_remark = array();
+	$deleted_subso_ids = array();
+	$deleted_product_codes = array();
 
 	for ($i = 1; $i <= 30; $i++) {
 		if (isset($_POST["subso_db_id$i"]) && $_POST["subso_db_id$i"] !== '') {
@@ -222,6 +318,14 @@ if (!isset($_POST["id"]) || !is_array($_POST["id"])) {
 			$mapped_clear_ivno[$db_id] = $_POST["clear_ivno$i"] ?? '';
 			$mapped_jong_ckk[$db_id] = $_POST["jong_ckk$i"] ?? '';
 			$mapped_jong_no[$db_id] = $_POST["jong_no$i"] ?? '';
+			$mapped_pm_year[$db_id] = $_POST["pm_year$i"] ?? '';
+			$mapped_admin_remark[$db_id] = $_POST["display_name$i"] ?? '';
+		}
+
+		if (isset($_POST["deleted_subso_db_id$i"]) && $_POST["deleted_subso_db_id$i"] !== '') {
+			$deleted_id = $_POST["deleted_subso_db_id$i"];
+			$deleted_subso_ids[$deleted_id] = $deleted_id;
+			$deleted_product_codes[$deleted_id] = $_POST["deleted_product_code$i"] ?? '';
 		}
 	}
 
@@ -240,6 +344,10 @@ if (!isset($_POST["id"]) || !is_array($_POST["id"])) {
 	$_POST["clear_ivno"] = $mapped_clear_ivno;
 	$_POST["jong_ckk"] = $mapped_jong_ckk;
 	$_POST["jong_no"] = $mapped_jong_no;
+	$_POST["pm_year"] = $mapped_pm_year;
+	$_POST["admin_remark"] = $mapped_admin_remark;
+	$_POST["deleted_subso_ids"] = $deleted_subso_ids;
+	$_POST["deleted_product_codes"] = $deleted_product_codes;
 }
 
 $id = $_POST["id"];
@@ -257,6 +365,10 @@ $sn = $_POST["sn"];
 $clear_ivno = $_POST["clear_ivno"];
 $jong_ckk = $_POST["jong_ckk"];
 $jong_no = $_POST["jong_no"];
+$pm_year = $_POST["pm_year"] ?? array();
+$admin_remark = $_POST["admin_remark"] ?? array();
+$deleted_subso_ids = $_POST["deleted_subso_ids"] ?? array();
+$deleted_product_codes = $_POST["deleted_product_codes"] ?? array();
 	
 	
 	
@@ -337,13 +449,22 @@ head_1='".$head_1."',ref_1='".$ref_1."',ref_2='".$ref_2."',ref_3='".$ref_3."',re
 $qsave56 = mysqli_query($conn, $save56);
 
 // Upsert tb_comment_so
-$checkCommentSo = mysqli_query($conn, "SELECT id FROM tb_comment_so WHERE ref_id = '".$ref_id."' LIMIT 1");
+$checkCommentSo = mysqli_query($conn, "SELECT id FROM tb_comment_so WHERE ref_id = '".$ref_id."' ORDER BY id DESC LIMIT 1");
+$commentSoId = 0;
 if ($checkCommentSo && mysqli_num_rows($checkCommentSo) > 0) {
-	$save57 = "Update tb_comment_so  SET comment_cs='".$comment_cs."',comment_en='".$comment_en."',comment_st='".$comment_st."',comment_ad='".$comment_ad."'	where  ref_id ='".$ref_id."'";
+	$commentSoRow = mysqli_fetch_assoc($checkCommentSo);
+	$commentSoId = (int)$commentSoRow["id"];
+	$save57 = "Update tb_comment_so  SET comment_cs='".$comment_cs."',comment_en='".$comment_en."',comment_st='".$comment_st."',comment_ad='".$comment_ad."',technician_required='".$technician_required."'	where  ref_id ='".$ref_id."'";
 } else {
-	$save57 = "INSERT INTO tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad) VALUES ('".$ref_id."','".$comment_cs."','".$comment_en."','".$comment_st."','".$comment_ad."')";
+	$save57 = "INSERT INTO tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad,technician_required) VALUES ('".$ref_id."','".$comment_cs."','".$comment_en."','".$comment_st."','".$comment_ad."','".$technician_required."')";
 }
 $qsave57 = mysqli_query($conn, $save57);
+if ($qsave57) {
+	if ($commentSoId === 0) {
+		$commentSoId = mysqli_insert_id($conn);
+	}
+	saveDeptCommentItems($conn, $commentSoId, $ref_id, $deptCommentItems);
+}
 	
 	
 	/*if($book_clear=='1'){
@@ -390,6 +511,50 @@ $Num_Rows21 = mysqli_num_rows($objQuery21);
 
 if($Num_Rows21 > 0){
 
+  if (!function_exists('deleteHosSubsoRowAndBomChildren')) {
+	function deleteHosSubsoRowAndBomChildren($conn, $refId, $subsoId, $fallbackProductCode = '')
+	{
+		$subsoIdEscaped = mysqli_real_escape_string($conn, $subsoId);
+		$refIdEscaped = mysqli_real_escape_string($conn, $refId);
+		$productCode = $fallbackProductCode;
+
+		$sqlCurrent = "SELECT code_bom, product_code FROM hos__subso WHERE id = '" . $subsoIdEscaped . "' LIMIT 1";
+		$qryCurrent = mysqli_query($conn, $sqlCurrent);
+		if ($qryCurrent) {
+			$currentRow = mysqli_fetch_assoc($qryCurrent);
+			if (!empty($currentRow['code_bom'])) {
+				$productCode = $currentRow['code_bom'];
+			} elseif (!empty($currentRow['product_code'])) {
+				$productCode = $currentRow['product_code'];
+			}
+		}
+
+		$deleteSql = "DELETE FROM hos__subso WHERE id = '" . $subsoIdEscaped . "'";
+		mysqli_query($conn, $deleteSql);
+
+		if ($productCode !== '') {
+			$productCodeEscaped = mysqli_real_escape_string($conn, $productCode);
+			$deleteBomSql = "DELETE FROM hos__subso WHERE ref_idd = '" . $refIdEscaped . "' AND bom_ckk = '1' AND code_bomsame = '" . $productCodeEscaped . "'";
+			mysqli_query($conn, $deleteBomSql);
+		}
+	}
+  }
+
+  if (is_array($deleted_subso_ids)) {
+	foreach ($deleted_subso_ids as $deletedId) {
+		if ($deletedId === '') {
+			continue;
+		}
+
+		$fallbackProductCode = '';
+		if (isset($deleted_product_codes[$deletedId])) {
+			$fallbackProductCode = $deleted_product_codes[$deletedId];
+		}
+
+		deleteHosSubsoRowAndBomChildren($conn, $ref_id, $deletedId, $fallbackProductCode);
+	}
+  }
+
   foreach($id as $key =>$value)
 	{
 		$id_new=$id[$key];
@@ -409,6 +574,8 @@ if($Num_Rows21 > 0){
 		$sum_amount_new = ($product_price_new - $discount_unit_new)*$sale_count_new;
 $jong_ckk_new = $jong_ckk[$key];
 $jong_no_new = $jong_no[$key];
+$pm_year_new = $pm_year[$key] ?? '';
+$admin_remark_new = $admin_remark[$key] ?? '';
 
 
 if($clear_ivno_new !=''){
@@ -527,7 +694,7 @@ exit();
 }else{
 	  
 	  
-$strSQL = "Update   hos__subso set ref_idd='$ref_id',count='$sale_count_new',countref='$sale_count_new',price='$product_price_new',price_ref='$product_price_new',amount='$sum_amount_new',sale_remark='$sale_remarkk_new',warranty='$warranty_new',pm='$pm_new',cal='$cal_new',product_id='$product_id_new',product_code ='$product_id_new',discount ='$discount_unit_new',ckk_order='".$have_order."',clear_br ='".$clear_br_new."',clear_ivno='".$clear_ivno_new."',sn='".$sn_new."',jong_ckk='".$jong_ckk_new."',jong_no='".$jong_no_new."'   Where id= '$id_new' ";
+$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new);
 $objQuery = mysqli_query($conn,$strSQL);
 }
 	
@@ -575,7 +742,7 @@ exit();
 }else{
 	  
 	  
-$strSQL = "Update   hos__subso set ref_idd='$ref_id',count='$sale_count_new',countref='$sale_count_new',price='$product_price_new',price_ref='$product_price_new',amount='$sum_amount_new',sale_remark='$sale_remarkk_new',warranty='$warranty_new',pm='$pm_new',cal='$cal_new',product_id='$product_id_new',product_code ='$product_id_new',discount ='$discount_unit_new',ckk_order='".$have_order."',clear_br ='".$clear_br_new."',clear_ivno='".$clear_ivno_new."',sn='".$sn_new."',jong_ckk='".$jong_ckk_new."',jong_no='".$jong_no_new."'   Where id= '$id_new' ";
+$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new);
 $objQuery = mysqli_query($conn,$strSQL);
 }
 		
@@ -583,7 +750,7 @@ $objQuery = mysqli_query($conn,$strSQL);
 	
 }else{
 	
-$strSQL = "Update   hos__subso set ref_idd='$ref_id',count='$sale_count_new',countref='$sale_count_new',price='$product_price_new',price_ref='$product_price_new',amount='$sum_amount_new',sale_remark='$sale_remarkk_new',warranty='$warranty_new',pm='$pm_new',cal='$cal_new',product_id='$product_id_new',product_code ='$product_id_new',discount ='$discount_unit_new',ckk_order='".$have_order."',clear_br ='".$clear_br_new."',clear_ivno='".$clear_ivno_new."',sn='".$sn_new."',jong_ckk='".$jong_ckk_new."',jong_no='".$jong_no_new."'   Where id= '$id_new' ";
+$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new);
 
 $objQuery = mysqli_query($conn,$strSQL);	
 	

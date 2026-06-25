@@ -21,6 +21,62 @@ function applyDeliveryTimeRangeToPost()
 	}
 }
 
+function getDeptCommentItemsFromPost()
+{
+	$itemsJson = $_POST["dept_comment_items"] ?? "[]";
+	$decodedItems = json_decode($itemsJson, true);
+	if (!is_array($decodedItems)) {
+		return array();
+	}
+
+	$items = array();
+	$allowedDepartments = array(1, 2, 3, 4);
+	foreach ($decodedItems as $index => $item) {
+		$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
+		$message = isset($item["message"]) ? trim($item["message"]) : "";
+		if (!in_array($departmentId, $allowedDepartments, true) || $message === "") {
+			continue;
+		}
+
+		$items[] = array(
+			"department_id" => $departmentId,
+			"message" => $message,
+			"sort_order" => isset($item["sort_order"]) ? (int)$item["sort_order"] : ($index + 1)
+		);
+	}
+
+	return $items;
+}
+
+function saveDeptCommentItems($conn, $commentSoId, $refId, $items)
+{
+	$commentSoId = (int)$commentSoId;
+	$refIdEscaped = mysqli_real_escape_string($conn, $refId);
+	mysqli_query($conn, "DELETE FROM tb_comment_so_item WHERE comment_so_id = " . $commentSoId . " OR ref_id = '" . $refIdEscaped . "'");
+
+	foreach ($items as $item) {
+		$departmentId = (int)$item["department_id"];
+		$message = mysqli_real_escape_string($conn, $item["message"]);
+		$sortOrder = (int)$item["sort_order"];
+		$sql = "INSERT INTO tb_comment_so_item (comment_so_id, ref_id, department_id, message, sort_order) VALUES (" . $commentSoId . ", '" . $refIdEscaped . "', " . $departmentId . ", '" . $message . "', " . $sortOrder . ")";
+		mysqli_query($conn, $sql);
+	}
+}
+
+function hosSubsoColumnExists($conn, $columnName)
+{
+	static $columnCache = array();
+	if (array_key_exists($columnName, $columnCache)) {
+		return $columnCache[$columnName];
+	}
+
+	$safeColumnName = mysqli_real_escape_string($conn, $columnName);
+	$sql = "SHOW COLUMNS FROM hos__subso LIKE '" . $safeColumnName . "'";
+	$query = mysqli_query($conn, $sql);
+	$columnCache[$columnName] = ($query && mysqli_num_rows($query) > 0);
+	return $columnCache[$columnName];
+}
+
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 	$defaultPostFields = array(
@@ -73,6 +129,8 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		'comment_en',
 		'comment_st',
 		'comment_ad',
+		'technician_required',
+		'dept_comment_items',
 		'head_1',
 		'ref_1',
 		'ref_2',
@@ -296,6 +354,8 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$comment_en = $_POST["comment_en"];
 	$comment_st = $_POST["comment_st"];
 	$comment_ad = $_POST["comment_ad"];
+	$technician_required = isset($_POST["technician_required"]) && $_POST["technician_required"] === "1" ? 1 : 0;
+	$deptCommentItems = getDeptCommentItemsFromPost();
 
 
 	if ($name == 'ธัญนุช' or $name == 'ปวัน​รัตน์​') {
@@ -528,8 +588,11 @@ values
 	$qsave56 = mysqli_query($conn, $save56);
 
 
-	$save57 = "insert into tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad) values ('" . $ref_id . "','" . $comment_cs . "','" . $comment_en . "','" . $comment_st . "','" . $comment_ad . "')";
+	$save57 = "insert into tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad,technician_required) values ('" . $ref_id . "','" . $comment_cs . "','" . $comment_en . "','" . $comment_st . "','" . $comment_ad . "','" . $technician_required . "')";
 	$qsave57 = mysqli_query($conn, $save57);
+	if ($qsave57) {
+		saveDeptCommentItems($conn, mysqli_insert_id($conn), $ref_id, $deptCommentItems);
+	}
 
 
 
@@ -3285,6 +3348,50 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		//exit();
 
 		$objQuery30 = mysqli_query($conn, $strSQL30);
+	}
+
+	$productExtraRows = array();
+	for ($productExtraIndex = 1; $productExtraIndex <= 30; $productExtraIndex++) {
+		$productExtraId = trim((string)($_POST['product_id' . $productExtraIndex] ?? ''));
+		if ($productExtraId === '') {
+			continue;
+		}
+
+		$productExtraRows[] = array(
+			'pm_year' => trim((string)($_POST['pm_year' . $productExtraIndex] ?? '')),
+			'admin_remark' => trim((string)($_POST['display_name' . $productExtraIndex] ?? ''))
+		);
+	}
+
+	if (count($productExtraRows) > 0) {
+		$safeRefIdForProductExtras = mysqli_real_escape_string($conn, $ref_id);
+		$productExtraQuery = mysqli_query($conn, "SELECT id FROM hos__subso WHERE ref_idd = '" . $safeRefIdForProductExtras . "' AND COALESCE(bom_ckk, '0') <> '1' ORDER BY id ASC");
+		$productExtraIndex = 0;
+		$canUpdatePmYear = hosSubsoColumnExists($conn, 'pm_year');
+		$canUpdateAdminRemark = hosSubsoColumnExists($conn, 'admin_remark');
+
+		if ($productExtraQuery && ($canUpdatePmYear || $canUpdateAdminRemark)) {
+			while ($productExtraRow = mysqli_fetch_assoc($productExtraQuery)) {
+				if (!isset($productExtraRows[$productExtraIndex])) {
+					break;
+				}
+
+				$safeSubsoId = (int)$productExtraRow['id'];
+				$updateParts = array();
+				if ($canUpdatePmYear) {
+					$safePmYear = mysqli_real_escape_string($conn, $productExtraRows[$productExtraIndex]['pm_year']);
+					$updateParts[] = "pm_year = '" . $safePmYear . "'";
+				}
+				if ($canUpdateAdminRemark) {
+					$safeAdminRemark = mysqli_real_escape_string($conn, $productExtraRows[$productExtraIndex]['admin_remark']);
+					$updateParts[] = "admin_remark = '" . $safeAdminRemark . "'";
+				}
+				if (!empty($updateParts)) {
+					mysqli_query($conn, "UPDATE hos__subso SET " . implode(', ', $updateParts) . " WHERE id = " . $safeSubsoId);
+				}
+				$productExtraIndex++;
+			}
+		}
 	}
 
 

@@ -120,6 +120,12 @@
                     // Extract row index from the product_price element ID (e.g. "product_price3" -> 3)
                     var rowIdx = parseInt(product_price.replace('product_price', ''));
                     if (!isNaN(rowIdx) && typeof updateRowTotal === 'function') {
+                        var rowDeletedEl = document.getElementById('row_deleted' + rowIdx);
+                        var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIdx);
+                        var deletedProductCodeEl = document.getElementById('deleted_product_code' + rowIdx);
+                        if (rowDeletedEl) rowDeletedEl.value = '0';
+                        if (deletedSubsoEl) deletedSubsoEl.value = '';
+                        if (deletedProductCodeEl) deletedProductCodeEl.value = '';
                         // Format the price and discount fields
                         var priceEl = document.getElementById(product_price);
                         var discEl = document.getElementById(discount_unit);
@@ -138,11 +144,13 @@
     }
 
 
-    function chkNumber(ele)
+    function chkNumber(ele, evt)
 
     {
 
-        var vchar = String.fromCharCode(event.keyCode);
+        var keyCode = evt && (evt.which || evt.keyCode);
+        if (!keyCode) return true;
+        var vchar = String.fromCharCode(keyCode);
         if ((vchar < '0' || vchar > '9') && (vchar != '.')) return false;
         ele.onKeyPress = vchar;
     }
@@ -678,6 +686,9 @@
                         <input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
                         <input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
                         <input type="hidden" name="subso_db_id<?php echo $i; ?>" id="subso_db_id<?php echo $i; ?>">
+                        <input type="hidden" name="row_deleted<?php echo $i; ?>" id="row_deleted<?php echo $i; ?>" value="0">
+                        <input type="hidden" name="deleted_subso_db_id<?php echo $i; ?>" id="deleted_subso_db_id<?php echo $i; ?>">
+                        <input type="hidden" name="deleted_product_code<?php echo $i; ?>" id="deleted_product_code<?php echo $i; ?>">
 
                         <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
                         <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
@@ -749,21 +760,21 @@
                 <div class="so-modal-field">
                     <label>CAL/ปี</label>
                     <div class="so-modal-input-wrap">
-                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
                     </div>
                 </div>
                 <div class="so-modal-field">
                     <label>PM(ปี)</label>
                     <div class="so-modal-input-wrap">
-                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
                     </div>
                 </div>
                 <div class="so-modal-field">
                     <label>PM (จำนวนครั้ง/ปี)</label>
                     <div class="so-modal-input-wrap">
-                        <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this)" data-clearable="true">
+                        <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_pm" aria-label="ล้างข้อมูล">&times;</button>
                     </div>
                 </div>
@@ -804,7 +815,7 @@
         // --- Drag and Drop Row Reordering ---
         let dragSourceIndex = null;
         const rowFields = [
-            'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name',
+            'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name', 'subso_db_id', 'row_deleted', 'deleted_subso_db_id', 'deleted_product_code',
             'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name',
             'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount'
         ];
@@ -997,6 +1008,23 @@
         }
 
         function clearRow(rowIndex) {
+            var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
+            var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
+
+            if (currentSubsoId !== '') {
+                document.getElementById('deleted_subso_db_id' + rowIndex).value = currentSubsoId;
+                document.getElementById('deleted_product_code' + rowIndex).value = currentProductCode;
+                document.getElementById('row_deleted' + rowIndex).value = '1';
+            } else {
+                document.getElementById('deleted_subso_db_id' + rowIndex).value = '';
+                document.getElementById('deleted_product_code' + rowIndex).value = '';
+                document.getElementById('row_deleted' + rowIndex).value = '0';
+            }
+
+            document.getElementById('subso_db_id' + rowIndex).value = '';
+            document.getElementById('h_product_codet' + rowIndex).value = '';
+            document.getElementById('h_product_code' + rowIndex).value = '';
+            document.getElementById('h_product_c' + rowIndex).value = '';
             document.getElementById('product_codet' + rowIndex).value = '';
             document.getElementById('product_name' + rowIndex).value = '';
             var nameLabel = document.getElementById('product_name_label' + rowIndex);
@@ -1032,7 +1060,7 @@
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
             document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
             document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
-            document.getElementById('m_display_name').value = document.getElementById('display_name' + rowIndex).value || document.getElementById('jong_no' + rowIndex).value;
+            document.getElementById('m_display_name').value = document.getElementById('display_name' + rowIndex).value;
 
             syncModalClearButtons();
             document.getElementById('productEditModal').style.display = 'flex';
@@ -1053,7 +1081,6 @@
             document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('m_sale_remarkk').value;
             document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
             document.getElementById('display_name' + rowIndex).value = document.getElementById('m_display_name').value;
-            document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_display_name').value;
 
             closeEditModal();
         }
@@ -1160,9 +1187,13 @@
             }, 200); // Slight delay to let jAutoCalc run first
         }
 
-        // Global Product Search -> Auto Add to Table
+        // Global Product Search: show suggestions first, add only after the user selects one.
         new Autocomplete("global_product_search", function() {
             this.setValue = function(id) {
+                if (!id) {
+                    return;
+                }
+
                 // Find the first empty row
                 let emptyRowIndex = -1;
                 for (let i = 1; i <= 30; i++) {
@@ -1176,9 +1207,17 @@
                 if (emptyRowIndex !== -1) {
                     let codeInput = document.getElementById('product_codet' + emptyRowIndex);
                     let hiddenCodeInput = document.getElementById('h_product_codet' + emptyRowIndex);
+                    let deletedSubsoInput = document.getElementById('deleted_subso_db_id' + emptyRowIndex);
+                    let deletedProductCodeInput = document.getElementById('deleted_product_code' + emptyRowIndex);
+                    let rowDeletedInput = document.getElementById('row_deleted' + emptyRowIndex);
+                    let subsoDbIdInput = document.getElementById('subso_db_id' + emptyRowIndex);
 
                     codeInput.value = id;
                     if (hiddenCodeInput) hiddenCodeInput.value = id;
+                    if (rowDeletedInput) rowDeletedInput.value = '0';
+                    if (subsoDbIdInput) subsoDbIdInput.value = '';
+                    if (deletedSubsoInput) deletedSubsoInput.value = '';
+                    if (deletedProductCodeInput) deletedProductCodeInput.value = '';
 
                     // Trigger the ajax call to populate the row
                     doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);
@@ -1206,15 +1245,16 @@
                 document.getElementById('global_product_search').value = '';
             };
 
-            if (this.isModified) this.setValue("");
             if (this.value.length < 1 && this.isNotClick) return;
             return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value);
+        }, {
+            select_first: 0
         });
 
         // Run initial calc
-        window.onload = function() {
+        window.addEventListener('load', function() {
             calculateSummary();
-        };
+        });
     </script>
 
     <?php for ($i = 1; $i <= 30; $i++): ?>
