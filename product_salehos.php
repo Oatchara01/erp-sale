@@ -701,6 +701,7 @@
                         <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="1">
                         <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
                         <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
+                        <input type="hidden" name="product_sn<?php echo $i; ?>" id="product_sn<?php echo $i; ?>">
                     </td>
                     <td>
                         <!-- รหัสสินค้า: แสดงผลอย่างเดียว (readonly) ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหาด้านบน -->
@@ -816,7 +817,7 @@
         let dragSourceIndex = null;
         const rowFields = [
             'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name', 'subso_db_id', 'row_deleted', 'deleted_subso_db_id', 'deleted_product_code',
-            'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name',
+            'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name', 'product_sn',
             'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount'
         ];
 
@@ -1035,6 +1036,7 @@
             document.getElementById('sum_amount' + rowIndex).value = '';
             document.getElementById('discount_unit' + rowIndex).value = '';
             document.getElementById('product_id' + rowIndex).value = '';
+            document.getElementById('product_sn' + rowIndex).value = '';
             document.getElementById('product_row_' + rowIndex).style.display = 'none';
 
             var cb = document.querySelector('#product_row_' + rowIndex + ' .so-row-checkbox');

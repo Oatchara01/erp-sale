@@ -46,6 +46,11 @@ $product_id = $_GET["product_ID"];
 $ref_id_br = $_GET["ref_id"];
 			
 include 'dbconnect.php';
+$stock = $conn;
+$main_conn = $conn;
+include 'dbconnect_service.php';
+$service = $conn;
+$conn = $main_conn;
 function DateThai($strDate)
 {
     $strYear = date("Y", strtotime($strDate)) + 543;
@@ -291,7 +296,7 @@ Visual cheok and rectify
         ?>
         <tr style="text-align: left;">
             <td style="width: 85%;"><?php if($v_key['images_main'] != ''){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id3" id="key_id3" value="<?=$numrows_03;?>"></td>
-            <td style="width: 15%; border: 1px solid black;  text-align: center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?}?></td>
+            <td style="width: 15%; border: 1px solid black;  text-align: center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?php } ?></td>
         </tr>
         <?php $numrows_03++; } ?>
         
@@ -327,7 +332,7 @@ Visual cheok and rectify
     <tr style="text-align: left; " >
         <td style="width: 70%;"><?php if($v_key['images_main'] != ''){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id4" id="key_id4" value="<?=$numrows_04;?>"></td>
         <td style="width: 15%; border: 1px solid black; text-align:center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['t_list1'] != ''){ echo $v_ck1['t_list1']; }?></td>
-        <td style="width: 15%; border: 1px solid black; text-align:center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?}?></td>
+        <td style="width: 15%; border: 1px solid black; text-align:center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?php } ?></td>
     </tr>
     <?php $numrows_04++; } ?>
     </table>

@@ -2410,6 +2410,7 @@
 				'product_id' => (string)($savedProduct["product_id"] ?? ""),
 				'product_code' => (string)($savedProduct["master_access_code"] ?? ""),
 				'product_name' => (string)($savedProduct["master_product_name"] ?? $savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? $savedProduct["product_code"] ?? ""),
+				'product_sn' => (string)($savedProduct["sn"] ?? ""),
 				'unit_name' => (string)($savedProduct["master_unit_name"] ?? ""),
 				'sale_count' => (string)($savedProduct["count"] ?? ""),
 				'product_price' => (string)($savedProduct["price"] ?? ""),
@@ -2679,6 +2680,7 @@
 					setValue('product_codet', product.product_code);
 					setValue('h_product_codet', product.product_code);
 					setValue('product_name', product.product_name);
+					setValue('product_sn', product.product_sn);
 					setValue('unit_name', product.unit_name);
 					setValue('sale_count', product.sale_count);
 					setValue('product_price', product.product_price);
@@ -2951,7 +2953,7 @@
 							<div class="so-field-group">
 								<label class="so-label">E-Mail<span class="required">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="email" id="email" class="so-input" placeholder="example@email.com" style="padding-right: 32px;">
+									<input type="text" name="email" id="email" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['email'] ?? '') : ''; ?>" placeholder="example@email.com" style="padding-right: 32px;">
 									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('email').value=''"></i>
 								</div>
 							</div>
@@ -4693,7 +4695,7 @@
 
 					.so-related-doc-row {
 						color: #3B3B3B;
-						font-size: 18px;
+						font-size: 16px;
 						border-bottom: 1px solid #EBEBEB;
 						min-height: 78px;
 					}
@@ -4713,8 +4715,8 @@
 					}
 
 					.so-related-doc-action img {
-						width: 30px;
-						height: 30px;
+						width: 23.97px;
+						height: 24px;
 						object-fit: contain;
 					}
 
@@ -4787,6 +4789,55 @@
 						return documentSn ? String(documentSn.value || '').trim() : '';
 					}
 
+					function getRelatedDocRefId() {
+						const refInput = document.querySelector('input[name="ref_id"]');
+						return refInput ? String(refInput.value || '').trim() : '';
+					}
+
+					function parseRelatedDocSnList(rawValue) {
+						return String(rawValue || '')
+							.split(/\r\n|\n|\r|,|;/)
+							.map(function(item) {
+								return item.trim();
+							})
+							.filter(function(item) {
+								return item.length > 2;
+							});
+					}
+
+					function openRelatedDocument(rowIndex) {
+						const refId = getRelatedDocRefId();
+						const productId = getRelatedDocFieldValue('product_id', rowIndex);
+						const snList = parseRelatedDocSnList(getRelatedDocSn(rowIndex));
+
+						if (refId === '') {
+							alert('กรุณาบันทึกเอกสารก่อนดูรายละเอียดเอกสาร');
+							return;
+						}
+
+						if (snList.length === 0) {
+							alert('ไม่พบ Serial Number สำหรับรายการนี้');
+							return;
+						}
+
+						if (snList.length === 1) {
+							if (productId === '') {
+								alert('ไม่พบรหัสสินค้า สำหรับเปิดรายละเอียดเอกสารรายสินค้า');
+								return;
+							}
+
+							window.open(
+								'register_adminhos_doc_sn1.php?product_sn=' + encodeURIComponent(snList[0]) +
+								'&product_ID=' + encodeURIComponent(productId) +
+								'&ref_id=' + encodeURIComponent(refId),
+								'_blank'
+							);
+							return;
+						}
+
+						window.open('register_adminhos_doc_sn.php?ref_id=' + encodeURIComponent(refId), '_blank');
+					}
+
 					function renderRelatedDocuments() {
 						const rowsContainer = document.getElementById('related_doc_rows');
 						if (!rowsContainer) return;
@@ -4820,8 +4871,8 @@
 									<div>${safeName}</div>
 									<div>${safeSn || '-'}</div>
 									<div>
-										<button type="button" class="so-related-doc-action" title="ดูเอกสาร" aria-label="ดูเอกสารแถวที่ ${row.rowIndex}">
-											<img src="img/icons/doc.png" alt="">
+										<button type="button" class="so-related-doc-action" title="ดูเอกสาร" aria-label="ดูเอกสารแถวที่ ${row.rowIndex}" onclick="openRelatedDocument(${row.rowIndex})">
+											<img src="img/icons/view_doc.png" alt="ดูเอกสาร">
 										</button>
 									</div>
 								</div>
@@ -4838,7 +4889,7 @@
 						}
 
 						for (let i = 1; i <= 30; i++) {
-							['product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_id', 'row_deleted'].forEach(function(prefix) {
+							['product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_id', 'product_sn', 'row_deleted'].forEach(function(prefix) {
 								const element = document.getElementById(prefix + i);
 								if (element) {
 									element.addEventListener('input', renderRelatedDocuments);
@@ -8246,6 +8297,7 @@
 						var rowFields = {
 							'subso_db_id': prod.id || prod.ID || '',
 							'product_id': prod.product_id || prod.product_ID || '',
+							'product_sn': prod.sn || prod.product_sn || '',
 							'unit_name': prod.unit_name,
 							'warranty': prod.warranty,
 							'cal': prod.cal,
