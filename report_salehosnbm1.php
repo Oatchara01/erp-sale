@@ -91,54 +91,93 @@ function DateThai($strDate)
 		return "$strDay $strMonthThai $strYear";
 	}
 
-$ref_id=$_GET["ref_id"];
 include"dbconnect.php";
 include"dbconnect_acc.php";
+include_once "report_salehos_preview_helper.php";
 
+$isPreview = salehos_is_preview_request();
+$previewProductRows = array();
 
-$strSQL25="Update  hos__so set status_ad_print = '1'  where ref_id ='".$ref_id."'";
-$objQuery25 = mysqli_query($conn,$strSQL25);
+if ($isPreview) {
+	$previewContext = salehos_build_preview_context($conn, $code);
+	$objResult = $previewContext['so'];
+	$objResultp = $previewContext['payment'];
+	$objResult10 = $previewContext['customer'];
+	$objResult3 = $previewContext['register'];
+	$objResult11 = $previewContext['other_bill'];
+	$objResult91 = $previewContext['comments'];
+	$previewProductRows = $previewContext['products'];
+	$objResult15 = array('amount_1' => $previewContext['summary']);
+	$ref_id = $objResult['ref_id'];
+} else {
+	$ref_id = isset($_GET["ref_id"]) && !is_array($_GET["ref_id"]) ? trim((string)$_GET["ref_id"]) : '';
+	if ($ref_id === '') {
+		salehos_render_report_error('ไม่พบเลขที่อ้างอิง (ref_id)');
+	}
 
-$strSQL = "SELECT * from hos__so  WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+	$safeRefId = mysqli_real_escape_string($conn, $ref_id);
+	$strSQL = "SELECT * FROM hos__so WHERE ref_id = '" . $safeRefId . "' LIMIT 1";
+	$objQuery = mysqli_query($conn, $strSQL);
+	$objResult = $objQuery ? mysqli_fetch_array($objQuery) : false;
+	if (!$objResult) {
+		salehos_render_report_error('ไม่พบข้อมูลใบสั่งขายเลขที่ ' . $ref_id . ' กรุณาบันทึกข้อมูลก่อนเปิดรายงาน');
+	}
+	$strSQL25 = "UPDATE hos__so SET status_ad_print = '1' WHERE ref_id = '" . $safeRefId . "'";
+	mysqli_query($conn, $strSQL25);
 
-$strSQLp = "SELECT pay_in FROM tb_bank WHERE id  = '".$objResult["payment"]."' ";
-$objQueryp = mysqli_query($code,$strSQLp) or die(mysqli_error());
-$objResultp = mysqli_fetch_array($objQueryp);
-$pay_in = $objResultp["pay_in"];
+	$safePayment = mysqli_real_escape_string($code, (string)($objResult['payment'] ?? ''));
+	$strSQLp = "SELECT pay_in FROM tb_bank WHERE id = '" . $safePayment . "' LIMIT 1";
+	$objQueryp = mysqli_query($code, $strSQLp);
+	$objResultp = $objQueryp ? mysqli_fetch_array($objQueryp) : false;
+	$objResultp = $objResultp ?: array('pay_in' => '');
 
+	$safeBillId = mysqli_real_escape_string($conn, (string)($objResult['bill_id'] ?? ''));
+	$strSQL10 = "SELECT customer_code, customer_coden FROM tb_customer WHERE customer_id = '" . $safeBillId . "' LIMIT 1";
+	$objQuery10 = mysqli_query($conn, $strSQL10);
+	$objResult10 = $objQuery10 ? mysqli_fetch_array($objQuery10) : false;
+	$objResult10 = $objResult10 ?: array('customer_code' => '', 'customer_coden' => '');
 
-$strSQL10 = "SELECT customer_code,customer_coden FROM tb_customer WHERE customer_id  = '".$objResult["bill_id"]."' ";
-$objQuery10 = mysqli_query($conn,$strSQL10) or die(mysqli_error());
-$objResult10 = mysqli_fetch_array($objQuery10);
+	$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id = '" . $safeRefId . "' LIMIT 1";
+	$objQuery11 = mysqli_query($conn, $strSQL11);
+	$objResult11 = $objQuery11 ? mysqli_fetch_array($objQuery11) : false;
+	$objResult11 = $objResult11 ?: array();
 
-$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id."' ";
-$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
-$objResult11 = mysqli_fetch_array($objQuery11);
+	$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '" . $safeRefId . "' LIMIT 1";
+	$objQuery3 = mysqli_query($conn, $strSQL3);
+	$objResult3 = $objQuery3 ? mysqli_fetch_array($objQuery3) : false;
+	$objResult3 = $objResult3 ?: array();
 
-$strSQL1 = "SELECT * FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '" . $safeRefId . "'";
+	$objQuery15 = mysqli_query($conn, $strSQL15);
+	$objResult15 = $objQuery15 ? mysqli_fetch_array($objQuery15) : false;
+	$objResult15 = $objResult15 ?: array('amount_1' => 0);
+}
 
-$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id."' ";
-$objQuery3 = mysqli_query($conn,$strSQL3);
-$objResult3 = mysqli_fetch_array($objQuery3);
+$objResult3 = array_merge(array(
+	'address_name' => '',
+	'address_1' => '',
+	'want_bus' => '0',
+	'call_customer' => '0',
+	'fix_date' => '',
+	'between_date' => ''
+), $objResult3);
+$otherBillDefaults = array('ref_des' => '');
+for ($refIndex = 1; $refIndex <= 13; $refIndex++) {
+	$otherBillDefaults['ref_' . $refIndex] = '0';
+}
+$objResult11 = array_merge($otherBillDefaults, $objResult11);
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
-
-$summary_1=$objResult15['amount_1'];
+$pay_in = $objResultp["pay_in"] ?? '';
+$summary_1 = (float)($objResult15['amount_1'] ?? 0);
 $summary= number_format( $summary_1,2)."";
 
 if ($objResult['type_doc']==3)
 {
-$customer_no=$objResult10['customer_code'];
+$customer_no=$objResult10['customer_code'] ?? '';
 }
 else if ($objResult['type_doc']==4)
 {
-$customer_no=$objResult10['customer_coden'];
+$customer_no=$objResult10['customer_coden'] ?? '';
 }
 
 $id = $objResult['id'];
@@ -172,8 +211,8 @@ $pr_no  = $objResult['pr_no'];
 $full_bill = $objResult['full_bill'];
 $type_type = $objResult['type_type'];
 $type_detail = $objResult['type_detail'];
-$iv_date = DateThai($objResult['iv_date']);
-if($objResult['delivery_date']!='0000-00-00'){
+$iv_date = (!empty($objResult['iv_date']) && $objResult['iv_date'] != '0000-00-00') ? DateThai($objResult['iv_date']) : '';
+if(!empty($objResult['delivery_date']) && $objResult['delivery_date']!='0000-00-00'){
 
 $delivery_date = DateThai($objResult['delivery_date']);
 }else{
@@ -209,6 +248,9 @@ $product_free8 = $objResult['product_free8'];
 $product_free9 = $objResult['product_free9'];
 $sale_code = $objResult['sale_code'];
 $delivery_type = $objResult['delivery_type'];
+$time_delivery = $objResult['time_delivery'] ?? '';
+$packing_remark = $objResult['packing_remark'] ?? '';
+$delivery_name = $objResult['delivery_name'] ?? '';
 $address_name  = $objResult3['address_name'];
 $address_1  = $objResult3['address_1'];
 $delivery_address = "$address_name $address_1";
@@ -305,15 +347,24 @@ $ref_10 ="";
 }
 
 
-$strSQL91 = "SELECT comment_cs,comment_st,comment_en,comment_ad FROM tb_comment_so WHERE ref_id  = '".$ref_id."' ";
-$objQuery91 = mysqli_query($conn,$strSQL91) or die(mysqli_error());
-$objResult91 = mysqli_fetch_array($objQuery91);
+if (!$isPreview) {
+	$strSQL91 = "SELECT comment_cs, comment_st, comment_en, comment_ad FROM tb_comment_so WHERE ref_id = '" . $safeRefId . "' LIMIT 1";
+	$objQuery91 = mysqli_query($conn, $strSQL91);
+	$objResult91 = $objQuery91 ? mysqli_fetch_array($objQuery91) : false;
+	$objResult91 = $objResult91 ?: array();
+}
+$objResult91 = array_merge(array(
+	'comment_cs' => '',
+	'comment_st' => '',
+	'comment_en' => '',
+	'comment_ad' => ''
+), $objResult91);
 
 
-$comment_ad1 = $objResult91["comment_ad"];
-$comment_en1 = $objResult91["comment_en"];
-$comment_st1 = $objResult91["comment_st"];
-$comment_cs1 = $objResult91["comment_cs"];
+$comment_ad1 = $objResult91["comment_ad"] ?? '';
+$comment_en1 = $objResult91["comment_en"] ?? '';
+$comment_st1 = $objResult91["comment_st"] ?? '';
+$comment_cs1 = $objResult91["comment_cs"] ?? '';
 
 $comment_ad = "หมายเหตุ Admin : $comment_ad1";
 $comment_en = "หมายเหตุ ช่าง : $comment_en1";
@@ -456,9 +507,19 @@ $comment_cs = "หมายเหตุ CS : $comment_cs1";
 <br>
 
 <?php
-$strSQL1 = "SELECT * FROM (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) where ref_idd = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1); ?>
+if ($isPreview) {
+	$reportProductRows = $previewProductRows;
+} else {
+	$strSQL1 = "SELECT * FROM (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '" . $safeRefId . "'";
+	$objQuery1 = mysqli_query($conn, $strSQL1);
+	$reportProductRows = array();
+	if ($objQuery1) {
+		while ($savedProductRow = mysqli_fetch_array($objQuery1)) {
+			$reportProductRows[] = $savedProductRow;
+		}
+	}
+}
+$Num_Rows1 = count($reportProductRows); ?>
 <table>
 <tr class="tr">
 	<td width="8%" align="center" >เคลียร์ยืม</td>
@@ -472,18 +533,26 @@ $Num_Rows1 = mysqli_num_rows($objQuery1); ?>
 </tr>
 <?php 
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
+foreach ($reportProductRows as $objResult1)
 {
 
-$sql = "SELECT date_expir   FROM st__lotno where product_id ='".$objResult1["product_id"]."' and lot_no='".$objResult1["lot_no"]."'";
-$qry = mysqli_query($new,$sql) or die(mysqli_error());
-$Num = mysqli_num_rows($qry);
-$rs = mysqli_fetch_assoc($qry);	
+$Num = 0;
+$rs = array();
+if (!$isPreview && !empty($objResult1['product_id']) && !empty($objResult1['lot_no'])) {
+	$safeProductId = mysqli_real_escape_string($new, (string)$objResult1['product_id']);
+	$safeLotNo = mysqli_real_escape_string($new, (string)$objResult1['lot_no']);
+	$sql = "SELECT date_expir FROM st__lotno WHERE product_id = '" . $safeProductId . "' AND lot_no = '" . $safeLotNo . "'";
+	$qry = mysqli_query($new, $sql);
+	if ($qry) {
+		$Num = mysqli_num_rows($qry);
+		$rs = mysqli_fetch_assoc($qry) ?: array();
+	}
+}
 	
 	
-$sum_amount1  =$objResult1["amount"];
+$sum_amount1 = (float)($objResult1["amount"] ?? 0);
 $sum_amount= number_format($sum_amount1,2)."";
-$price1  =$objResult1["price"];
+$price1 = (float)($objResult1["price"] ?? 0);
 $price= number_format( $price1,2)."";
 $access_code  =$objResult1["express_code"];
 $access_name  =$objResult1["sol_name"];
@@ -494,12 +563,12 @@ $product = "$access_name:$sale_remark";
 $warranty = $objResult1["warranty"];
 $cal = $objResult1["cal"];
 $pm = $objResult1["pm"];
-$discount1  = $objResult1["discount"];
+$discount1 = (float)($objResult1["discount"] ?? 0);
 $discount= number_format($discount1,2)."";
 	$clear_br = $objResult1["clear_br"];
 $clear_ivno = $objResult1["clear_ivno"];
 $lot_no = $objResult1["lot_no"];	
-$date_expir = $rs["date_expir"];
+$date_expir = $rs["date_expir"] ?? '';
 	
 ?>
 <tr>

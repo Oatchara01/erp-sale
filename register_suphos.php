@@ -1,4 +1,4 @@
-﻿<?php include("head.php"); ?>
+<?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
@@ -2851,6 +2851,62 @@
 
 				return false;
 			}
+
+			function openPrintReport() {
+				var form = document.forms.frmMain;
+				var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
+				var typeDocSelect = document.getElementById('type_doc_select');
+				var refId = refInput ? refInput.value.trim() : '';
+				var typeDoc = typeDocSelect ? typeDocSelect.value : '';
+
+				if (!form || !refId) {
+					Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id)', 'warning');
+					return;
+				}
+
+				var reportUrl = '';
+				if (typeDoc === '3') {
+					reportUrl = 'report_salehosptl1.php';
+				} else if (typeDoc === '4') {
+					reportUrl = 'report_salehosnbm1.php';
+				} else {
+					Swal.fire('แจ้งเตือน', 'ไม่สามารถระบุประเภทเอกสารได้', 'warning');
+					return;
+				}
+
+				if (typeof updateRowTotal === 'function') {
+					for (var rowIndex = 1; rowIndex <= 30; rowIndex++) {
+						updateRowTotal(rowIndex);
+					}
+				}
+
+				var previewTarget = 'salehos_preview_' + Date.now();
+				var previewWindow = window.open('', previewTarget);
+				if (!previewWindow) {
+					Swal.fire('แจ้งเตือน', 'เบราว์เซอร์บล็อกหน้าต่าง Preview กรุณาอนุญาต Pop-up แล้วลองใหม่', 'warning');
+					return;
+				}
+
+				var previewFlag = document.createElement('input');
+				previewFlag.type = 'hidden';
+				previewFlag.name = '_report_preview';
+				previewFlag.value = '1';
+				form.appendChild(previewFlag);
+
+				var originalAction = form.getAttribute('action');
+				var originalMethod = form.getAttribute('method');
+				var originalTarget = form.getAttribute('target');
+
+				form.action = reportUrl;
+				form.method = 'post';
+				form.target = previewTarget;
+				HTMLFormElement.prototype.submit.call(form);
+
+				if (originalAction === null) form.removeAttribute('action'); else form.setAttribute('action', originalAction);
+				if (originalMethod === null) form.removeAttribute('method'); else form.setAttribute('method', originalMethod);
+				if (originalTarget === null) form.removeAttribute('target'); else form.setAttribute('target', originalTarget);
+				previewFlag.remove();
+			}
 		</script>
 
 		<div class="w3-container" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
@@ -2867,7 +2923,7 @@
 				</div>
 				<div class="so-header-right">
 					<button type="button" class="btn-clear-loan-reserve" onclick="toggleClearSection()">เคลียร์ยืม/จอง</button>
-					<button type="button" class="btn-preview-so" onclick="window.print();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
+					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
 			</div>
 
@@ -2877,7 +2933,8 @@
 				<button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tab-admin-info')">Admin</button>
 			</div>
 
-			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? $savedSo['ref_id'] : ($ffirst['ref_id'] + 1); ?>">
+			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
+			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
 
 			<!-- Card Container -->
