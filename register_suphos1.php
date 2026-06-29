@@ -6,6 +6,10 @@ include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
 
+// hos__so เป็นตาราง legacy ที่มีคอลัมน์ NOT NULL จำนวนมากโดยไม่มี default
+// ให้ connection ของหน้านี้ใช้พฤติกรรมเดิมของระบบ เมื่อไม่ได้ระบุคอลัมน์เหล่านั้นใน INSERT
+mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
+
 function applyDeliveryTimeRangeToPost()
 {
 	$timeRange = $_POST["time_range"] ?? "";
@@ -278,7 +282,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$bill_name = $_POST["bill_name"];
 	$bill_address = $_POST["bill_address"];
 	$bill_tel = $_POST["bill_tel"];
-	$full_bill = $_POST["full_bill"];
+	$full_bill = isset($_POST['full_bill']) ? 1 : 0;
 	// bill_id ใน flow นี้ใช้เป็น customer_id หลักของลูกค้าที่ถูกเลือกจาก popup
 	// และยังเป็น key ที่ flow อื่นของระบบใช้ต่อจริง เช่น การดึงภาระหนี้/ประวัติลูกค้า
 	$bill_id = $_POST["bill_id"];
@@ -294,21 +298,22 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$date_so = $_POST["date_so"];
 	$suggest = $_POST["suggest"];
 	$payment = $_POST["payment"];
+	$payment2 = trim($_POST["payment2"] ?? $payment);
 	$payment_method = (int)($_POST["payment_method"] ?? 0);
-	$que_ckk = $_POST["que_ckk"];
+	$que_ckk = isset($_POST['que_ckk']) ? 1 : 0;
 	$sale_comment = $_POST["sale_comment"];
 	$po_no = $_POST["po_no"];
 	$delivery_contract = $_POST["delivery_contract"];
-	$book_clear = $_POST["book_clear"];
+	$book_clear = isset($_POST['book_clear']) ? 1 : 0;
 	$book_no = $_POST["book_no"];
-	$brn_clear = $_POST["brn_clear"];
+	$brn_clear = isset($_POST['brn_clear']) ? 1 : 0;
 	$brn_no = $_POST["brn_no"];
-	$brnp_clear = $_POST["brnp_clear"];
+	$brnp_clear = isset($_POST['brnp_clear']) ? 1 : 0;
 	$brnp_no = $_POST["brnp_no"];
-	$sn_ckk = $_POST["sn_ckk"];
+	$sn_ckk = isset($_POST['sn_ckk']) ? 1 : 0;
 	$sn_no = $_POST["sn_no"];
 	$install_place = $_POST["address_send"];
-	$with_pr = $_POST["with_pr"];
+	$with_pr = isset($_POST['with_pr']) ? 1 : 0;
 	$type_type = $_POST["type_type"];
 	$type_detail = $_POST["type_detail"];
 	$delivery_type = $_POST["delivery_type"];
@@ -321,19 +326,36 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$delivery_tel = $_POST["customer_tel"];
 	$payment_des  = $_POST["payment_des"];
 	$date_send_key  = $_POST["between_date"];
-	$have_order = $_POST["have_order"];
+	$have_order = isset($_POST['have_order']) ? 1 : 0;
 	$cm_no = $_POST["cm_no"];
 	$mode_cus = $_POST["mode_name"];
-	$plan_ckk = $_POST["plan_ckk"];
+	$plan_ckk = isset($_POST['plan_ckk']) ? 1 : 0;
 
 	$date_tranfer = $_POST["date_tranfer"];
 	$tax_id = $_POST["tax_id"];
 	$pre_name = $_POST["pre_name"];
+	$job_no = trim($_POST["admin_work_no"] ?? '');
+	$job_no2 = trim($_POST["job_no2"] ?? '0');
+	$sr_no = trim($_POST["admin_sr_no"] ?? '0');
+	$dep_no = trim($_POST["dep_no"] ?? '0');
+	$order_no = trim($_POST["admin_deposit_no"] ?? '0');
+	$iv_date = trim($_POST["admin_doc_date"] ?? '');
+	if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $iv_date, $matches)) {
+		$year = (int)$matches[3];
+		if ($year > 2400) {
+			$year -= 543;
+		}
+		$iv_date = sprintf('%04d-%02d-%02d', $year, (int)$matches[2], (int)$matches[1]);
+	}
+	$iv_time = $iv_date !== '' ? date('H:i:s') : '00:00:00';
 	$sale_date = date('Y-m-d');
 	$sale =  $_SESSION['name'];
 	$sale_code = $_POST['sale_code'];
 	//$sup_code = $_SESSION['code'];
 	$name =  $_SESSION['name'];
+	$admin = $_SESSION['name'];
+	$admin_code = $_SESSION['code'] ?? '';
+	$admin_date = date('Y-m-d');
 	$approve_time = date("H:i:s");
 	$pr_no  = $_POST["pr_no"];
 	$add_date = date('Y-m-d H:i:s');
@@ -401,9 +423,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$ref_13 = $_POST["ref_13"];
 	$ref_des = $_POST["ref_des"];
 
-	$ic_ckk = $_POST["ic_ckk"];
-	$et_ckk = $_POST["et_ckk"];
-	$repeat_cus = $_POST["repeat_cus"] ?? '';
+	$ic_ckk = isset($_POST['ic_ckk']) ? 1 : 0;
+	$et_ckk = isset($_POST['et_ckk']) ? 1 : 0;
+	$repeat_cus = isset($_POST['repeat_cus']) ? 1 : 0;
 	$time_range = $_POST["time_range"] ?? '';
 	$status_comment_val = $_POST["status_comment"] ?? '';
 
@@ -517,9 +539,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 
 	$save = "insert into hos__so
-(ref_id,type_doc,bill_name,bill_address,bill_tel,full_bill,date_so,suggest,payment,payment_method,sale_comment,po_no,delivery_contract,book_clear,book_no,brn_clear,brn_no,brnp_clear,brnp_no,sn_ckk,sn_no,install_place,with_pr,type_type,type_detail,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,sale_date,sale,sale_code,pr_no,add_date,add_by,status_doc,approve,approve_code,approve_date,payment_des,slip1,slip2,slip3,slip4,slip5,date_send_key,have_order,send_sup,iv_no,tax_id,approve_time,bill_id,cm_no,pre_name,que_ckk,mode_cus,plan_ckk,email,adm_ckk,ic_ckk,et_ckk,repeat_cus)
-values
-('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $payment_method . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','Request','" . $approve . "','" . $sup_code . "','" . $sale_date . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','1','" . $iv_no . "','" . $tax_id . "','" . $approve_time . "','" . $bill_id . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "')";
+	(ref_id,type_doc,bill_name,bill_address,bill_tel,full_bill,date_so,suggest,payment,payment_method,sale_comment,po_no,delivery_contract,book_clear,book_no,brn_clear,brn_no,brnp_clear,brnp_no,sn_ckk,sn_no,install_place,with_pr,type_type,type_detail,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,sale_date,sale,sale_code,pr_no,add_date,add_by,status_doc,approve,approve_code,approve_date,payment_des,slip1,slip2,slip3,slip4,slip5,date_send_key,have_order,send_sup,iv_no,iv_date,iv_time,job_no,job_no2,sr_no,dep_no,order_no,payment2,tax_id,approve_time,bill_id,admin,admin_code,admin_date,cm_no,pre_name,que_ckk,mode_cus,plan_ckk,email,adm_ckk,ic_ckk,et_ckk,repeat_cus)
+	values
+	('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $payment_method . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','Request','" . $approve . "','" . $sup_code . "','" . $sale_date . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','1','" . $iv_no . "','" . $iv_date . "','" . $iv_time . "','" . $job_no . "','" . $job_no2 . "','" . $sr_no . "','" . $dep_no . "','" . $order_no . "','" . $payment2 . "','" . $tax_id . "','" . $approve_time . "','" . $bill_id . "','" . $admin . "','" . $admin_code . "','" . $admin_date . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "')";
 
 	$qsave = mysqli_query($conn, $save);
 
