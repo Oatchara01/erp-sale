@@ -280,6 +280,8 @@ include "dbconnect_sale.php";
 										<td bgcolor="#FF3030" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 									<?php } else if ($objResult["status_doc"] == 'Approve') { ?>
 										<td bgcolor="#00FF00" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
+									<?php } else if ($objResult["status_doc"] == 'Draft') { ?>
+										<td bgcolor="#FFA500" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 									<?php } else { ?>
 										<td style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 									<?php } ?>
@@ -440,6 +442,8 @@ include "dbconnect_sale.php";
 									<td bgcolor="#FF3030" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 								<?php } else if ($objResult["status_doc"] == 'Approve') { ?>
 									<td bgcolor="#00FF00" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
+								<?php } else if ($objResult["status_doc"] == 'Draft') { ?>
+									<td bgcolor="#FFA500" style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 								<?php } else { ?>
 									<td style="font-size: 10px;"><?php echo $objResult["status_doc"]; ?></td>
 								<?php } ?>

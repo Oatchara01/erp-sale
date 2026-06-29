@@ -1,6 +1,23 @@
 
 <?php
 include("dbconnect.php");
+mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
+
+if (!function_exists('tableExists')) {
+	function tableExists($conn, $tableName) {
+		static $tables = null;
+		if ($tables === null) {
+			$tables = array();
+			$res = mysqli_query($conn, "SHOW TABLES");
+			if ($res) {
+				while ($row = mysqli_fetch_array($res)) {
+					$tables[strtolower($row[0])] = true;
+				}
+			}
+		}
+		return isset($tables[strtolower($tableName)]);
+	}
+}
 include ("error_page.php"); 
 
 $redirect_to = isset($_POST["redirect_to"]) ? $_POST["redirect_to"] : "register_suphos_edit.php"; 
@@ -47,6 +64,12 @@ function getDeptCommentItemsFromPost()
 	}
 
 	return $items;
+}
+
+function sanitizeAdminNumericInput($value)
+{
+	$value = preg_replace('/\D+/', '', trim((string)($value ?? '')));
+	return $value !== '' ? $value : '';
 }
 
 function saveDeptCommentItems($conn, $commentSoId, $refId, $items)
@@ -121,7 +144,7 @@ $type_doc = $_POST["type_doc"];
 $bill_name = $_POST["bill_name"];
 $bill_address = $_POST["bill_address"];
 $bill_tel = $_POST["bill_tel"];
-$full_bill = $_POST["full_bill"];
+$full_bill = isset($_POST["full_bill"]) && $_POST["full_bill"] !== '' ? $_POST["full_bill"] : '0';
 $bill_id  = $_POST["bill_id"];
 $date_so = $_POST["date_so"];
 $suggest = $_POST["suggest"];
@@ -129,19 +152,19 @@ $payment = $_POST["payment"];
 $payment_method = (int)($_POST["payment_method"] ?? 0);
 $sale_comment = $_POST["sale_comment"];
 $po_no = $_POST["po_no"];
-$que_ckk = $_POST["que_ckk"];
+$que_ckk = isset($_POST["que_ckk"]) && $_POST["que_ckk"] !== '' ? $_POST["que_ckk"] : '0';
 $delivery_contract = $_POST["delivery_contract"];
-$book_clear = $_POST["book_clear"];
+$book_clear = isset($_POST["book_clear"]) && $_POST["book_clear"] !== '' ? $_POST["book_clear"] : '0';
 $book_no = $_POST["book_no"];
-$brn_clear = $_POST["brn_clear"];
+$brn_clear = isset($_POST["brn_clear"]) && $_POST["brn_clear"] !== '' ? $_POST["brn_clear"] : '0';
 $brn_no = $_POST["brn_no"];
-$brnp_clear = $_POST["brnp_clear"];
+$brnp_clear = isset($_POST["brnp_clear"]) && $_POST["brnp_clear"] !== '' ? $_POST["brnp_clear"] : '0';
 $brnp_no = $_POST["brnp_no"];
-$sn_ckk = $_POST["sn_ckk"];
+$sn_ckk = isset($_POST["sn_ckk"]) && $_POST["sn_ckk"] !== '' ? $_POST["sn_ckk"] : '0';
 $sn_no = $_POST["sn_no"];
 $mode_cus = $_POST["mode_name"];
 $install_place = $_POST["address_send"];
-$with_pr = $_POST["with_pr"];
+$with_pr = isset($_POST["with_pr"]) && $_POST["with_pr"] !== '' ? $_POST["with_pr"] : '0';
 $type_type = $_POST["type_type"];
 $type_detail = $_POST["type_detail"];
 $delivery_type = $_POST["delivery_type"];
@@ -154,12 +177,15 @@ $delivery_contact = $_POST["customer_name"];
 $delivery_tel = $_POST["customer_tel"];
 $payment_des  = $_POST["payment_des"];
 $date_send_key  = $_POST["between_date"];
-$have_order = $_POST["have_order"];
+$have_order = isset($_POST["have_order"]) && $_POST["have_order"] !== '' ? $_POST["have_order"] : '0';
 $tax_id = $_POST["tax_id"];
 $cm_no = $_POST["cm_no"];
 $sale_date= date('Y-m-d');
 $sale =  $_SESSION['name'];
 $sale_code = $_POST['sale_code'];
+$admin = $_SESSION['name'];
+$admin_code = $_SESSION['code'] ?? '';
+$admin_date = date('Y-m-d H:i:s');
 $pre_name = $_POST['pre_name'];
 $sup_code = $_SESSION['code'];
 $name =  $_SESSION['name'];
@@ -168,8 +194,11 @@ $pr_no  = $_POST["pr_no"];
 $add_date = date('Y-m-d H:i:s');
 $surname =	$_SESSION['surname'];
 $add_by = "$name $surname";
-$plan_ckk =$_POST["plan_ckk"];	
+$plan_ckk = isset($_POST["plan_ckk"]) && $_POST["plan_ckk"] !== '' ? $_POST["plan_ckk"] : '0';	
 $email=$_POST["email"];
+$admin_box_count = sanitizeAdminNumericInput($_POST["admin_box_count"] ?? '');
+$admin_box_count_value = $admin_box_count !== '' ? $admin_box_count : '0';
+$admin_edit_count = sanitizeAdminNumericInput($_POST["admin_edit_count"] ?? '');
 	
 $head_1 = $_POST["head_1"];	
 $ref_1 = $_POST["ref_1"];	
@@ -195,9 +224,9 @@ $comment_ad = $_POST["comment_ad"];
 $technician_required = isset($_POST["technician_required"]) && $_POST["technician_required"] === "1" ? 1 : 0;
 $deptCommentItems = getDeptCommentItemsFromPost();
 
-$ic_ckk = $_POST["ic_ckk"];	
-$et_ckk = $_POST["et_ckk"];
-$repeat_cus = $_POST["repeat_cus"] ?? '';
+$ic_ckk = isset($_POST["ic_ckk"]) && $_POST["ic_ckk"] !== '' ? $_POST["ic_ckk"] : '0';	
+$et_ckk = isset($_POST["et_ckk"]) && $_POST["et_ckk"] !== '' ? $_POST["et_ckk"] : '0';
+$repeat_cus = isset($_POST["repeat_cus"]) && $_POST["repeat_cus"] !== '' ? $_POST["repeat_cus"] : '0';
 $time_range = $_POST["time_range"] ?? '';
 $status_comment = $_POST["status_comment"] ?? '';
 	
@@ -373,7 +402,7 @@ $deleted_product_codes = $_POST["deleted_product_codes"] ?? array();
 	
 	
 $save="Update  hos__so set
-bill_name ='".$bill_name."',bill_tel ='".$bill_tel."',bill_address  ='".$bill_address."',full_bill ='".$full_bill."',date_so ='".$date_so."',suggest ='".$suggest."',payment ='".$payment."',payment_method ='".$payment_method."',sale_comment ='".$sale_comment."',po_no ='".$po_no."',delivery_contract ='".$delivery_contract."',book_clear ='".$book_clear."',book_no ='".$book_no."',brn_clear ='".$brn_clear."',brn_no ='".$brn_no."',brnp_clear ='".$brnp_clear."',brnp_no ='".$brnp_no."',sn_ckk ='".$sn_ckk."',sn_no ='".$sn_no."',install_place ='".$install_place."',with_pr ='".$with_pr."',type_type ='".$type_type."',type_detail ='".$type_detail."',delivery_type ='".$delivery_type."',delivery_date ='".$delivery_date."',delivery_time ='".$delivery_time."',delivery_address ='".$delivery_address."',delivery_contact ='".$delivery_contact."',delivery_tel ='".$delivery_tel."',pr_no ='".$pr_no."',add_by ='".$add_by."',payment_des ='".$payment_des."',slip1 = '".$slip1."',slip2 = '".$slip2."',slip3 = '".$slip3."',slip4 = '".$slip4."',slip5 = '".$slip5."',date_send_key='".$date_send_key."',have_order='".$have_order."',bill_id = '".$bill_id."',date_tranfer = '".$date_tranfer."',cm_no='".$cm_no."',send_sup='1',status_doc = 'Request',pre_name='".$pre_name."',que_ckk='".$que_ckk."',mode_cus ='".$mode_cus."',plan_ckk='".$plan_ckk."',email='".$email."',sale_code='".$sale_code."',tax_id='".$tax_id."',ic_ckk='".$ic_ckk."',et_ckk='".$et_ckk."',repeat_cus='".$repeat_cus."'  where ref_id='".$ref_id."'";
+bill_name ='".$bill_name."',bill_tel ='".$bill_tel."',bill_address  ='".$bill_address."',full_bill ='".$full_bill."',date_so ='".$date_so."',suggest ='".$suggest."',payment ='".$payment."',payment_method ='".$payment_method."',sale_comment ='".$sale_comment."',po_no ='".$po_no."',delivery_contract ='".$delivery_contract."',book_clear ='".$book_clear."',book_no ='".$book_no."',brn_clear ='".$brn_clear."',brn_no ='".$brn_no."',brnp_clear ='".$brnp_clear."',brnp_no ='".$brnp_no."',sn_ckk ='".$sn_ckk."',sn_no ='".$sn_no."',install_place ='".$install_place."',with_pr ='".$with_pr."',type_type ='".$type_type."',type_detail ='".$type_detail."',delivery_type ='".$delivery_type."',delivery_date ='".$delivery_date."',delivery_time ='".$delivery_time."',delivery_address ='".$delivery_address."',delivery_contact ='".$delivery_contact."',delivery_tel ='".$delivery_tel."',pr_no ='".$pr_no."',add_by ='".$add_by."',payment_des ='".$payment_des."',slip1 = '".$slip1."',slip2 = '".$slip2."',slip3 = '".$slip3."',slip4 = '".$slip4."',slip5 = '".$slip5."',date_send_key='".$date_send_key."',have_order='".$have_order."',bill_id = '".$bill_id."',date_tranfer = '".$date_tranfer."',cm_no='".$cm_no."',send_sup='1',status_doc = 'Request',pre_name='".$pre_name."',que_ckk='".$que_ckk."',mode_cus ='".$mode_cus."',plan_ckk='".$plan_ckk."',email='".$email."',sale_code='".$sale_code."',tax_id='".$tax_id."',ic_ckk='".$ic_ckk."',et_ckk='".$et_ckk."',repeat_cus='".$repeat_cus."',admin='".$admin."',admin_code='".$admin_code."',admin_date='".$admin_date."'  where ref_id='".$ref_id."'";
 
 $qsave=mysqli_query($conn,$save);
 
@@ -431,6 +460,9 @@ $optionalHosSoFieldMap = array(
 foreach ($optionalHosSoFieldMap as $postField => $columnName) {
 	if (isset($_POST[$postField])) {
 		$optionalValue = $_POST[$postField];
+		if ($postField === 'admin_edit_count') {
+			$optionalValue = $admin_edit_count;
+		}
 		if ($postField === 'admin_doc_date' || $postField === 'admin_old_doc_date') {
 			$optionalValue = normalizeOptionalDateValue($optionalValue);
 		}
@@ -3103,7 +3135,7 @@ $description_ja = $_POST["description_ja"];
 
 	
 
-$strSQL66 =  "Update tb_register_data set start_date = '".$start_date."',between_date ='".$between_date."',start_time ='".$start_time."',end_time ='".$end_time."',status ='".$status."',fix_date ='".$fix_date."',no_price ='".$no_price."',call_customer ='".$call_customer."',credit ='".$credit."',call_employee ='".$call_employee."',cash ='".$chash."',check_peper ='".$check_peper."',bill = '".$bill."',department ='".$department."',type_customer ='".$type_customer."',type_company = '".$type_company."',customer_name ='".$customer_name."',customer_tel ='".$customer_tel."',address_name ='".$address_name."',address_send ='".$address_send."',want_bus ='".$want_bus."',product_name ='".$product_name."',product_sn ='".$product_sn."',unit_credit ='".$unit_credit."',price ='".$price."',employee_name ='".$employee_name."',employee_tel ='".$employee_tel."',add_by ='".$add_by."',description ='".$description."',have_map = '".$havemap."',add_date ='$add_date',unit_bill ='".$unit_bill."',unit_check ='".$unit_check."',unit_tran ='".$unit_tran."',tran ='".$tran."',check_detail ='".$check_detail."',dep ='".$dep."',dept ='".$dept."',department_show ='".$department_show."',customer_contact = '".$customer_contact."' ,on_time='".$on_time."',address_1 ='".$address_1."',mk_research='".$mk_research."',province_name='".$province_name."'  where ref_id = '".$ref_id."'";
+$strSQL66 =  "Update tb_register_data set start_date = '".$start_date."',between_date ='".$between_date."',start_time ='".$start_time."',end_time ='".$end_time."',status ='".$status."',fix_date ='".$fix_date."',no_price ='".$no_price."',call_customer ='".$call_customer."',credit ='".$credit."',call_employee ='".$call_employee."',cash ='".$chash."',check_peper ='".$check_peper."',bill = '".$bill."',department ='".$department."',type_customer ='".$type_customer."',type_company = '".$type_company."',customer_name ='".$customer_name."',customer_tel ='".$customer_tel."',address_name ='".$address_name."',address_send ='".$address_send."',want_bus ='".$want_bus."',product_name ='".$product_name."',product_sn ='".$product_sn."',unit_credit ='".$unit_credit."',price ='".$price."',employee_name ='".$employee_name."',employee_tel ='".$employee_tel."',add_by ='".$add_by."',description ='".$description."',have_map = '".$havemap."',add_date ='$add_date',unit_bill ='".$unit_bill."',unit_check ='".$unit_check."',unit_tran ='".$unit_tran."',tran ='".$tran."',check_detail ='".$check_detail."',dep ='".$dep."',dept ='".$dept."',department_show ='".$department_show."',customer_contact = '".$customer_contact."' ,on_time='".$on_time."',address_1 ='".$address_1."',mk_research='".$mk_research."',province_name='".$province_name."',count_box='".$admin_box_count_value."'  where ref_id = '".$ref_id."'";
 
 $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 

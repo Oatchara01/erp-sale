@@ -2554,6 +2554,28 @@
 		return so_saved_time_value($savedRegister[$fallbackKey] ?? "");
 	}
 
+	function so_saved_buddhist_date_input($value)
+	{
+		$value = trim((string)($value ?? ""));
+		if ($value === "") {
+			return "";
+		}
+
+		if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/', $value, $matches)) {
+			return sprintf('%02d/%02d/%04d', (int)$matches[3], (int)$matches[2], (int)$matches[1] + 543);
+		}
+
+		if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $matches)) {
+			$year = (int)$matches[3];
+			if ($year < 2400) {
+				$year += 543;
+			}
+			return sprintf('%02d/%02d/%04d', (int)$matches[1], (int)$matches[2], $year);
+		}
+
+		return $value;
+	}
+
 
 
 
@@ -2850,6 +2872,63 @@
 				});
 
 				return false;
+			}
+
+			function saveDraft() {
+				syncFormCompatibilityFields();
+				if (typeof syncDeptComments === 'function') {
+					syncDeptComments();
+				}
+				if (typeof syncDeliveryTimeRange === 'function') {
+					syncDeliveryTimeRange();
+				}
+
+				var form = document.forms['frmMain'];
+				if (!form) {
+					return;
+				}
+
+				var btn = form.querySelector('[name="save_draft"]');
+				var defaultHtml = btn ? btn.innerHTML : '';
+				var formData = new FormData(form);
+				formData.set('is_draft', '1');
+
+				if (btn) {
+					btn.disabled = true;
+					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+				}
+
+				fetch('register_suphos_draft1.php', {
+					method: 'POST',
+					body: formData
+				})
+					.then(function(res) {
+						return res.json();
+					})
+					.then(function(data) {
+						if (data && data.success) {
+							return Swal.fire({
+								title: 'Save Draft success',
+								text: 'Ref ID: ' + data.ref_id,
+								icon: 'success',
+								confirmButtonColor: '#612989'
+							}).then(function() {
+								window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							});
+						}
+
+						var message = data && data.message ? data.message : 'Unable to save draft';
+						return Swal.fire('Error', message, 'error');
+					})
+					.catch(function() {
+						return Swal.fire('Error', 'Unable to save draft', 'error');
+					})
+					.finally(function() {
+						if (btn) {
+							btn.disabled = false;
+							btn.innerHTML = defaultHtml;
+						}
+					});
 			}
 
 			function openPrintReport() {
@@ -3259,7 +3338,7 @@
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">เลขที่เอกสาร</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_doc_no" class="admin-ui-input" placeholder="No.">
+									<input type="text" name="admin_doc_no" class="admin-ui-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : ''; ?>" placeholder="No.">
 								</div>
 							</div>
 							<div class="admin-ui-field">
@@ -3270,14 +3349,14 @@
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">เลขที่ลงงาน</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_work_no" class="admin-ui-input has-icon" value="3149713948">
+									<input type="text" name="admin_work_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : ''; ?>">
 									<i class="fas fa-search admin-ui-icon"></i>
 								</div>
 							</div>
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">เลขที่ SR ลดหนี้</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_sr_no" class="admin-ui-input has-icon" value="4732981308">
+									<input type="text" name="admin_sr_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : ''; ?>">
 									<i class="fas fa-search admin-ui-icon"></i>
 								</div>
 							</div>
@@ -3288,27 +3367,27 @@
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">เลขที่ใบฝาก</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_deposit_no" class="admin-ui-input has-icon" value="3124791749">
+									<input type="text" name="admin_deposit_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : ''; ?>">
 									<i class="fas fa-search admin-ui-icon"></i>
 								</div>
 							</div>
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">วันที่ออกเอกสาร</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_doc_date" class="admin-ui-input has-icon" value="09/09/2568">
+									<input type="text" name="admin_doc_date" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h(so_saved_buddhist_date_input($savedSo['iv_date'] ?? '')) : ''; ?>">
 									<i class="far fa-calendar-alt admin-ui-icon"></i>
 								</div>
 							</div>
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">จำนวนกล่อง</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_box_count" class="admin-ui-input" placeholder="เฉพาะตัวเลข">
+									<input type="text" name="admin_box_count" class="admin-ui-input" value="<?php echo ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : ''; ?>" placeholder="Numbers only">
 								</div>
 							</div>
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">จำนวนครั้งที่แก้ไขบิล</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_edit_count" class="admin-ui-input" placeholder="ใส่เฉพาะตัวเลข">
+									<input type="text" name="admin_edit_count" class="admin-ui-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : ''; ?>" placeholder="Numbers only">
 								</div>
 							</div>
 						</div>
@@ -3318,14 +3397,14 @@
 							<div class="admin-ui-field">
 								<label class="admin-ui-label">วันที่ออกเอกสาร (เดิม)</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_old_doc_date" class="admin-ui-input has-icon" value="09/09/2568">
+									<input type="text" name="admin_old_doc_date" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h(so_saved_buddhist_date_input($savedSo['date_oldbill'] ?? '')) : ''; ?>">
 									<i class="far fa-calendar-alt admin-ui-icon"></i>
 								</div>
 							</div>
 							<div class="admin-ui-field span-3">
 								<label class="admin-ui-label">สาเหตุการแก้ไขบิล</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_edit_reason" class="admin-ui-input has-icon" value="">
+									<input type="text" name="admin_edit_reason" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : ''; ?>">
 									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
 								</div>
 							</div>
@@ -3341,7 +3420,7 @@
 							<div class="admin-ui-field span-3">
 								<label class="admin-ui-label">หมายเหตุการยกเลิก</label>
 								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_cancel_reason" class="admin-ui-input has-icon" value="">
+									<input type="text" name="admin_cancel_reason" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : ''; ?>">
 									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
 								</div>
 							</div>
@@ -5485,7 +5564,7 @@
 				<button type="submit" name="submit" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
 					<i class="far fa-save"></i> บันทึกข้อมูล
 				</button>
-				<button type="button" name="save_draft" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+				<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
 					<i class="far fa-save"></i> Save Draft
 				</button>
 			</div>
@@ -7945,6 +8024,30 @@
 				return '';
 			})();
 
+			function formatSavedAdminDateInput(value) {
+				var raw = String(value || '').trim();
+				var matches;
+				var year;
+				if (raw === '') {
+					return '';
+				}
+				matches = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/);
+				if (matches) {
+					return matches[3] + '/' + matches[2] + '/' + String(parseInt(matches[1], 10) + 543);
+				}
+				matches = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+				if (matches) {
+					year = parseInt(matches[3], 10);
+					if (year < 2400) {
+						year += 543;
+					}
+					return String(parseInt(matches[1], 10)).padStart(2, '0') + '/' +
+						String(parseInt(matches[2], 10)).padStart(2, '0') + '/' +
+						String(year);
+				}
+				return raw;
+			}
+
 			// 1. Populate simple text/select inputs by name or id
 			var simpleMappings = {
 				'date_so': savedSo.date_so,
@@ -8004,6 +8107,17 @@
 				'status_comment': (savedRegister && savedRegister.description) || (savedRegister && savedRegister.status_comment) || savedSo.status_comment || '',
 				// Shipping extras:
 				'transport_company': savedSo.transport_company || '',
+				// Admin:
+				'admin_doc_no': savedSo.iv_no || '',
+				'admin_work_no': savedSo.job_no || '',
+				'admin_sr_no': savedSo.sr_no || '',
+				'admin_deposit_no': savedSo.order_no || '',
+				'admin_doc_date': formatSavedAdminDateInput(savedSo.iv_date || ''),
+				'admin_box_count': (savedRegister && savedRegister.count_box !== undefined && savedRegister.count_box !== null) ? savedRegister.count_box : '',
+				'admin_edit_count': savedSo.new_bill || '',
+				'admin_old_doc_date': formatSavedAdminDateInput(savedSo.date_oldbill || ''),
+				'admin_edit_reason': savedSo.desnew_bill || '',
+				'admin_cancel_reason': savedSo.remark_cancel || '',
 				'time_range': inferredTimeRange
 			};
 

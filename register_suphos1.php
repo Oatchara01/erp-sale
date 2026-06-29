@@ -1,10 +1,17 @@
-<?php include("head.php"); ?>
-
 <?php
+$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+if (!$isDraftRequest) {
+	include("head.php");
+}
+
 include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
+
+if ($isDraftRequest) {
+	header('Content-Type: application/json; charset=utf-8');
+}
 
 // hos__so เป็นตาราง legacy ที่มีคอลัมน์ NOT NULL จำนวนมากโดยไม่มี default
 // ให้ connection ของหน้านี้ใช้พฤติกรรมเดิมของระบบ เมื่อไม่ได้ระบุคอลัมน์เหล่านั้นใน INSERT
@@ -50,6 +57,12 @@ function getDeptCommentItemsFromPost()
 	}
 
 	return $items;
+}
+
+function sanitizeAdminNumericInput($value)
+{
+	$value = preg_replace('/\D+/', '', trim((string)($value ?? '')));
+	return $value !== '' ? $value : '';
 }
 
 function saveDeptCommentItems($conn, $commentSoId, $refId, $items)
@@ -334,6 +347,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$date_tranfer = $_POST["date_tranfer"];
 	$tax_id = $_POST["tax_id"];
 	$pre_name = $_POST["pre_name"];
+	$admin_box_count = sanitizeAdminNumericInput($_POST["admin_box_count"] ?? '');
+	$admin_box_count_value = $admin_box_count !== '' ? $admin_box_count : '0';
+	$admin_edit_count = sanitizeAdminNumericInput($_POST["admin_edit_count"] ?? '');
 	$job_no = trim($_POST["admin_work_no"] ?? '');
 	$job_no2 = trim($_POST["job_no2"] ?? '0');
 	$sr_no = trim($_POST["admin_sr_no"] ?? '0');
@@ -355,7 +371,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$name =  $_SESSION['name'];
 	$admin = $_SESSION['name'];
 	$admin_code = $_SESSION['code'] ?? '';
-	$admin_date = date('Y-m-d');
+	$admin_date = date('Y-m-d H:i:s');
 	$approve_time = date("H:i:s");
 	$pr_no  = $_POST["pr_no"];
 	$add_date = date('Y-m-d H:i:s');
@@ -429,7 +445,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$time_range = $_POST["time_range"] ?? '';
 	$status_comment_val = $_POST["status_comment"] ?? '';
 
-	if ($po_no != '') {
+	if (!$isDraftRequest && $po_no != '') {
 		$strSQL23 = "SELECT * FROM hos__po WHERE po_no = '" . $po_no . "'";
 		$objQuery23 = mysqli_query($conn, $strSQL23);
 		$num = mysqli_num_rows($objQuery23);
@@ -530,18 +546,29 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$so = "SO";
 	$ref_id = "$so$nextId";
 
-	if ($ic_ckk == '1') {
+	if (!$isDraftRequest && $ic_ckk == '1') {
 		$iv_no = "IC";
-	} else {
+	} else if (!$isDraftRequest) {
 		$iv_no = "IV";
+	} else {
+		$iv_no = "";
 	}
+
+	$statusDoc = $isDraftRequest ? "Draft" : "Request";
+	$sendSup = $isDraftRequest ? "0" : "1";
+	$approveValue = $isDraftRequest ? "" : $approve;
+	$approveCodeValue = $isDraftRequest ? "" : $sup_code;
+	$approveDateValue = $isDraftRequest ? "" : $sale_date;
+	$approveTimeValue = $isDraftRequest ? "" : $approve_time;
+	$ivDateValue = $isDraftRequest ? "" : $iv_date;
+	$ivTimeValue = $isDraftRequest ? "" : $iv_time;
 
 
 
 	$save = "insert into hos__so
 	(ref_id,type_doc,bill_name,bill_address,bill_tel,full_bill,date_so,suggest,payment,payment_method,sale_comment,po_no,delivery_contract,book_clear,book_no,brn_clear,brn_no,brnp_clear,brnp_no,sn_ckk,sn_no,install_place,with_pr,type_type,type_detail,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,sale_date,sale,sale_code,pr_no,add_date,add_by,status_doc,approve,approve_code,approve_date,payment_des,slip1,slip2,slip3,slip4,slip5,date_send_key,have_order,send_sup,iv_no,iv_date,iv_time,job_no,job_no2,sr_no,dep_no,order_no,payment2,tax_id,approve_time,bill_id,admin,admin_code,admin_date,cm_no,pre_name,que_ckk,mode_cus,plan_ckk,email,adm_ckk,ic_ckk,et_ckk,repeat_cus)
 	values
-	('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $payment_method . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','Request','" . $approve . "','" . $sup_code . "','" . $sale_date . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','1','" . $iv_no . "','" . $iv_date . "','" . $iv_time . "','" . $job_no . "','" . $job_no2 . "','" . $sr_no . "','" . $dep_no . "','" . $order_no . "','" . $payment2 . "','" . $tax_id . "','" . $approve_time . "','" . $bill_id . "','" . $admin . "','" . $admin_code . "','" . $admin_date . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "')";
+	('" . $ref_id . "','" . $type_doc . "','" . $bill_name . "','" . $bill_address . "','" . $bill_tel . "','" . $full_bill . "','" . $date_so . "','" . $suggest . "','" . $payment . "','" . $payment_method . "','" . $sale_comment . "','" . $po_no . "','" . $delivery_contract . "','" . $book_clear . "','" . $book_no . "','" . $brn_clear . "','" . $brn_no . "','" . $brnp_clear . "','" . $brnp_no . "','" . $sn_ckk . "','" . $sn_no . "','" . $install_place . "','" . $with_pr . "','" . $type_type . "','" . $type_detail . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $pr_no . "','" . $add_date . "','" . $add_by . "','" . $statusDoc . "','" . $approveValue . "','" . $approveCodeValue . "','" . $approveDateValue . "','" . $payment_des . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $date_send_key . "','" . $have_order . "','" . $sendSup . "','" . $iv_no . "','" . $ivDateValue . "','" . $ivTimeValue . "','" . $job_no . "','" . $job_no2 . "','" . $sr_no . "','" . $dep_no . "','" . $order_no . "','" . $payment2 . "','" . $tax_id . "','" . $approveTimeValue . "','" . $bill_id . "','" . $admin . "','" . $admin_code . "','" . $admin_date . "','" . $cm_no . "','" . $pre_name . "','" . $que_ckk . "','" . $mode_cus . "','" . $plan_ckk . "','" . $email . "','" . $adm_ckk . "','" . $ic_ckk . "','" . $et_ckk . "','" . $repeat_cus . "')";
 
 	$qsave = mysqli_query($conn, $save);
 
@@ -595,6 +622,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	foreach ($optionalHosSoFieldMap as $postField => $columnName) {
 		if (isset($_POST[$postField])) {
 			$optionalValue = $_POST[$postField];
+			if ($postField === 'admin_edit_count') {
+				$optionalValue = $admin_edit_count;
+			}
 			if ($postField === 'admin_doc_date' || $postField === 'admin_old_doc_date') {
 				$optionalValue = normalizeOptionalDateValue($optionalValue);
 			}
@@ -1174,7 +1204,7 @@ $qsave=mysqli_query($conn,$save);
 	$product_id27 = $_POST["product_id27"];
 	$sale_count27 = $_POST["sale_count27"];
 	$product_price27 = $_POST["product_price27"];
-	$sale_remarkk27 = $_POST["sale_remark27"];
+	$sale_remarkk27 = $_POST["sale_remarkk27"];
 	$sum_amountt27 = $_POST["sum_amount27"];
 	$sum_amount27 = str_replace(',', '', $sum_amountt27);
 	$discount_unit27 = $_POST["discount_unit27"];
@@ -3759,7 +3789,8 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		'address_1',
 		'add_code',
 		'mk_research',
-		'province_name'
+		'province_name',
+		'count_box'
 	);
 
 	$registerDataValues = array(
@@ -3808,7 +3839,8 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		$address_1,
 		$h_employee_name,
 		$mk_research,
-		$province_name
+		$province_name,
+		$admin_box_count_value
 	);
 
 	$shippingColumnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_register_data LIKE 'shipping_id'");
@@ -4037,10 +4069,26 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 
 
 	if ($qsave) {
+		if ($isDraftRequest) {
+			echo json_encode(array(
+				'success' => true,
+				'ref_id' => $ref_id,
+				'message' => 'Draft saved'
+			));
+			exit();
+		}
+
 		echo "<script language=\"JavaScript\">";
 		echo "window.location='register_suphos.php?ref_id=$ref_id&saved=1';";
 		echo "</script>";
 	} else {
+		if ($isDraftRequest) {
+			echo json_encode(array(
+				'success' => false,
+				'message' => 'Unable to save draft'
+			));
+			exit();
+		}
 		echo "Cannot";
 	}
 }

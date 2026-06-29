@@ -281,6 +281,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         } else {
             $customerSqlData = array(
+                "first_name=''",
+                "last_name=''",
+                "customer_no=''",
+                "customer_coden=''",
                 "customer_code=''",
                 "customer_name='" . esc($conn, $fullName) . "'",
                 "type_customer='" . esc($conn, $defaultTypeCustomer) . "'",
