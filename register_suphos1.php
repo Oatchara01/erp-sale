@@ -363,7 +363,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$payment = $_POST["payment"];
 	$payment2 = trim($_POST["payment2"] ?? $payment);
 	$payment_method = (int)($_POST["payment_method"] ?? 0);
-	$que_ckk = isset($_POST['que_ckk']) ? 1 : 0;
+	$que_ckk = isset($_POST['que_ckk']) && $_POST['que_ckk'] !== '' ? 1 : 0;
 	$sale_comment = $_POST["sale_comment"];
 	$po_no = $_POST["po_no"];
 	$delivery_contract = $_POST["delivery_contract"];
@@ -389,10 +389,10 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$delivery_tel = $_POST["customer_tel"];
 	$payment_des  = $_POST["payment_des"];
 	$date_send_key  = $_POST["between_date"];
-	$have_order = isset($_POST['have_order']) ? 1 : 0;
+	$have_order = isset($_POST['have_order']) && $_POST['have_order'] !== '' ? 1 : 0;
 	$cm_no = $_POST["cm_no"];
 	$mode_cus = $_POST["mode_name"];
-	$plan_ckk = isset($_POST['plan_ckk']) ? 1 : 0;
+	$plan_ckk = isset($_POST['plan_ckk']) && $_POST['plan_ckk'] !== '' ? 1 : 0;
 
 	$date_tranfer = $_POST["date_tranfer"];
 	$tax_id = $_POST["tax_id"];

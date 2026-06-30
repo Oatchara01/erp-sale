@@ -4092,7 +4092,7 @@
 												$provName = (string)$objResuut_prov_main['province_name'];
 												$isSelectedMain = ($provName === $selectedProvinceMain) ? ' selected' : '';
 										?>
-												<option value="<?php echo so_saved_h($provName); ?>"<?php echo $isSelectedMain; ?>><?php echo so_saved_h($provName); ?></option>
+												<option value="<?php echo so_saved_h($provName); ?>" <?php echo $isSelectedMain; ?>><?php echo so_saved_h($provName); ?></option>
 										<?php
 											}
 										}

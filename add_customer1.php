@@ -287,7 +287,7 @@ if (isset($_POST["submit"])) {
     if ($allOk) {
         mysqli_commit($conn);
         echo "<script language=\"JavaScript\">";
-        echo "window.location='customer_add.php?success=created'";
+        echo "window.location='customer_add.php?customer_id=" . (int)$customer_id . "&success=created'";
         echo "</script>";
         exit();
         echo "<script language=\"JavaScript\">";
