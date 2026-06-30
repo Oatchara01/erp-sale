@@ -146,6 +146,55 @@ $bill_address = $_POST["bill_address"];
 $bill_tel = $_POST["bill_tel"];
 $full_bill = isset($_POST["full_bill"]) && $_POST["full_bill"] !== '' ? $_POST["full_bill"] : '0';
 $bill_id  = $_POST["bill_id"];
+
+// บันทึกที่อยู่ใหม่เข้าฐานข้อมูลของลูกค้ากรณีที่ปุ่ม "เพิ่มลงฐานลูกค้า" ถูกเลือกไว้
+$save_to_customer_db = isset($_POST['save_to_customer_db']) && $_POST['save_to_customer_db'] === '1';
+if ($save_to_customer_db && !empty($bill_id)) {
+	$esc_customer_id = mysqli_real_escape_string($conn, $bill_id);
+	$esc_shipping_name = mysqli_real_escape_string($conn, $_POST['customer_name'] ?? '');
+	$esc_shipping_tel = mysqli_real_escape_string($conn, $_POST['customer_tel'] ?? '');
+	$esc_shipping_province = mysqli_real_escape_string($conn, $_POST['province_name'] ?? '');
+	$esc_shipping_address = mysqli_real_escape_string($conn, $_POST['address_name'] ?? '');
+	$esc_install_location = mysqli_real_escape_string($conn, $_POST['address_send'] ?? '');
+	$now = date('Y-m-d H:i:s');
+
+	// ตรวจสอบคอลัมน์ที่มีอยู่จริงในตาราง tb_customer_shipping_address ป้องกันกรณีคอลัมน์ไม่มีใน schema
+	$col_check = mysqli_query($conn, "SHOW COLUMNS FROM tb_customer_shipping_address");
+	$existing_cols = array();
+	if ($col_check) {
+		while ($col_row = mysqli_fetch_assoc($col_check)) {
+			$existing_cols[] = strtolower($col_row['Field']);
+		}
+	}
+
+	$insert_fields = array(
+		'customer_id' => "'$esc_customer_id'",
+		'shipping_preface_name' => "''",
+		'shipping_name' => "'$esc_shipping_name'",
+		'shipping_address' => "'$esc_shipping_address'",
+		'shipping_ampher' => "''",
+		'shipping_province' => "'$esc_shipping_province'",
+		'shipping_postcode' => "''",
+		'shipping_tel' => "'$esc_shipping_tel'",
+		'created_at' => "'$now'",
+		'updated_at' => "'$now'"
+	);
+
+	if (in_array('install_location', $existing_cols)) {
+		$insert_fields['install_location'] = "'$esc_install_location'";
+	}
+	if (in_array('location_link', $existing_cols)) {
+		$insert_fields['location_link'] = "''";
+	}
+
+	$insert_cols_str = implode(', ', array_keys($insert_fields));
+	$insert_vals_str = implode(', ', array_values($insert_fields));
+
+	$sql_insert_ship = "INSERT INTO tb_customer_shipping_address ($insert_cols_str) VALUES ($insert_vals_str)";
+	if (mysqli_query($conn, $sql_insert_ship)) {
+		$_POST["shipping_id"] = mysqli_insert_id($conn);
+	}
+}
 $date_so = $_POST["date_so"];
 $suggest = $_POST["suggest"];
 $payment = $_POST["payment"];

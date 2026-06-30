@@ -476,7 +476,11 @@
 							shipping_full_address: customerData.delivery_full_address || customerData.delivery_address || ''
 						};
 						window.originalShippingData = defaultShipping;
-						applyShippingSelection(defaultShipping);
+						if (window.isInitialDraftLoad) {
+							window.isInitialDraftLoad = false;
+						} else {
+							applyShippingSelection(defaultShipping);
+						}
 
 						// เก็บ bank id ของลูกค้าไว้ใน hidden เพื่อ restore dropdown ภายหลัง
 						var cusCkk = customerData.credit_ckk.trim();
@@ -591,7 +595,9 @@
 			if (xhr.status === 200) {
 				paymentMethodSelect.innerHTML = '<option value="0">เลือกวิธีชำระเงิน</option>' + (xhr.responseText || '');
 				var savedValue = paymentMethodSelect.getAttribute('data-saved-value') || paymentMethodSelect.value || '0';
-				if (savedValue && Array.prototype.some.call(paymentMethodSelect.options, function(option) { return option.value === savedValue; })) {
+				if (savedValue && Array.prototype.some.call(paymentMethodSelect.options, function(option) {
+						return option.value === savedValue;
+					})) {
 					paymentMethodSelect.value = savedValue;
 				}
 			} else {
@@ -790,7 +796,9 @@
 			loadBankOptions(true, function() {
 				var sel = document.getElementById('payment');
 				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
-				if (savedCusCkk && [...sel.options].some(function(option) { return option.value === savedCusCkk; })) {
+				if (savedCusCkk && [...sel.options].some(function(option) {
+						return option.value === savedCusCkk;
+					})) {
 					sel.value = savedCusCkk;
 				} else if (savedCusCkk === '0' || !savedCusCkk) {
 					sel.value = '';
@@ -2899,9 +2907,9 @@
 				}
 
 				fetch('register_suphos_draft1.php', {
-					method: 'POST',
-					body: formData
-				})
+						method: 'POST',
+						body: formData
+					})
 					.then(function(res) {
 						return res.json();
 					})
@@ -2981,9 +2989,12 @@
 				form.target = previewTarget;
 				HTMLFormElement.prototype.submit.call(form);
 
-				if (originalAction === null) form.removeAttribute('action'); else form.setAttribute('action', originalAction);
-				if (originalMethod === null) form.removeAttribute('method'); else form.setAttribute('method', originalMethod);
-				if (originalTarget === null) form.removeAttribute('target'); else form.setAttribute('target', originalTarget);
+				if (originalAction === null) form.removeAttribute('action');
+				else form.setAttribute('action', originalAction);
+				if (originalMethod === null) form.removeAttribute('method');
+				else form.setAttribute('method', originalMethod);
+				if (originalTarget === null) form.removeAttribute('target');
+				else form.setAttribute('target', originalTarget);
 				previewFlag.remove();
 			}
 		</script>
@@ -3159,15 +3170,15 @@
 								<label class="so-label">&nbsp;</label>
 								<div class="so-toggle-group">
 									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'que_ckk') ? ' active' : ''; ?>" id="lbl-que_ckk">
-										<input type="checkbox" name="que_ckk" id="que_ckk" value="1"<?php echo so_saved_checked($savedSo, 'que_ckk') ? ' checked' : ''; ?>>
+										<input type="checkbox" name="que_ckk" id="que_ckk" value="1" <?php echo so_saved_checked($savedSo, 'que_ckk') ? ' checked' : ''; ?>>
 										<span>งานด่วน</span>
 									</label>
 									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'have_order') ? ' active' : ''; ?>" id="lbl-have_order">
-										<input type="checkbox" name="have_order" id="have_order" value="1"<?php echo so_saved_checked($savedSo, 'have_order') ? ' checked' : ''; ?>>
+										<input type="checkbox" name="have_order" id="have_order" value="1" <?php echo so_saved_checked($savedSo, 'have_order') ? ' checked' : ''; ?>>
 										<span>ออเดอร์ฝาก</span>
 									</label>
 									<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'plan_ckk') ? ' active' : ''; ?>" id="lbl-plan_ckk">
-										<input type="checkbox" name="plan_ckk" id="plan_ckk" value="1"<?php echo so_saved_checked($savedSo, 'plan_ckk') ? ' checked' : ''; ?>>
+										<input type="checkbox" name="plan_ckk" id="plan_ckk" value="1" <?php echo so_saved_checked($savedSo, 'plan_ckk') ? ' checked' : ''; ?>>
 										<span>ไม่ได้ประมาณการ</span>
 									</label>
 								</div>
@@ -3553,7 +3564,7 @@
 												<input type='hidden' name="h_bill_id" id="h_bill_id" readonly>
 												<!-- billing_id เตรียมไว้สำหรับผูกกับ billing address record โดยตรง แต่ disable การใช้งานใน save flow ชั่วคราว -->
 												<input type="hidden" name="billing_id" id="billing_id" value="">
-												<input type="hidden" name="shipping_id" id="shipping_id" value="">
+												<input type="hidden" name="shipping_id" id="shipping_id" value="<?php echo isset($savedRegister['shipping_id']) ? htmlspecialchars($savedRegister['shipping_id'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 											</div>
 										</div>
 										<div class="cidc-row">
@@ -3655,7 +3666,7 @@
 						<div class="so-field-group" style="justify-content: flex-end;">
 							<div style="display: flex; align-items: center; height: 42px;">
 								<label class="so-toggle-pill<?php echo so_saved_checked($savedSo, 'repeat_cus') ? ' active' : ''; ?>" id="lbl-repeat_cus">
-									<input type="checkbox" name="repeat_cus" id="repeat_cus" value="1"<?php echo so_saved_checked($savedSo, 'repeat_cus') ? ' checked' : ''; ?>>
+									<input type="checkbox" name="repeat_cus" id="repeat_cus" value="1" <?php echo so_saved_checked($savedSo, 'repeat_cus') ? ' checked' : ''; ?>>
 									<span>ลูกค้าซื้อซ้ำ</span>
 								</label>
 							</div>
@@ -3982,12 +3993,12 @@
 
 						<div style="display: flex; gap: 16px; margin-top: 24px;">
 							<label class="so-toggle-btn">
-								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;"<?php echo so_saved_checked($savedRegister, 'call_customer') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;" <?php echo so_saved_checked($savedRegister, 'call_customer') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ต้องการให้โทรแจ้ง</span>
 							</label>
 
 							<label class="so-toggle-btn">
-								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;"<?php echo so_saved_checked($savedOtherBill, 'ref_12') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;" <?php echo so_saved_checked($savedOtherBill, 'ref_12') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)</span>
 							</label>
 						</div>
@@ -4049,7 +4060,8 @@
 							<button type="button" class="so-address-action-btn so-address-action-btn-primary" onclick="openShippingAddressPopup()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 								<i class="fas fa-search"></i> ค้นหาที่อยู่
 							</button>
-							<button type="button" class="so-address-action-btn so-address-action-btn-secondary" onclick="openShippingAddressCreatePage(getCurrentShippingPopupCustomerId())" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+							<input type="hidden" name="save_to_customer_db" id="save_to_customer_db" value="0">
+							<button type="button" class="so-address-action-btn so-address-action-btn-secondary" onclick="toggleSaveToCustomerDb(this)" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 								<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า
 							</button>
 						</div>
@@ -4058,13 +4070,13 @@
 							<div class="so-field-group">
 								<label class="so-label" style="color: #612989;">ชื่อผู้ติดต่อ<span style="color:red">*</span></label>
 								<div style="position: relative; display: flex; align-items: center;">
-									<input name="contact_name" type="text" class="so-input" placeholder="ใส่ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+									<input name="contact_name" type="text" class="so-input" value="<?php echo so_saved_h($savedSo['delivery_contact'] ?? ($savedRegister['customer_name'] ?? '')); ?>" placeholder="ใส่ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 								</div>
 							</div>
 							<div class="so-field-group">
 								<label class="so-label" style="color: #612989;">เบอร์โทร<span style="color:red">*</span></label>
-								<input name="contact_tel" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+								<input name="contact_tel" type="text" class="so-input" value="<?php echo so_saved_h($savedSo['delivery_tel'] ?? ($savedRegister['customer_tel'] ?? '')); ?>" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 							</div>
 							<div class="so-field-group">
 								<label class="so-label" style="color: #612989;">จังหวัด<span style="color:red">*</span></label>
@@ -4075,9 +4087,12 @@
 										$strSQL_prov_main = "select * from tb_province order by province_ID ";
 										$objQuery_prov_main = mysqli_query($conn, $strSQL_prov_main);
 										if ($objQuery_prov_main) {
+											$selectedProvinceMain = (string)($savedSo['province_name'] ?? ($savedRegister['province_name'] ?? ''));
 											while ($objResuut_prov_main = mysqli_fetch_array($objQuery_prov_main, MYSQLI_ASSOC)) {
+												$provName = (string)$objResuut_prov_main['province_name'];
+												$isSelectedMain = ($provName === $selectedProvinceMain) ? ' selected' : '';
 										?>
-												<option value="<?php echo $objResuut_prov_main['province_name']; ?>"><?php echo $objResuut_prov_main['province_name']; ?></option>
+												<option value="<?php echo so_saved_h($provName); ?>"<?php echo $isSelectedMain; ?>><?php echo so_saved_h($provName); ?></option>
 										<?php
 											}
 										}
@@ -4090,7 +4105,7 @@
 						<div class="so-field-group" style="margin-top: 16px;">
 							<label class="so-label" style="color: #612989;">ที่อยู่ในการส่งสินค้า<span style="color:red">*</span></label>
 							<div style="position: relative; display: flex; align-items: center;">
-								<input name="shipping_address" type="text" class="so-input" placeholder="ใส่ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+								<input name="shipping_address" type="text" class="so-input" value="<?php echo so_saved_h($savedSo['delivery_address'] ?? ($savedRegister['address_name'] ?? '')); ?>" placeholder="ใส่ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 							</div>
 						</div>
@@ -4139,7 +4154,7 @@
 														$extraProvinceName = (string)$objResuut_prov_extra['province_name'];
 														$extraProvinceSelected = $extraProvinceName === (string)$savedFirstExtraAddress['province'] ? ' selected' : '';
 												?>
-														<option value="<?php echo so_saved_h($extraProvinceName); ?>"<?php echo $extraProvinceSelected; ?>><?php echo so_saved_h($extraProvinceName); ?></option>
+														<option value="<?php echo so_saved_h($extraProvinceName); ?>" <?php echo $extraProvinceSelected; ?>><?php echo so_saved_h($extraProvinceName); ?></option>
 												<?php
 													}
 												}
@@ -4233,7 +4248,7 @@
 													$billExtraProvinceName = (string)$objResuut_prov_bill_extra['province_name'];
 													$billExtraProvinceSelected = $billExtraProvinceName === $savedDeliveryBillAddress['province'] ? ' selected' : '';
 											?>
-													<option value="<?php echo so_saved_h($billExtraProvinceName); ?>"<?php echo $billExtraProvinceSelected; ?>><?php echo so_saved_h($billExtraProvinceName); ?></option>
+													<option value="<?php echo so_saved_h($billExtraProvinceName); ?>" <?php echo $billExtraProvinceSelected; ?>><?php echo so_saved_h($billExtraProvinceName); ?></option>
 											<?php
 												}
 											}
@@ -4508,7 +4523,7 @@
 							</div>
 							<div class="so-field-group">
 								<label style="cursor: pointer; display: block;">
-									<input type="checkbox" name="is_high_roof" value="1" style="display: none;"<?php echo so_saved_checked($savedTransaction, 'height_ltd') ? ' checked' : ''; ?> onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
+									<input type="checkbox" name="is_high_roof" value="1" style="display: none;" <?php echo so_saved_checked($savedTransaction, 'height_ltd') ? ' checked' : ''; ?> onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
 									<div style="background-color: <?php echo so_saved_checked($savedTransaction, 'height_ltd') ? '#612989' : '#F4F3F7'; ?>; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; color: <?php echo so_saved_checked($savedTransaction, 'height_ltd') ? 'white' : '#6e6e6e'; ?>; font-size: 14px; font-family: 'Prompt', sans-serif; height: 42px; transition: all 0.2s; user-select: none;">รถหลังคาสูงเข้าได้</div>
 								</label>
 							</div>
@@ -4651,51 +4666,51 @@
 
 						<div class="so-doc-grid">
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_3" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_3') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_3" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_3') ? ' checked' : ''; ?>>
 								<span>ใบ อย.</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_6" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_6') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_6" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_6') ? ' checked' : ''; ?>>
 								<span>ใบนำเข้าสินค้า</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_8" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_8') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_8" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_8') ? ' checked' : ''; ?>>
 								<span>ใบ PM</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_9" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_9') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_9" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_9') ? ' checked' : ''; ?>>
 								<span>ใบ CAL</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_11" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_11') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_11" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_11') ? ' checked' : ''; ?>>
 								<span>ใบประเมินสินค้า</span>
 							</label>
 							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_5" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_5') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_5" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_5') ? ' checked' : ''; ?>>
 								<span>ใบช่างอบรม</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_2" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_2') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_2" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_2') ? ' checked' : ''; ?>>
 								<span>เอกสารตามไฟล์แนบ</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_1" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_1') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_1" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_1') ? ' checked' : ''; ?>>
 								<span>เอกสาร N-Health</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_4" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_4') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_4" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_4') ? ' checked' : ''; ?>>
 								<span>ใบตัวแทนจำหน่าย</span>
 							</label>
 							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_7" value="1"<?php echo so_saved_checked($savedOtherBill, 'ref_7') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_7" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_7') ? ' checked' : ''; ?>>
 								<span>ใบ CER เครื่องมือที่ใช้ทดสอบ</span>
 							</label>
 							<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
 								<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
 								<input type="text" name="ref_des" class="so-input" value="<?php echo so_saved_h($savedOtherBill['ref_des'] ?? ''); ?>" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('ref_10_hidden').checked = (this.value.trim() !== '');">
-								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;"<?php echo (so_saved_checked($savedOtherBill, 'ref_10') || trim((string)($savedOtherBill['ref_des'] ?? '')) !== '') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;" <?php echo (so_saved_checked($savedOtherBill, 'ref_10') || trim((string)($savedOtherBill['ref_des'] ?? '')) !== '') ? ' checked' : ''; ?>>
 								<!-- Hidden inputs to keep old compatibility if needed -->
-								<input type="checkbox" name="ref_13" value="1" style="display:none;"<?php echo so_saved_checked($savedOtherBill, 'ref_13') ? ' checked' : ''; ?>>
+								<input type="checkbox" name="ref_13" value="1" style="display:none;" <?php echo so_saved_checked($savedOtherBill, 'ref_13') ? ' checked' : ''; ?>>
 							</div>
 						</div>
 					</div>
@@ -4824,8 +4839,8 @@
 						border-bottom: 1px solid #612989;
 					}
 
-					.so-related-doc-header > div,
-					.so-related-doc-row > div {
+					.so-related-doc-header>div,
+					.so-related-doc-row>div {
 						padding: 18px 46px;
 					}
 
@@ -4874,8 +4889,8 @@
 							min-width: 560px;
 						}
 
-						.so-related-doc-header > div,
-						.so-related-doc-row > div {
+						.so-related-doc-header>div,
+						.so-related-doc-row>div {
 							padding: 14px 18px;
 						}
 					}
@@ -5290,7 +5305,7 @@
 						for (let i = 2; i <= 5; i++) {
 							const input = document.getElementById('hidden_slip' + i);
 							const hiddenVal = document.getElementById('hidden_slip_val' + i);
-							
+
 							if (input.files && input.files[0]) {
 								const fileName = input.files[0].name;
 
@@ -5855,6 +5870,30 @@
 			var url = 'shipping_info_add.php';
 			url += '?customer_id=' + encodeURIComponent(resolvedCustomerId);
 			window.open(url, '_blank');
+		}
+
+		function toggleSaveToCustomerDb(btn) {
+			var customerId = getCurrentShippingPopupCustomerId();
+			if (!customerId) {
+				alert('เลือกลูกค้าก่อน');
+				return;
+			}
+			var hiddenInput = document.getElementById('save_to_customer_db');
+			if (!hiddenInput) return;
+
+			if (hiddenInput.value === '1') {
+				hiddenInput.value = '0';
+				btn.style.backgroundColor = '#FFFFFF';
+				btn.style.color = '#612989';
+				btn.style.borderColor = '#EBEBEB';
+				btn.innerHTML = '<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า';
+			} else {
+				hiddenInput.value = '1';
+				btn.style.backgroundColor = '#612989';
+				btn.style.color = '#FFFFFF';
+				btn.style.borderColor = '#612989';
+				btn.innerHTML = '<i class="fas fa-check"></i> เพิ่มลงฐานลูกค้า (เลือกแล้ว)';
+			}
 		}
 
 		// ปิด modal ข้อมูลออกบิล และคืนสถานะ checkbox full_bill หากผู้ใช้ยกเลิกการเลือก
@@ -6669,7 +6708,7 @@
 				return;
 			}
 
-			var billId = document.getElementById('bill_id');			
+			var billId = document.getElementById('bill_id');
 			if (billId) {
 				billId.value = customerPopupSelected.customer_id || '';
 			}
@@ -8152,6 +8191,7 @@
 			// Populate customer card display inputs
 			var savedBillId = savedSo.bill_id || '';
 			if (savedBillId !== '') {
+				window.isInitialDraftLoad = true;
 				var hBillIdElem = document.getElementById('h_bill_id');
 				if (hBillIdElem) hBillIdElem.value = savedBillId;
 				var displayBillId = document.getElementById('display_bill_id');
@@ -8216,7 +8256,9 @@
 				}
 				// Also sync hidden radio if exists
 				var typeDocRadio = document.querySelector('input[name="type_doc"][value="' + savedSo.type_doc + '"]');
-				if (typeDocRadio) { typeDocRadio.checked = true; }
+				if (typeDocRadio) {
+					typeDocRadio.checked = true;
+				}
 			}
 			// Set document type select based on ic_ckk/et_ckk
 			(function() {
