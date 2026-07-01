@@ -3396,7 +3396,7 @@ if ($deliveryBillContactName !== '' || $deliveryBillTelephone !== '' || $deliver
    if (strpos($redirect_to, "register_suphos.php") !== false) {
        $redirect_url .= "&saved=1";
    }
-   echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='" . $redirect_url . "';";
+   echo "window.location='" . $redirect_url . "';";
    echo "</script>";
   } else {
    echo "Cannot";

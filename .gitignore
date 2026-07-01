@@ -13,3 +13,4 @@ manual/
 img_pro/
 /dbconnect_service.php
 /.agents/skills/
+/skills-lock.json

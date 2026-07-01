@@ -58,6 +58,349 @@
 		border-width: 0 2px 2px 0;
 		transform: rotate(45deg);
 	}
+
+	/* Clear Loan/Reserve Modal Styles */
+	.clear-loan-popup-box {
+		width: min(1096px, 96vw);
+		height: min(980px, 92vh);
+		padding-bottom: 92px;
+	}
+
+	.clear-loan-header {
+		padding: 24px 32px 0;
+		border-bottom: 1px solid #eee7f4;
+	}
+
+	.clear-loan-title {
+		margin: 0;
+		padding-bottom: 14px;
+		border-bottom: 1px solid #eee7f4;
+		color: #3b3b3b;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: 1.35;
+	}
+
+	.clear-loan-top-controls {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		padding: 18px 0;
+	}
+
+	.clear-loan-type-group {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 24px;
+	}
+
+	.clear-loan-radio-label {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 14px;
+		color: #612989;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.so-custom-radio-input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.so-custom-radio-circle {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		border: 1.5px solid #EFEBEF;
+		display: inline-block;
+		position: relative;
+		box-sizing: border-box;
+	}
+
+	.so-custom-radio-input:checked+.so-custom-radio-circle {
+		border-color: #612989;
+	}
+
+	.so-custom-radio-input:checked+.so-custom-radio-circle::after {
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 10px;
+		height: 10px;
+		background-color: #612989;
+		border-radius: 50%;
+	}
+
+	.clear-loan-search-wrap {
+		width: 100%;
+		max-width: 600px;
+	}
+
+	.clear-loan-search-label {
+		display: block;
+		margin-bottom: 8px;
+		font-size: 13px;
+		font-weight: 500;
+		color: #612989;
+	}
+
+	.clear-loan-search {
+		height: 42px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 0 14px;
+		box-sizing: border-box;
+		border-radius: 10px;
+		border: 1px solid transparent;
+		background: #f5f6f8;
+		transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+	}
+
+	.clear-loan-search i {
+		color: #2f3337;
+		font-size: 16px;
+	}
+
+	.clear-loan-search input {
+		width: 100%;
+		border: 0;
+		outline: none;
+		background: transparent;
+		color: #3b3b3b;
+		font-size: 16px;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.clear-loan-search:focus-within {
+		background-color: #FFFFFF;
+		border-color: #612989;
+		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
+	}
+
+	.clear-loan-table-wrap {
+		flex: 1;
+		overflow: auto;
+		border-top: 1px solid #612989;
+		border-bottom: 1px solid #f0edf2;
+	}
+
+	.clear-loan-table-container {
+		width: 100%;
+		overflow-x: auto;
+	}
+
+	.clear-loan-table {
+		width: 100%;
+		min-width: 1080px;
+		border-collapse: collapse;
+		table-layout: auto;
+		color: #3b3b3b;
+		font-family: 'Prompt', sans-serif;
+	}
+
+	.clear-loan-table th,
+	.clear-loan-table td {
+		padding: 16px 12px;
+		text-align: left;
+		font-size: 14px;
+		border-bottom: 1px solid #EFEBEF;
+		color: #4A4A4A;
+		vertical-align: middle;
+	}
+
+	.clear-loan-table th {
+		padding: 12px 12px;
+		color: #612989;
+		font-size: 16px;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.clear-loan-table th:first-child,
+	.clear-loan-table td:first-child,
+	.clear-loan-table th:nth-child(2),
+	.clear-loan-table td:nth-child(2) {
+		width: 40px;
+		padding-left: 18px;
+		padding-right: 6px;
+	}
+
+	.clear-loan-table tbody tr:hover {
+		background-color: #F5F6F8;
+	}
+
+	.clear-loan-check-circle {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background-color: #F5F6F8;
+		display: inline-block;
+		cursor: pointer;
+		position: relative;
+		border: 1px solid transparent;
+	}
+
+	.clear-loan-check-input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.clear-loan-check-input:checked+.clear-loan-check-circle {
+		background-color: #612989;
+	}
+
+	.clear-loan-check-input:checked+.clear-loan-check-circle::after {
+		content: "";
+		position: absolute;
+		top: 4px;
+		left: 7px;
+		width: 5px;
+		height: 9px;
+		border: solid white;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg);
+	}
+
+	.clear-loan-expand-btn {
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+		color: #4A4A4A;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		transition: transform 0.2s;
+		padding: 0;
+	}
+
+	.clear-loan-expand-btn.expanded {
+		transform: rotate(180deg);
+	}
+
+	.clear-loan-subrow {
+		display: none;
+		background-color: #F1EDFA;
+	}
+
+	.clear-loan-subrow.show {
+		display: table-row;
+	}
+
+	.clear-loan-subrow td {
+		padding: 12px 12px 12px 48px;
+		font-size: 13px;
+	}
+
+	.clear-loan-items {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.clear-loan-item-option {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		cursor: pointer;
+	}
+
+	.clear-loan-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		padding: 22px 32px;
+		border-top: 1px solid #f0edf2;
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: #fff;
+		z-index: 10;
+		border-radius: 0 0 10px 10px;
+	}
+
+	.clear-loan-action-container {
+		display: flex;
+		gap: 16px;
+	}
+
+	.clear-loan-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		height: 48px;
+		padding: 0 40px;
+		border-radius: 24px;
+		font-size: 16px;
+		font-weight: 500;
+		font-family: 'Prompt', sans-serif;
+		cursor: pointer;
+		border: none;
+		transition: all 0.2s;
+	}
+
+	.clear-loan-btn-primary {
+		background-color: #612989;
+		color: #FFFFFF;
+		box-shadow: 0 2px 8px rgba(97, 41, 137, 0.2);
+	}
+
+	.clear-loan-btn-primary:hover:not(:disabled) {
+		background-color: #502072;
+	}
+
+	.clear-loan-btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		box-shadow: none;
+	}
+
+	.clear-loan-btn-secondary {
+		background-color: #FFFFFF;
+		color: #4A4A4A;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		border: 1px solid #EFEBEF;
+	}
+
+	.clear-loan-btn-secondary:hover {
+		background-color: #F8F8F8;
+	}
+
+	@media (max-width: 768px) {
+		.clear-loan-popup-box {
+			width: 100%;
+			height: auto;
+			max-height: 94vh;
+		}
+
+		.clear-loan-header {
+			padding: 22px 18px 0;
+		}
+
+		.clear-loan-actions {
+			padding: 16px 18px;
+		}
+
+		.clear-loan-action-container {
+			width: 100%;
+			flex-direction: column;
+		}
+
+		.clear-loan-btn {
+			width: 100%;
+		}
+	}
 </style>
 <script>
 	var HttPRequest = false;
@@ -2304,7 +2647,6 @@
 			width: 100%;
 			justify-content: center;
 		}
-	}
 </style>
 
 <body>
@@ -3012,7 +3354,7 @@
 
 				</div>
 				<div class="so-header-right">
-					<button type="button" class="btn-clear-loan-reserve" onclick="toggleClearSection()">เคลียร์ยืม/จอง</button>
+					<button type="button" class="btn-clear-loan-reserve" onclick="toggleClearSection()">เคลียร์จอง/ยืม</button>
 					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
 			</div>
@@ -5607,7 +5949,7 @@
 		<div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="customerPopupTitle">
 			<button type="button" class="customer-popup-close" onclick="closeCustomerPopup()" aria-label="Close">&times;</button>
 
-			<div class="customer-popup-header">
+			<div class="clear-loan-header">
 				<h2 id="customerPopupTitle">ข้อมูลลูกค้า</h2>
 				<div class="customer-popup-toolbar" style="margin-top: 18px;">
 					<div class="customer-popup-search-wrap">
@@ -5658,7 +6000,7 @@
 		<div class="customer-popup-box fullbill-popup-box" role="dialog" aria-modal="true" aria-labelledby="fullBillPopupTitle">
 			<button type="button" class="customer-popup-close" onclick="closeFullBillPopup(false)" aria-label="Close">&times;</button>
 
-			<div class="customer-popup-header">
+			<div class="clear-loan-header">
 				<h2 id="fullBillPopupTitle">ข้อมูลการออกบิล</h2>
 				<div class="customer-popup-toolbar" style="margin-top: 18px;">
 					<div class="customer-popup-search-wrap">
@@ -5710,7 +6052,7 @@
 		<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
 			<button type="button" class="customer-popup-close" onclick="closeShippingAddressPopup()" aria-label="Close">&times;</button>
 
-			<div class="customer-popup-header">
+			<div class="clear-loan-header">
 				<h2 id="shippingAddressPopupTitle">ที่อยู่จัดส่ง</h2>
 				<div class="customer-popup-toolbar shipping-popup-toolbar" style="margin-top: 18px;">
 					<div class="customer-popup-search-wrap">
@@ -6739,6 +7081,8 @@
 			var fullBillModal = document.getElementById('fullBillPopupModal');
 			var shippingAddressSearch = document.getElementById('shippingAddressPopupSearch');
 			var shippingAddressModal = document.getElementById('shippingAddressPopupModal');
+			var clearLoanSearch = document.getElementById('clearLoanSearch');
+			var clearLoanModal = document.getElementById('clearLoanModal');
 
 			bindShippingFieldMirrors();
 
@@ -6769,6 +7113,14 @@
 						shippingAddressPopupSelected = null;
 						loadShippingAddressPopupRows(shippingAddressSearch.value, false);
 					}, 250);
+				});
+			}
+
+			if (clearLoanModal) {
+				clearLoanModal.addEventListener('change', function(event) {
+					if (event.target && event.target.classList.contains('clear-loan-check-input')) {
+						updateClearLoanSelectionSummary();
+					}
 				});
 			}
 
@@ -6815,6 +7167,10 @@
 				{
 					modal: shippingAddressModal,
 					onClose: closeShippingAddressPopup
+				},
+				{
+					modal: clearLoanModal,
+					onClose: closeClearLoanPopup
 				}
 			].forEach(function(entry) {
 				if (!entry.modal) return;
@@ -6844,7 +7200,66 @@
 			evt.currentTarget.classList.add("active");
 		}
 
-		function toggleClearSection() {}
+		function openClearLoanPopup() {
+			var modal = document.getElementById('clearLoanModal');
+			var search = document.getElementById('clearLoanSearch');
+			if (!modal) return;
+
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+			updateClearLoanSelectionSummary();
+			setTimeout(function() {
+				if (search) {
+					search.focus();
+					search.select();
+				}
+			}, 50);
+		}
+
+		function closeClearLoanPopup() {
+			var modal = document.getElementById('clearLoanModal');
+			if (!modal) return;
+
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
+		}
+
+		function toggleClearSection() {
+			var modal = document.getElementById('clearLoanModal');
+			if (!modal || modal.style.display === 'flex') {
+				closeClearLoanPopup();
+				return;
+			}
+
+			openClearLoanPopup();
+		}
+
+		function toggleClearRow(btn, subrowId) {
+			var subrow = document.getElementById(subrowId);
+			var expanded = btn.getAttribute('aria-expanded') === 'true';
+			btn.classList.toggle('expanded', !expanded);
+			btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+			if (subrow) {
+				subrow.classList.toggle('show', !expanded);
+				subrow.setAttribute('aria-hidden', expanded ? 'true' : 'false');
+			}
+		}
+
+		function updateClearLoanSelectionSummary() {
+			var selectedCount = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked').length;
+			var summary = document.getElementById('clearLoanSelectionSummary');
+			var button = document.getElementById('clearLoanApplyButton');
+			if (summary) {
+				summary.textContent = selectedCount > 0 ? 'เลือกแล้ว ' + selectedCount + ' รายการ' : 'ยังไม่ได้เลือกรายการ';
+			}
+			if (button) {
+				button.disabled = selectedCount === 0;
+			}
+		}
+
+		function confirmClearLoanSelection() {
+			closeClearLoanPopup();
+		}
 
 		function updateToggleStyle(checkbox) {
 			var label = document.getElementById('lbl-' + checkbox.id);
@@ -8002,7 +8417,6 @@
 	#overLimitModal,
 	#overLimitModal * {
 		font-family: 'Prompt', sans-serif;
-	}
 </style>
 
 <div id="overLimitModal">
@@ -8027,539 +8441,705 @@
 	</div>
 </div>
 
-<?php if ($savedSo !== null): ?>
-	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			var savedSo = <?php echo json_encode($savedSo); ?>;
-			var savedRegister = <?php echo json_encode($savedRegister); ?>;
-			var savedOtherBill = <?php echo json_encode($savedOtherBill); ?>;
-			var savedCommentSo = <?php echo json_encode($savedCommentSo); ?>;
-			var savedCommentSoItems = <?php echo json_encode($savedCommentSoItems); ?>;
-			var savedTransaction = <?php echo json_encode($savedTransaction); ?>;
-			var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
-			var savedShippingAddresses = <?php echo json_encode($savedShippingAddresses); ?>;
-			var savedProducts = <?php echo json_encode($savedProducts); ?>;
-			var inferredTimeRange = (function() {
-				var startTime = '';
-				var endTime = '';
+<!-- Clear Loan/Reserve Modal -->
+<div id="clearLoanModal" class="customer-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box clear-loan-popup-box" role="dialog" aria-modal="true" aria-labelledby="clearLoanPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeClearLoanPopup()" aria-label="Close">&times;</button>
 
-				if (savedRegister) {
-					startTime = ((savedRegister.start_time || '') + '').trim().substring(0, 5);
-					endTime = ((savedRegister.end_time || '') + '').trim().substring(0, 5);
-				}
+		<div class="clear-loan-header">
+			<h2 id="clearLoanPopupTitle" class="clear-loan-title">เคลียร์จอง/ยืม</h2>
+			<div class="clear-loan-top-controls">
+				<div class="clear-loan-type-group" role="radiogroup" aria-label="ประเภทเอกสาร">
+					<label class="clear-loan-radio-label">
+						<input type="radio" name="clear_loan_type" value="reserve" class="so-custom-radio-input" checked>
+						<span class="so-custom-radio-circle" aria-hidden="true"></span>
+						ใบจอง
+					</label>
+					<label class="clear-loan-radio-label">
+						<input type="radio" name="clear_loan_type" value="loan" class="so-custom-radio-input">
+						<span class="so-custom-radio-circle" aria-hidden="true"></span>
+						ใบยืม
+					</label>
+				</div>
+				<div class="clear-loan-search-wrap">
+					<label class="clear-loan-search-label" for="clearLoanSearch">ค้นหา</label>
+					<div class="clear-loan-search">
+						<i class="fas fa-search" aria-hidden="true"></i>
+						<input type="text" id="clearLoanSearch" placeholder="ค้นหาจากเลขที่ใบจอง/รหัสสมาชิก/ชื่อลูกค้า/รหัสสินค้า/ชื่อสินค้า">
+					</div>
+				</div>
+			</div>
+		</div>
 
-				if ((!startTime || !endTime) && savedSo && savedSo.delivery_time) {
-					var timeParts = (savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || []).map(function(part) {
-						return part.substring(0, 5);
-					});
-					startTime = startTime || (timeParts[0] || '');
-					endTime = endTime || (timeParts[1] || '');
-				}
+		<div class="clear-loan-table-wrap">
+			<div class="clear-loan-table-container">
+				<table class="clear-loan-table">
+					<thead>
+						<tr>
+							<th style="width: 40px;"></th>
+							<th style="width: 40px;"></th>
+							<th>เลขที่อ้างอิง</th>
+							<th>วันที่ลงทะเบียน</th>
+							<th>เลขที่ใบจอง</th>
+							<th>วันที่ต้องการสินค้า</th>
+							<th>ชื่อลูกค้า</th>
+							<th>เขตการขาย</th>
+							<th>สถานะ</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="1">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td>
+								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-1')" aria-expanded="false" aria-controls="subrow-1">▼</button>
+							</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>sw.xxxxxx</td>
+							<td>S11</td>
+							<td>Approve</td>
+						</tr>
+						<tr id="subrow-1" class="clear-loan-subrow" aria-hidden="true">
+							<td colspan="9">
+								<div class="clear-loan-items">
+									<label class="clear-loan-item-option">
+										<input type="checkbox" class="clear-loan-check-input" value="sub1-1">
+										<span class="clear-loan-check-circle" aria-hidden="true"></span>
+										สินค้า A - จำนวน 2 - 1,000 บาท
+									</label>
+									<label class="clear-loan-item-option">
+										<input type="checkbox" class="clear-loan-check-input" value="sub1-2">
+										<span class="clear-loan-check-circle" aria-hidden="true"></span>
+										สินค้า A2 - จำนวน 1 - 1,000 บาท
+									</label>
+								</div>
+							</td>
+						</tr>
 
-				if (startTime === '08:00' && endTime === '12:00') return 'morning';
-				if (startTime === '13:00' && endTime === '17:00') return 'afternoon';
-				if (startTime === '08:00' && endTime === '17:00') return 'allday';
-				if (startTime || endTime) return 'specific';
-				return '';
-			})();
+						<tr>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="2">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td>
+								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-2')" aria-expanded="false" aria-controls="subrow-2">▼</button>
+							</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>sw.xxxxxx</td>
+							<td>S24</td>
+							<td>Approve</td>
+						</tr>
+						<tr id="subrow-2" class="clear-loan-subrow" aria-hidden="true">
+							<td colspan="9">
+								<div class="clear-loan-items">
+									<label class="clear-loan-item-option">
+										<input type="checkbox" class="clear-loan-check-input" value="sub2-1">
+										<span class="clear-loan-check-circle" aria-hidden="true"></span>
+										สินค้า B - จำนวน 1 - 500 บาท
+									</label>
+								</div>
+							</td>
+						</tr>
 
-			function formatSavedAdminDateInput(value) {
-				var raw = String(value || '').trim();
-				var matches;
-				var year;
-				if (raw === '') {
+						<tr>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="3">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td>
+								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-3')" aria-expanded="false" aria-controls="subrow-3">▼</button>
+							</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>49988</td>
+							<td>24/09/68</td>
+							<td>sw.xxxxxx</td>
+							<td>S13</td>
+							<td>Approve</td>
+						</tr>
+						<tr id="subrow-3" class="clear-loan-subrow" aria-hidden="true">
+							<td colspan="9">
+								<div class="clear-loan-items">
+									<label class="clear-loan-item-option">
+										<input type="checkbox" class="clear-loan-check-input" value="sub3-1">
+										<span class="clear-loan-check-circle" aria-hidden="true"></span>
+										สินค้า C - จำนวน 5 - 2,500 บาท
+									</label>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class="clear-loan-actions">
+				<div class="clear-loan-action-container">
+					<button type="button" class="clear-loan-btn clear-loan-btn-primary" id="clearLoanApplyButton" onclick="confirmClearLoanSelection()" disabled>
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="5" y="10" width="14" height="5" rx="1"></rect>
+							<path d="M12 10V6"></path>
+							<path d="M10 6h4"></path>
+							<path d="M7 15v3"></path>
+							<path d="M10 15v3"></path>
+							<path d="M14 15v3"></path>
+							<path d="M17 15v3"></path>
+						</svg>
+						Clear
+					</button>
+					<button type="button" class="clear-loan-btn clear-loan-btn-secondary" onclick="closeClearLoanPopup()">ยกเลิก</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<?php if ($savedSo !== null): ?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var savedSo = <?php echo json_encode($savedSo); ?>;
+				var savedRegister = <?php echo json_encode($savedRegister); ?>;
+				var savedOtherBill = <?php echo json_encode($savedOtherBill); ?>;
+				var savedCommentSo = <?php echo json_encode($savedCommentSo); ?>;
+				var savedCommentSoItems = <?php echo json_encode($savedCommentSoItems); ?>;
+				var savedTransaction = <?php echo json_encode($savedTransaction); ?>;
+				var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
+				var savedShippingAddresses = <?php echo json_encode($savedShippingAddresses); ?>;
+				var savedProducts = <?php echo json_encode($savedProducts); ?>;
+				var inferredTimeRange = (function() {
+					var startTime = '';
+					var endTime = '';
+
+					if (savedRegister) {
+						startTime = ((savedRegister.start_time || '') + '').trim().substring(0, 5);
+						endTime = ((savedRegister.end_time || '') + '').trim().substring(0, 5);
+					}
+
+					if ((!startTime || !endTime) && savedSo && savedSo.delivery_time) {
+						var timeParts = (savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || []).map(function(part) {
+							return part.substring(0, 5);
+						});
+						startTime = startTime || (timeParts[0] || '');
+						endTime = endTime || (timeParts[1] || '');
+					}
+
+					if (startTime === '08:00' && endTime === '12:00') return 'morning';
+					if (startTime === '13:00' && endTime === '17:00') return 'afternoon';
+					if (startTime === '08:00' && endTime === '17:00') return 'allday';
+					if (startTime || endTime) return 'specific';
 					return '';
-				}
-				matches = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/);
-				if (matches) {
-					return matches[3] + '/' + matches[2] + '/' + String(parseInt(matches[1], 10) + 543);
-				}
-				matches = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-				if (matches) {
-					year = parseInt(matches[3], 10);
-					if (year < 2400) {
-						year += 543;
+				})();
+
+				function formatSavedAdminDateInput(value) {
+					var raw = String(value || '').trim();
+					var matches;
+					var year;
+					if (raw === '') {
+						return '';
 					}
-					return String(parseInt(matches[1], 10)).padStart(2, '0') + '/' +
-						String(parseInt(matches[2], 10)).padStart(2, '0') + '/' +
-						String(year);
-				}
-				return raw;
-			}
-
-			// 1. Populate simple text/select inputs by name or id
-			var simpleMappings = {
-				'date_so': savedSo.date_so,
-				'suggest': savedSo.suggest,
-				'bill_id': savedSo.bill_id,
-				'pre_name': savedSo.pre_name,
-				'bill_name': savedSo.bill_name,
-				'bill_address': savedSo.bill_address,
-				'bill_tel': savedSo.bill_tel,
-				'tax_id': savedSo.tax_id,
-				'payment': savedSo.payment,
-				'payment_method': savedSo.payment_method,
-				'payment_des': savedSo.payment_des,
-				'cm_no': savedSo.cm_no,
-				'date_tranfer': savedSo.date_tranfer,
-				'po_no': savedSo.po_no,
-				'delivery_contract': savedSo.delivery_contract,
-				'shipping_date': savedSo.date_ker || '',
-				'shipping_ref1': savedSo.order_refer_code || '',
-				'shipping_ref2': savedSo.order_refer_code1 || '',
-				'shipping_cost': savedSo.ker_bath || '',
-				'book_no': savedSo.book_no,
-				'brn_no': savedSo.brn_no,
-				'brnp_no': savedSo.brnp_no,
-				'sn_no': savedSo.sn_no,
-				'pr_no': savedSo.pr_no,
-				'type_detail': savedSo.type_detail,
-				'delivery_type': savedSo.delivery_type,
-				'start_date': savedSo.delivery_date,
-				'address_name': savedSo.delivery_address,
-				'customer_name': savedSo.delivery_contact,
-				'customer_tel': savedSo.delivery_tel,
-				'address_send': savedSo.install_place,
-				'address_1': savedSo.address_1,
-				'sale_code': savedSo.sale_code,
-				// Address main:
-				'contact_name': savedSo.delivery_contact || (savedRegister && savedRegister.customer_name) || '',
-				'contact_tel': savedSo.delivery_tel || (savedRegister && savedRegister.customer_tel) || '',
-				'contact_province': savedSo.province_name || (savedRegister && savedRegister.province_name) || '',
-				'shipping_address': savedSo.delivery_address || (savedRegister && savedRegister.address_name) || '',
-				'install_location': savedSo.install_place || (savedRegister && savedRegister.address_send) || '',
-				// Address details (mapped from tb_transaction):
-				'park_location': savedTransaction ? (savedTransaction.car_park || '') : '',
-				'stair_count': savedTransaction ? (savedTransaction.unit_bundai || '') : '',
-				'install_floor': savedTransaction ? (savedTransaction.install || '') : '',
-				'door_width': savedTransaction ? (savedTransaction.room_bigger || '') : '',
-				'door_height': savedTransaction ? (savedTransaction.room_longer || '') : '',
-				'elev_capacity': savedTransaction ? (savedTransaction.lip_weight || '') : '',
-				'move_furn_count': savedTransaction ? (savedTransaction.employee_unit || '') : '',
-				'move_furn_detail': savedTransaction ? (savedTransaction.ferniger_name || '') : '',
-				'addr_note': savedTransaction ? (savedTransaction.description || '') : '',
-				// Autocomplete employee mappings:
-				'employee_name': (savedRegister && savedRegister.employee_name) || '',
-				'h_employee_name': (savedRegister && savedRegister.h_employee_name) || '',
-				// Delivery schedule fields:
-				'between_date': savedSo.date_send_key || (savedRegister && savedRegister.between_date) || '',
-				'status_comment': (savedRegister && savedRegister.description) || (savedRegister && savedRegister.status_comment) || savedSo.status_comment || '',
-				// Shipping extras:
-				'transport_company': savedSo.transport_company || '',
-				// Admin:
-				'admin_doc_no': savedSo.iv_no || '',
-				'admin_work_no': savedSo.job_no || '',
-				'admin_sr_no': savedSo.sr_no || '',
-				'admin_deposit_no': savedSo.order_no || '',
-				'admin_doc_date': formatSavedAdminDateInput(savedSo.iv_date || ''),
-				'admin_box_count': (savedRegister && savedRegister.count_box !== undefined && savedRegister.count_box !== null) ? savedRegister.count_box : '',
-				'admin_edit_count': savedSo.new_bill || '',
-				'admin_old_doc_date': formatSavedAdminDateInput(savedSo.date_oldbill || ''),
-				'admin_edit_reason': savedSo.desnew_bill || '',
-				'admin_cancel_reason': savedSo.remark_cancel || '',
-				'time_range': inferredTimeRange
-			};
-
-			// Set simple field values
-			Object.keys(simpleMappings).forEach(function(key) {
-				var val = simpleMappings[key];
-				if (val !== undefined && val !== null) {
-					var inputs = document.querySelectorAll('[name="' + key + '"], #' + key);
-					inputs.forEach(function(input) {
-						if (input.type !== 'radio' && input.type !== 'checkbox') {
-							input.value = val;
+					matches = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/);
+					if (matches) {
+						return matches[3] + '/' + matches[2] + '/' + String(parseInt(matches[1], 10) + 543);
+					}
+					matches = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+					if (matches) {
+						year = parseInt(matches[3], 10);
+						if (year < 2400) {
+							year += 543;
 						}
-					});
+						return String(parseInt(matches[1], 10)).padStart(2, '0') + '/' +
+							String(parseInt(matches[2], 10)).padStart(2, '0') + '/' +
+							String(year);
+					}
+					return raw;
 				}
-			});
 
-			if (savedTransaction) {
-				var stairParts = splitSizeParts(savedTransaction.bundai_big, 2);
-				setFieldValueBySelector('input[name="stair_width"]', stairParts[0]);
-				setFieldValueBySelector('input[name="stair_height"]', stairParts[1]);
+				// 1. Populate simple text/select inputs by name or id
+				var simpleMappings = {
+					'date_so': savedSo.date_so,
+					'suggest': savedSo.suggest,
+					'bill_id': savedSo.bill_id,
+					'pre_name': savedSo.pre_name,
+					'bill_name': savedSo.bill_name,
+					'bill_address': savedSo.bill_address,
+					'bill_tel': savedSo.bill_tel,
+					'tax_id': savedSo.tax_id,
+					'payment': savedSo.payment,
+					'payment_method': savedSo.payment_method,
+					'payment_des': savedSo.payment_des,
+					'cm_no': savedSo.cm_no,
+					'date_tranfer': savedSo.date_tranfer,
+					'po_no': savedSo.po_no,
+					'delivery_contract': savedSo.delivery_contract,
+					'shipping_date': savedSo.date_ker || '',
+					'shipping_ref1': savedSo.order_refer_code || '',
+					'shipping_ref2': savedSo.order_refer_code1 || '',
+					'shipping_cost': savedSo.ker_bath || '',
+					'book_no': savedSo.book_no,
+					'brn_no': savedSo.brn_no,
+					'brnp_no': savedSo.brnp_no,
+					'sn_no': savedSo.sn_no,
+					'pr_no': savedSo.pr_no,
+					'type_detail': savedSo.type_detail,
+					'delivery_type': savedSo.delivery_type,
+					'start_date': savedSo.delivery_date,
+					'address_name': savedSo.delivery_address,
+					'customer_name': savedSo.delivery_contact,
+					'customer_tel': savedSo.delivery_tel,
+					'address_send': savedSo.install_place,
+					'address_1': savedSo.address_1,
+					'sale_code': savedSo.sale_code,
+					// Address main:
+					'contact_name': savedSo.delivery_contact || (savedRegister && savedRegister.customer_name) || '',
+					'contact_tel': savedSo.delivery_tel || (savedRegister && savedRegister.customer_tel) || '',
+					'contact_province': savedSo.province_name || (savedRegister && savedRegister.province_name) || '',
+					'shipping_address': savedSo.delivery_address || (savedRegister && savedRegister.address_name) || '',
+					'install_location': savedSo.install_place || (savedRegister && savedRegister.address_send) || '',
+					// Address details (mapped from tb_transaction):
+					'park_location': savedTransaction ? (savedTransaction.car_park || '') : '',
+					'stair_count': savedTransaction ? (savedTransaction.unit_bundai || '') : '',
+					'install_floor': savedTransaction ? (savedTransaction.install || '') : '',
+					'door_width': savedTransaction ? (savedTransaction.room_bigger || '') : '',
+					'door_height': savedTransaction ? (savedTransaction.room_longer || '') : '',
+					'elev_capacity': savedTransaction ? (savedTransaction.lip_weight || '') : '',
+					'move_furn_count': savedTransaction ? (savedTransaction.employee_unit || '') : '',
+					'move_furn_detail': savedTransaction ? (savedTransaction.ferniger_name || '') : '',
+					'addr_note': savedTransaction ? (savedTransaction.description || '') : '',
+					// Autocomplete employee mappings:
+					'employee_name': (savedRegister && savedRegister.employee_name) || '',
+					'h_employee_name': (savedRegister && savedRegister.h_employee_name) || '',
+					// Delivery schedule fields:
+					'between_date': savedSo.date_send_key || (savedRegister && savedRegister.between_date) || '',
+					'status_comment': (savedRegister && savedRegister.description) || (savedRegister && savedRegister.status_comment) || savedSo.status_comment || '',
+					// Shipping extras:
+					'transport_company': savedSo.transport_company || '',
+					// Admin:
+					'admin_doc_no': savedSo.iv_no || '',
+					'admin_work_no': savedSo.job_no || '',
+					'admin_sr_no': savedSo.sr_no || '',
+					'admin_deposit_no': savedSo.order_no || '',
+					'admin_doc_date': formatSavedAdminDateInput(savedSo.iv_date || ''),
+					'admin_box_count': (savedRegister && savedRegister.count_box !== undefined && savedRegister.count_box !== null) ? savedRegister.count_box : '',
+					'admin_edit_count': savedSo.new_bill || '',
+					'admin_old_doc_date': formatSavedAdminDateInput(savedSo.date_oldbill || ''),
+					'admin_edit_reason': savedSo.desnew_bill || '',
+					'admin_cancel_reason': savedSo.remark_cancel || '',
+					'time_range': inferredTimeRange
+				};
 
-				var elevDoorParts = splitSizeParts(savedTransaction.lip_big, 2);
-				setFieldValueBySelector('input[name="elev_door_width"]', elevDoorParts[0]);
-				setFieldValueBySelector('input[name="elev_door_height"]', elevDoorParts[1]);
-
-				var elevRoomParts = splitSizeParts(savedTransaction.lip_long, 3);
-				setFieldValueBySelector('input[name="elev_width"]', elevRoomParts[0]);
-				setFieldValueBySelector('input[name="elev_height"]', elevRoomParts[1]);
-				setFieldValueBySelector('input[name="elev_depth"]', elevRoomParts[2]);
-			}
-
-			// Populate customer card display inputs
-			var savedBillId = savedSo.bill_id || '';
-			if (savedBillId !== '') {
-				window.isInitialDraftLoad = true;
-				var hBillIdElem = document.getElementById('h_bill_id');
-				if (hBillIdElem) hBillIdElem.value = savedBillId;
-				var displayBillId = document.getElementById('display_bill_id');
-				if (displayBillId) displayBillId.textContent = savedBillId;
-				setElementValue('display_bill_name', savedSo.bill_name || '');
-				setElementValue('display_bill_tel', savedSo.bill_tel || '');
-				setElementValue('display_mode_name', savedSo.mode_cus || '');
-
-				doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
-					if (success) {
-						// Restore specific saved order overrides
-						if (savedSo.bill_name) document.getElementById('bill_name').value = savedSo.bill_name;
-						if (savedSo.bill_address) document.getElementById('bill_address').value = savedSo.bill_address;
-						if (savedSo.bill_tel) document.getElementById('bill_tel').value = savedSo.bill_tel;
-						if (savedSo.tax_id) document.getElementById('tax_id').value = savedSo.tax_id;
-						if (savedSo.pre_name) document.getElementById('pre_name').value = savedSo.pre_name;
-						if (savedSo.install_place) {
-							setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
-							setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');
-						}
-
-						var paymentMethodSelect = document.getElementById('payment_method');
-						if (paymentMethodSelect) {
-							var savedPaymentMethod = savedSo.payment_method ? String(savedSo.payment_method) : '';
-							paymentMethodSelect.setAttribute('data-saved-value', savedPaymentMethod);
-							if (savedPaymentMethod) {
-								paymentMethodSelect.value = savedPaymentMethod;
+				// Set simple field values
+				Object.keys(simpleMappings).forEach(function(key) {
+					var val = simpleMappings[key];
+					if (val !== undefined && val !== null) {
+						var inputs = document.querySelectorAll('[name="' + key + '"], #' + key);
+						inputs.forEach(function(input) {
+							if (input.type !== 'radio' && input.type !== 'checkbox') {
+								input.value = val;
 							}
-						}
-
-						var isCreditPayment = (savedSo.payment !== '0' && savedSo.payment !== '');
-						if (isCreditPayment) {
-							switchPaymentMode('credit');
-							setTimeout(function() {
-								var sel = document.getElementById('payment');
-								if (sel) {
-									sel.value = savedSo.payment;
-									updateCreditDisplay();
-								}
-							}, 500);
-						} else {
-							switchPaymentMode('cash');
-							setTimeout(function() {
-								var sel = document.getElementById('payment');
-								if (sel) {
-									sel.value = savedSo.payment;
-									var cashSel = document.getElementById('payment_cash_select');
-									if (cashSel) cashSel.value = savedSo.payment;
-								}
-							}, 500);
-						}
-					}
-				});
-			}
-
-			// 2. Handle type_doc (company) select and doc_type_select
-			if (savedSo.type_doc) {
-				// Set company select (AWL=3, NBM=4)
-				var typeDocSel = document.getElementById('type_doc_select');
-				if (typeDocSel) {
-					typeDocSel.value = savedSo.type_doc;
-				}
-				// Also sync hidden radio if exists
-				var typeDocRadio = document.querySelector('input[name="type_doc"][value="' + savedSo.type_doc + '"]');
-				if (typeDocRadio) {
-					typeDocRadio.checked = true;
-				}
-			}
-			// Set document type select based on ic_ckk/et_ckk
-			(function() {
-				var docTypeSel = document.getElementById('doc_type_select');
-				if (!docTypeSel) return;
-				if (savedSo.ic_ckk === '1') {
-					docTypeSel.value = '3';
-				} else if (savedSo.et_ckk === '1') {
-					docTypeSel.value = '2';
-				} else {
-					docTypeSel.value = '1';
-				}
-			})();
-
-			// 3. Handle type_type radio buttons (รูปแบบการพิมพ์)
-			if (savedSo.type_type) {
-				var typeTypeRadio = document.querySelector('input[name="type_type"][value="' + savedSo.type_type + '"]');
-				if (typeTypeRadio) {
-					typeTypeRadio.checked = true;
-					if (typeof ckk_1 === 'function') {
-						ckk_1();
-					}
-				}
-			}
-
-			// 4. Handle address details radio buttons
-			var parkFrontVal = '';
-			if (savedTransaction) {
-				parkFrontVal = savedTransaction.car_home === '1' ? '1' : (savedTransaction.car_road === '1' ? '0' : '');
-			}
-			if (parkFrontVal !== '') {
-				var pfRadio = document.querySelector('input[name="park_front"][value="' + parkFrontVal + '"]');
-				if (pfRadio) pfRadio.checked = true;
-			}
-
-			var entTypeVal = '';
-			if (savedTransaction) {
-				entTypeVal = savedTransaction.slope === '1' ? '1' : (savedTransaction.bundai === '1' ? '2' : '');
-			}
-			if (entTypeVal !== '') {
-				var entRadio = document.querySelector('input[name="entrance_type"][value="' + entTypeVal + '"]');
-				if (entRadio) {
-					entRadio.checked = true;
-					if (typeof ckk_2 === 'function') {
-						ckk_2();
-					}
-				}
-			}
-
-			var roomTypeVal = '';
-			if (savedTransaction) {
-				roomTypeVal = savedTransaction.install_room || savedTransaction.home_type || '';
-			}
-			if (roomTypeVal) {
-				var rtRadio = document.querySelector('input[name="room_type"][value="' + roomTypeVal + '"]');
-				if (rtRadio) rtRadio.checked = true;
-			}
-
-			if (savedTransaction && savedTransaction.want_employee) {
-				var mfRadio = document.querySelector('input[name="move_furn"][value="' + savedTransaction.want_employee + '"]');
-				if (mfRadio) {
-					mfRadio.checked = true;
-					if (typeof object === 'function') {
-						object();
-					}
-				}
-			}
-
-			// 5. Handle checkboxes (รวม toggle pills)
-			var checkboxes = ['with_pr', 'sn_ckk', 'book_clear', 'brn_clear', 'brnp_clear', 'full_bill', 'ic_ckk', 'et_ckk', 'que_ckk', 'have_order', 'plan_ckk', 'repeat_cus'];
-			checkboxes.forEach(function(cbName) {
-				var checkedVal = savedSo[cbName];
-				var cb = document.getElementById(cbName) || document.querySelector('input[type="checkbox"][name="' + cbName + '"]');
-				if (cb) {
-					if (typeof applySavedToggleState === 'function') {
-						applySavedToggleState(cb, checkedVal);
-					} else {
-						cb.checked = (String(checkedVal).trim() === '1');
-						if (typeof updateToggleStyle === 'function') {
-							updateToggleStyle(cb);
-						}
-					}
-				}
-			});
-
-			var callCustomerCheckbox = document.querySelector('input[name="call_customer"]');
-			if (callCustomerCheckbox && savedRegister) {
-				callCustomerCheckbox.checked = (savedRegister.call_customer === '1');
-				callCustomerCheckbox.dispatchEvent(new Event('change'));
-			}
-
-			var ref12Checkbox = document.querySelector('input[name="ref_12"]');
-			if (ref12Checkbox && savedOtherBill) {
-				ref12Checkbox.checked = (savedOtherBill.ref_12 === '1');
-				ref12Checkbox.dispatchEvent(new Event('change'));
-			}
-
-			var hrCb = document.querySelector('input[name="is_high_roof"]');
-			if (hrCb && savedTransaction) {
-				hrCb.checked = (savedTransaction.height_ltd === '1');
-				hrCb.dispatchEvent(new Event('change'));
-			}
-
-			// 6. Handle comments from savedCommentSo and tb_comment_so_item
-			if (savedCommentSo) {
-				if (document.getElementById('hidden_comment_cs')) document.getElementById('hidden_comment_cs').value = savedCommentSo.comment_cs || '';
-				if (document.getElementById('hidden_comment_en')) document.getElementById('hidden_comment_en').value = savedCommentSo.comment_en || '';
-				if (document.getElementById('hidden_comment_st')) document.getElementById('hidden_comment_st').value = savedCommentSo.comment_st || '';
-				if (document.getElementById('hidden_comment_ad')) document.getElementById('hidden_comment_ad').value = savedCommentSo.comment_ad || '';
-				if (typeof setTechnicianRequired === 'function') {
-					setTechnicianRequired(savedCommentSo.technician_required === '1' || savedCommentSo.technician_required === 1);
-				}
-			} else if (typeof setTechnicianRequired === 'function') {
-				setTechnicianRequired(false);
-			}
-
-			if (typeof addDeptComment === 'function' && typeof syncDeptComments === 'function') {
-				var list = document.getElementById('dept_comment_list');
-				if (list) list.innerHTML = '';
-
-				var addedAny = false;
-				if (Array.isArray(savedCommentSoItems) && savedCommentSoItems.length > 0) {
-					savedCommentSoItems.forEach(function(item) {
-						if (item.message && item.message.trim() !== '') {
-							addDeptComment(item.department_id, item.message);
-							addedAny = true;
-						}
-					});
-				} else if (savedCommentSo) {
-					var depts = ['cs', 'en', 'st', 'ad'];
-					depts.forEach(function(dept) {
-						var commentText = savedCommentSo['comment_' + dept];
-						if (commentText && commentText.trim() !== '') {
-							var lines = commentText.split('\n');
-							lines.forEach(function(line) {
-								addDeptComment(dept, line);
-								addedAny = true;
-							});
-						}
-					});
-				}
-				if (!addedAny) {
-					addDeptComment();
-				}
-			}
-
-			// 7. Handle checkboxed other fields in tb_other_bill
-			if (savedOtherBill) {
-				var otherCheckboxes = ['ref_1', 'ref_2', 'ref_3', 'ref_4', 'ref_5', 'ref_6', 'ref_7', 'ref_8', 'ref_9', 'ref_10', 'ref_11', 'ref_12', 'ref_13', 'head_1'];
-				otherCheckboxes.forEach(function(cbName) {
-					var cbVal = savedOtherBill[cbName];
-					var cb = document.querySelector('input[name="' + cbName + '"]');
-					if (cb) {
-						cb.checked = (cbVal === '1');
-					}
-				});
-				if (savedOtherBill.ref_des) {
-					var refDesInput = document.querySelector('input[name="ref_des"]');
-					if (refDesInput) {
-						refDesInput.value = savedOtherBill.ref_des;
-					}
-				}
-			}
-
-			// 8. Handle start_time and end_time
-			if (savedSo.delivery_time && savedSo.delivery_time.trim() !== '') {
-				var timeParts = savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || [];
-				if (timeParts.length > 0 && document.querySelector('input[name="start_time"]')) {
-					document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(timeParts[0]);
-				}
-				if (timeParts.length > 1 && document.querySelector('input[name="end_time"]')) {
-					document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(timeParts[1]);
-				}
-			} else if (savedRegister) {
-				// Fallback: ดึงเวลาจาก tb_register_data
-				if (savedRegister.start_time && document.querySelector('input[name="start_time"]')) {
-					document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(savedRegister.start_time);
-				}
-				if (savedRegister.end_time && document.querySelector('input[name="end_time"]')) {
-					document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(savedRegister.end_time);
-				}
-			}
-
-			// 9. Restore extra delivery addresses from tb_shipping_address first, then fallback to tb_delivery_print
-			if (Array.isArray(savedShippingAddresses) && savedShippingAddresses.length > 0) {
-				var existingExtraRows = document.querySelectorAll('#extra_address_list .extra-addr-row').length;
-				while (existingExtraRows < savedShippingAddresses.length && typeof addExtraAddress === 'function') {
-					addExtraAddress();
-					existingExtraRows++;
-				}
-
-				savedShippingAddresses.forEach(function(item, index) {
-					var displayIndex = index + 1;
-					var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
-					var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
-					var extraProvinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
-					var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
-
-					if (extraNameInput) extraNameInput.value = item.contact_name || '';
-					if (extraTelInput) extraTelInput.value = item.telephone || '';
-					if (extraProvinceInput) extraProvinceInput.value = item.province || '';
-					if (extraAddressInput) extraAddressInput.value = item.address || '';
-				});
-			} else if (savedDeliveryPrint) {
-				var extraAddressItems = [];
-				for (var extraIndex = 1; extraIndex <= 9; extraIndex++) {
-					var nameValue = savedDeliveryPrint['customer_name' + extraIndex] || '';
-					var telValue = savedDeliveryPrint['customer_tel' + extraIndex] || '';
-					var provinceValue = savedDeliveryPrint['province_name' + extraIndex] || '';
-					var addressValue = savedDeliveryPrint['address_name' + extraIndex] || '';
-
-					if (nameValue || telValue || provinceValue || addressValue) {
-						extraAddressItems.push({
-							name: nameValue,
-							tel: telValue,
-							province: provinceValue,
-							address: addressValue
 						});
 					}
+				});
+
+				if (savedTransaction) {
+					var stairParts = splitSizeParts(savedTransaction.bundai_big, 2);
+					setFieldValueBySelector('input[name="stair_width"]', stairParts[0]);
+					setFieldValueBySelector('input[name="stair_height"]', stairParts[1]);
+
+					var elevDoorParts = splitSizeParts(savedTransaction.lip_big, 2);
+					setFieldValueBySelector('input[name="elev_door_width"]', elevDoorParts[0]);
+					setFieldValueBySelector('input[name="elev_door_height"]', elevDoorParts[1]);
+
+					var elevRoomParts = splitSizeParts(savedTransaction.lip_long, 3);
+					setFieldValueBySelector('input[name="elev_width"]', elevRoomParts[0]);
+					setFieldValueBySelector('input[name="elev_height"]', elevRoomParts[1]);
+					setFieldValueBySelector('input[name="elev_depth"]', elevRoomParts[2]);
 				}
 
-				if (extraAddressItems.length > 0) {
+				// Populate customer card display inputs
+				var savedBillId = savedSo.bill_id || '';
+				if (savedBillId !== '') {
+					window.isInitialDraftLoad = true;
+					var hBillIdElem = document.getElementById('h_bill_id');
+					if (hBillIdElem) hBillIdElem.value = savedBillId;
+					var displayBillId = document.getElementById('display_bill_id');
+					if (displayBillId) displayBillId.textContent = savedBillId;
+					setElementValue('display_bill_name', savedSo.bill_name || '');
+					setElementValue('display_bill_tel', savedSo.bill_tel || '');
+					setElementValue('display_mode_name', savedSo.mode_cus || '');
+
+					doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
+						if (success) {
+							// Restore specific saved order overrides
+							if (savedSo.bill_name) document.getElementById('bill_name').value = savedSo.bill_name;
+							if (savedSo.bill_address) document.getElementById('bill_address').value = savedSo.bill_address;
+							if (savedSo.bill_tel) document.getElementById('bill_tel').value = savedSo.bill_tel;
+							if (savedSo.tax_id) document.getElementById('tax_id').value = savedSo.tax_id;
+							if (savedSo.pre_name) document.getElementById('pre_name').value = savedSo.pre_name;
+							if (savedSo.install_place) {
+								setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
+								setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');
+							}
+
+							var paymentMethodSelect = document.getElementById('payment_method');
+							if (paymentMethodSelect) {
+								var savedPaymentMethod = savedSo.payment_method ? String(savedSo.payment_method) : '';
+								paymentMethodSelect.setAttribute('data-saved-value', savedPaymentMethod);
+								if (savedPaymentMethod) {
+									paymentMethodSelect.value = savedPaymentMethod;
+								}
+							}
+
+							var isCreditPayment = (savedSo.payment !== '0' && savedSo.payment !== '');
+							if (isCreditPayment) {
+								switchPaymentMode('credit');
+								setTimeout(function() {
+									var sel = document.getElementById('payment');
+									if (sel) {
+										sel.value = savedSo.payment;
+										updateCreditDisplay();
+									}
+								}, 500);
+							} else {
+								switchPaymentMode('cash');
+								setTimeout(function() {
+									var sel = document.getElementById('payment');
+									if (sel) {
+										sel.value = savedSo.payment;
+										var cashSel = document.getElementById('payment_cash_select');
+										if (cashSel) cashSel.value = savedSo.payment;
+									}
+								}, 500);
+							}
+						}
+					});
+				}
+
+				// 2. Handle type_doc (company) select and doc_type_select
+				if (savedSo.type_doc) {
+					// Set company select (AWL=3, NBM=4)
+					var typeDocSel = document.getElementById('type_doc_select');
+					if (typeDocSel) {
+						typeDocSel.value = savedSo.type_doc;
+					}
+					// Also sync hidden radio if exists
+					var typeDocRadio = document.querySelector('input[name="type_doc"][value="' + savedSo.type_doc + '"]');
+					if (typeDocRadio) {
+						typeDocRadio.checked = true;
+					}
+				}
+				// Set document type select based on ic_ckk/et_ckk
+				(function() {
+					var docTypeSel = document.getElementById('doc_type_select');
+					if (!docTypeSel) return;
+					if (savedSo.ic_ckk === '1') {
+						docTypeSel.value = '3';
+					} else if (savedSo.et_ckk === '1') {
+						docTypeSel.value = '2';
+					} else {
+						docTypeSel.value = '1';
+					}
+				})();
+
+				// 3. Handle type_type radio buttons (รูปแบบการพิมพ์)
+				if (savedSo.type_type) {
+					var typeTypeRadio = document.querySelector('input[name="type_type"][value="' + savedSo.type_type + '"]');
+					if (typeTypeRadio) {
+						typeTypeRadio.checked = true;
+						if (typeof ckk_1 === 'function') {
+							ckk_1();
+						}
+					}
+				}
+
+				// 4. Handle address details radio buttons
+				var parkFrontVal = '';
+				if (savedTransaction) {
+					parkFrontVal = savedTransaction.car_home === '1' ? '1' : (savedTransaction.car_road === '1' ? '0' : '');
+				}
+				if (parkFrontVal !== '') {
+					var pfRadio = document.querySelector('input[name="park_front"][value="' + parkFrontVal + '"]');
+					if (pfRadio) pfRadio.checked = true;
+				}
+
+				var entTypeVal = '';
+				if (savedTransaction) {
+					entTypeVal = savedTransaction.slope === '1' ? '1' : (savedTransaction.bundai === '1' ? '2' : '');
+				}
+				if (entTypeVal !== '') {
+					var entRadio = document.querySelector('input[name="entrance_type"][value="' + entTypeVal + '"]');
+					if (entRadio) {
+						entRadio.checked = true;
+						if (typeof ckk_2 === 'function') {
+							ckk_2();
+						}
+					}
+				}
+
+				var roomTypeVal = '';
+				if (savedTransaction) {
+					roomTypeVal = savedTransaction.install_room || savedTransaction.home_type || '';
+				}
+				if (roomTypeVal) {
+					var rtRadio = document.querySelector('input[name="room_type"][value="' + roomTypeVal + '"]');
+					if (rtRadio) rtRadio.checked = true;
+				}
+
+				if (savedTransaction && savedTransaction.want_employee) {
+					var mfRadio = document.querySelector('input[name="move_furn"][value="' + savedTransaction.want_employee + '"]');
+					if (mfRadio) {
+						mfRadio.checked = true;
+						if (typeof object === 'function') {
+							object();
+						}
+					}
+				}
+
+				// 5. Handle checkboxes (รวม toggle pills)
+				var checkboxes = ['with_pr', 'sn_ckk', 'book_clear', 'brn_clear', 'brnp_clear', 'full_bill', 'ic_ckk', 'et_ckk', 'que_ckk', 'have_order', 'plan_ckk', 'repeat_cus'];
+				checkboxes.forEach(function(cbName) {
+					var checkedVal = savedSo[cbName];
+					var cb = document.getElementById(cbName) || document.querySelector('input[type="checkbox"][name="' + cbName + '"]');
+					if (cb) {
+						if (typeof applySavedToggleState === 'function') {
+							applySavedToggleState(cb, checkedVal);
+						} else {
+							cb.checked = (String(checkedVal).trim() === '1');
+							if (typeof updateToggleStyle === 'function') {
+								updateToggleStyle(cb);
+							}
+						}
+					}
+				});
+
+				var callCustomerCheckbox = document.querySelector('input[name="call_customer"]');
+				if (callCustomerCheckbox && savedRegister) {
+					callCustomerCheckbox.checked = (savedRegister.call_customer === '1');
+					callCustomerCheckbox.dispatchEvent(new Event('change'));
+				}
+
+				var ref12Checkbox = document.querySelector('input[name="ref_12"]');
+				if (ref12Checkbox && savedOtherBill) {
+					ref12Checkbox.checked = (savedOtherBill.ref_12 === '1');
+					ref12Checkbox.dispatchEvent(new Event('change'));
+				}
+
+				var hrCb = document.querySelector('input[name="is_high_roof"]');
+				if (hrCb && savedTransaction) {
+					hrCb.checked = (savedTransaction.height_ltd === '1');
+					hrCb.dispatchEvent(new Event('change'));
+				}
+
+				// 6. Handle comments from savedCommentSo and tb_comment_so_item
+				if (savedCommentSo) {
+					if (document.getElementById('hidden_comment_cs')) document.getElementById('hidden_comment_cs').value = savedCommentSo.comment_cs || '';
+					if (document.getElementById('hidden_comment_en')) document.getElementById('hidden_comment_en').value = savedCommentSo.comment_en || '';
+					if (document.getElementById('hidden_comment_st')) document.getElementById('hidden_comment_st').value = savedCommentSo.comment_st || '';
+					if (document.getElementById('hidden_comment_ad')) document.getElementById('hidden_comment_ad').value = savedCommentSo.comment_ad || '';
+					if (typeof setTechnicianRequired === 'function') {
+						setTechnicianRequired(savedCommentSo.technician_required === '1' || savedCommentSo.technician_required === 1);
+					}
+				} else if (typeof setTechnicianRequired === 'function') {
+					setTechnicianRequired(false);
+				}
+
+				if (typeof addDeptComment === 'function' && typeof syncDeptComments === 'function') {
+					var list = document.getElementById('dept_comment_list');
+					if (list) list.innerHTML = '';
+
+					var addedAny = false;
+					if (Array.isArray(savedCommentSoItems) && savedCommentSoItems.length > 0) {
+						savedCommentSoItems.forEach(function(item) {
+							if (item.message && item.message.trim() !== '') {
+								addDeptComment(item.department_id, item.message);
+								addedAny = true;
+							}
+						});
+					} else if (savedCommentSo) {
+						var depts = ['cs', 'en', 'st', 'ad'];
+						depts.forEach(function(dept) {
+							var commentText = savedCommentSo['comment_' + dept];
+							if (commentText && commentText.trim() !== '') {
+								var lines = commentText.split('\n');
+								lines.forEach(function(line) {
+									addDeptComment(dept, line);
+									addedAny = true;
+								});
+							}
+						});
+					}
+					if (!addedAny) {
+						addDeptComment();
+					}
+				}
+
+				// 7. Handle checkboxed other fields in tb_other_bill
+				if (savedOtherBill) {
+					var otherCheckboxes = ['ref_1', 'ref_2', 'ref_3', 'ref_4', 'ref_5', 'ref_6', 'ref_7', 'ref_8', 'ref_9', 'ref_10', 'ref_11', 'ref_12', 'ref_13', 'head_1'];
+					otherCheckboxes.forEach(function(cbName) {
+						var cbVal = savedOtherBill[cbName];
+						var cb = document.querySelector('input[name="' + cbName + '"]');
+						if (cb) {
+							cb.checked = (cbVal === '1');
+						}
+					});
+					if (savedOtherBill.ref_des) {
+						var refDesInput = document.querySelector('input[name="ref_des"]');
+						if (refDesInput) {
+							refDesInput.value = savedOtherBill.ref_des;
+						}
+					}
+				}
+
+				// 8. Handle start_time and end_time
+				if (savedSo.delivery_time && savedSo.delivery_time.trim() !== '') {
+					var timeParts = savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || [];
+					if (timeParts.length > 0 && document.querySelector('input[name="start_time"]')) {
+						document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(timeParts[0]);
+					}
+					if (timeParts.length > 1 && document.querySelector('input[name="end_time"]')) {
+						document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(timeParts[1]);
+					}
+				} else if (savedRegister) {
+					// Fallback: ดึงเวลาจาก tb_register_data
+					if (savedRegister.start_time && document.querySelector('input[name="start_time"]')) {
+						document.querySelector('input[name="start_time"]').value = normalizeTimeInputValue(savedRegister.start_time);
+					}
+					if (savedRegister.end_time && document.querySelector('input[name="end_time"]')) {
+						document.querySelector('input[name="end_time"]').value = normalizeTimeInputValue(savedRegister.end_time);
+					}
+				}
+
+				// 9. Restore extra delivery addresses from tb_shipping_address first, then fallback to tb_delivery_print
+				if (Array.isArray(savedShippingAddresses) && savedShippingAddresses.length > 0) {
 					var existingExtraRows = document.querySelectorAll('#extra_address_list .extra-addr-row').length;
-					while (existingExtraRows < extraAddressItems.length && typeof addExtraAddress === 'function') {
+					while (existingExtraRows < savedShippingAddresses.length && typeof addExtraAddress === 'function') {
 						addExtraAddress();
 						existingExtraRows++;
 					}
 
-					extraAddressItems.forEach(function(item, index) {
+					savedShippingAddresses.forEach(function(item, index) {
 						var displayIndex = index + 1;
 						var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
 						var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
 						var extraProvinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
 						var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
 
-						if (extraNameInput) extraNameInput.value = item.name;
-						if (extraTelInput) extraTelInput.value = item.tel;
-						if (extraProvinceInput) extraProvinceInput.value = item.province;
-						if (extraAddressInput) extraAddressInput.value = item.address;
+						if (extraNameInput) extraNameInput.value = item.contact_name || '';
+						if (extraTelInput) extraTelInput.value = item.telephone || '';
+						if (extraProvinceInput) extraProvinceInput.value = item.province || '';
+						if (extraAddressInput) extraAddressInput.value = item.address || '';
 					});
-				}
-			}
+				} else if (savedDeliveryPrint) {
+					var extraAddressItems = [];
+					for (var extraIndex = 1; extraIndex <= 9; extraIndex++) {
+						var nameValue = savedDeliveryPrint['customer_name' + extraIndex] || '';
+						var telValue = savedDeliveryPrint['customer_tel' + extraIndex] || '';
+						var provinceValue = savedDeliveryPrint['province_name' + extraIndex] || '';
+						var addressValue = savedDeliveryPrint['address_name' + extraIndex] || '';
 
-			// 10. Handle Products table
-			if (Array.isArray(savedProducts) && savedProducts.length > 0) {
-				savedProducts.forEach(function(prod, index) {
-					var i = index + 1;
-					if (i <= 30) {
-						var rowFields = {
-							'subso_db_id': prod.id || prod.ID || '',
-							'product_id': prod.product_id || prod.product_ID || '',
-							'product_sn': prod.sn || prod.product_sn || '',
-							'unit_name': prod.unit_name,
-							'warranty': prod.warranty,
-							'cal': prod.cal,
-							'pm': prod.pm,
-							'pm_year': prod.pm_year,
-							'sale_remarkk': prod.sale_remark,
-							'clear_br': prod.clear_br,
-							'clear_ivno': prod.clear_ivno,
-							'jong_ckk': prod.jong_ckk,
-							'jong_no': prod.jong_no,
-							'display_name': prod.admin_remark || prod.display_name,
-							'product_codet': prod.product_code || prod.product_codet,
-							'product_name': prod.product_name,
-							'sale_count': prod.count,
-							'product_price': prod.price,
-							'discount_unit': prod.discount,
-							'sum_amount': prod.amount
-						};
-
-						Object.keys(rowFields).forEach(function(key) {
-							var el = document.getElementById(key + i) || document.querySelector('input[name="' + key + i + '"]');
-							if (el) {
-								el.value = rowFields[key] || '';
-							}
-						});
-
-						var labelEl = document.getElementById('product_name_label' + i);
-						if (labelEl) {
-							labelEl.textContent = prod.product_name || '';
-						}
-
-						var row = document.getElementById('product_row_' + i);
-						if (row) {
-							row.style.display = '';
+						if (nameValue || telValue || provinceValue || addressValue) {
+							extraAddressItems.push({
+								name: nameValue,
+								tel: telValue,
+								province: provinceValue,
+								address: addressValue
+							});
 						}
 					}
-				});
-			}
 
-			// 11. Sync compatibility fields and calculate grand total
-			if (typeof syncFormCompatibilityFields === 'function') {
-				syncFormCompatibilityFields();
-			}
-			if (typeof calculateSummary === 'function') {
-				calculateSummary();
-			}
-			if (typeof renderFileList === 'function') {
-				renderFileList();
-			}
-		});
-	</script>
-<?php endif; ?>
+					if (extraAddressItems.length > 0) {
+						var existingExtraRows = document.querySelectorAll('#extra_address_list .extra-addr-row').length;
+						while (existingExtraRows < extraAddressItems.length && typeof addExtraAddress === 'function') {
+							addExtraAddress();
+							existingExtraRows++;
+						}
+
+						extraAddressItems.forEach(function(item, index) {
+							var displayIndex = index + 1;
+							var extraNameInput = document.querySelector('input[name="extra_contact_name_' + displayIndex + '"]');
+							var extraTelInput = document.querySelector('input[name="extra_contact_tel_' + displayIndex + '"]');
+							var extraProvinceInput = document.querySelector('select[name="extra_contact_province_' + displayIndex + '"]');
+							var extraAddressInput = document.querySelector('input[name="extra_shipping_address_' + displayIndex + '"]');
+
+							if (extraNameInput) extraNameInput.value = item.name;
+							if (extraTelInput) extraTelInput.value = item.tel;
+							if (extraProvinceInput) extraProvinceInput.value = item.province;
+							if (extraAddressInput) extraAddressInput.value = item.address;
+						});
+					}
+				}
+
+				// 10. Handle Products table
+				if (Array.isArray(savedProducts) && savedProducts.length > 0) {
+					savedProducts.forEach(function(prod, index) {
+						var i = index + 1;
+						if (i <= 30) {
+							var rowFields = {
+								'subso_db_id': prod.id || prod.ID || '',
+								'product_id': prod.product_id || prod.product_ID || '',
+								'product_sn': prod.sn || prod.product_sn || '',
+								'unit_name': prod.unit_name,
+								'warranty': prod.warranty,
+								'cal': prod.cal,
+								'pm': prod.pm,
+								'pm_year': prod.pm_year,
+								'sale_remarkk': prod.sale_remark,
+								'clear_br': prod.clear_br,
+								'clear_ivno': prod.clear_ivno,
+								'jong_ckk': prod.jong_ckk,
+								'jong_no': prod.jong_no,
+								'display_name': prod.admin_remark || prod.display_name,
+								'product_codet': prod.product_code || prod.product_codet,
+								'product_name': prod.product_name,
+								'sale_count': prod.count,
+								'product_price': prod.price,
+								'discount_unit': prod.discount,
+								'sum_amount': prod.amount
+							};
+
+							Object.keys(rowFields).forEach(function(key) {
+								var el = document.getElementById(key + i) || document.querySelector('input[name="' + key + i + '"]');
+								if (el) {
+									el.value = rowFields[key] || '';
+								}
+							});
+
+							var labelEl = document.getElementById('product_name_label' + i);
+							if (labelEl) {
+								labelEl.textContent = prod.product_name || '';
+							}
+
+							var row = document.getElementById('product_row_' + i);
+							if (row) {
+								row.style.display = '';
+							}
+						}
+					});
+				}
+
+				// 11. Sync compatibility fields and calculate grand total
+				if (typeof syncFormCompatibilityFields === 'function') {
+					syncFormCompatibilityFields();
+				}
+				if (typeof calculateSummary === 'function') {
+					calculateSummary();
+				}
+				if (typeof renderFileList === 'function') {
+					renderFileList();
+				}
+			});
+		</script>
+
+	<?php endif; ?>
