@@ -32,30 +32,27 @@ $response = [
 ];
 
 if ($compareName !== '') {
-
+    $safeCompare = mysqli_real_escape_string($conn, $compareName);
+    $customerFilter = $customerId > 0 ? " AND customer_id != {$customerId}" : "";
     $sql = "SELECT customer_id, customer_name
             FROM tb_customer
-            ORDER BY customer_name ASC";
+            WHERE REPLACE(REPLACE(REPLACE(customer_name, ' ', ''), '\r', ''), '\n', '') LIKE '%{$safeCompare}%'
+            {$customerFilter}
+            ORDER BY customer_name ASC
+            LIMIT 10";
 
     $result = mysqli_query($conn, $sql);
 
     $names = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        if ($customerId > 0 && (int)$row['customer_id'] === $customerId) {
-            continue;
-        }
-
-        $dbName = normalizeThaiName($row['customer_name']);
-        $dbCompareName = preg_replace('/\s+/u', '', $dbName);
-
-        if (mb_stripos($dbCompareName, $compareName, 0, 'UTF-8') !== false) {
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
             $names[] = $row['customer_name'];
         }
     }
 
     $response['count'] = count($names);
     $response['exists'] = count($names) > 0;
-    $response['names'] = array_slice($names, 0, 10);
+    $response['names'] = $names;
 }
 
 echo json_encode($response, JSON_UNESCAPED_UNICODE);

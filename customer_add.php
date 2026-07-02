@@ -2124,27 +2124,14 @@ if (empty($shippingRecords)) {
                     form.reportValidity();
                     return false;
                 }
-                checkCustomerName(async function(isDuplicate) {
-                    if (isDuplicate) {
-                        var duplicateMessage = "มีชื่อลูกค้าใกล้เคียงในระบบ:\n- " + duplicateNames.join("\n- ") + "\n\nต้องการบันทึกต่อหรือไม่?";
-                        var duplicateConfirmed = await openConfirmPopup({
-                            title: "พบชื่อลูกค้าคล้ายกัน",
-                            message: duplicateMessage,
-                            cancelText: "กลับไปตรวจสอบ",
-                            confirmText: "บันทึกต่อ"
-                        });
-                        if (!duplicateConfirmed) return false;
-                    }
-                    var submitConfirmed = await openConfirmPopup({
-                        title: "ยืนยันการบันทึกข้อมูล",
-                        message: "ตรวจสอบข้อมูลเรียบร้อยแล้วใช่หรือไม่\nกด \"ยืนยัน\" เพื่อบันทึกข้อมูลลูกค้า",
-                        cancelText: "ยกเลิก",
-                        confirmText: "<?php echo $isEditMode ? 'ยืนยันการอัปเดต' : 'ยืนยันการบันทึก'; ?>"
-                    });
-                    if (submitConfirmed) {
-                        if (nativeFormSubmit) {
-                            nativeFormSubmit.call(form);
-                        }
+                openConfirmPopup({
+                    title: "ยืนยันการบันทึกข้อมูล",
+                    message: "ตรวจสอบข้อมูลเรียบร้อยแล้วใช่หรือไม่\nกด \"ยืนยัน\" เพื่อบันทึกข้อมูลลูกค้า",
+                    cancelText: "ยกเลิก",
+                    confirmText: "<?php echo $isEditMode ? 'ยืนยันการอัปเดต' : 'ยืนยันการบันทึก'; ?>"
+                }).then(function(submitConfirmed) {
+                    if (submitConfirmed && nativeFormSubmit) {
+                        nativeFormSubmit.call(form);
                     }
                 });
             });
