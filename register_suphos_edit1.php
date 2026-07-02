@@ -503,7 +503,8 @@ $optionalHosSoFieldMap = array(
 	'shipping_ref1' => 'order_refer_code',
 	'shipping_ref2' => 'order_refer_code1',
 	'shipping_cost' => 'ker_bath',
-	'transport_company' => 'transport_company'
+	'transport_company' => 'transport_company',
+	'sale_channel' => 'sale_channel'
 );
 
 foreach ($optionalHosSoFieldMap as $postField => $columnName) {

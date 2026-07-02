@@ -3117,6 +3117,11 @@
 					return false;
 				}
 
+				if (document.frmMain.sale_code && document.frmMain.sale_code.value == "") {
+					alert('กรุณาเลือกแผนก/เขตการขาย');
+					document.frmMain.sale_code.focus();
+					return false;
+				}
 				if (document.frmMain.payment.value == "") {
 					alert('กรุณาเลือกช่องทางการชำระเงิน');
 					var visiblePayment = document.getElementById('payment_cash_select') || document.getElementById('payment_method') || document.getElementById('pay_mode_cash');
@@ -3454,8 +3459,26 @@
 							<div class="so-field-group">
 								<label class="so-label">แผนก/เขตการขาย<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<select class="so-select">
+									<?php
+									$saleCodeQueries = array(
+										'SS1' => "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC",
+										'SS2' => "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC",
+										'SS3' => "SELECT * FROM tb_team_ss3 WHERE ckk_1='0' ORDER BY sale_code ASC",
+										'SS5' => "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC",
+										'SUP_MK' => "SELECT * FROM tb_team_adm WHERE ckk='1' ORDER BY sale_code ASC",
+										'SUP_EN' => "SELECT * FROM tb_team_en ORDER BY sale_code ASC"
+									);
+									$userSaleCode = isset($_SESSION['code']) ? $_SESSION['code'] : '';
+									$saleCodeSql = isset($saleCodeQueries[$userSaleCode]) ? $saleCodeQueries[$userSaleCode] : "SELECT * FROM tb_team_adm WHERE ckk='0' ORDER BY sale_code ASC";
+									$saleCodeQuery = mysqli_query($com, $saleCodeSql);
+									?>
+									<select name="sale_code" id="sale_code" class="so-select">
 										<option value="">เลือกแผนก/เขตการขาย</option>
+										<?php if ($saleCodeQuery) { ?>
+											<?php while ($saleCodeRow = mysqli_fetch_array($saleCodeQuery, MYSQLI_ASSOC)) { ?>
+												<option value="<?php echo htmlspecialchars($saleCodeRow['sale_code'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'], ENT_QUOTES, 'UTF-8'); ?></option>
+											<?php } ?>
+										<?php } ?>
 									</select>
 								</div>
 							</div>
@@ -3464,8 +3487,24 @@
 							<div class="so-field-group">
 								<label class="so-label">ช่องทางการขาย<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<select class="so-select">
+									<select name="sale_channel" id="sale_channel" class="so-select">
 										<option value="">เลือกช่องทางการขาย</option>
+										<?php
+										$sqlchannel = "SELECT * FROM tb_salechannel ORDER BY salechannel_ID";
+										$querychannel = false;
+										$saleChannelTable = mysqli_query($conn, "SHOW TABLES LIKE 'tb_salechannel'");
+										if ($saleChannelTable && mysqli_num_rows($saleChannelTable) > 0) {
+											$querychannel = mysqli_query($conn, $sqlchannel);
+										}
+										if ($querychannel) {
+											while ($fetchchannel = mysqli_fetch_array($querychannel, MYSQLI_ASSOC)) {
+												$channelLabel = trim($fetchchannel['salechannel_nameshort'] . ' ' . $fetchchannel['description_chanel']);
+												?>
+												<option value="<?php echo htmlspecialchars($fetchchannel['salechannel_ID'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($channelLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+												<?php
+											}
+										}
+										?>
 									</select>
 								</div>
 							</div>
@@ -5720,91 +5759,6 @@
 					</div>
 
 					<div class="so-grid-3">
-						<!-- Sale -->
-						<div class="so-field-group">
-							<label class="so-label">Sale</label>
-							<div class="so-select-wrapper">
-								<?php if ($_SESSION['code'] == 'SS1') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else if ($_SESSION['code'] == 'SS2') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else if ($_SESSION['code'] == 'SS3') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_ss3 where ckk_1='0' ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else if ($_SESSION['code'] == 'SS5') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else if ($_SESSION['code'] == 'SUP_MK') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_adm where ckk='1' ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else if ($_SESSION['code'] == 'SUP_EN') { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } else { ?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">**Please Select**</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_adm where ckk = '0' ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-										<?php } ?>
-									</select>
-								<?php } ?>
-							</div>
-						</div>
-
 						<!-- แนบใบเสนอราคา -->
 						<div class="so-field-group">
 							<label class="so-label">แนบใบเสนอราคา</label>
@@ -8766,6 +8720,7 @@
 					'address_send': savedSo.install_place,
 					'address_1': savedSo.address_1,
 					'sale_code': savedSo.sale_code,
+					'sale_channel': savedSo.sale_channel || '',
 					// Address main:
 					'contact_name': savedSo.delivery_contact || (savedRegister && savedRegister.customer_name) || '',
 					'contact_tel': savedSo.delivery_tel || (savedRegister && savedRegister.customer_tel) || '',
