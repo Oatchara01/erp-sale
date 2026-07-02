@@ -1,4 +1,5 @@
-<?php include("head.php"); ?>
+﻿<?php header("Content-Type: text/html; charset=utf-8");
+include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
@@ -286,6 +287,11 @@
 		transform: rotate(180deg);
 	}
 
+	.clear-loan-expand-btn:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+
 	.clear-loan-subrow {
 		display: none;
 		background-color: #F1EDFA;
@@ -311,6 +317,19 @@
 		cursor: pointer;
 	}
 
+	.clear-loan-item-meta {
+		display: block;
+		margin-top: 4px;
+		color: #6d6d6d;
+		font-size: 12px;
+	}
+
+	.clear-loan-state-row td {
+		padding: 28px 12px;
+		text-align: center;
+		color: #6d6d6d;
+	}
+
 	.clear-loan-table tbody tr:has(.clear-loan-check-input:checked) {
 		background-color: #F1EDFA;
 	}
@@ -332,6 +351,7 @@
 
 	.clear-loan-action-container {
 		display: flex;
+		align-items: center;
 		gap: 16px;
 	}
 
@@ -405,6 +425,11 @@
 </style>
 <script>
 	var HttPRequest = false;
+	var clearLoanPopupTimer = null;
+	var clearLoanPopupRequest = null;
+	var clearLoanPopupRequestToken = 0;
+	var clearLoanPopupDocuments = [];
+	var clearLoanPopupType = 'reserve';
 
 	function setElementValue(id, value) {
 		var element = document.getElementById(id);
@@ -3360,7 +3385,7 @@
 
 				</div>
 				<div class="so-header-right">
-					<button type="button" class="btn-clear-loan-reserve" onclick="toggleClearSection()">เคลียร์จอง/ยืม</button>
+					<button type="button" class="btn-clear-loan-reserve" id="clearLoanTriggerButton">เคลียร์จอง/ยืม</button>
 					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
 			</div>
@@ -3499,9 +3524,9 @@
 										if ($querychannel) {
 											while ($fetchchannel = mysqli_fetch_array($querychannel, MYSQLI_ASSOC)) {
 												$channelLabel = trim($fetchchannel['salechannel_nameshort'] . ' ' . $fetchchannel['description_chanel']);
-												?>
+										?>
 												<option value="<?php echo htmlspecialchars($fetchchannel['salechannel_ID'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($channelLabel, ENT_QUOTES, 'UTF-8'); ?></option>
-												<?php
+										<?php
 											}
 										}
 										?>
@@ -6635,7 +6660,7 @@
 
 			addresses = addresses || shippingAddressPopupData || [];
 			if (!addresses.length) {
-				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">ไม่พบข้อมูลที่อยู่จัดส่ง</td></tr>';
 				shippingAddressPopupSelected = [];
 				shippingAddressPopupSelectedKeys = [];
 				if (selectAllCheckbox) {
@@ -6663,7 +6688,7 @@
 					'<td>' + escapeCustomerPopupHtml(phone) + '</td>' +
 					'<td>' + escapeCustomerPopupHtml(shippingName) + '</td>' +
 					'<td>' + escapeCustomerPopupHtml(fullAddress) + '</td>' +
-					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openShippingAddressManagePage();"><img src="img/icons/edit.png?v=20260610" alt="à¹à¸à¹‰à¹„à¸‚" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+					'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openShippingAddressManagePage();"><img src="img/icons/edit.png?v=20260610" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
 					'</tr>';
 			}).join('');
 
@@ -6693,7 +6718,7 @@
 			shippingAddressPopupLoading = true;
 
 			if (!append && tbody) {
-				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¸à¸³à¸¥à¸±à¸‡à¸„à¹‰à¸™à¸«à¸²...</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
 			}
 
 			if (!append) {
@@ -6740,7 +6765,7 @@
 					shippingAddressPopupHasMore = false;
 					shippingAddressPopupNextLastId = null;
 					if (tbody) {
-						tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸„à¹‰à¸™à¸«à¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸”à¹‰</td></tr>';
+						tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
 					}
 					toggleShippingAddressPopupLoadMore(false, false);
 				})
@@ -6784,7 +6809,7 @@
 
 		function confirmShippingAddressPopupSelectionLegacyMulti() {
 			if (!shippingAddressPopupSelected || !shippingAddressPopupSelected.length) {
-				alert('à¸à¸£à¸¸à¸“à¸²à¹€à¸¥à¸·à¸­à¸à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸ˆà¸±à¸”à¸ªà¹ˆà¸‡à¸à¹ˆà¸­à¸™');
+				alert('กรุณาเลือกที่อยู่จัดส่งก่อน');
 				return;
 			}
 
@@ -7038,6 +7063,7 @@
 			var shippingAddressModal = document.getElementById('shippingAddressPopupModal');
 			var clearLoanSearch = document.getElementById('clearLoanSearch');
 			var clearLoanModal = document.getElementById('clearLoanModal');
+			var clearLoanTriggerButton = document.getElementById('clearLoanTriggerButton');
 
 			bindShippingFieldMirrors();
 
@@ -7068,6 +7094,23 @@
 						shippingAddressPopupSelected = null;
 						loadShippingAddressPopupRows(shippingAddressSearch.value, false);
 					}, 250);
+				});
+			}
+
+			if (clearLoanSearch) {
+				clearLoanSearch.addEventListener('input', scheduleClearLoanPopupSearch);
+			}
+
+			if (clearLoanTriggerButton) {
+				clearLoanTriggerButton.addEventListener('click', function() {
+					toggleClearSection();
+				});
+			}
+
+			var clearLoanTypeInputs = document.getElementsByName('clear_loan_type');
+			for (var clearLoanTypeIndex = 0; clearLoanTypeIndex < clearLoanTypeInputs.length; clearLoanTypeIndex++) {
+				clearLoanTypeInputs[clearLoanTypeIndex].addEventListener('change', function() {
+					loadClearLoanPopupRows();
 				});
 			}
 
@@ -7122,10 +7165,6 @@
 				{
 					modal: shippingAddressModal,
 					onClose: closeShippingAddressPopup
-				},
-				{
-					modal: clearLoanModal,
-					onClose: closeClearLoanPopup
 				}
 			].forEach(function(entry) {
 				if (!entry.modal) return;
@@ -7162,6 +7201,7 @@
 
 			modal.style.display = 'flex';
 			modal.setAttribute('aria-hidden', 'false');
+			loadClearLoanPopupRows();
 			updateClearLoanSelectionSummary();
 			setTimeout(function() {
 				if (search) {
@@ -7189,6 +7229,286 @@
 			openClearLoanPopup();
 		}
 
+		function escapeClearLoanHtml(value) {
+			return String(value === undefined || value === null ? '' : value)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		function getClearLoanSelectedType() {
+			var checked = document.querySelector('input[name="clear_loan_type"]:checked');
+			return checked ? checked.value : 'reserve';
+		}
+
+		function scheduleClearLoanPopupSearch() {
+			clearTimeout(clearLoanPopupTimer);
+			clearLoanPopupTimer = setTimeout(function() {
+				loadClearLoanPopupRows();
+			}, 250);
+		}
+
+		function renderClearLoanTableState(message) {
+			var tableBody = document.getElementById('clearLoanTableBody');
+			if (!tableBody) return;
+			clearLoanPopupDocuments = [];
+			tableBody.innerHTML = '<tr class="clear-loan-state-row"><td colspan="9">' + escapeClearLoanHtml(message) + '</td></tr>';
+			updateClearLoanSelectionSummary();
+		}
+
+		function renderClearLoanPopupRows(documents, type) {
+			var tableBody = document.getElementById('clearLoanTableBody');
+			if (!tableBody) return;
+			if (!documents || !documents.length) {
+				renderClearLoanTableState('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e37\u0e48\u0e2d\u0e19\u0e44\u0e02\u0e17\u0e35\u0e48\u0e04\u0e49\u0e19\u0e2b\u0e32');
+				return;
+			}
+			var rows = [];
+			for (var docIndex = 0; docIndex < documents.length; docIndex++) {
+				var documentRow = documents[docIndex] || {};
+				var items = Array.isArray(documentRow.items) ? documentRow.items : [];
+				var groupId = 'clear-loan-subrow-' + docIndex;
+				var hasItems = items.length > 0;
+				var documentKey = escapeClearLoanHtml(documentRow.document_no || ('doc-' + docIndex));
+				rows.push('<tr>');
+				rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + documentKey + '" data-entry-type="document" data-doc-index="' + docIndex + '"><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
+				rows.push('<td>' + (hasItems ?
+					'<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, \'' + groupId + '\')" aria-expanded="false" aria-controls="' + groupId + '">&#9660;</button>' :
+					'<button type="button" class="clear-loan-expand-btn disabled" disabled aria-expanded="false">&#9660;</button>') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.reference_no || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.required_date || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.sale_zone || '-') + '</td>');
+				rows.push('<td>' + escapeClearLoanHtml(documentRow.status || '-') + '</td>');
+				rows.push('</tr>');
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
+				rows.push('<td></td><td></td>');
+				rows.push('<td colspan="3" style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>');
+				rows.push('<td style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px; text-align: center;">จำนวน</td>');
+				rows.push('<td colspan="3"></td>');
+				rows.push('</tr>');
+				if (!hasItems) {
+					rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
+					rows.push('<td></td><td></td><td colspan="7">No items</td>');
+					rows.push('</tr>');
+					continue;
+				}
+				for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+					var item = items[itemIndex] || {};
+					var productLabel = escapeClearLoanHtml(item.product_id || '-');
+					var productName = escapeClearLoanHtml(item.product_name || '');
+					var productCode = escapeClearLoanHtml(item.product_code || '');
+					var snText = escapeClearLoanHtml(item.sn || '');
+					var itemKey = escapeClearLoanHtml(item.item_key || ((documentRow.document_no || ('doc-' + docIndex)) + '-' + itemIndex));
+					rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
+					rows.push('<td></td>');
+					rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + itemKey + '" data-entry-type="item" data-doc-index="' + docIndex + '" data-item-index="' + itemIndex + '"><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
+					rows.push('<td colspan="3">' + productLabel + (productName ? '<span class="clear-loan-item-meta">' + productName + (productCode ? ' (' + productCode + ')' : '') + '</span>' : '') + '</td>');
+					rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(item.quantity || '0') + '</td>');
+					rows.push('<td colspan="3"></td>');
+					rows.push('</tr>');
+				}
+			}
+			tableBody.innerHTML = rows.join('');
+			updateClearLoanSelectionSummary();
+		}
+
+		function getClearLoanRowField(prefix, rowIndex) {
+			return document.getElementById(prefix + rowIndex) ||
+				document.querySelector('input[name="' + prefix + rowIndex + '"], select[name="' + prefix + rowIndex + '"], textarea[name="' + prefix + rowIndex + '"]');
+		}
+
+		function setClearLoanRowField(prefix, rowIndex, value) {
+			var field = getClearLoanRowField(prefix, rowIndex);
+			if (field) {
+				field.value = value == null ? '' : String(value);
+			}
+			return field;
+		}
+
+		function getClearLoanRowValue(prefix, rowIndex) {
+			var field = getClearLoanRowField(prefix, rowIndex);
+			return field ? String(field.value || '').trim() : '';
+		}
+
+		function isClearLoanRowEmpty(rowIndex) {
+			if (getClearLoanRowValue('row_deleted', rowIndex) === '1') {
+				return true;
+			}
+			var prefixes = ['product_id', 'product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_sn', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'clear_ivno', 'jong_no'];
+			for (var i = 0; i < prefixes.length; i++) {
+				if (getClearLoanRowValue(prefixes[i], rowIndex) !== '') {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		function getClearLoanAvailableRows(limit) {
+			var rows = [];
+			for (var rowIndex = 1; rowIndex <= limit; rowIndex++) {
+				if (getClearLoanRowField('product_id', rowIndex) && isClearLoanRowEmpty(rowIndex)) {
+					rows.push(rowIndex);
+				}
+			}
+			return rows;
+		}
+
+		function buildClearLoanImportItems() {
+			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
+			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
+			var importMap = {};
+			var importItems = [];
+			for (var index = 0; index < selectedInputs.length; index++) {
+				var input = selectedInputs[index];
+				var entryType = input.getAttribute('data-entry-type');
+				var docIndex = parseInt(input.getAttribute('data-doc-index'), 10);
+				var itemIndex = parseInt(input.getAttribute('data-item-index'), 10);
+				var documentRow = documents[docIndex];
+				var items = documentRow && Array.isArray(documentRow.items) ? documentRow.items : [];
+				if (!documentRow) {
+					continue;
+				}
+				if (entryType === 'document') {
+					for (var docItemIndex = 0; docItemIndex < items.length; docItemIndex++) {
+						var documentItem = items[docItemIndex] || {};
+						var documentImportKey = docIndex + ':' + docItemIndex;
+						if (importMap[documentImportKey]) {
+							continue;
+						}
+						importMap[documentImportKey] = true;
+						importItems.push({
+							document_no: documentRow.document_no || '',
+							doc_type: documentRow.doc_type || clearLoanPopupType,
+							item: documentItem
+						});
+					}
+					continue;
+				}
+				if (entryType === 'item' && !isNaN(itemIndex) && items[itemIndex]) {
+					var itemImportKey = docIndex + ':' + itemIndex;
+					if (importMap[itemImportKey]) {
+						continue;
+					}
+					importMap[itemImportKey] = true;
+					importItems.push({
+						document_no: documentRow.document_no || '',
+						doc_type: documentRow.doc_type || clearLoanPopupType,
+						item: items[itemIndex]
+					});
+				}
+			}
+			return importItems;
+		}
+
+		function populateClearLoanRow(rowIndex, entry) {
+			var item = entry && entry.item ? entry.item : {};
+			var docType = entry && entry.doc_type ? entry.doc_type : clearLoanPopupType;
+			var documentNo = entry && entry.document_no ? entry.document_no : '';
+			var quantity = item.quantity == null || item.quantity === '' ? '1' : String(item.quantity);
+			var productId = item.product_id || '';
+			var productCode = item.product_code || productId || '';
+			var productName = item.product_name || productId || productCode || '';
+			var productSn = item.sn || '';
+			var row = document.getElementById('product_row_' + rowIndex);
+			if (row) {
+				row.style.display = '';
+			}
+			setClearLoanRowField('row_deleted', rowIndex, '');
+			setClearLoanRowField('subso_db_id', rowIndex, '');
+			setClearLoanRowField('product_id', rowIndex, productId);
+			setClearLoanRowField('product_codet', rowIndex, productCode);
+			setClearLoanRowField('h_product_codet', rowIndex, productCode);
+			setClearLoanRowField('product_name', rowIndex, productName);
+			setClearLoanRowField('display_name', rowIndex, productName);
+			setClearLoanRowField('product_sn', rowIndex, productSn);
+			setClearLoanRowField('sn', rowIndex, productSn);
+			setClearLoanRowField('sale_count', rowIndex, quantity);
+			setClearLoanRowField('product_price', rowIndex, '');
+			setClearLoanRowField('discount_unit', rowIndex, '');
+			setClearLoanRowField('sum_amount', rowIndex, '');
+			setClearLoanRowField('unit_name', rowIndex, '');
+			setClearLoanRowField('warranty', rowIndex, '');
+			setClearLoanRowField('cal', rowIndex, '');
+			setClearLoanRowField('pm', rowIndex, '');
+			setClearLoanRowField('pm_year', rowIndex, '');
+			setClearLoanRowField('sale_remarkk', rowIndex, '');
+			if (docType === 'loan') {
+				setClearLoanRowField('clear_br', rowIndex, '1');
+				setClearLoanRowField('clear_ivno', rowIndex, documentNo);
+				setClearLoanRowField('jong_ckk', rowIndex, '');
+				setClearLoanRowField('jong_no', rowIndex, '');
+			} else {
+				setClearLoanRowField('clear_br', rowIndex, '');
+				setClearLoanRowField('clear_ivno', rowIndex, '');
+				setClearLoanRowField('jong_ckk', rowIndex, '1');
+				setClearLoanRowField('jong_no', rowIndex, documentNo);
+			}
+			var productNameLabel = document.getElementById('product_name_label' + rowIndex);
+			if (productNameLabel) {
+				productNameLabel.textContent = productName;
+			}
+			if (typeof formatNumberInput === 'function') {
+				var priceElement = getClearLoanRowField('product_price', rowIndex);
+				var discountElement = getClearLoanRowField('discount_unit', rowIndex);
+				if (priceElement && priceElement.value !== '') {
+					formatNumberInput(priceElement);
+				}
+				if (discountElement && discountElement.value !== '') {
+					formatNumberInput(discountElement);
+				}
+			}
+			if (typeof updateRowTotal === 'function') {
+				updateRowTotal(rowIndex);
+			}
+		}
+
+		function loadClearLoanPopupRows() {
+			var selectedType = getClearLoanSelectedType();
+			var search = document.getElementById('clearLoanSearch');
+			var keyword = search ? search.value : '';
+			clearLoanPopupType = selectedType;
+			if (typeof jQuery === 'undefined') {
+				renderClearLoanTableState('Refresh required');
+				return;
+			}
+			if (clearLoanPopupRequest && typeof clearLoanPopupRequest.abort === 'function') {
+				clearLoanPopupRequest.abort();
+			}
+			renderClearLoanTableState('Loading...');
+			clearLoanPopupRequestToken += 1;
+			var requestToken = clearLoanPopupRequestToken;
+			clearLoanPopupRequest = jQuery.ajax({
+				url: 'ajax_clear_loan_popup_search.php',
+				type: 'GET',
+				dataType: 'json',
+				cache: false,
+				data: {
+					type: selectedType,
+					keyword: keyword
+				}
+			}).done(function(response) {
+				if (requestToken !== clearLoanPopupRequestToken) {
+					return;
+				}
+				if (!response || response.success !== true) {
+					renderClearLoanTableState((response && response.message) ? response.message : 'Load failed');
+					return;
+				}
+				clearLoanPopupDocuments = response.documents || [];
+				renderClearLoanPopupRows(response.documents || [], selectedType);
+			}).fail(function(xhr, statusText) {
+				if (statusText === 'abort' || requestToken !== clearLoanPopupRequestToken) {
+					return;
+				}
+				renderClearLoanTableState('Load failed');
+			});
+		}
+
 		function toggleClearRow(btn, subrowId) {
 			var subrows = document.getElementsByClassName(subrowId);
 			var expanded = btn.getAttribute('aria-expanded') === 'true';
@@ -7202,17 +7522,35 @@
 
 		function updateClearLoanSelectionSummary() {
 			var selectedCount = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked').length;
-			var summary = document.getElementById('clearLoanSelectionSummary');
 			var button = document.getElementById('clearLoanApplyButton');
-			if (summary) {
-				summary.textContent = selectedCount > 0 ? 'เลือกแล้ว ' + selectedCount + ' รายการ' : 'ยังไม่ได้เลือกรายการ';
-			}
 			if (button) {
 				button.disabled = selectedCount === 0;
 			}
 		}
 
 		function confirmClearLoanSelection() {
+			var importItems = buildClearLoanImportItems();
+			if (!importItems.length) {
+				alert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e19\u0e33\u0e40\u0e02\u0e49\u0e32');
+				return;
+			}
+			var availableRows = getClearLoanAvailableRows(30);
+			if (availableRows.length < importItems.length) {
+				alert('\u0e41\u0e16\u0e27\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32\u0e27\u0e48\u0e32\u0e07\u0e44\u0e21\u0e48\u0e1e\u0e2d \u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e04\u0e25\u0e35\u0e22\u0e23\u0e4c\u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1e\u0e34\u0e48\u0e21\u0e41\u0e16\u0e27\u0e01\u0e48\u0e2d\u0e19');
+				return;
+			}
+			for (var index = 0; index < importItems.length; index++) {
+				populateClearLoanRow(availableRows[index], importItems[index]);
+			}
+			if (typeof syncFormCompatibilityFields === 'function') {
+				syncFormCompatibilityFields();
+			}
+			if (typeof calculateSummary === 'function') {
+				calculateSummary();
+			}
+			if (typeof renderRelatedDocuments === 'function') {
+				renderRelatedDocuments();
+			}
 			closeClearLoanPopup();
 		}
 
@@ -8442,164 +8780,9 @@
 							<th>สถานะ</th>
 						</tr>
 					</thead>
-					<tbody>
-						<tr>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="1">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td>
-								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-1')" aria-expanded="false" aria-controls="subrow-1">▼</button>
-							</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>sw.xxxxxx</td>
-							<td>S11</td>
-							<td>Approve</td>
-						</tr>
-						<!-- Subrow 1 Headers -->
-						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td></td>
-							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
-							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 1 Item 1 -->
-						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub1-1">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">สินค้า A</td>
-							<td>2</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 1 Item 2 -->
-						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub1-2">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">สินค้า A2</td>
-							<td>1</td>
-							<td colspan="4"></td>
-						</tr>
-
-						<tr>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="2">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td>
-								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-2')" aria-expanded="false" aria-controls="subrow-2">▼</button>
-							</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>sw.xxxxxx</td>
-							<td>S24</td>
-							<td>Approve</td>
-						</tr>
-						<!-- Subrow 2 Headers -->
-						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td></td>
-							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
-							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 2 Item 1 -->
-						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub2-1">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
-							<td>1</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 2 Item 2 -->
-						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub2-2">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
-							<td>1</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 2 Item 3 -->
-						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub2-3">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
-							<td>3</td>
-							<td colspan="4"></td>
-						</tr>
-
-						<tr>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="3">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td>
-								<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, 'subrow-3')" aria-expanded="false" aria-controls="subrow-3">▼</button>
-							</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>49988</td>
-							<td>24/09/68</td>
-							<td>sw.xxxxxx</td>
-							<td>S13</td>
-							<td>Approve</td>
-						</tr>
-						<!-- Subrow 3 Headers -->
-						<tr class="subrow-3 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td></td>
-							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
-							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
-							<td colspan="4"></td>
-						</tr>
-						<!-- Subrow 3 Item 1 -->
-						<tr class="subrow-3 clear-loan-subrow" aria-hidden="true">
-							<td></td>
-							<td>
-								<label class="clear-loan-item-option">
-									<input type="checkbox" class="clear-loan-check-input" value="sub3-1">
-									<span class="clear-loan-check-circle" aria-hidden="true"></span>
-								</label>
-							</td>
-							<td colspan="2">สินค้า C</td>
-							<td>5</td>
-							<td colspan="4"></td>
+					<tbody id="clearLoanTableBody">
+						<tr class="clear-loan-state-row">
+							<td colspan="9">Preparing data...</td>
 						</tr>
 					</tbody>
 				</table>
