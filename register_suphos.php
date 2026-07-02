@@ -296,14 +296,11 @@
 	}
 
 	.clear-loan-subrow td {
-		padding: 12px 12px 12px 48px;
-		font-size: 13px;
-	}
-
-	.clear-loan-items {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
+		border-bottom: none;
+		padding: 10px 12px;
+		font-size: 14px;
+		color: #4A4A4A;
+		vertical-align: middle;
 	}
 
 	.clear-loan-item-option {
@@ -312,6 +309,10 @@
 		align-items: center;
 		gap: 12px;
 		cursor: pointer;
+	}
+
+	.clear-loan-table tbody tr:has(.clear-loan-check-input:checked) {
+		background-color: #F1EDFA;
 	}
 
 	.clear-loan-actions {
@@ -7235,13 +7236,13 @@
 		}
 
 		function toggleClearRow(btn, subrowId) {
-			var subrow = document.getElementById(subrowId);
+			var subrows = document.getElementsByClassName(subrowId);
 			var expanded = btn.getAttribute('aria-expanded') === 'true';
 			btn.classList.toggle('expanded', !expanded);
 			btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-			if (subrow) {
-				subrow.classList.toggle('show', !expanded);
-				subrow.setAttribute('aria-hidden', expanded ? 'true' : 'false');
+			for (var i = 0; i < subrows.length; i++) {
+				subrows[i].classList.toggle('show', !expanded);
+				subrows[i].setAttribute('aria-hidden', expanded ? 'true' : 'false');
 			}
 		}
 
@@ -8506,21 +8507,39 @@
 							<td>S11</td>
 							<td>Approve</td>
 						</tr>
-						<tr id="subrow-1" class="clear-loan-subrow" aria-hidden="true">
-							<td colspan="9">
-								<div class="clear-loan-items">
-									<label class="clear-loan-item-option">
-										<input type="checkbox" class="clear-loan-check-input" value="sub1-1">
-										<span class="clear-loan-check-circle" aria-hidden="true"></span>
-										สินค้า A - จำนวน 2 - 1,000 บาท
-									</label>
-									<label class="clear-loan-item-option">
-										<input type="checkbox" class="clear-loan-check-input" value="sub1-2">
-										<span class="clear-loan-check-circle" aria-hidden="true"></span>
-										สินค้า A2 - จำนวน 1 - 1,000 บาท
-									</label>
-								</div>
+						<!-- Subrow 1 Headers -->
+						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td></td>
+							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
+							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 1 Item 1 -->
+						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub1-1">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
 							</td>
+							<td colspan="2">สินค้า A</td>
+							<td>2</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 1 Item 2 -->
+						<tr class="subrow-1 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub1-2">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td colspan="2">สินค้า A2</td>
+							<td>1</td>
+							<td colspan="4"></td>
 						</tr>
 
 						<tr>
@@ -8541,16 +8560,52 @@
 							<td>S24</td>
 							<td>Approve</td>
 						</tr>
-						<tr id="subrow-2" class="clear-loan-subrow" aria-hidden="true">
-							<td colspan="9">
-								<div class="clear-loan-items">
-									<label class="clear-loan-item-option">
-										<input type="checkbox" class="clear-loan-check-input" value="sub2-1">
-										<span class="clear-loan-check-circle" aria-hidden="true"></span>
-										สินค้า B - จำนวน 1 - 500 บาท
-									</label>
-								</div>
+						<!-- Subrow 2 Headers -->
+						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td></td>
+							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
+							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 2 Item 1 -->
+						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub2-1">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
 							</td>
+							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
+							<td>1</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 2 Item 2 -->
+						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub2-2">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
+							<td>1</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 2 Item 3 -->
+						<tr class="subrow-2 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub2-3">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
+							</td>
+							<td colspan="2">ที่นอนโฟม DYNA-FORM COMMUNITY 10 CM</td>
+							<td>3</td>
+							<td colspan="4"></td>
 						</tr>
 
 						<tr>
@@ -8571,16 +8626,26 @@
 							<td>S13</td>
 							<td>Approve</td>
 						</tr>
-						<tr id="subrow-3" class="clear-loan-subrow" aria-hidden="true">
-							<td colspan="9">
-								<div class="clear-loan-items">
-									<label class="clear-loan-item-option">
-										<input type="checkbox" class="clear-loan-check-input" value="sub3-1">
-										<span class="clear-loan-check-circle" aria-hidden="true"></span>
-										สินค้า C - จำนวน 5 - 2,500 บาท
-									</label>
-								</div>
+						<!-- Subrow 3 Headers -->
+						<tr class="subrow-3 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td></td>
+							<td colspan="2" style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>
+							<td style="color: #612989; font-weight: 500; padding-top: 14px; padding-bottom: 6px;">จำนวน</td>
+							<td colspan="4"></td>
+						</tr>
+						<!-- Subrow 3 Item 1 -->
+						<tr class="subrow-3 clear-loan-subrow" aria-hidden="true">
+							<td></td>
+							<td>
+								<label class="clear-loan-item-option">
+									<input type="checkbox" class="clear-loan-check-input" value="sub3-1">
+									<span class="clear-loan-check-circle" aria-hidden="true"></span>
+								</label>
 							</td>
+							<td colspan="2">สินค้า C</td>
+							<td>5</td>
+							<td colspan="4"></td>
 						</tr>
 					</tbody>
 				</table>
