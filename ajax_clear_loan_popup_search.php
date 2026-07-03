@@ -36,6 +36,17 @@ function clearLoanFormatDate($value)
     return date('d/m/y', $timestamp);
 }
 
+function clearLoanFormatRawDate($value)
+{
+    $value = trim((string)$value);
+    if ($value === '' || $value === '0000-00-00' || $value === '0000-00-00 00:00:00') {
+        return '';
+    }
+
+    $timestamp = strtotime($value);
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+}
+
 function clearLoanNormalizeText($value)
 {
     return trim((string)$value);
@@ -44,6 +55,18 @@ function clearLoanNormalizeText($value)
 function clearLoanEscape($conn, $value)
 {
     return mysqli_real_escape_string($conn, clearLoanNormalizeText($value));
+}
+
+function clearLoanClampLimit($limit)
+{
+    $limit = (int)$limit;
+    if ($limit <= 0) {
+        $limit = 50;
+    }
+    if ($limit > 50) {
+        $limit = 50;
+    }
+    return $limit;
 }
 
 function clearLoanSplitSnLines($sn)
@@ -91,7 +114,7 @@ function clearLoanReserveSaleFilter($conn)
     }
 
     if ($saleCode !== '') {
-        if (preg_match('/^(S\d{2}|EN\d+|SOL\d+|MM\d+|PM|MK)$/' , $saleCode)) {
+        if (preg_match('/^(S\d{2}|EN\d+|SOL\d+|MM\d+|PM|MK)$/', $saleCode)) {
             return "h.sale_code = '" . clearLoanEscape($conn, $saleCode) . "'";
         }
 
@@ -128,7 +151,88 @@ function clearLoanLoanSaleFilter()
     return '1=1';
 }
 
-function clearLoanFetchReserveDocuments($conn, $keyword)
+function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
+{
+    $detailSql = "SELECT
+            d.product_id,
+            d.`count` AS qty,
+            p.sol_name,
+            p.access_code
+        FROM hos__subjongpro d
+        LEFT JOIN tb_product p ON d.product_ID = p.product_id
+        WHERE d.ref_idd = '" . clearLoanEscape($conn, $referenceNo) . "'";
+    $detailQuery = mysqli_query($conn, $detailSql);
+    $items = array();
+    $itemIndex = 1;
+
+    if ($detailQuery) {
+        while ($detail = mysqli_fetch_assoc($detailQuery)) {
+            $items[] = array(
+                'item_key' => 'reserve-' . $documentNo . '-' . $itemIndex,
+                'product_id' => clearLoanNormalizeText($detail['product_id']),
+                'product_name' => clearLoanNormalizeText($detail['sol_name']),
+                'product_code' => clearLoanNormalizeText($detail['access_code']),
+                'quantity' => (string)$detail['qty'],
+                'sn' => ''
+            );
+            $itemIndex++;
+        }
+    }
+
+    return $items;
+}
+
+function clearLoanBuildLoanItems($conn, $referenceNo, $documentNo)
+{
+    $detailSql = "SELECT
+            d.product_id,
+            d.`count` AS qty,
+            d.sn,
+            p.sol_name,
+            p.access_code
+        FROM hos__subbr d
+        LEFT JOIN tb_product p ON d.product_id = p.product_ID
+        WHERE d.ref_idd_br = '" . clearLoanEscape($conn, $referenceNo) . "'
+        AND d.clear_ckk = '0'
+        AND d.ckk_st = '1'";
+    $detailQuery = mysqli_query($conn, $detailSql);
+    $items = array();
+    $itemIndex = 1;
+
+    if ($detailQuery) {
+        while ($detail = mysqli_fetch_assoc($detailQuery)) {
+            $snList = clearLoanSplitSnLines($detail['sn']);
+            if (!empty($snList)) {
+                foreach ($snList as $snValue) {
+                    $items[] = array(
+                        'item_key' => 'loan-' . $documentNo . '-' . $itemIndex,
+                        'product_id' => clearLoanNormalizeText($detail['product_id']),
+                        'product_name' => clearLoanNormalizeText($detail['sol_name']),
+                        'product_code' => clearLoanNormalizeText($detail['access_code']),
+                        'quantity' => '1',
+                        'sn' => $snValue
+                    );
+                    $itemIndex++;
+                }
+                continue;
+            }
+
+            $items[] = array(
+                'item_key' => 'loan-' . $documentNo . '-' . $itemIndex,
+                'product_id' => clearLoanNormalizeText($detail['product_id']),
+                'product_name' => clearLoanNormalizeText($detail['sol_name']),
+                'product_code' => clearLoanNormalizeText($detail['access_code']),
+                'quantity' => (string)$detail['qty'],
+                'sn' => ''
+            );
+            $itemIndex++;
+        }
+    }
+
+    return $items;
+}
+
+function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit)
 {
     $filters = array(
         "h.close_jong = '0'",
@@ -137,12 +241,17 @@ function clearLoanFetchReserveDocuments($conn, $keyword)
         clearLoanReserveSaleFilter($conn)
     );
 
+    if ($lastId > 0) {
+        $filters[] = 'h.id_jong < ' . (int)$lastId;
+    }
+
     if ($keyword !== '') {
         $keywordLike = '%' . clearLoanEscape($conn, $keyword) . '%';
         $filters[] = "(
             h.ref_id LIKE '{$keywordLike}'
             OR h.iv_no LIKE '{$keywordLike}'
             OR h.customer LIKE '{$keywordLike}'
+            OR h.customer_id LIKE '{$keywordLike}'
             OR EXISTS (
                 SELECT 1
                 FROM hos__subjongpro d
@@ -157,73 +266,86 @@ function clearLoanFetchReserveDocuments($conn, $keyword)
         )";
     }
 
+    $queryLimit = $limit + 1;
     $sql = "SELECT
             h.ref_id,
             h.date_jong,
             h.iv_no,
             h.date_receive,
             h.customer,
+            h.customer_id,
+            h.company,
             h.sale_code,
             h.status_doc,
-            h.id_jong
+            h.id_jong,
+            EXISTS (
+                SELECT 1
+                FROM hos__subjongpro d
+                WHERE d.ref_idd = h.ref_id
+            ) AS has_items
         FROM hos__jongproduct h
         WHERE " . implode(' AND ', $filters) . "
         ORDER BY h.id_jong DESC
-        LIMIT 50";
+        LIMIT " . (int)$queryLimit;
 
     $query = mysqli_query($conn, $sql);
     if (!$query) {
         clearLoanJsonResponse(array(
             'success' => false,
-            'message' => 'ไม่สามารถดึงข้อมูลใบจองได้'
+            'message' => 'ไม่สามารถโหลดข้อมูลใบจองได้'
         ), 500);
     }
 
-    $documents = array();
+    $rows = array();
     while ($row = mysqli_fetch_assoc($query)) {
-        $detailSql = "SELECT
-                d.product_id,
-                d.`count` AS qty,
-                p.sol_name,
-                p.access_code
-            FROM hos__subjongpro d
-            LEFT JOIN tb_product p ON d.product_ID = p.product_id
-            WHERE d.ref_idd = '" . clearLoanEscape($conn, $row['ref_id']) . "'";
-        $detailQuery = mysqli_query($conn, $detailSql);
-        $items = array();
-        $itemIndex = 1;
+        $rows[] = $row;
+    }
 
-        if ($detailQuery) {
-            while ($detail = mysqli_fetch_assoc($detailQuery)) {
-                $items[] = array(
-                    'item_key' => 'reserve-' . $row['iv_no'] . '-' . $itemIndex,
-                    'product_id' => clearLoanNormalizeText($detail['product_id']),
-                    'product_name' => clearLoanNormalizeText($detail['sol_name']),
-                    'product_code' => clearLoanNormalizeText($detail['access_code']),
-                    'quantity' => (string)$detail['qty'],
-                    'sn' => ''
-                );
-                $itemIndex++;
-            }
-        }
+    $hasMore = count($rows) > $limit;
+    if ($hasMore) {
+        array_pop($rows);
+    }
 
+    $documents = array();
+    $nextLastId = null;
+
+    foreach ($rows as $row) {
+        $internalId = (int)$row['id_jong'];
+        $nextLastId = $internalId;
         $documents[] = array(
             'doc_type' => 'reserve',
+            'internal_id' => $internalId,
+            'document_key' => 'reserve:' . $internalId,
+            'company' => clearLoanNormalizeText($row['company']),
+            'customer_id' => clearLoanNormalizeText($row['customer_id']),
+            'sale_code' => clearLoanNormalizeText($row['sale_code']),
             'reference_no' => clearLoanNormalizeText($row['ref_id']),
             'registered_date' => clearLoanFormatDate($row['date_jong']),
+            'registered_date_raw' => clearLoanFormatRawDate($row['date_jong']),
             'document_no' => clearLoanNormalizeText($row['iv_no']),
             'required_date' => clearLoanFormatDate($row['date_receive']),
+            'required_date_raw' => clearLoanFormatRawDate($row['date_receive']),
             'customer_name' => clearLoanNormalizeText($row['customer']),
             'sale_zone' => clearLoanNormalizeText($row['sale_code']),
             'status' => clearLoanNormalizeText($row['status_doc']),
-            'items' => $items
+            'has_items' => (string)$row['has_items'] === '1',
+            'items_loaded' => false,
+            'items' => array()
         );
     }
 
-    return $documents;
+    return array(
+        'documents' => $documents,
+        'pagination' => array(
+            'limit' => $limit,
+            'has_more' => $hasMore,
+            'next_last_id' => $hasMore ? $nextLastId : null,
+            'returned' => count($documents)
+        )
+    );
 }
 
-function clearLoanFetchLoanDocuments($conn, $keyword)
+function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
 {
     $filters = array(
         "h.close_br = '0'",
@@ -239,12 +361,17 @@ function clearLoanFetchLoanDocuments($conn, $keyword)
         )"
     );
 
+    if ($lastId > 0) {
+        $filters[] = 'h.id < ' . (int)$lastId;
+    }
+
     if ($keyword !== '') {
         $keywordLike = '%' . clearLoanEscape($conn, $keyword) . '%';
         $filters[] = "(
             h.ref_id_br LIKE '{$keywordLike}'
             OR h.iv_no LIKE '{$keywordLike}'
             OR h.customer LIKE '{$keywordLike}'
+            OR h.customer_id LIKE '{$keywordLike}'
             OR EXISTS (
                 SELECT 1
                 FROM hos__subbr d
@@ -261,93 +388,164 @@ function clearLoanFetchLoanDocuments($conn, $keyword)
         )";
     }
 
+    $queryLimit = $limit + 1;
     $sql = "SELECT
             h.ref_id_br,
             h.date_br,
             h.iv_no,
             h.iv_date,
             h.customer,
+            h.customer_id,
+            h.company,
             h.sale_code,
             h.status_doc,
-            h.id
+            h.id,
+            1 AS has_items
         FROM hos__br h
         WHERE " . implode(' AND ', $filters) . "
         ORDER BY h.id DESC
-        LIMIT 50";
+        LIMIT " . (int)$queryLimit;
 
     $query = mysqli_query($conn, $sql);
     if (!$query) {
         clearLoanJsonResponse(array(
             'success' => false,
-            'message' => 'ไม่สามารถดึงข้อมูลใบยืมได้'
+            'message' => 'ไม่สามารถโหลดข้อมูลใบยืมได้'
         ), 500);
     }
 
-    $documents = array();
+    $rows = array();
     while ($row = mysqli_fetch_assoc($query)) {
-        $detailSql = "SELECT
-                d.product_id,
-                d.`count` AS qty,
-                d.sn,
-                p.sol_name,
-                p.access_code
-            FROM hos__subbr d
-            LEFT JOIN tb_product p ON d.product_id = p.product_ID
-            WHERE d.ref_idd_br = '" . clearLoanEscape($conn, $row['ref_id_br']) . "'
-            AND d.clear_ckk = '0'
-            AND d.ckk_st = '1'";
-        $detailQuery = mysqli_query($conn, $detailSql);
-        $items = array();
-        $itemIndex = 1;
+        $rows[] = $row;
+    }
 
-        if ($detailQuery) {
-            while ($detail = mysqli_fetch_assoc($detailQuery)) {
-                $snList = clearLoanSplitSnLines($detail['sn']);
-                if (!empty($snList)) {
-                    foreach ($snList as $snValue) {
-                        $items[] = array(
-                            'item_key' => 'loan-' . $row['iv_no'] . '-' . $itemIndex,
-                            'product_id' => clearLoanNormalizeText($detail['product_id']),
-                            'product_name' => clearLoanNormalizeText($detail['sol_name']),
-                            'product_code' => clearLoanNormalizeText($detail['access_code']),
-                            'quantity' => '1',
-                            'sn' => $snValue
-                        );
-                        $itemIndex++;
-                    }
-                    continue;
-                }
+    $hasMore = count($rows) > $limit;
+    if ($hasMore) {
+        array_pop($rows);
+    }
 
-                $items[] = array(
-                    'item_key' => 'loan-' . $row['iv_no'] . '-' . $itemIndex,
-                    'product_id' => clearLoanNormalizeText($detail['product_id']),
-                    'product_name' => clearLoanNormalizeText($detail['sol_name']),
-                    'product_code' => clearLoanNormalizeText($detail['access_code']),
-                    'quantity' => (string)$detail['qty'],
-                    'sn' => ''
-                );
-                $itemIndex++;
-            }
-        }
+    $documents = array();
+    $nextLastId = null;
 
+    foreach ($rows as $row) {
+        $internalId = (int)$row['id'];
+        $nextLastId = $internalId;
         $documents[] = array(
             'doc_type' => 'loan',
+            'internal_id' => $internalId,
+            'document_key' => 'loan:' . $internalId,
+            'company' => clearLoanNormalizeText($row['company']),
+            'customer_id' => clearLoanNormalizeText($row['customer_id']),
+            'sale_code' => clearLoanNormalizeText($row['sale_code']),
             'reference_no' => clearLoanNormalizeText($row['ref_id_br']),
             'registered_date' => clearLoanFormatDate($row['date_br']),
+            'registered_date_raw' => clearLoanFormatRawDate($row['date_br']),
             'document_no' => clearLoanNormalizeText($row['iv_no']),
             'required_date' => clearLoanFormatDate($row['iv_date']),
+            'required_date_raw' => clearLoanFormatRawDate($row['iv_date']),
             'customer_name' => clearLoanNormalizeText($row['customer']),
             'sale_zone' => clearLoanNormalizeText($row['sale_code']),
             'status' => clearLoanNormalizeText($row['status_doc']),
-            'items' => $items
+            'has_items' => (string)$row['has_items'] === '1',
+            'items_loaded' => false,
+            'items' => array()
         );
     }
 
-    return $documents;
+    return array(
+        'documents' => $documents,
+        'pagination' => array(
+            'limit' => $limit,
+            'has_more' => $hasMore,
+            'next_last_id' => $hasMore ? $nextLastId : null,
+            'returned' => count($documents)
+        )
+    );
 }
 
+function clearLoanFetchReserveDocumentItems($conn, $documentId)
+{
+    $documentId = (int)$documentId;
+    if ($documentId <= 0) {
+        clearLoanJsonResponse(array(
+            'success' => false,
+            'message' => 'ไม่พบเอกสารที่ต้องการ'
+        ), 400);
+    }
+
+    $filters = array(
+        "h.close_jong = '0'",
+        "h.cancel_ckk = '0'",
+        "h.status_doc = 'Approve'",
+        clearLoanReserveSaleFilter($conn),
+        "h.id_jong = {$documentId}"
+    );
+
+    $sql = "SELECT h.ref_id, h.iv_no
+        FROM hos__jongproduct h
+        WHERE " . implode(' AND ', $filters) . "
+        LIMIT 1";
+    $query = mysqli_query($conn, $sql);
+    $row = $query ? mysqli_fetch_assoc($query) : null;
+
+    if (!$row) {
+        clearLoanJsonResponse(array(
+            'success' => false,
+            'message' => 'ไม่พบเอกสารใบจองที่ต้องการ'
+        ), 404);
+    }
+
+    return clearLoanBuildReserveItems($conn, $row['ref_id'], $row['iv_no']);
+}
+
+function clearLoanFetchLoanDocumentItems($conn, $documentId)
+{
+    $documentId = (int)$documentId;
+    if ($documentId <= 0) {
+        clearLoanJsonResponse(array(
+            'success' => false,
+            'message' => 'ไม่พบเอกสารที่ต้องการ'
+        ), 400);
+    }
+
+    $filters = array(
+        "h.close_br = '0'",
+        "h.status_doc = 'Approve'",
+        "h.company = '1'",
+        clearLoanLoanSaleFilter(),
+        "EXISTS (
+            SELECT 1
+            FROM hos__subbr d
+            WHERE d.ref_idd_br = h.ref_id_br
+            AND d.clear_ckk = '0'
+            AND d.ckk_st = '1'
+        )",
+        "h.id = {$documentId}"
+    );
+
+    $sql = "SELECT h.ref_id_br, h.iv_no
+        FROM hos__br h
+        WHERE " . implode(' AND ', $filters) . "
+        LIMIT 1";
+    $query = mysqli_query($conn, $sql);
+    $row = $query ? mysqli_fetch_assoc($query) : null;
+
+    if (!$row) {
+        clearLoanJsonResponse(array(
+            'success' => false,
+            'message' => 'ไม่พบเอกสารใบยืมที่ต้องการ'
+        ), 404);
+    }
+
+    return clearLoanBuildLoanItems($conn, $row['ref_id_br'], $row['iv_no']);
+}
+
+$action = isset($_GET['action']) ? strtolower(trim((string)$_GET['action'])) : 'list';
 $type = isset($_GET['type']) ? strtolower(trim((string)$_GET['type'])) : 'reserve';
 $keyword = isset($_GET['keyword']) ? trim((string)$_GET['keyword']) : '';
+$limit = clearLoanClampLimit(isset($_GET['limit']) ? $_GET['limit'] : 50);
+$lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
+$documentId = isset($_GET['document_id']) ? (int)$_GET['document_id'] : 0;
 
 if ($type !== 'reserve' && $type !== 'loan') {
     clearLoanJsonResponse(array(
@@ -356,11 +554,23 @@ if ($type !== 'reserve' && $type !== 'loan') {
     ), 400);
 }
 
-$documents = $type === 'loan'
-    ? clearLoanFetchLoanDocuments($conn, $keyword)
-    : clearLoanFetchReserveDocuments($conn, $keyword);
+if ($action === 'items') {
+    $items = $type === 'loan'
+        ? clearLoanFetchLoanDocumentItems($conn, $documentId)
+        : clearLoanFetchReserveDocumentItems($conn, $documentId);
+
+    clearLoanJsonResponse(array(
+        'success' => true,
+        'items' => $items
+    ));
+}
+
+$result = $type === 'loan'
+    ? clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
+    : clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit);
 
 clearLoanJsonResponse(array(
     'success' => true,
-    'documents' => $documents
+    'documents' => $result['documents'],
+    'pagination' => $result['pagination']
 ));

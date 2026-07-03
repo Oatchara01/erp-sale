@@ -430,6 +430,11 @@ include("head.php"); ?>
 	var clearLoanPopupRequestToken = 0;
 	var clearLoanPopupDocuments = [];
 	var clearLoanPopupType = 'reserve';
+	var clearLoanPopupNextLastId = null;
+	var clearLoanPopupHasMore = false;
+	var clearLoanPopupLoadingMore = false;
+	var clearLoanPopupSelectedKeys = {};
+	var clearLoanPopupExpandedKeys = {};
 
 	function setElementValue(id, value) {
 		var element = document.getElementById(id);
@@ -3128,7 +3133,7 @@ include("head.php"); ?>
 	<form action='<?php echo ($savedSo !== null) ? "register_suphos_edit1.php" : "register_suphos1.php"; ?>' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
-			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
+			function fncSubmit() //ตรวจสอบข้อมูลก่อนบันทึก
 			{
 				syncFormCompatibilityFields();
 				if (typeof syncDeptComments === 'function') {
@@ -3620,15 +3625,6 @@ include("head.php"); ?>
 				<!-- TAB 2: Admin -->
 				<div id="tab-admin-info" class="so-tab-content">
 					<style>
-						/* .admin-ui-card {
-					background-color: #FFFFFF;
-					border-radius: 16px;
-					padding: 32px;
-					margin-bottom: 30px;
-					border: 1px solid #E5E7EB;
-					font-family: 'Prompt', sans-serif;
-				} */
-
 						.admin-ui-title {
 							font-size: 20px;
 							font-weight: 500;
@@ -6003,7 +5999,7 @@ include("head.php"); ?>
 						<tr>
 							<th>ชื่อลูกค้า</th>
 							<th>เบอร์โทร</th>
-							<th>รายละเอียดการออกบิล</th>
+							<th>วันที่ต้องการสินค้า</th>
 							<th>เลขที่ผู้เสียภาษี</th>
 							<th></th>
 						</tr>
@@ -7201,7 +7197,7 @@ include("head.php"); ?>
 
 			modal.style.display = 'flex';
 			modal.setAttribute('aria-hidden', 'false');
-			loadClearLoanPopupRows();
+			loadClearLoanPopupRows(false);
 			updateClearLoanSelectionSummary();
 			setTimeout(function() {
 				if (search) {
@@ -7243,78 +7239,162 @@ include("head.php"); ?>
 			return checked ? checked.value : 'reserve';
 		}
 
+		function resetClearLoanPopupState() {
+			clearLoanPopupDocuments = [];
+			clearLoanPopupNextLastId = null;
+			clearLoanPopupHasMore = false;
+			clearLoanPopupLoadingMore = false;
+			clearLoanPopupSelectedKeys = {};
+			clearLoanPopupExpandedKeys = {};
+		}
+
+		function normalizeClearLoanDocument(documentRow) {
+			var normalized = documentRow || {};
+			normalized.doc_type = normalized.doc_type || clearLoanPopupType;
+			normalized.internal_id = parseInt(normalized.internal_id, 10) || 0;
+			normalized.document_key = normalized.document_key || ((normalized.doc_type || clearLoanPopupType) + ':' + normalized.internal_id);
+			normalized.has_items = normalized.has_items !== false;
+			normalized.items_loaded = normalized.items_loaded === true;
+			normalized.items_loading = normalized.items_loading === true;
+			normalized.items = Array.isArray(normalized.items) ? normalized.items : [];
+			return normalized;
+		}
+
 		function scheduleClearLoanPopupSearch() {
 			clearTimeout(clearLoanPopupTimer);
 			clearLoanPopupTimer = setTimeout(function() {
-				loadClearLoanPopupRows();
+				loadClearLoanPopupRows(false);
 			}, 250);
+		}
+
+		function captureClearLoanSelectionState() {
+			var selected = {};
+			var checkedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
+			for (var index = 0; index < checkedInputs.length; index++) {
+				selected[String(checkedInputs[index].value || '')] = true;
+			}
+			clearLoanPopupSelectedKeys = selected;
+		}
+
+		function isClearLoanSelectionChecked(key) {
+			return !!clearLoanPopupSelectedKeys[String(key || '')];
+		}
+
+		function updateClearLoanLoadMoreButton() {
+			var button = document.getElementById('clearLoanLoadMoreButton');
+			var wrap = document.getElementById('clearLoanLoadMoreWrap');
+			if (!button || !wrap) return;
+
+			var shouldShow = clearLoanPopupHasMore || clearLoanPopupLoadingMore;
+			wrap.style.display = shouldShow ? 'block' : 'none';
+			button.style.display = shouldShow ? 'inline-flex' : 'none';
+			button.disabled = clearLoanPopupLoadingMore;
+			button.textContent = clearLoanPopupLoadingMore ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
 		}
 
 		function renderClearLoanTableState(message) {
 			var tableBody = document.getElementById('clearLoanTableBody');
 			if (!tableBody) return;
-			clearLoanPopupDocuments = [];
+			resetClearLoanPopupState();
 			tableBody.innerHTML = '<tr class="clear-loan-state-row"><td colspan="9">' + escapeClearLoanHtml(message) + '</td></tr>';
 			updateClearLoanSelectionSummary();
+			updateClearLoanLoadMoreButton();
 		}
 
-		function renderClearLoanPopupRows(documents, type) {
+		function buildClearLoanDocumentRows(documentRow, docIndex) {
+			var rows = [];
+			var items = Array.isArray(documentRow.items) ? documentRow.items : [];
+			var hasItems = documentRow.has_items !== false;
+			var expanded = !!clearLoanPopupExpandedKeys[documentRow.document_key];
+			var groupId = 'clear-loan-subrow-' + docIndex;
+			var documentKey = escapeClearLoanHtml(documentRow.document_key || ('doc-' + docIndex));
+			var documentChecked = isClearLoanSelectionChecked(documentRow.document_key);
+			var expandButtonClass = 'clear-loan-expand-btn' + (expanded ? ' expanded' : '') + (hasItems ? '' : ' disabled');
+			var expandButton = hasItems ?
+				'<button type="button" class="' + expandButtonClass + '" onclick="toggleClearRow(' + docIndex + ')" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="' + groupId + '">&#9660;</button>' :
+				'<button type="button" class="' + expandButtonClass + '" disabled aria-expanded="false">&#9660;</button>';
+
+			rows.push('<tr>');
+			rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + documentKey + '" data-entry-type="document" data-doc-index="' + docIndex + '"' + (documentChecked ? ' checked' : '') + '><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
+			rows.push('<td>' + expandButton + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.reference_no || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.required_date || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.sale_zone || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.status || '-') + '</td>');
+			rows.push('</tr>');
+			rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '">');
+			rows.push('<td></td><td></td>');
+			rows.push('<td colspan="3" style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>');
+			rows.push('<td style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px; text-align: center;">จำนวน</td>');
+			rows.push('<td colspan="3"></td>');
+			rows.push('</tr>');
+
+			if (!hasItems) {
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">ไม่พบรายการสินค้า</td></tr>');
+				return rows;
+			}
+
+			if (documentRow.items_loading) {
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">กำลังโหลด...</td></tr>');
+				return rows;
+			}
+
+			if (!documentRow.items_loaded) {
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">Expand to load items</td></tr>');
+				return rows;
+			}
+
+			if (!items.length) {
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">ไม่พบรายการสินค้า</td></tr>');
+				return rows;
+			}
+
+			for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+				var item = items[itemIndex] || {};
+				var productLabel = escapeClearLoanHtml(item.product_id || '-');
+				var productName = escapeClearLoanHtml(item.product_name || '');
+				var productCode = escapeClearLoanHtml(item.product_code || '');
+				var snText = escapeClearLoanHtml(item.sn || '');
+				var metaParts = [];
+				if (productName) {
+					metaParts.push(productName + (productCode ? ' (' + productCode + ')' : ''));
+				}
+				if (snText) {
+					metaParts.push('SN: ' + snText);
+				}
+				var itemKey = escapeClearLoanHtml(item.item_key || ((documentRow.document_key || ('doc-' + docIndex)) + '-' + itemIndex));
+				var itemChecked = isClearLoanSelectionChecked(item.item_key);
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '">');
+				rows.push('<td></td>');
+				rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + itemKey + '" data-entry-type="item" data-doc-index="' + docIndex + '" data-item-index="' + itemIndex + '"' + (itemChecked ? ' checked' : '') + '><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
+				rows.push('<td colspan="3">' + productLabel + (metaParts.length ? '<span class="clear-loan-item-meta">' + metaParts.join(' | ') + '</span>' : '') + '</td>');
+				rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(item.quantity || '0') + '</td>');
+				rows.push('<td colspan="3"></td>');
+				rows.push('</tr>');
+			}
+
+			return rows;
+		}
+
+		function renderClearLoanPopupRows(documents) {
 			var tableBody = document.getElementById('clearLoanTableBody');
 			if (!tableBody) return;
 			if (!documents || !documents.length) {
-				renderClearLoanTableState('\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a\u0e40\u0e07\u0e37\u0e48\u0e2d\u0e19\u0e44\u0e02\u0e17\u0e35\u0e48\u0e04\u0e49\u0e19\u0e2b\u0e32');
+				renderClearLoanTableState('No documents found');
 				return;
 			}
+
 			var rows = [];
 			for (var docIndex = 0; docIndex < documents.length; docIndex++) {
-				var documentRow = documents[docIndex] || {};
-				var items = Array.isArray(documentRow.items) ? documentRow.items : [];
-				var groupId = 'clear-loan-subrow-' + docIndex;
-				var hasItems = items.length > 0;
-				var documentKey = escapeClearLoanHtml(documentRow.document_no || ('doc-' + docIndex));
-				rows.push('<tr>');
-				rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + documentKey + '" data-entry-type="document" data-doc-index="' + docIndex + '"><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
-				rows.push('<td>' + (hasItems ?
-					'<button type="button" class="clear-loan-expand-btn" onclick="toggleClearRow(this, \'' + groupId + '\')" aria-expanded="false" aria-controls="' + groupId + '">&#9660;</button>' :
-					'<button type="button" class="clear-loan-expand-btn disabled" disabled aria-expanded="false">&#9660;</button>') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.reference_no || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.required_date || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.sale_zone || '-') + '</td>');
-				rows.push('<td>' + escapeClearLoanHtml(documentRow.status || '-') + '</td>');
-				rows.push('</tr>');
-				rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
-				rows.push('<td></td><td></td>');
-				rows.push('<td colspan="3" style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>');
-				rows.push('<td style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px; text-align: center;">จำนวน</td>');
-				rows.push('<td colspan="3"></td>');
-				rows.push('</tr>');
-				if (!hasItems) {
-					rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
-					rows.push('<td></td><td></td><td colspan="7">No items</td>');
-					rows.push('</tr>');
-					continue;
-				}
-				for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
-					var item = items[itemIndex] || {};
-					var productLabel = escapeClearLoanHtml(item.product_id || '-');
-					var productName = escapeClearLoanHtml(item.product_name || '');
-					var productCode = escapeClearLoanHtml(item.product_code || '');
-					var snText = escapeClearLoanHtml(item.sn || '');
-					var itemKey = escapeClearLoanHtml(item.item_key || ((documentRow.document_no || ('doc-' + docIndex)) + '-' + itemIndex));
-					rows.push('<tr class="' + groupId + ' clear-loan-subrow" aria-hidden="true">');
-					rows.push('<td></td>');
-					rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + itemKey + '" data-entry-type="item" data-doc-index="' + docIndex + '" data-item-index="' + itemIndex + '"><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
-					rows.push('<td colspan="3">' + productLabel + (productName ? '<span class="clear-loan-item-meta">' + productName + (productCode ? ' (' + productCode + ')' : '') + '</span>' : '') + '</td>');
-					rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(item.quantity || '0') + '</td>');
-					rows.push('<td colspan="3"></td>');
-					rows.push('</tr>');
-				}
+				var builtRows = buildClearLoanDocumentRows(documents[docIndex] || {}, docIndex);
+				rows = rows.concat(builtRows);
 			}
 			tableBody.innerHTML = rows.join('');
 			updateClearLoanSelectionSummary();
+			updateClearLoanLoadMoreButton();
 		}
 
 		function getClearLoanRowField(prefix, rowIndex) {
@@ -7405,6 +7485,75 @@ include("head.php"); ?>
 			return importItems;
 		}
 
+		function getClearLoanPrimaryDocument() {
+			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
+			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
+			for (var index = 0; index < selectedInputs.length; index++) {
+				var docIndex = parseInt(selectedInputs[index].getAttribute('data-doc-index'), 10);
+				if (!isNaN(docIndex) && documents[docIndex]) {
+					return documents[docIndex];
+				}
+			}
+			return null;
+		}
+
+		function setClearLoanSelectValue(id, value, addMissingOption) {
+			var select = document.getElementById(id);
+			if (!select) return;
+			var normalizedValue = value == null ? '' : String(value);
+			for (var index = 0; index < select.options.length; index++) {
+				if (select.options[index].value === normalizedValue) {
+					select.value = normalizedValue;
+					select.dispatchEvent(new Event('change', {
+						bubbles: true
+					}));
+					return;
+				}
+			}
+			if (addMissingOption && normalizedValue !== '') {
+				var option = document.createElement('option');
+				option.value = normalizedValue;
+				option.textContent = normalizedValue;
+				select.appendChild(option);
+				select.value = normalizedValue;
+				select.dispatchEvent(new Event('change', {
+					bubbles: true
+				}));
+			}
+		}
+
+		function mapClearLoanDocumentHeader(documentRow) {
+			var companyMap = {
+				'1': '3',
+				'2': '4',
+				'3': '3',
+				'4': '4'
+			};
+			setClearLoanSelectValue('type_doc_select', companyMap[String(documentRow.company || '')] || documentRow.company);
+			setClearLoanSelectValue('sale_code', documentRow.sale_code || '', true);
+			setClearLoanSelectValue('doc_type_select', '1');
+
+			var deliveryContract = document.getElementById('delivery_contract');
+			if (deliveryContract) {
+				deliveryContract.value = documentRow.required_date_raw || '';
+				deliveryContract.dispatchEvent(new Event('change', {
+					bubbles: true
+				}));
+			}
+		}
+
+		function loadClearLoanCustomer(documentRow, onComplete) {
+			var customerId = String(documentRow.customer_id || '').trim();
+			var billId = document.getElementById('bill_id');
+			var hiddenBillId = document.getElementById('h_bill_id');
+			var displayBillId = document.getElementById('display_bill_id');
+			if (billId) billId.value = customerId;
+			if (hiddenBillId) hiddenBillId.value = customerId;
+			if (displayBillId) displayBillId.textContent = customerId;
+
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, onComplete);
+		}
+
 		function populateClearLoanRow(rowIndex, entry) {
 			var item = entry && entry.item ? entry.item : {};
 			var docType = entry && entry.doc_type ? entry.doc_type : clearLoanPopupType;
@@ -7432,7 +7581,7 @@ include("head.php"); ?>
 			setClearLoanRowField('discount_unit', rowIndex, '');
 			setClearLoanRowField('sum_amount', rowIndex, '');
 			setClearLoanRowField('unit_name', rowIndex, '');
-			setClearLoanRowField('warranty', rowIndex, '');
+			setClearLoanRowField('warranty', rowIndex, item.warranty || '');
 			setClearLoanRowField('cal', rowIndex, '');
 			setClearLoanRowField('pm', rowIndex, '');
 			setClearLoanRowField('pm_year', rowIndex, '');
@@ -7467,57 +7616,166 @@ include("head.php"); ?>
 			}
 		}
 
-		function loadClearLoanPopupRows() {
-			var selectedType = getClearLoanSelectedType();
-			var search = document.getElementById('clearLoanSearch');
-			var keyword = search ? search.value : '';
-			clearLoanPopupType = selectedType;
-			if (typeof jQuery === 'undefined') {
-				renderClearLoanTableState('Refresh required');
+		function requestClearLoanDocumentItems(docIndex, onComplete) {
+			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
+			var documentRow = documents[docIndex];
+			if (!documentRow) {
+				if (typeof onComplete === 'function') onComplete(false);
 				return;
 			}
-			if (clearLoanPopupRequest && typeof clearLoanPopupRequest.abort === 'function') {
-				clearLoanPopupRequest.abort();
+			if (documentRow.items_loaded) {
+				if (typeof onComplete === 'function') onComplete(true);
+				return;
 			}
-			renderClearLoanTableState('Loading...');
-			clearLoanPopupRequestToken += 1;
-			var requestToken = clearLoanPopupRequestToken;
-			clearLoanPopupRequest = jQuery.ajax({
+			if (!documentRow.has_items) {
+				documentRow.items_loaded = true;
+				documentRow.items = [];
+				renderClearLoanPopupRows(clearLoanPopupDocuments);
+				if (typeof onComplete === 'function') onComplete(true);
+				return;
+			}
+			if (documentRow.items_loading) {
+				if (typeof onComplete === 'function') onComplete(false);
+				return;
+			}
+
+			documentRow.items_loading = true;
+			renderClearLoanPopupRows(clearLoanPopupDocuments);
+
+			jQuery.ajax({
 				url: 'ajax_clear_loan_popup_search.php',
 				type: 'GET',
 				dataType: 'json',
 				cache: false,
 				data: {
-					type: selectedType,
-					keyword: keyword
+					action: 'items',
+					type: documentRow.doc_type || clearLoanPopupType,
+					document_id: documentRow.internal_id
 				}
+			}).done(function(response) {
+				documentRow.items_loading = false;
+				if (!response || response.success !== true) {
+					renderClearLoanPopupRows(clearLoanPopupDocuments);
+					if (typeof onComplete === 'function') onComplete(false);
+					return;
+				}
+				documentRow.items = Array.isArray(response.items) ? response.items : [];
+				documentRow.items_loaded = true;
+				documentRow.has_items = documentRow.items.length > 0;
+				renderClearLoanPopupRows(clearLoanPopupDocuments);
+				if (typeof onComplete === 'function') onComplete(true);
+			}).fail(function() {
+				documentRow.items_loading = false;
+				renderClearLoanPopupRows(clearLoanPopupDocuments);
+				if (typeof onComplete === 'function') onComplete(false);
+			});
+		}
+
+		function loadClearLoanPopupRows(loadMore) {
+			var selectedType = getClearLoanSelectedType();
+			var search = document.getElementById('clearLoanSearch');
+			var keyword = search ? search.value : '';
+			clearLoanPopupType = selectedType;
+			loadMore = loadMore === true;
+
+			if (typeof jQuery === 'undefined') {
+				renderClearLoanTableState('Refresh required');
+				return;
+			}
+			if (loadMore && (!clearLoanPopupHasMore || clearLoanPopupLoadingMore)) {
+				return;
+			}
+			if (clearLoanPopupRequest && typeof clearLoanPopupRequest.abort === 'function') {
+				clearLoanPopupRequest.abort();
+			}
+
+			if (!loadMore) {
+				resetClearLoanPopupState();
+				renderClearLoanTableState('กำลังโหลด...');
+			} else {
+				captureClearLoanSelectionState();
+				clearLoanPopupLoadingMore = true;
+				updateClearLoanLoadMoreButton();
+			}
+
+			clearLoanPopupRequestToken += 1;
+			var requestToken = clearLoanPopupRequestToken;
+			var requestData = {
+				action: 'list',
+				type: selectedType,
+				keyword: keyword,
+				limit: 50
+			};
+			if (loadMore && clearLoanPopupNextLastId !== null) {
+				requestData.last_id = clearLoanPopupNextLastId;
+			}
+
+			clearLoanPopupRequest = jQuery.ajax({
+				url: 'ajax_clear_loan_popup_search.php',
+				type: 'GET',
+				dataType: 'json',
+				cache: false,
+				data: requestData
 			}).done(function(response) {
 				if (requestToken !== clearLoanPopupRequestToken) {
 					return;
 				}
 				if (!response || response.success !== true) {
-					renderClearLoanTableState((response && response.message) ? response.message : 'Load failed');
+					if (!loadMore) {
+						renderClearLoanTableState((response && response.message) ? response.message : 'โหลดข้อมูลไม่สำเร็จ');
+					} else {
+						clearLoanPopupLoadingMore = false;
+						updateClearLoanLoadMoreButton();
+					}
 					return;
 				}
-				clearLoanPopupDocuments = response.documents || [];
-				renderClearLoanPopupRows(response.documents || [], selectedType);
+
+				var incoming = Array.isArray(response.documents) ? response.documents.map(normalizeClearLoanDocument) : [];
+				if (loadMore) {
+					clearLoanPopupDocuments = clearLoanPopupDocuments.concat(incoming);
+				} else {
+					clearLoanPopupDocuments = incoming;
+				}
+
+				var pagination = response.pagination || {};
+				clearLoanPopupHasMore = pagination.has_more === true;
+				clearLoanPopupNextLastId = pagination.next_last_id != null ? pagination.next_last_id : null;
+				clearLoanPopupLoadingMore = false;
+				renderClearLoanPopupRows(clearLoanPopupDocuments);
 			}).fail(function(xhr, statusText) {
 				if (statusText === 'abort' || requestToken !== clearLoanPopupRequestToken) {
 					return;
 				}
-				renderClearLoanTableState('Load failed');
+				clearLoanPopupLoadingMore = false;
+				if (!loadMore) {
+					renderClearLoanTableState('โหลดข้อมูลไม่สำเร็จ');
+				} else {
+					updateClearLoanLoadMoreButton();
+				}
 			});
 		}
 
-		function toggleClearRow(btn, subrowId) {
-			var subrows = document.getElementsByClassName(subrowId);
-			var expanded = btn.getAttribute('aria-expanded') === 'true';
-			btn.classList.toggle('expanded', !expanded);
-			btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-			for (var i = 0; i < subrows.length; i++) {
-				subrows[i].classList.toggle('show', !expanded);
-				subrows[i].setAttribute('aria-hidden', expanded ? 'true' : 'false');
+		function loadMoreClearLoanRows() {
+			loadClearLoanPopupRows(true);
+		}
+
+		function toggleClearRow(docIndex) {
+			captureClearLoanSelectionState();
+			var documentRow = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments[docIndex] : null;
+			if (!documentRow) return;
+			var documentKey = documentRow.document_key;
+			if (clearLoanPopupExpandedKeys[documentKey]) {
+				delete clearLoanPopupExpandedKeys[documentKey];
+				renderClearLoanPopupRows(clearLoanPopupDocuments);
+				return;
 			}
+
+			clearLoanPopupExpandedKeys[documentKey] = true;
+			if (documentRow.has_items && !documentRow.items_loaded) {
+				requestClearLoanDocumentItems(docIndex);
+				return;
+			}
+			renderClearLoanPopupRows(clearLoanPopupDocuments);
 		}
 
 		function updateClearLoanSelectionSummary() {
@@ -7528,30 +7786,145 @@ include("head.php"); ?>
 			}
 		}
 
+		function ensureClearLoanDocumentsReadyForImport(onComplete) {
+			var checkedDocuments = document.querySelectorAll('#clearLoanModal .clear-loan-check-input[data-entry-type="document"]:checked');
+			var queue = [];
+			var queueMap = {};
+			for (var index = 0; index < checkedDocuments.length; index++) {
+				var docIndex = parseInt(checkedDocuments[index].getAttribute('data-doc-index'), 10);
+				if (!isNaN(docIndex) && !queueMap[docIndex]) {
+					queueMap[docIndex] = true;
+					queue.push(docIndex);
+				}
+			}
+
+			function loadNext(position) {
+				if (position >= queue.length) {
+					if (typeof onComplete === 'function') onComplete(true);
+					return;
+				}
+				var currentIndex = queue[position];
+				var documentRow = clearLoanPopupDocuments[currentIndex];
+				if (!documentRow || documentRow.items_loaded || !documentRow.has_items) {
+					loadNext(position + 1);
+					return;
+				}
+				requestClearLoanDocumentItems(currentIndex, function(success) {
+					if (!success) {
+						if (typeof onComplete === 'function') onComplete(false);
+						return;
+					}
+					loadNext(position + 1);
+				});
+			}
+
+			loadNext(0);
+		}
+
+		function getSelectedClearLoanDocuments() {
+			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
+			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
+			var seen = {};
+			var selectedDocuments = [];
+			for (var index = 0; index < selectedInputs.length; index++) {
+				var docIndex = parseInt(selectedInputs[index].getAttribute('data-doc-index'), 10);
+				if (isNaN(docIndex) || seen[docIndex] || !documents[docIndex]) {
+					continue;
+				}
+				seen[docIndex] = true;
+				selectedDocuments.push(documents[docIndex]);
+			}
+			return selectedDocuments;
+		}
+
+		function validateClearLoanDocumentCompatibility(documents) {
+			if (!documents || documents.length <= 1) {
+				return {
+					valid: true
+				};
+			}
+			var firstDocument = documents[0] || {};
+			var baseCustomerId = String(firstDocument.customer_id || '').trim();
+			var baseCompany = String(firstDocument.company || '').trim();
+			var baseSaleCode = String(firstDocument.sale_code || '').trim();
+			var baseRequiredDate = String(firstDocument.required_date_raw || '').trim();
+			for (var index = 1; index < documents.length; index++) {
+				var documentRow = documents[index] || {};
+				if (String(documentRow.customer_id || '').trim() !== baseCustomerId) {
+					return {
+						valid: false,
+						message: 'กรุณาเลือกเอกสารของลูกค้ารายเดียวกัน'
+					};
+				}
+				if (String(documentRow.company || '').trim() !== baseCompany) {
+					return {
+						valid: false,
+						message: 'กรุณาเลือกเอกสารที่อยู่บริษัทเดียวกัน'
+					};
+				}
+				if (String(documentRow.sale_code || '').trim() !== baseSaleCode) {
+					return {
+						valid: false,
+						message: 'กรุณาเลือกเอกสารที่มีเขตการขายเดียวกัน'
+					};
+				}
+				if (String(documentRow.required_date_raw || '').trim() !== baseRequiredDate) {
+					return {
+						valid: false,
+						message: 'กรุณาเลือกเอกสารที่มีวันที่กำหนดส่งเดียวกัน'
+					};
+				}
+			}
+			return {
+				valid: true
+			};
+		}
+
 		function confirmClearLoanSelection() {
-			var importItems = buildClearLoanImportItems();
-			if (!importItems.length) {
-				alert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e19\u0e33\u0e40\u0e02\u0e49\u0e32');
-				return;
-			}
-			var availableRows = getClearLoanAvailableRows(30);
-			if (availableRows.length < importItems.length) {
-				alert('\u0e41\u0e16\u0e27\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32\u0e27\u0e48\u0e32\u0e07\u0e44\u0e21\u0e48\u0e1e\u0e2d \u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e04\u0e25\u0e35\u0e22\u0e23\u0e4c\u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1e\u0e34\u0e48\u0e21\u0e41\u0e16\u0e27\u0e01\u0e48\u0e2d\u0e19');
-				return;
-			}
-			for (var index = 0; index < importItems.length; index++) {
-				populateClearLoanRow(availableRows[index], importItems[index]);
-			}
-			if (typeof syncFormCompatibilityFields === 'function') {
-				syncFormCompatibilityFields();
-			}
-			if (typeof calculateSummary === 'function') {
-				calculateSummary();
-			}
-			if (typeof renderRelatedDocuments === 'function') {
-				renderRelatedDocuments();
-			}
-			closeClearLoanPopup();
+			captureClearLoanSelectionState();
+			ensureClearLoanDocumentsReadyForImport(function(ready) {
+				if (!ready) {
+					alert('ไม่สามารถโหลดรายการสินค้าของเอกสารที่เลือกได้');
+					return;
+				}
+
+				var selectedDocuments = getSelectedClearLoanDocuments();
+				var importItems = buildClearLoanImportItems();
+				var primaryDocument = selectedDocuments.length ? selectedDocuments[0] : getClearLoanPrimaryDocument();
+				if (!importItems.length) {
+					alert('กรุณาเลือกรายการที่ต้องการนำเข้า');
+					return;
+				}
+				if (!primaryDocument || !String(primaryDocument.customer_id || '').trim()) {
+					alert('ไม่พบรหัสลูกค้าในเอกสารต้นทาง');
+					return;
+				}
+				var compatibility = validateClearLoanDocumentCompatibility(selectedDocuments);
+				if (!compatibility.valid) {
+					alert(compatibility.message);
+					return;
+				}
+				var availableRows = getClearLoanAvailableRows(30);
+				if (availableRows.length < importItems.length) {
+					alert('แถวสินค้าว่างไม่เพียงพอ กรุณาเคลียร์หรือเพิ่มแถวก่อน');
+					return;
+				}
+				loadClearLoanCustomer(primaryDocument, function(success, missingFields) {
+					if (!success) {
+						var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'โหลดข้อมูลลูกค้าไม่สำเร็จ';
+						alert('ไม่สามารถนำเข้าข้อมูลได้: ' + missingMessage);
+						return;
+					}
+					mapClearLoanDocumentHeader(primaryDocument);
+					for (var index = 0; index < importItems.length; index++) {
+						populateClearLoanRow(availableRows[index], importItems[index]);
+					}
+					if (typeof syncFormCompatibilityFields === 'function') syncFormCompatibilityFields();
+					if (typeof calculateSummary === 'function') calculateSummary();
+					if (typeof renderRelatedDocuments === 'function') renderRelatedDocuments();
+					closeClearLoanPopup();
+				});
+			});
 		}
 
 		function updateToggleStyle(checkbox) {
@@ -7699,10 +8072,10 @@ include("head.php"); ?>
 
 									if (limit > 0 && total > limit) {
 
-										// โชว์ Popup แทน alert
+						// โชว์ Popup แทน alert
 										showOverLimitPopup(total, limit);
 
-										// (เลือกได้) จะย้อนค่าเดิมหรือไม่ก็ได้
+						// (เลือกได้) จะย้อนค่าเดิมหรือไม่ก็ได้
 										const el = document.getElementById(changedId);
 										if (el && lastOkValues[changedId] !== undefined) {
 											el.value = lastOkValues[changedId];
@@ -7727,7 +8100,7 @@ include("head.php"); ?>
 									const el = document.getElementById(id);
 									if (!el) return;
 
-									// เก็บค่าเริ่มต้นไว้ก่อน
+							// เก็บค่าเริ่มต้นไว้ก่อน
 									lastOkValues[id] = el.value;
 
 									el.addEventListener('focus', () => lastOkValues[id] = el.value);
@@ -7770,333 +8143,7 @@ include("head.php"); ?>
 </script>
 
 <style>
-	/*
-	.customer-popup-modal {
-		display: none;
-		position: fixed;
-		z-index: 99998;
-		inset: 0;
-		align-items: center;
-		justify-content: center;
-		background: rgba(0, 0, 0, .45);
-		padding: 24px;
-		box-sizing: border-box;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.customer-popup-box {
-		width: min(1096px, 96vw);
-		height: min(1226px, 92vh);
-		background: #fff;
-		border-radius: 10px;
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-		box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
-	}
-
-	.fullbill-popup-box {
-		.fullbill-popup-box {
-			width .customer-popup-close {
-				position: absolute;
-				top: 4px;
-				right: 18px;
-				width: 28px;
-				height: 28px;
-				border: 0;
-				background: transparent;
-				color: #3B3B3B;
-				font-size: 52px;
-				line-height: 1;
-				cursor: pointer;
-				z-index: 1;
-			}
-
-			.customer-popup-header {
-				padding: 24px 32px 10px;
-				border-bottom: 1px solid #EEE7F4;
-			}
-
-			.customer-popup-header h2 {
-				margin: 0;
-				color: #3B3B3B;
-				font-size: 20px;
-				font-weight: 500;
-				line-height: 1.35;
-			}
-
-			.customer-popup-toolbar {
-				display: flex;
-				align-items: flex-end;
-				gap: 20px;
-				padding: 14px 32px 18px;
-			}
-
-			.customer-popup-search-wrap {
-				flex: 1;
-				max-width: 562px;
-			}
-
-			.customer-popup-search-wrap label {
-				display: block;
-				margin-bottom: 4px;
-				color: #612989;
-				font-size: 14px;
-				font-weight: 400;
-			}
-
-			.customer-popup-search {
-				height: 42px;
-				display: flex;
-				align-items: center;
-				gap: 12px;
-				background: #F5F6F8;
-				border-radius: 10px;
-				padding: 0 14px;
-				box-sizing: border-box;
-			}
-
-			.customer-popup-search i {
-				color: #2F3337;
-				font-size: 16px;
-			}
-
-			.customer-popup-search input {
-				width: 100%;
-				border: 0;
-				outline: none;
-				background: transparent;
-				color: #3B3B3B;
-				font-size: 16px;
-				font-family: 'Prompt', sans-serif;
-			}
-
-			.customer-popup-add {
-				height: 42px;
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				gap: 10px;
-				border: 0;
-				border-radius: 25px;
-				background: #fff;
-				color: #612989;
-				font-family: 'Prompt', sans-serif;
-				font-size: 14px;
-				font-weight: 500;
-				padding: 0 24px;
-				cursor: pointer;
-				box-shadow: 0 0 4px rgba(0, 0, 0, .25);
-				white-space: nowrap;
-			}
-
-			.customer-popup-table-wrap {
-				flex: 1;
-				overflow: auto;
-				border-top: 1px solid #612989;
-				border-bottom: 1px solid #F0EDF2;
-			}
-
-			.customer-popup-table {
-				width: 100%;
-				border-collapse: collapse;
-				table-layout: fixed;
-				color: #3B3B3B;
-				font-family: 'Prompt', sans-serif;
-			}
-
-			.customer-popup-table th {
-				height: 40px;
-				padding: 0 36px;
-				text-align: left;
-				color: #612989;
-				font-size: 16px;
-				font-weight: 500;
-				border-bottom: 1px solid #612989;
-				white-space: nowrap;
-			}
-
-			.customer-popup-table th:nth-child(1) {
-				width: 20%;
-			}
-
-			.customer-popup-table th:nth-child(2) {
-				width: 16%;
-			}
-
-			.customer-popup-table th:nth-child(3) {
-				width: 46%;
-			}
-
-			.customer-popup-table th:nth-child(4) {
-				width: 18%;
-			}
-
-			.customer-popup-table td {
-				height: 63px;
-				padding: 0 36px;
-				font-size: 16px;
-				font-weight: 300;
-				border-bottom: 1px solid #EBEBEB;
-				vertical-align: middle;
-			}
-
-			.customer-popup-table tbody tr {
-				cursor: pointer;
-			}
-
-			.customer-popup-table tbody tr:hover,
-			.customer-popup-table tbody tr.selected {
-				background: #F1E1FF;
-			}
-
-			.customer-popup-name {
-				border: 0;
-				background: transparent;
-				color: #612989;
-				font-family: 'Prompt', sans-serif;
-				font-size: 16px;
-				font-weight: 300;
-				text-decoration: underline;
-				cursor: pointer;
-				padding: 0;
-				text-align: left;
-			}
-
-			.customer-popup-empty {
-				text-align: center;
-				color: #696969;
-				cursor: default;
-			}
-
-			.customer-popup-pagination {
-				display: flex;
-				justify-content: center;
-				padding: 4px 32px 0;
-			}
-
-			.customer-popup-loadmore {
-				min-width: 152px;
-				height: 40px;
-				border: 1px solid #D9C8EA;
-				border-radius: 20px;
-				background: #FFFFFF;
-				color: #612989;
-				font-family: 'Prompt', sans-serif;
-				font-size: 14px;
-				font-weight: 500;
-				cursor: pointer;
-				box-shadow: 0 0 4px rgba(0, 0, 0, .10);
-				transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
-			}
-
-			.customer-popup-loadmore:hover:not(:disabled) {
-				background: #612989;
-				color: #FFFFFF;
-				border-color: #612989;
-				box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2);
-			}
-
-			.customer-popup-loadmore:disabled {
-				opacity: .7;
-				cursor: wait;
-			}
-
-			.customer-popup-actions {
-				display: flex;
-				justify-content: flex-end;
-				gap: 24px;
-				padding: 22px 32px;
-			}
-
-			.customer-popup-actions button {
-				width: 152px;
-				height: 42px;
-				border-radius: 21px;
-				font-family: 'Prompt', sans-serif;
-				font-size: 14px;
-				font-weight: 500;
-				cursor: pointer;
-				box-shadow: 0 0 4px rgba(0, 0, 0, .25);
-				transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-			}
-
-			.customer-popup-confirm {
-				border: 0;
-				background: #612989;
-				color: #fff;
-			}
-
-			.customer-popup-confirm:hover {
-				background: #54237a;
-				box-shadow: 0 4px 12px rgba(97, 41, 137, 0.3);
-			}
-
-			.customer-popup-cancel {
-				border: 0;
-				background: #fff;
-				color: #3B3B3B;
-			}
-
-			.customer-popup-cancel:hover {
-				background: #f6effd;
-				color: #612989;
-			}
-
-			@media (max-width: 768px) {
-				.customer-popup-modal {
-					padding: 12px;
-				}
-
-				.customer-popup-box {
-					width: 100%;
-					height: 94vh;
-				}
-
-				.customer-popup-toolbar {
-					align-items: stretch;
-					flex-direction: column;
-					gap: 12px;
-					padding: 14px 18px 18px;
-				}
-
-				.customer-popup-header {
-					padding: 22px 18px 10px;
-				}
-
-				.customer-popup-search-wrap {
-					max-width: none;
-				}
-
-				.customer-popup-table {
-					min-width: 780px;
-				}
-
-				.customer-popup-table th,
-				.customer-popup-table td {
-					padding: 0 18px;
-				}
-
-				.customer-popup-actions {
-					gap: 12px;
-					padding: 16px 18px;
-				}
-
-				.customer-popup-actions button {
-					flex: 1;
-					width: auto;
-					ay: none;
-					position: fixed;
-					z-index: 99999;
-					left: 0;
-					top: 0;
-					width: 100%;
-					height: 100%;
-					background: rgba(0, 0, 0, .45);
-				}
-
-				/* Modal box */
+	/* Modal box */
 	#overLimitModal .box {
 		width: min(520px, 92vw);
 		background: #fff;
@@ -8786,6 +8833,12 @@ include("head.php"); ?>
 						</tr>
 					</tbody>
 				</table>
+			</div>
+
+			<div id="clearLoanLoadMoreWrap" class="clear-loan-actions" style="display: none; padding-top: 12px; border-top: none;">
+				<div class="clear-loan-action-container">
+					<button type="button" class="clear-loan-btn clear-loan-btn-secondary" id="clearLoanLoadMoreButton" onclick="loadMoreClearLoanRows()" style="display: none;">โหลดเพิ่ม</button>
+				</div>
 			</div>
 
 			<div class="clear-loan-actions">
