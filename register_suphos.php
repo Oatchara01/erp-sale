@@ -7292,16 +7292,56 @@ include("head.php"); ?>
 			button.textContent = clearLoanPopupLoadingMore ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
 		}
 
+
+		function getClearLoanTableColumnCount(docType) {
+			return docType === 'loan' ? 10 : 9;
+		}
+
 		function renderClearLoanTableState(message) {
 			var tableBody = document.getElementById('clearLoanTableBody');
 			if (!tableBody) return;
 			resetClearLoanPopupState();
-			tableBody.innerHTML = '<tr class="clear-loan-state-row"><td colspan="9">' + escapeClearLoanHtml(message) + '</td></tr>';
+			updateClearLoanTableHeaders(clearLoanPopupType);
+			tableBody.innerHTML = '<tr class="clear-loan-state-row"><td colspan="' + getClearLoanTableColumnCount(clearLoanPopupType) + '">' + escapeClearLoanHtml(message) + '</td></tr>';
 			updateClearLoanSelectionSummary();
 			updateClearLoanLoadMoreButton();
 		}
 
-		function buildClearLoanDocumentRows(documentRow, docIndex) {
+		function updateClearLoanTableHeaders(docType) {
+			var labels = docType === 'loan' ? {
+				clearLoanHeaderReference: 'วันที่ลงทะเบียน',
+				clearLoanHeaderRegisteredDate: 'เลขที่เอกสาร',
+				clearLoanHeaderDocumentNo: 'รายการสินค้า',
+				clearLoanHeaderRequiredDate: 'จำนวน',
+				clearLoanHeaderCustomerName: 'หมายเลข SN',
+				clearLoanHeaderSaleZone: 'ชื่อลูกค้า',
+				clearLoanHeaderStatus: 'เขตการขาย',
+				clearLoanHeaderExtra: 'สถานะ'
+			} : {
+				clearLoanHeaderReference: 'เลขที่อ้างอิง',
+				clearLoanHeaderRegisteredDate: 'วันที่ลงทะเบียน',
+				clearLoanHeaderDocumentNo: 'เลขที่ใบจอง',
+				clearLoanHeaderRequiredDate: 'วันที่ต้องการสินค้า',
+				clearLoanHeaderCustomerName: 'ชื่อลูกค้า',
+				clearLoanHeaderSaleZone: 'เขตการขาย',
+				clearLoanHeaderStatus: 'สถานะ',
+				clearLoanHeaderExtra: ''
+			};
+			var headerIds = Object.keys(labels);
+			for (var index = 0; index < headerIds.length; index++) {
+				var headerId = headerIds[index];
+				var headerElement = document.getElementById(headerId);
+				if (headerElement) {
+					headerElement.textContent = labels[headerId];
+				}
+			}
+			var extraHeader = document.getElementById('clearLoanHeaderExtra');
+			if (extraHeader) {
+				extraHeader.style.display = docType === 'loan' ? '' : 'none';
+			}
+		}
+
+		function buildReserveClearLoanDocumentRows(documentRow, docIndex) {
 			var rows = [];
 			var items = Array.isArray(documentRow.items) ? documentRow.items : [];
 			var hasItems = documentRow.has_items !== false;
@@ -7327,18 +7367,18 @@ include("head.php"); ?>
 			rows.push('</tr>');
 			rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '">');
 			rows.push('<td></td><td></td>');
-			rows.push('<td colspan="3" style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px;">รายการสินค้า</td>');
-			rows.push('<td style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px; text-align: center;">จำนวน</td>');
+			rows.push('<td colspan="3" style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px;">\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32</td>');
+			rows.push('<td style="color: #612989; font-weight: 600; padding-top: 14px; padding-bottom: 6px; text-align: center;">\u0E08\u0E33\u0E19\u0E27\u0E19</td>');
 			rows.push('<td colspan="3"></td>');
 			rows.push('</tr>');
 
 			if (!hasItems) {
-				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">ไม่พบรายการสินค้า</td></tr>');
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32</td></tr>');
 				return rows;
 			}
 
 			if (documentRow.items_loading) {
-				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">กำลังโหลด...</td></tr>');
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">\u0E01\u0E33\u0E25\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14...</td></tr>');
 				return rows;
 			}
 
@@ -7348,7 +7388,7 @@ include("head.php"); ?>
 			}
 
 			if (!items.length) {
-				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">ไม่พบรายการสินค้า</td></tr>');
+				rows.push('<tr class="' + groupId + ' clear-loan-subrow' + (expanded ? ' show' : '') + '" aria-hidden="' + (expanded ? 'false' : 'true') + '"><td></td><td></td><td colspan="7">\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32</td></tr>');
 				return rows;
 			}
 
@@ -7379,8 +7419,35 @@ include("head.php"); ?>
 			return rows;
 		}
 
+		function buildLoanClearLoanDocumentRows(documentRow, docIndex) {
+			var rows = [];
+			var documentKey = escapeClearLoanHtml(documentRow.document_key || ('doc-' + docIndex));
+			var documentChecked = isClearLoanSelectionChecked(documentRow.document_key);
+			rows.push('<tr>');
+			rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + documentKey + '" data-entry-type="document" data-doc-index="' + docIndex + '"' + (documentChecked ? ' checked' : '') + '><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
+			rows.push('<td></td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no_display || documentRow.reference_no || documentRow.document_no || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_product_name || documentRow.loan_product_id || '-') + '</td>');
+			rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(documentRow.loan_quantity || '0') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_sn || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.sale_zone || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.status || '-') + '</td>');
+			rows.push('</tr>');
+			return rows;
+		}
+
+		function buildClearLoanDocumentRows(documentRow, docIndex) {
+			if ((documentRow.doc_type || clearLoanPopupType) === 'loan') {
+				return buildLoanClearLoanDocumentRows(documentRow, docIndex);
+			}
+			return buildReserveClearLoanDocumentRows(documentRow, docIndex);
+		}
+
 		function renderClearLoanPopupRows(documents) {
 			var tableBody = document.getElementById('clearLoanTableBody');
+			updateClearLoanTableHeaders(clearLoanPopupType);
 			if (!tableBody) return;
 			if (!documents || !documents.length) {
 				renderClearLoanTableState('No documents found');
@@ -7677,6 +7744,7 @@ include("head.php"); ?>
 			var keyword = search ? search.value : '';
 			clearLoanPopupType = selectedType;
 			loadMore = loadMore === true;
+			updateClearLoanTableHeaders(clearLoanPopupType);
 
 			if (typeof jQuery === 'undefined') {
 				renderClearLoanTableState('Refresh required');
@@ -8818,13 +8886,14 @@ include("head.php"); ?>
 						<tr>
 							<th style="width: 40px;"></th>
 							<th style="width: 40px;"></th>
-							<th>เลขที่อ้างอิง</th>
-							<th>วันที่ลงทะเบียน</th>
-							<th>เลขที่ใบจอง</th>
-							<th>วันที่ต้องการสินค้า</th>
-							<th>ชื่อลูกค้า</th>
-							<th>เขตการขาย</th>
-							<th>สถานะ</th>
+							<th id="clearLoanHeaderReference"></th>
+							<th id="clearLoanHeaderRegisteredDate"></th>
+							<th id="clearLoanHeaderDocumentNo"></th>
+							<th id="clearLoanHeaderRequiredDate"></th>
+							<th id="clearLoanHeaderCustomerName"></th>
+							<th id="clearLoanHeaderSaleZone"></th>
+							<th id="clearLoanHeaderStatus"></th>
+							<th id="clearLoanHeaderExtra" style="display: none;"></th>
 						</tr>
 					</thead>
 					<tbody id="clearLoanTableBody">

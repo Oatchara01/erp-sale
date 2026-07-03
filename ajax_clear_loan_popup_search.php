@@ -232,6 +232,62 @@ function clearLoanBuildLoanItems($conn, $referenceNo, $documentNo)
     return $items;
 }
 
+function clearLoanBuildLoanDocumentEntries($row, $items)
+{
+    $documents = array();
+    $internalId = (int)$row['id'];
+    $registeredDate = clearLoanFormatDate($row['date_br']);
+    $registeredDateRaw = clearLoanFormatRawDate($row['date_br']);
+    $requiredDate = clearLoanFormatDate($row['iv_date']);
+    $requiredDateRaw = clearLoanFormatRawDate($row['iv_date']);
+    $customerName = clearLoanNormalizeText($row['customer']);
+    $customerId = clearLoanNormalizeText($row['customer_id']);
+    $company = clearLoanNormalizeText($row['company']);
+    $saleCode = clearLoanNormalizeText($row['sale_code']);
+    $status = clearLoanNormalizeText($row['status_doc']);
+    $referenceNo = clearLoanNormalizeText($row['ref_id_br']);
+    $importDocumentNo = clearLoanNormalizeText($row['iv_no']);
+
+    foreach ($items as $itemIndex => $item) {
+        $item = is_array($item) ? $item : array();
+        $itemKey = clearLoanNormalizeText(isset($item['item_key']) ? $item['item_key'] : '');
+        if ($itemKey === '') {
+            $itemKey = 'loan-' . $internalId . '-' . ($itemIndex + 1);
+        }
+
+        $documents[] = array(
+            'doc_type' => 'loan',
+            'internal_id' => $internalId,
+            'document_key' => 'loan:' . $internalId . ':' . $itemKey,
+            'company' => $company,
+            'customer_id' => $customerId,
+            'sale_code' => $saleCode,
+            'reference_no' => $referenceNo,
+            'registered_date' => $registeredDate,
+            'registered_date_raw' => $registeredDateRaw,
+            'document_no' => $importDocumentNo,
+            'document_no_display' => $referenceNo,
+            'required_date' => $requiredDate,
+            'required_date_raw' => $requiredDateRaw,
+            'customer_name' => $customerName,
+            'sale_zone' => $saleCode,
+            'status' => $status,
+            'has_items' => true,
+            'items_loaded' => true,
+            'items' => array($item),
+            'loan_item_key' => $itemKey,
+            'loan_product_id' => clearLoanNormalizeText(isset($item['product_id']) ? $item['product_id'] : ''),
+            'loan_product_name' => clearLoanNormalizeText(isset($item['product_name']) ? $item['product_name'] : ''),
+            'loan_product_code' => clearLoanNormalizeText(isset($item['product_code']) ? $item['product_code'] : ''),
+            'loan_quantity' => isset($item['quantity']) ? (string)$item['quantity'] : '',
+            'loan_sn' => clearLoanNormalizeText(isset($item['sn']) ? $item['sn'] : '')
+        );
+    }
+
+    return $documents;
+}
+
+
 function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit)
 {
     $filters = array(
@@ -430,26 +486,11 @@ function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
     foreach ($rows as $row) {
         $internalId = (int)$row['id'];
         $nextLastId = $internalId;
-        $documents[] = array(
-            'doc_type' => 'loan',
-            'internal_id' => $internalId,
-            'document_key' => 'loan:' . $internalId,
-            'company' => clearLoanNormalizeText($row['company']),
-            'customer_id' => clearLoanNormalizeText($row['customer_id']),
-            'sale_code' => clearLoanNormalizeText($row['sale_code']),
-            'reference_no' => clearLoanNormalizeText($row['ref_id_br']),
-            'registered_date' => clearLoanFormatDate($row['date_br']),
-            'registered_date_raw' => clearLoanFormatRawDate($row['date_br']),
-            'document_no' => clearLoanNormalizeText($row['iv_no']),
-            'required_date' => clearLoanFormatDate($row['iv_date']),
-            'required_date_raw' => clearLoanFormatRawDate($row['iv_date']),
-            'customer_name' => clearLoanNormalizeText($row['customer']),
-            'sale_zone' => clearLoanNormalizeText($row['sale_code']),
-            'status' => clearLoanNormalizeText($row['status_doc']),
-            'has_items' => (string)$row['has_items'] === '1',
-            'items_loaded' => false,
-            'items' => array()
-        );
+        $items = clearLoanBuildLoanItems($conn, $row['ref_id_br'], $row['iv_no']);
+        if (empty($items)) {
+            continue;
+        }
+        $documents = array_merge($documents, clearLoanBuildLoanDocumentEntries($row, $items));
     }
 
     return array(
