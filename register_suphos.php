@@ -2,6 +2,7 @@
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="css/credit-term-modal.css?v=20260704">
 <style>
 	/* Custom Circular Checkbox/Radio Styling */
 	.shipping-custom-radio {
@@ -6291,7 +6292,7 @@ include("head.php"); ?>
 		</div>
 	</div>
 
-	<!-- Credit Term Modal: UI only, no live data binding yet -->
+	<!-- Credit Term Modal -->
 	<div id="creditTermPopupModal" class="customer-popup-modal" aria-hidden="true">
 		<div class="customer-popup-box credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
 			<button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
@@ -6304,19 +6305,19 @@ include("head.php"); ?>
 				<div class="credit-term-summary">
 					<div class="credit-term-summary-item">
 						<p class="credit-term-summary-label">เครดิต (วัน)</p>
-						<p class="credit-term-summary-value">-</p>
+						<p class="credit-term-summary-value" id="creditTermSummaryDay">-</p>
 					</div>
 					<div class="credit-term-summary-item">
 						<p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p>
-						<p class="credit-term-summary-value">-</p>
+						<p class="credit-term-summary-value" id="creditTermSummaryAmount">0.00</p>
 					</div>
 					<div class="credit-term-summary-item">
 						<p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p>
-						<p class="credit-term-summary-value">-</p>
+						<p class="credit-term-summary-value" id="creditTermSummaryOutstanding">0.00</p>
 					</div>
 					<div class="credit-term-summary-item is-highlight">
 						<p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p>
-						<p class="credit-term-summary-value">-</p>
+						<p class="credit-term-summary-value" id="creditTermSummaryRemaining">0.00</p>
 					</div>
 				</div>
 
@@ -6333,33 +6334,42 @@ include("head.php"); ?>
 									<th>ยอดหนี้คงค้าง</th>
 								</tr>
 							</thead>
-							<tbody>
+							<tbody id="creditTermTableBody">
 								<tr class="credit-term-empty-row">
 									<td><span class="credit-term-caret" aria-hidden="true"></span></td>
-									<td colspan="5">ส่วนตารางรายการเครดิตเทอมจะแสดงที่นี่เมื่อเชื่อมต่อข้อมูลจริง</td>
+									<td colspan="5">เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล</td>
 								</tr>
 							</tbody>
 						</table>
 					</div>
 
 					<div class="credit-term-detail-panel">
+						<p class="credit-term-selected-doc" id="creditTermSelectedDoc">เลือกรายการหนี้เพื่อดูรายละเอียดการติดตาม</p>
 						<div class="credit-term-detail-grid">
 							<div>
 								<p class="credit-term-detail-title">วันที่ติดตาม</p>
-								<div class="credit-term-skeleton-line short"></div>
-								<div class="credit-term-skeleton-line short"></div>
-								<div class="credit-term-skeleton-line short"></div>
+								<div class="credit-term-detail-list" id="creditTermTrackDateList">
+									<p class="credit-term-detail-empty">ยังไม่ได้เลือกรายการ</p>
+								</div>
 							</div>
 							<div>
 								<p class="credit-term-detail-title">การติดตาม</p>
-								<div class="credit-term-skeleton-line"></div>
-								<div class="credit-term-skeleton-line medium"></div>
-								<div class="credit-term-skeleton-input"></div>
+								<div class="credit-term-detail-list" id="creditTermTrackDescList">
+									<p class="credit-term-detail-empty">เลือกรายการหนี้ทางด้านบนก่อน</p>
+								</div>
+								<div class="credit-term-form">
+									<textarea id="creditTermTrackInput" class="credit-term-textarea" placeholder="กรอกข้อมูลการติดตาม" disabled></textarea>
+									<div class="credit-term-actions">
+										<span class="credit-term-hint">กด Ctrl + Enter เพื่อบันทึกได้</span>
+										<button type="button" id="creditTermTrackSaveButton" class="credit-term-save-btn" onclick="saveCreditTermTrack()" disabled>บันทึกการติดตาม</button>
+									</div>
+								</div>
 							</div>
 							<div>
 								<p class="credit-term-detail-title">ชื่อผู้ติดตาม</p>
-								<div class="credit-term-skeleton-line short"></div>
-								<div class="credit-term-skeleton-line short"></div>
+								<div class="credit-term-detail-list" id="creditTermTrackByList">
+									<p class="credit-term-detail-empty">ยังไม่มีข้อมูลผู้ติดตาม</p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -6367,7 +6377,6 @@ include("head.php"); ?>
 			</div>
 		</div>
 	</div>
-
 	<!-- Modal ที่อยู่จัดส่ง: ใช้เลือก shipping address ของลูกค้าที่ถูกเลือกอยู่ก่อนหน้า -->
 	<div id="shippingAddressPopupModal" class="customer-popup-modal shipping-popup-modal" aria-hidden="true">
 		<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
@@ -7373,6 +7382,7 @@ include("head.php"); ?>
 
 			var billId = document.getElementById('bill_id');
 			if (billId) {
+				console.log(billId);
 				billId.value = customerPopupSelected.customer_id || '';
 			}
 			var hiddenBillId = document.getElementById('h_bill_id');
@@ -7565,6 +7575,9 @@ include("head.php"); ?>
 			if (!modal || !trigger || trigger.disabled) return;
 			modal.style.display = 'flex';
 			modal.setAttribute('aria-hidden', 'false');
+			if (typeof window.loadCreditTermModalData === 'function') {
+				window.loadCreditTermModalData();
+			}
 		}
 
 		function closeCreditTermPopup() {
@@ -7573,7 +7586,6 @@ include("head.php"); ?>
 			modal.style.display = 'none';
 			modal.setAttribute('aria-hidden', 'true');
 		}
-
 		function openClearLoanPopup() {
 			var modal = document.getElementById('clearLoanModal');
 			var search = document.getElementById('clearLoanSearch');
@@ -9850,5 +9862,7 @@ include("head.php"); ?>
 				}
 			});
 		</script>
+		<script src="js/credit-term-modal.js?v=20260704"></script>
 
 	<?php endif; ?>
+

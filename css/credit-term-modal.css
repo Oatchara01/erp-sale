@@ -1,0 +1,135 @@
+.credit-term-selected-doc {
+	margin: 0 0 18px;
+	font-size: 14px;
+	color: #4A4A4A;
+}
+
+.credit-term-detail-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-height: 112px;
+}
+
+.credit-term-detail-item {
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.72);
+	color: #3B3B3B;
+	line-height: 1.5;
+	word-break: break-word;
+}
+
+.credit-term-detail-empty {
+	margin: 0;
+	padding: 12px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.5);
+	color: #7A7280;
+}
+
+.credit-term-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.credit-term-textarea {
+	width: 100%;
+	min-height: 96px;
+	padding: 12px 14px;
+	border: 1px solid #D7CEE1;
+	border-radius: 10px;
+	background: #FFFFFF;
+	font-size: 14px;
+	font-family: 'Prompt', sans-serif;
+	color: #3B3B3B;
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.credit-term-textarea:focus {
+	outline: none;
+	border-color: #612989;
+	box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.12);
+}
+
+.credit-term-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.credit-term-hint {
+	font-size: 13px;
+	color: #7A7280;
+}
+
+.credit-term-save-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 42px;
+	padding: 0 24px;
+	border: none;
+	border-radius: 999px;
+	background: #612989;
+	color: #FFFFFF;
+	font-size: 14px;
+	font-family: 'Prompt', sans-serif;
+	cursor: pointer;
+	transition: background-color 0.2s, opacity 0.2s;
+}
+
+.credit-term-save-btn:hover:not(:disabled) {
+	background: #502072;
+}
+
+.credit-term-save-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.credit-term-row-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+	padding: 0;
+}
+
+.credit-term-row-btn:hover {
+	background: rgba(97, 41, 137, 0.08);
+}
+
+.credit-term-row-btn.is-selected {
+	background: rgba(97, 41, 137, 0.12);
+}
+
+.credit-term-row-btn.is-selected .credit-term-caret {
+	opacity: 1;
+	border-left-color: #612989;
+	transform: rotate(90deg);
+}
+
+.credit-term-row-selected td {
+	background: #F7F0FF;
+}
+
+.credit-term-row-selected td:first-child {
+	box-shadow: inset 3px 0 0 #612989;
+}
+
+.credit-term-track-count {
+	display: inline-block;
+	margin-top: 6px;
+	font-size: 12px;
+	color: #7A7280;
+}
