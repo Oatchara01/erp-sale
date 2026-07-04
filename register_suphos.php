@@ -398,6 +398,232 @@ include("head.php"); ?>
 		background-color: #F8F8F8;
 	}
 
+	.credit-term-trigger {
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		font-family: 'Prompt', sans-serif;
+		color: #612989;
+	}
+
+	.credit-term-trigger.is-empty {
+		display: none;
+	}
+
+	.credit-term-trigger:disabled {
+		cursor: default;
+	}
+
+	.credit-term-trigger:focus-visible {
+		outline: 2px solid rgba(97, 41, 137, 0.35);
+		outline-offset: 4px;
+		border-radius: 8px;
+	}
+
+	.credit-term-trigger-text {
+		font-size: 14px;
+		line-height: 1.4;
+		color: #612989;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.credit-term-trigger-icon {
+		width: 19.5px;
+		height: 19.5px;
+		object-fit: contain;
+		flex: 0 0 19.5px;
+	}
+
+	.credit-term-popup-box {
+		width: min(1096px, 96vw);
+		height: min(884px, 92vh);
+	}
+
+	.credit-term-popup-content {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-height: 0;
+		padding: 22px 30px 30px;
+		gap: 20px;
+	}
+
+	.credit-term-summary {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		background: #F5F6F8;
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	.credit-term-summary-item {
+		padding: 18px 20px 16px;
+		text-align: center;
+		position: relative;
+	}
+	.credit-term-summary-item:not(:last-child)::after {
+		content: "";
+		position: absolute;
+		top: 14px;
+		right: 0;
+		width: 1px;
+		height: calc(100% - 28px);
+		background: #C9C3CE;
+	}
+	.credit-term-summary-label {
+		margin: 0 0 10px;
+		font-size: 16px;
+		font-weight: 400;
+		color: #696969;
+	}
+	.credit-term-summary-value {
+		margin: 0;
+		font-size: 20px;
+		font-weight: 400;
+		color: #3B3B3B;
+		min-height: 30px;
+	}
+	.credit-term-summary-item.is-highlight .credit-term-summary-label {
+		color: #3B3B3B;
+	}
+	.credit-term-summary-item.is-highlight .credit-term-summary-value {
+		color: #612989;
+		font-size: 24px;
+	}
+	.credit-term-table-panel {
+		border: 1px solid #EFEBEF;
+		border-radius: 10px;
+		background: #FFFFFF;
+		overflow: hidden;
+	}
+	.credit-term-table-wrap {
+		overflow: auto;
+		border-bottom: 1px solid #EFEBEF;
+	}
+	.credit-term-table {
+		width: 100%;
+		min-width: 920px;
+		border-collapse: collapse;
+		font-family: 'Prompt', sans-serif;
+		color: #3B3B3B;
+	}
+	.credit-term-table th,
+	.credit-term-table td {
+		padding: 18px 14px;
+		font-size: 14px;
+		border-bottom: 1px solid #EFEBEF;
+		vertical-align: middle;
+	}
+	.credit-term-table th {
+		padding-top: 16px;
+		padding-bottom: 16px;
+		font-size: 16px;
+		font-weight: 500;
+		color: #612989;
+		text-align: left;
+		white-space: nowrap;
+	}
+	.credit-term-table th:first-child,
+	.credit-term-table td:first-child {
+		width: 42px;
+		padding-left: 18px;
+		padding-right: 6px;
+	}
+	.credit-term-table th:nth-child(2) {
+		width: 15%;
+	}
+	.credit-term-table th:nth-child(3) {
+		width: 41%;
+	}
+	.credit-term-table th:nth-child(4),
+	.credit-term-table th:nth-child(5),
+	.credit-term-table th:nth-child(6) {
+		width: 14%;
+		text-align: right;
+	}
+	.credit-term-table td:nth-child(4),
+	.credit-term-table td:nth-child(5),
+	.credit-term-table td:nth-child(6) {
+		text-align: right;
+	}
+	.credit-term-empty-row td {
+		padding-top: 22px;
+		padding-bottom: 22px;
+		color: #8E8B94;
+		text-align: center !important;
+	}
+	.credit-term-caret {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 0;
+		height: 0;
+		border-left: 6px solid #4A4A4A;
+		border-top: 5px solid transparent;
+		border-bottom: 5px solid transparent;
+		opacity: 0.5;
+	}
+	.credit-term-detail-panel {
+		background: #F1E1FF;
+		padding: 26px 24px 22px;
+	}
+	.credit-term-detail-grid {
+		display: grid;
+		grid-template-columns: 150px minmax(0, 1fr) 160px;
+		gap: 20px;
+		align-items: start;
+	}
+	.credit-term-detail-title {
+		margin: 0 0 14px;
+		font-size: 16px;
+		font-weight: 500;
+		color: #612989;
+	}
+	.credit-term-skeleton-line {
+		height: 18px;
+		border-radius: 999px;
+		background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.2) 100%);
+		background-size: 200% 100%;
+		animation: creditTermShimmer 1.8s infinite;
+	}
+	.credit-term-skeleton-line + .credit-term-skeleton-line {
+		margin-top: 14px;
+	}
+	.credit-term-skeleton-line.short {
+		width: 70%;
+	}
+	.credit-term-skeleton-line.medium {
+		width: 82%;
+	}
+	.credit-term-skeleton-input {
+		height: 42px;
+		border-radius: 10px;
+		background: #F5F6F8;
+		margin-top: 18px;
+		position: relative;
+		overflow: hidden;
+	}
+	.credit-term-skeleton-input::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0.2) 100%);
+		background-size: 200% 100%;
+		animation: creditTermShimmer 1.8s infinite;
+	}
+	@keyframes creditTermShimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.clear-loan-popup-box {
 			width: 100%;
@@ -421,6 +647,25 @@ include("head.php"); ?>
 		.clear-loan-btn {
 			width: 100%;
 		}
+
+		.credit-term-popup-content {
+			padding: 18px 16px 20px;
+		}
+		.credit-term-summary {
+			grid-template-columns: 1fr;
+		}
+		.credit-term-summary-item:not(:last-child)::after {
+			top: auto;
+			right: 16px;
+			left: 16px;
+			bottom: 0;
+			width: auto;
+			height: 1px;
+		}
+		.credit-term-detail-grid {
+			grid-template-columns: 1fr;
+			gap: 18px;
+		}
 	}
 </style>
 <script>
@@ -439,8 +684,28 @@ include("head.php"); ?>
 	function setElementValue(id, value) {
 		var element = document.getElementById(id);
 		if (element) {
-			element.value = value || "";
+			var normalizedValue = value || "";
+			if ('value' in element) {
+				element.value = normalizedValue;
+			} else {
+				element.textContent = normalizedValue;
+			}
+			if (id === 'display_credit_thb') {
+				syncCreditTermTriggerState();
+			}
 		}
+	}
+
+	function syncCreditTermTriggerState() {
+		var trigger = document.getElementById('display_credit_thb_trigger');
+		var valueElement = document.getElementById('display_credit_thb');
+		if (!trigger || !valueElement) return;
+
+		var creditTermValue = (valueElement.textContent || valueElement.value || '').trim();
+		var hasCreditTerm = creditTermValue !== '';
+		trigger.classList.toggle('is-empty', !hasCreditTerm);
+		trigger.disabled = !hasCreditTerm;
+		trigger.setAttribute('aria-disabled', hasCreditTerm ? 'false' : 'true');
 	}
 
 	function setFieldValueBySelector(selector, value) {
@@ -4002,7 +4267,10 @@ include("head.php"); ?>
 										<div class="cidc-row">
 											<div class="cidc-label">เครดิตเทอม</div>
 											<div class="cidc-value">
-												<input type="text" id="display_credit_thb" class="cidc-value-input purple-text underline" readonly placeholder="">
+												<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled>
+													<span id="display_credit_thb" class="credit-term-trigger-text"></span>
+													<img src="img/icons/edit.png?v=20260610" class="credit-term-trigger-icon" alt="แก้ไข">
+												</button>
 											</div>
 										</div>
 									</div>
@@ -6023,6 +6291,83 @@ include("head.php"); ?>
 		</div>
 	</div>
 
+	<!-- Credit Term Modal: UI only, no live data binding yet -->
+	<div id="creditTermPopupModal" class="customer-popup-modal" aria-hidden="true">
+		<div class="customer-popup-box credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
+			<button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
+
+			<div class="clear-loan-header">
+				<h2 id="creditTermPopupTitle">เครดิตเทอม</h2>
+			</div>
+
+			<div class="credit-term-popup-content">
+				<div class="credit-term-summary">
+					<div class="credit-term-summary-item">
+						<p class="credit-term-summary-label">เครดิต (วัน)</p>
+						<p class="credit-term-summary-value">-</p>
+					</div>
+					<div class="credit-term-summary-item">
+						<p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p>
+						<p class="credit-term-summary-value">-</p>
+					</div>
+					<div class="credit-term-summary-item">
+						<p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p>
+						<p class="credit-term-summary-value">-</p>
+					</div>
+					<div class="credit-term-summary-item is-highlight">
+						<p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p>
+						<p class="credit-term-summary-value">-</p>
+					</div>
+				</div>
+
+				<div class="credit-term-table-panel">
+					<div class="credit-term-table-wrap">
+						<table class="credit-term-table">
+							<thead>
+								<tr>
+									<th></th>
+									<th>เลขที่ใบสั่งขาย</th>
+									<th>รายการสินค้า</th>
+									<th>ยอดที่ต้องชำระ</th>
+									<th>ยอดชำระแล้ว</th>
+									<th>ยอดหนี้คงค้าง</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr class="credit-term-empty-row">
+									<td><span class="credit-term-caret" aria-hidden="true"></span></td>
+									<td colspan="5">ส่วนตารางรายการเครดิตเทอมจะแสดงที่นี่เมื่อเชื่อมต่อข้อมูลจริง</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="credit-term-detail-panel">
+						<div class="credit-term-detail-grid">
+							<div>
+								<p class="credit-term-detail-title">วันที่ติดตาม</p>
+								<div class="credit-term-skeleton-line short"></div>
+								<div class="credit-term-skeleton-line short"></div>
+								<div class="credit-term-skeleton-line short"></div>
+							</div>
+							<div>
+								<p class="credit-term-detail-title">การติดตาม</p>
+								<div class="credit-term-skeleton-line"></div>
+								<div class="credit-term-skeleton-line medium"></div>
+								<div class="credit-term-skeleton-input"></div>
+							</div>
+							<div>
+								<p class="credit-term-detail-title">ชื่อผู้ติดตาม</p>
+								<div class="credit-term-skeleton-line short"></div>
+								<div class="credit-term-skeleton-line short"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<!-- Modal ที่อยู่จัดส่ง: ใช้เลือก shipping address ของลูกค้าที่ถูกเลือกอยู่ก่อนหน้า -->
 	<div id="shippingAddressPopupModal" class="customer-popup-modal shipping-popup-modal" aria-hidden="true">
 		<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
@@ -7050,6 +7395,7 @@ include("head.php"); ?>
 		}
 
 		document.addEventListener('DOMContentLoaded', function() {
+			syncCreditTermTriggerState();
 			var search = document.getElementById('customerPopupSearch');
 			var customerModal = document.getElementById('customerPopupModal');
 			var fullBillCheckbox = document.getElementById('full_bill');
@@ -7057,6 +7403,8 @@ include("head.php"); ?>
 			var fullBillModal = document.getElementById('fullBillPopupModal');
 			var shippingAddressSearch = document.getElementById('shippingAddressPopupSearch');
 			var shippingAddressModal = document.getElementById('shippingAddressPopupModal');
+			var creditTermTrigger = document.getElementById('display_credit_thb_trigger');
+			var creditTermModal = document.getElementById('creditTermPopupModal');
 			var clearLoanSearch = document.getElementById('clearLoanSearch');
 			var clearLoanModal = document.getElementById('clearLoanModal');
 			var clearLoanTriggerButton = document.getElementById('clearLoanTriggerButton');
@@ -7095,6 +7443,16 @@ include("head.php"); ?>
 
 			if (clearLoanSearch) {
 				clearLoanSearch.addEventListener('input', scheduleClearLoanPopupSearch);
+			}
+
+			if (creditTermTrigger) {
+				creditTermTrigger.addEventListener('click', openCreditTermPopup);
+				creditTermTrigger.addEventListener('keydown', function(event) {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault();
+						openCreditTermPopup();
+					}
+				});
 			}
 
 			if (clearLoanTriggerButton) {
@@ -7161,6 +7519,10 @@ include("head.php"); ?>
 				{
 					modal: shippingAddressModal,
 					onClose: closeShippingAddressPopup
+				},
+				{
+					modal: creditTermModal,
+					onClose: closeCreditTermPopup
 				}
 			].forEach(function(entry) {
 				if (!entry.modal) return;
@@ -7169,6 +7531,13 @@ include("head.php"); ?>
 						entry.onClose();
 					}
 				});
+			});
+
+			document.addEventListener('keydown', function(event) {
+				if (event.key !== 'Escape') return;
+				if (creditTermModal && creditTermModal.style.display === 'flex') {
+					closeCreditTermPopup();
+				}
 			});
 		});
 
@@ -7188,6 +7557,21 @@ include("head.php"); ?>
 
 			document.getElementById(tabId).classList.add("active");
 			evt.currentTarget.classList.add("active");
+		}
+
+		function openCreditTermPopup() {
+			var modal = document.getElementById('creditTermPopupModal');
+			var trigger = document.getElementById('display_credit_thb_trigger');
+			if (!modal || !trigger || trigger.disabled) return;
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+		}
+
+		function closeCreditTermPopup() {
+			var modal = document.getElementById('creditTermPopupModal');
+			if (!modal) return;
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
 		}
 
 		function openClearLoanPopup() {
