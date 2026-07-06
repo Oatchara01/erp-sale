@@ -461,11 +461,13 @@ include("head.php"); ?>
 		border-radius: 10px;
 		overflow: hidden;
 	}
+
 	.credit-term-summary-item {
 		padding: 18px 20px 16px;
 		text-align: center;
 		position: relative;
 	}
+
 	.credit-term-summary-item:not(:last-child)::after {
 		content: "";
 		position: absolute;
@@ -475,12 +477,14 @@ include("head.php"); ?>
 		height: calc(100% - 28px);
 		background: #C9C3CE;
 	}
+
 	.credit-term-summary-label {
 		margin: 0 0 10px;
 		font-size: 16px;
 		font-weight: 400;
 		color: #696969;
 	}
+
 	.credit-term-summary-value {
 		margin: 0;
 		font-size: 20px;
@@ -488,23 +492,28 @@ include("head.php"); ?>
 		color: #3B3B3B;
 		min-height: 30px;
 	}
+
 	.credit-term-summary-item.is-highlight .credit-term-summary-label {
 		color: #3B3B3B;
 	}
+
 	.credit-term-summary-item.is-highlight .credit-term-summary-value {
 		color: #612989;
 		font-size: 24px;
 	}
+
 	.credit-term-table-panel {
 		border: 1px solid #EFEBEF;
 		border-radius: 10px;
 		background: #FFFFFF;
 		overflow: hidden;
 	}
+
 	.credit-term-table-wrap {
 		overflow: auto;
 		border-bottom: 1px solid #EFEBEF;
 	}
+
 	.credit-term-table {
 		width: 100%;
 		min-width: 920px;
@@ -512,6 +521,7 @@ include("head.php"); ?>
 		font-family: 'Prompt', sans-serif;
 		color: #3B3B3B;
 	}
+
 	.credit-term-table th,
 	.credit-term-table td {
 		padding: 18px 14px;
@@ -519,6 +529,7 @@ include("head.php"); ?>
 		border-bottom: 1px solid #EFEBEF;
 		vertical-align: middle;
 	}
+
 	.credit-term-table th {
 		padding-top: 16px;
 		padding-bottom: 16px;
@@ -528,35 +539,42 @@ include("head.php"); ?>
 		text-align: left;
 		white-space: nowrap;
 	}
+
 	.credit-term-table th:first-child,
 	.credit-term-table td:first-child {
 		width: 42px;
 		padding-left: 18px;
 		padding-right: 6px;
 	}
+
 	.credit-term-table th:nth-child(2) {
 		width: 15%;
 	}
+
 	.credit-term-table th:nth-child(3) {
 		width: 41%;
 	}
+
 	.credit-term-table th:nth-child(4),
 	.credit-term-table th:nth-child(5),
 	.credit-term-table th:nth-child(6) {
 		width: 14%;
 		text-align: right;
 	}
+
 	.credit-term-table td:nth-child(4),
 	.credit-term-table td:nth-child(5),
 	.credit-term-table td:nth-child(6) {
 		text-align: right;
 	}
+
 	.credit-term-empty-row td {
 		padding-top: 22px;
 		padding-bottom: 22px;
 		color: #8E8B94;
 		text-align: center !important;
 	}
+
 	.credit-term-caret {
 		display: inline-flex;
 		align-items: center;
@@ -568,6 +586,7 @@ include("head.php"); ?>
 		border-bottom: 5px solid transparent;
 		opacity: 0.5;
 	}
+
 	.credit-term-skeleton-line {
 		height: 18px;
 		border-radius: 999px;
@@ -575,15 +594,19 @@ include("head.php"); ?>
 		background-size: 200% 100%;
 		animation: creditTermShimmer 1.8s infinite;
 	}
-	.credit-term-skeleton-line + .credit-term-skeleton-line {
+
+	.credit-term-skeleton-line+.credit-term-skeleton-line {
 		margin-top: 14px;
 	}
+
 	.credit-term-skeleton-line.short {
 		width: 70%;
 	}
+
 	.credit-term-skeleton-line.medium {
 		width: 82%;
 	}
+
 	.credit-term-skeleton-input {
 		height: 42px;
 		border-radius: 10px;
@@ -592,6 +615,7 @@ include("head.php"); ?>
 		position: relative;
 		overflow: hidden;
 	}
+
 	.credit-term-skeleton-input::after {
 		content: "";
 		position: absolute;
@@ -600,10 +624,12 @@ include("head.php"); ?>
 		background-size: 200% 100%;
 		animation: creditTermShimmer 1.8s infinite;
 	}
+
 	@keyframes creditTermShimmer {
 		0% {
 			background-position: 200% 0;
 		}
+
 		100% {
 			background-position: -200% 0;
 		}
@@ -636,9 +662,11 @@ include("head.php"); ?>
 		.credit-term-popup-content {
 			padding: 18px 16px 20px;
 		}
+
 		.credit-term-summary {
 			grid-template-columns: 1fr;
 		}
+
 		.credit-term-summary-item:not(:last-child)::after {
 			top: auto;
 			right: 16px;
@@ -648,7 +676,6 @@ include("head.php"); ?>
 			height: 1px;
 		}
 	}
-
 </style>
 <script>
 	var HttPRequest = false;
@@ -667,6 +694,18 @@ include("head.php"); ?>
 		var element = document.getElementById(id);
 		if (element) {
 			var normalizedValue = value || "";
+			if (id === 'display_credit_thb') {
+				var trimmed = String(normalizedValue).trim();
+				if (trimmed !== "") {
+					var number = Number(trimmed.replace(/,/g, ''));
+					if (!isNaN(number)) {
+						normalizedValue = number.toLocaleString('en-US', {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2
+						});
+					}
+				}
+			}
 			if ('value' in element) {
 				element.value = normalizedValue;
 			} else {
@@ -1114,7 +1153,6 @@ include("head.php"); ?>
 								customerPaymentModeInput.value = resolvedMode;
 							}
 							switchPaymentMode(resolvedMode);
-							evaluateDebtPanel();
 						});
 					}
 
@@ -1126,28 +1164,6 @@ include("head.php"); ?>
 				}
 			}
 		};
-	}
-
-	// ----- เงื่อนไขการแสดงตารางหนี้: payment != '0' และมีวงเงิน > 0 -----
-	function shouldShowDebtPanel() {
-		var payVal = (document.getElementById('payment').value || '').trim();
-		var creditRaw = (document.getElementById('credit_thb').value || '0').replace(/,/g, '');
-		var creditNum = parseFloat(creditRaw) || 0;
-		return (payVal !== '0' && creditNum > 0);
-	}
-
-	function evaluateDebtPanel() {
-		if (shouldShowDebtPanel()) {
-			var cusId = (document.getElementById('h_bill_id').value || '').trim();
-			if (cusId) {
-				showDebts(cusId);
-			} else {
-				// ไม่มีลูกค้า -> ซ่อน
-				hideDebts();
-			}
-		} else {
-			hideDebts();
-		}
 	}
 
 	function hasSelectedCustomerForPaymentMode() {
@@ -1264,120 +1280,13 @@ include("head.php"); ?>
 		xhr.send();
 	}
 
-	var lastDebtPanelWarningKey = '';
-
-	// แสดงตารางหนี้คงค้าง
-	function showDebts(cusId) {
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'get_debts.php?cus_id=' + encodeURIComponent(cusId), true);
-		xhr.onreadystatechange = function() {
-			if (xhr.readyState === 4) {
-				if (xhr.status === 200) {
-					try {
-						var res = JSON.parse(xhr.responseText || '{}');
-
-						// ดึงวงเงิน
-						var creditInput = document.getElementById('credit_thb').value || '0';
-						var credit = parseFloat(String(creditInput).replace(/,/g, '').trim()) || 0;
-
-						// ยอดหนี้
-						var rawOutstanding = res.total_outstanding || 0;
-						var outstanding = parseFloat(String(rawOutstanding).replace(/,/g, '').trim()) || 0;
-
-						// วงเงินคงเหลือ
-						var remain = credit - outstanding;
-						document.getElementById('sum_ca').value = remain;
-
-						var billName = document.getElementById('bill_name').value || '-';
-						var creditSummaryEl = document.getElementById('credit_summary');
-						var warningKey = [cusId, credit, outstanding].join('|');
-
-						// Summary
-						var summaryHtml = `
-            <div style="margin-bottom:16px; font-weight:bold;">
-              วงเงิน: ${numberFormat(credit)} |
-              ยอดวงเงินคงเหลือ:
-              <span style="color:${remain < 0 ? 'red' : 'green'};">
-                ${numberFormat(remain)}
-              </span>
-            </div>
-          `;
-
-						// แสดงผล
-						document.getElementById('debt_table_wrap').innerHTML =
-							summaryHtml + (res.html || '');
-						document.getElementById('debt_panel').style.display = 'block';
-
-
-						if (remain < 0) {
-							if (creditSummaryEl) {
-								creditSummaryEl.innerHTML =
-									"<span style='color:#c62828;'>ยอดหนี้คงค้างเกินวงเงิน กรุณาติดต่อบัญชีเพื่อขอเพิ่มวงเงินก่อนทำรายการต่อ</span>";
-							}
-
-							if (lastDebtPanelWarningKey !== warningKey) {
-								lastDebtPanelWarningKey = warningKey;
-								Swal.fire({
-									title: "กรุณาติดต่อบัญชี",
-									html: "<div style='font-size:16px; text-align:left;'>" +
-										"<p>เพื่อขอเพิ่มวงเงินของคุณ เนื่องจากวงเงินของคุณไม่เพียงพอ</p>" +
-										"<hr>" +
-										"<p><b> " + billName + "</b></p>" +
-										"<p><b>วงเงิน: " + numberFormat(credit) + " บาท</b></p>" +
-										"<p><b>ยอดวงเงินคงเหลือ:</b> " +
-										"<span style='color:red; font-weight:bold;'>" +
-										numberFormat(remain) + " บาท" +
-										"</span>" +
-										"</p>" +
-										"</div>",
-									icon: "warning",
-									confirmButtonText: "รับทราบ"
-								});
-							}
-						} else {
-							lastDebtPanelWarningKey = '';
-							if (creditSummaryEl) {
-								creditSummaryEl.innerHTML = '';
-							}
-						}
-					} catch (e) {
-						console.error('Parse JSON error', e);
-						hideDebts();
-					}
-				} else {
-					console.error('โหลดยอดหนี้คงค้างไม่สำเร็จ');
-					hideDebts();
-				}
-			}
-		};
-		xhr.send();
-	}
-
-
-	function hideDebts() {
-		lastDebtPanelWarningKey = '';
-		document.getElementById('debt_panel').style.display = 'none';
-		document.getElementById('debt_table_wrap').innerHTML = '';
-		document.getElementById('credit_summary').innerHTML = '';
-	}
-
-	// utility แปลงตัวเลขให้อ่านง่าย
-	function numberFormat(n) {
-		return (Number(n) || 0).toLocaleString('en-US', {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		});
-	}
-
 	// กรณีผู้ใช้แก้ไขค่า payment เองภายหลัง
 	document.addEventListener('DOMContentLoaded', function() {
 		// เริ่มต้นโหลดในโหมดเงินสด/เครดิตตามค่าเริ่มต้น
 		loadTypeBankOptions();
 		switchPaymentMode('credit');
 
-		// ผู้ใช้แก้ไขวงเงิน -> ประเมินใหม่ (ถ้าวงเงินเป็น 0 จะซ่อน)
 		document.getElementById('credit_thb').addEventListener('input', function() {
-			evaluateDebtPanel();
 			updateCreditDisplay();
 		});
 	});
@@ -1413,7 +1322,6 @@ include("head.php"); ?>
 				var cashSel = document.getElementById('payment_cash_select');
 				if (cashSel) cashSel.value = sel.value;
 				updateCreditDisplay();
-				evaluateDebtPanel();
 			});
 		} else {
 			var shouldDisableCredit = hasSelectedCustomerForPaymentMode() && getResolvedCustomerPaymentMode() === 'cash';
@@ -1441,7 +1349,6 @@ include("head.php"); ?>
 				}
 				var cashSel = document.getElementById('payment_cash_select');
 				if (cashSel) cashSel.value = sel.value;
-				evaluateDebtPanel();
 			});
 		}
 	}
@@ -2938,7 +2845,6 @@ include("head.php"); ?>
 			width: 100%;
 			justify-content: center;
 		}
-
 </style>
 
 <body>
@@ -4003,8 +3909,7 @@ include("head.php"); ?>
 							font-family: 'Prompt', sans-serif;
 							margin-top: 25px;
 						}
-					
-</style>
+					</style>
 
 					<div class="so-card">
 						<h2 class="admin-ui-title">ข้อมูลเพิ่มเติม (Admin)</h2>
@@ -4216,8 +4121,7 @@ include("head.php"); ?>
 										margin-right: 8px;
 										object-fit: contain;
 									}
-								
-</style>
+								</style>
 
 								<div class="customer-info-display-card">
 									<!-- Column 1 -->
@@ -4402,7 +4306,7 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label">ช่องทางการชำระ</label>
 							<div class="so-select-wrapper">
-								<select id="payment_cash_select" class="so-select" onchange="document.getElementById('payment').value = this.value; evaluateDebtPanel();">
+								<select id="payment_cash_select" class="so-select" onchange="document.getElementById('payment').value = this.value;">
 									<option value="">Select</option>
 								</select>
 							</div>
@@ -4450,13 +4354,6 @@ include("head.php"); ?>
 					<input type="hidden" name="credit_thb" id="credit_thb">
 					<input type="hidden" name="sum_ca" id="sum_ca">
 					<input type="hidden" name="sum_amount_total" id="sum_amount_total" value="0">
-
-					<!-- พื้นที่ตารางหนี้คงค้าง -->
-					<div id="debt_panel" style="margin-top:16px; display:none;">
-						<h4 class="so-section-sub-title" style="color: #612989; font-size: 15px; font-weight: 600; margin-bottom: 12px;">ยอดหนี้คงค้าง</h4>
-						<div id="debt_table_wrap"></div>
-						<div id="credit_summary" style="margin-top:8px; font-weight:600;"></div>
-					</div>
 
 					<!-- เอกสารแนบบิล HIDDEN -->
 				</div>
@@ -4576,8 +4473,7 @@ include("head.php"); ?>
 							#del_info .so-toggle-btn:has(input:checked) span {
 								color: #FFFFFF !important;
 							}
-						
-</style>
+						</style>
 
 						<div class="so-section-title-container">
 							<h3 class="so-section-title">ข้อมูลการจัดส่ง</h3>
@@ -5564,8 +5460,7 @@ include("head.php"); ?>
 							padding: 14px 18px;
 						}
 					}
-				
-</style>
+				</style>
 
 				<script>
 					function open3Tab(tabId, element) {
@@ -7567,6 +7462,7 @@ include("head.php"); ?>
 			modal.style.display = 'none';
 			modal.setAttribute('aria-hidden', 'true');
 		}
+
 		function openClearLoanPopup() {
 			var modal = document.getElementById('clearLoanModal');
 			var search = document.getElementById('clearLoanSearch');
@@ -8660,7 +8556,6 @@ include("head.php"); ?>
 	}
 
 	*/
-
 </style>
 
 <style>
@@ -9203,7 +9098,6 @@ include("head.php"); ?>
 	#overLimitModal,
 	#overLimitModal * {
 		font-family: 'Prompt', sans-serif;
-
 </style>
 
 <div id="overLimitModal">
@@ -9845,9 +9739,5 @@ include("head.php"); ?>
 				}
 			});
 		</script>
-		<?php endif; ?>
+	<?php endif; ?>
 	<script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
-
-
-
-

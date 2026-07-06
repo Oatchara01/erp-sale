@@ -23,6 +23,11 @@ function credit_term_track_error($message, $statusCode = 400)
     exit;
 }
 
+set_exception_handler(function ($error) {
+    error_log('Credit term tracking error: ' . $error->getMessage());
+    credit_term_track_error('เกิดข้อผิดพลาดระหว่างบันทึกการติดตาม กรุณาลองใหม่อีกครั้ง', 500);
+});
+
 function credit_term_fetch_tracks(mysqli $code, $refIdOff)
 {
     $sql = "
@@ -84,6 +89,24 @@ if (!$debtRow) {
     credit_term_track_error('ไม่พบรายการหนี้ที่เลือก');
 }
 
+$userId = trim((string)$_SESSION['UserID']);
+$userSql = "SELECT em_id FROM tb_user WHERE user_id = ? LIMIT 1";
+$userStmt = mysqli_prepare($code, $userSql);
+if (!$userStmt) {
+    credit_term_track_error('ไม่สามารถตรวจสอบข้อมูลผู้บันทึกได้', 500);
+}
+
+mysqli_stmt_bind_param($userStmt, 's', $userId);
+mysqli_stmt_execute($userStmt);
+$userResult = mysqli_stmt_get_result($userStmt);
+$userRow = $userResult ? mysqli_fetch_assoc($userResult) : null;
+mysqli_stmt_close($userStmt);
+
+$employeeNo = trim((string)($userRow['em_id'] ?? ''));
+if ($employeeNo === '') {
+    credit_term_track_error('ไม่พบรหัสพนักงานของผู้ใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+}
+
 $userName = trim((string)($_SESSION['name'] ?? ''));
 $userSurname = trim((string)($_SESSION['surname'] ?? ''));
 $addBy = trim($userName . ' ' . $userSurname);
@@ -92,16 +115,48 @@ if ($addBy === '') {
 }
 
 $addDate = date('Y-m-d H:i:s');
+$datePlan = '0000-00-00';
+$planName = '';
+$planEmployeeId = '';
+$addPlan = '0000-00-00 00:00:00';
+$planChecked = 0;
+
+// This legacy table uses zero dates to represent an unset follow-up plan.
+$sqlModeResult = mysqli_query($code, "SELECT @@SESSION.sql_mode AS sql_mode");
+$sqlModeRow = $sqlModeResult ? mysqli_fetch_assoc($sqlModeResult) : null;
+$sqlModes = explode(",", (string)($sqlModeRow["sql_mode"] ?? ""));
+$sqlModes = array_filter($sqlModes, function ($mode) {
+    return $mode !== "NO_ZERO_DATE" && $mode !== "NO_ZERO_IN_DATE";
+});
+$legacySqlMode = mysqli_real_escape_string($code, implode(",", $sqlModes));
+mysqli_query($code, "SET SESSION sql_mode = '" . $legacySqlMode . "'");
+
 $insertSql = "
-    INSERT INTO tb_track (ref_id_off, des_track, add_date, add_by)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO tb_track (
+        ref_id_off, des_track, add_date, add_by, emp_no,
+        date_plan, plan_name, plan_emid, add_plan, planckk
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ";
 $insertStmt = mysqli_prepare($code, $insertSql);
 if (!$insertStmt) {
     credit_term_track_error('ไม่สามารถเตรียมการบันทึกได้', 500);
 }
 
-mysqli_stmt_bind_param($insertStmt, 'ssss', $refIdOff, $desTrack, $addDate, $addBy);
+mysqli_stmt_bind_param(
+    $insertStmt,
+    'sssssssssi',
+    $refIdOff,
+    $desTrack,
+    $addDate,
+    $addBy,
+    $employeeNo,
+    $datePlan,
+    $planName,
+    $planEmployeeId,
+    $addPlan,
+    $planChecked
+);
 $saved = mysqli_stmt_execute($insertStmt);
 mysqli_stmt_close($insertStmt);
 

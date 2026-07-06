@@ -404,10 +404,16 @@
 			body: 'ref_id_off=' + encodeURIComponent(normalizedRefIdOff) + '&des_track=' + encodeURIComponent(description)
 		})
 			.then(function(response) {
-				if (!response.ok) {
-					throw new Error('ไม่สามารถบันทึกการติดตามได้');
-				}
-				return response.json();
+				return response.json()
+					.catch(function() {
+						return null;
+					})
+					.then(function(data) {
+						if (!response.ok) {
+							throw new Error((data && data.message) ? data.message : 'ไม่สามารถบันทึกการติดตามได้');
+						}
+						return data;
+					});
 			})
 			.then(function(data) {
 				if (!data || !data.success) {
