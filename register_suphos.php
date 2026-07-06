@@ -1,4 +1,4 @@
-﻿<?php header("Content-Type: text/html; charset=utf-8");
+<?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -568,22 +568,6 @@ include("head.php"); ?>
 		border-bottom: 5px solid transparent;
 		opacity: 0.5;
 	}
-	.credit-term-detail-panel {
-		background: #F1E1FF;
-		padding: 26px 24px 22px;
-	}
-	.credit-term-detail-grid {
-		display: grid;
-		grid-template-columns: 150px minmax(0, 1fr) 160px;
-		gap: 20px;
-		align-items: start;
-	}
-	.credit-term-detail-title {
-		margin: 0 0 14px;
-		font-size: 16px;
-		font-weight: 500;
-		color: #612989;
-	}
 	.credit-term-skeleton-line {
 		height: 18px;
 		border-radius: 999px;
@@ -663,11 +647,8 @@ include("head.php"); ?>
 			width: auto;
 			height: 1px;
 		}
-		.credit-term-detail-grid {
-			grid-template-columns: 1fr;
-			gap: 18px;
-		}
 	}
+
 </style>
 <script>
 	var HttPRequest = false;
@@ -1283,6 +1264,8 @@ include("head.php"); ?>
 		xhr.send();
 	}
 
+	var lastDebtPanelWarningKey = '';
+
 	// แสดงตารางหนี้คงค้าง
 	function showDebts(cusId) {
 		var xhr = new XMLHttpRequest();
@@ -1306,30 +1289,8 @@ include("head.php"); ?>
 						document.getElementById('sum_ca').value = remain;
 
 						var billName = document.getElementById('bill_name').value || '-';
-
-						if (remain < 0) {
-							Swal.fire({
-								title: "กรุณาติดต่อบัญชี",
-								html: "<div style='font-size:16px; text-align:left;'>" +
-
-									"<p>เพื่อขอเพิ่มวงเงินของคุณ เนื่องจากวงเงินของคุณไม่เพียงพอ</p>" +
-									"<hr>" +
-									"<p><b> " + billName + "</b></p>" +
-									"<p><b>วงเงิน: " + numberFormat(credit) + " บาท</b></p>" +
-									"<p><b>ยอดวงเงินคงเหลือ:</b> " +
-									"<span style='color:red; font-weight:bold;'>" +
-									numberFormat(remain) + " บาท" +
-									"</span>" +
-									"</p>" +
-									"</div>",
-								icon: "warning",
-								confirmButtonText: "กลับหน้าหลัก",
-							}).then(() => {
-								window.location.href = "main_suphos_so.php";
-							});
-
-							return;
-						}
+						var creditSummaryEl = document.getElementById('credit_summary');
+						var warningKey = [cusId, credit, outstanding].join('|');
 
 						// Summary
 						var summaryHtml = `
@@ -1347,6 +1308,38 @@ include("head.php"); ?>
 							summaryHtml + (res.html || '');
 						document.getElementById('debt_panel').style.display = 'block';
 
+
+						if (remain < 0) {
+							if (creditSummaryEl) {
+								creditSummaryEl.innerHTML =
+									"<span style='color:#c62828;'>ยอดหนี้คงค้างเกินวงเงิน กรุณาติดต่อบัญชีเพื่อขอเพิ่มวงเงินก่อนทำรายการต่อ</span>";
+							}
+
+							if (lastDebtPanelWarningKey !== warningKey) {
+								lastDebtPanelWarningKey = warningKey;
+								Swal.fire({
+									title: "กรุณาติดต่อบัญชี",
+									html: "<div style='font-size:16px; text-align:left;'>" +
+										"<p>เพื่อขอเพิ่มวงเงินของคุณ เนื่องจากวงเงินของคุณไม่เพียงพอ</p>" +
+										"<hr>" +
+										"<p><b> " + billName + "</b></p>" +
+										"<p><b>วงเงิน: " + numberFormat(credit) + " บาท</b></p>" +
+										"<p><b>ยอดวงเงินคงเหลือ:</b> " +
+										"<span style='color:red; font-weight:bold;'>" +
+										numberFormat(remain) + " บาท" +
+										"</span>" +
+										"</p>" +
+										"</div>",
+									icon: "warning",
+									confirmButtonText: "รับทราบ"
+								});
+							}
+						} else {
+							lastDebtPanelWarningKey = '';
+							if (creditSummaryEl) {
+								creditSummaryEl.innerHTML = '';
+							}
+						}
 					} catch (e) {
 						console.error('Parse JSON error', e);
 						hideDebts();
@@ -1362,6 +1355,7 @@ include("head.php"); ?>
 
 
 	function hideDebts() {
+		lastDebtPanelWarningKey = '';
 		document.getElementById('debt_panel').style.display = 'none';
 		document.getElementById('debt_table_wrap').innerHTML = '';
 		document.getElementById('credit_summary').innerHTML = '';
@@ -2944,6 +2938,7 @@ include("head.php"); ?>
 			width: 100%;
 			justify-content: center;
 		}
+
 </style>
 
 <body>
@@ -4008,7 +4003,8 @@ include("head.php"); ?>
 							font-family: 'Prompt', sans-serif;
 							margin-top: 25px;
 						}
-					</style>
+					
+</style>
 
 					<div class="so-card">
 						<h2 class="admin-ui-title">ข้อมูลเพิ่มเติม (Admin)</h2>
@@ -4220,7 +4216,8 @@ include("head.php"); ?>
 										margin-right: 8px;
 										object-fit: contain;
 									}
-								</style>
+								
+</style>
 
 								<div class="customer-info-display-card">
 									<!-- Column 1 -->
@@ -4579,7 +4576,8 @@ include("head.php"); ?>
 							#del_info .so-toggle-btn:has(input:checked) span {
 								color: #FFFFFF !important;
 							}
-						</style>
+						
+</style>
 
 						<div class="so-section-title-container">
 							<h3 class="so-section-title">ข้อมูลการจัดส่ง</h3>
@@ -5566,7 +5564,8 @@ include("head.php"); ?>
 							padding: 14px 18px;
 						}
 					}
-				</style>
+				
+</style>
 
 				<script>
 					function open3Tab(tabId, element) {
@@ -6341,37 +6340,6 @@ include("head.php"); ?>
 								</tr>
 							</tbody>
 						</table>
-					</div>
-
-					<div class="credit-term-detail-panel">
-						<p class="credit-term-selected-doc" id="creditTermSelectedDoc">เลือกรายการหนี้เพื่อดูรายละเอียดการติดตาม</p>
-						<div class="credit-term-detail-grid">
-							<div>
-								<p class="credit-term-detail-title">วันที่ติดตาม</p>
-								<div class="credit-term-detail-list" id="creditTermTrackDateList">
-									<p class="credit-term-detail-empty">ยังไม่ได้เลือกรายการ</p>
-								</div>
-							</div>
-							<div>
-								<p class="credit-term-detail-title">การติดตาม</p>
-								<div class="credit-term-detail-list" id="creditTermTrackDescList">
-									<p class="credit-term-detail-empty">เลือกรายการหนี้ทางด้านบนก่อน</p>
-								</div>
-								<div class="credit-term-form">
-									<textarea id="creditTermTrackInput" class="credit-term-textarea" placeholder="กรอกข้อมูลการติดตาม" disabled></textarea>
-									<div class="credit-term-actions">
-										<span class="credit-term-hint">กด Ctrl + Enter เพื่อบันทึกได้</span>
-										<button type="button" id="creditTermTrackSaveButton" class="credit-term-save-btn" onclick="saveCreditTermTrack()" disabled>บันทึกการติดตาม</button>
-									</div>
-								</div>
-							</div>
-							<div>
-								<p class="credit-term-detail-title">ชื่อผู้ติดตาม</p>
-								<div class="credit-term-detail-list" id="creditTermTrackByList">
-									<p class="credit-term-detail-empty">ยังไม่มีข้อมูลผู้ติดตาม</p>
-								</div>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -7456,11 +7424,11 @@ include("head.php"); ?>
 			}
 
 			if (creditTermTrigger) {
-				creditTermTrigger.addEventListener('click', openCreditTermPopup);
+				creditTermTrigger.addEventListener('click', invokeCreditTermPopupOpen);
 				creditTermTrigger.addEventListener('keydown', function(event) {
 					if (event.key === 'Enter' || event.key === ' ') {
 						event.preventDefault();
-						openCreditTermPopup();
+						invokeCreditTermPopupOpen();
 					}
 				});
 			}
@@ -7532,7 +7500,7 @@ include("head.php"); ?>
 				},
 				{
 					modal: creditTermModal,
-					onClose: closeCreditTermPopup
+					onClose: invokeCreditTermPopupClose
 				}
 			].forEach(function(entry) {
 				if (!entry.modal) return;
@@ -7546,7 +7514,7 @@ include("head.php"); ?>
 			document.addEventListener('keydown', function(event) {
 				if (event.key !== 'Escape') return;
 				if (creditTermModal && creditTermModal.style.display === 'flex') {
-					closeCreditTermPopup();
+					invokeCreditTermPopupClose();
 				}
 			});
 		});
@@ -7569,18 +7537,31 @@ include("head.php"); ?>
 			evt.currentTarget.classList.add("active");
 		}
 
-		function openCreditTermPopup() {
+		function invokeCreditTermPopupOpen() {
+			if (typeof window.openCreditTermPopup === 'function') {
+				window.openCreditTermPopup();
+				return;
+			}
+
 			var modal = document.getElementById('creditTermPopupModal');
 			var trigger = document.getElementById('display_credit_thb_trigger');
+			var tableBody = document.getElementById('creditTermTableBody');
 			if (!modal || !trigger || trigger.disabled) return;
 			modal.style.display = 'flex';
 			modal.setAttribute('aria-hidden', 'false');
 			if (typeof window.loadCreditTermModalData === 'function') {
 				window.loadCreditTermModalData();
+			} else if (tableBody) {
+				tableBody.innerHTML = '<tr class="credit-term-empty-row"><td><span class="credit-term-caret" aria-hidden="true"></span></td><td colspan="5">ไม่สามารถโหลดสคริปต์เครดิตเทอมได้ กรุณารีเฟรชหน้าอีกครั้ง</td></tr>';
 			}
 		}
 
-		function closeCreditTermPopup() {
+		function invokeCreditTermPopupClose() {
+			if (typeof window.closeCreditTermPopup === 'function') {
+				window.closeCreditTermPopup();
+				return;
+			}
+
 			var modal = document.getElementById('creditTermPopupModal');
 			if (!modal) return;
 			modal.style.display = 'none';
@@ -8679,6 +8660,7 @@ include("head.php"); ?>
 	}
 
 	*/
+
 </style>
 
 <style>
@@ -9221,6 +9203,7 @@ include("head.php"); ?>
 	#overLimitModal,
 	#overLimitModal * {
 		font-family: 'Prompt', sans-serif;
+
 </style>
 
 <div id="overLimitModal">
@@ -9862,7 +9845,9 @@ include("head.php"); ?>
 				}
 			});
 		</script>
-		<script src="js/credit-term-modal.js?v=20260704"></script>
+		<?php endif; ?>
+	<script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 
-	<?php endif; ?>
+
+
 

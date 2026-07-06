@@ -4,10 +4,10 @@ session_start();
 
 if (empty($_SESSION['UserID'])) {
     http_response_code(401);
-    echo json_encode([
+    echo json_encode(array(
         'success' => false,
-        'message' => 'à¸à¸£à¸¸à¸“à¸²à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¹ƒà¸«à¸¡à¹ˆ'
-    ], JSON_UNESCAPED_UNICODE);
+        'message' => 'กรุณาเข้าสู่ระบบใหม่'
+    ), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -17,17 +17,16 @@ require_once 'dbconnect_acc.php';
 function credit_term_json_error($message, $statusCode = 400)
 {
     http_response_code($statusCode);
-    echo json_encode([
+    echo json_encode(array(
         'success' => false,
         'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
+    ), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 function credit_term_track_map(mysqli $code, array $refIdOffList)
 {
     $trackMap = array();
-
     if (empty($refIdOffList)) {
         return $trackMap;
     }
@@ -43,7 +42,7 @@ function credit_term_track_map(mysqli $code, array $refIdOffList)
 
     $stmt = mysqli_prepare($code, $sql);
     if (!$stmt) {
-        credit_term_json_error('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸•à¸£à¸µà¸¢à¸¡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸›à¸£à¸°à¸§à¸±à¸•à¸´à¸à¸²à¸£à¸•à¸´à¸”à¸•à¸²à¸¡à¹„à¸”à¹‰', 500);
+        credit_term_json_error('ไม่สามารถเตรียมข้อมูลประวัติการติดตามได้', 500);
     }
 
     mysqli_stmt_bind_param($stmt, $types, ...$refIdOffList);
@@ -79,13 +78,13 @@ function credit_term_track_map(mysqli $code, array $refIdOffList)
 
 $billId = trim($_GET['bill_id'] ?? '');
 if ($billId === '') {
-    credit_term_json_error('à¹„à¸¡à¹ˆà¸žà¸šà¸£à¸«à¸±à¸ªà¸¥à¸¹à¸à¸„à¹‰à¸²');
+    credit_term_json_error('ไม่พบรหัสลูกค้า');
 }
 
-$customerSql = "SELECT credit_ckk, credit_thb FROM tb_customer WHERE customer_id = ? LIMIT 1";
+$customerSql = 'SELECT credit_ckk, credit_thb FROM tb_customer WHERE customer_id = ? LIMIT 1';
 $customerStmt = mysqli_prepare($conn, $customerSql);
 if (!$customerStmt) {
-    credit_term_json_error('à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¹€à¸•à¸£à¸µà¸¢à¸¡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸¥à¸¹à¸à¸„à¹‰à¸²à¹„à¸”à¹‰', 500);
+    credit_term_json_error('ไม่สามารถเตรียมข้อมูลลูกค้าได้', 500);
 }
 
 mysqli_stmt_bind_param($customerStmt, 's', $billId);
@@ -95,7 +94,7 @@ $customerRow = $customerResult ? mysqli_fetch_assoc($customerResult) : null;
 mysqli_stmt_close($customerStmt);
 
 if (!$customerRow) {
-    credit_term_json_error('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸¥à¸¹à¸à¸„à¹‰à¸²');
+    credit_term_json_error('ไม่พบข้อมูลลูกค้า');
 }
 
 $creditCkk = trim((string)($customerRow['credit_ckk'] ?? ''));
@@ -103,7 +102,7 @@ $creditAmount = (float)($customerRow['credit_thb'] ?? 0);
 $creditDay = '';
 
 if ($creditCkk !== '') {
-    $bankSql = "SELECT day FROM tb_bank WHERE id = ? LIMIT 1";
+    $bankSql = 'SELECT day FROM tb_bank WHERE id = ? LIMIT 1';
     $bankStmt = mysqli_prepare($code, $bankSql);
     if ($bankStmt) {
         mysqli_stmt_bind_param($bankStmt, 's', $creditCkk);
@@ -144,8 +143,8 @@ $debtSql = "
         ON hs.ref_idd = r.ref_id
     LEFT JOIN allwell_sol_test.tb_product AS p
         ON p.product_ID = hs.product_id
-    WHERE r.IV_number NOT LIKE '%R%'
-      AND r.IV_number NOT LIKE '%à¸’%'
+    WHERE r.IV_number NOT LIKE '%ธ%'
+      AND r.IV_number NOT LIKE '%R%'
       AND (
           NULLIF(TRIM(CAST(r.date_bank AS CHAR)), '') IS NULL
           OR TRIM(CAST(r.date_bank AS CHAR)) = '0000-00-00'
@@ -224,5 +223,3 @@ echo json_encode(array(
     'tracks' => $tracks,
     'selected_ref_id_off' => $selectedRefIdOff
 ), JSON_UNESCAPED_UNICODE);
-
-

@@ -1,12 +1,14 @@
-(function() {
+﻿(function() {
 	var creditTermState = {
 		billId: '',
 		loading: false,
-		saving: false,
+		savingRefIdOff: '',
 		summary: null,
 		debts: [],
 		tracksByRefId: {},
-		selectedRefIdOff: ''
+		draftsByRefId: {},
+		selectedRefIdOff: '',
+		expandedRefIdOff: ''
 	};
 
 	function getElement(id) {
@@ -33,21 +35,103 @@
 		});
 	}
 
+	function padDatePart(value) {
+		var normalized = String(value === undefined || value === null ? '' : value).trim();
+		return normalized.length >= 2 ? normalized : ('0' + normalized).slice(-2);
+	}
+
+	function formatTrackDateFromParts(yearValue, monthValue, dayValue) {
+		var yearNumber = Number(yearValue);
+		if (!isFinite(yearNumber)) {
+			return '';
+		}
+		if (yearNumber < 2400) {
+			yearNumber += 543;
+		}
+		return padDatePart(dayValue) + '/' + padDatePart(monthValue) + '/' + padDatePart(yearNumber % 100);
+	}
+
+	function formatTrackDate(value) {
+		var raw = String(value === undefined || value === null ? '' : value).trim();
+		if (raw === '') {
+			return '-';
+		}
+
+		var datePart = raw.split(/[T ]/)[0];
+		var dashMatch = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+		if (dashMatch) {
+			return formatTrackDateFromParts(dashMatch[1], dashMatch[2], dashMatch[3]);
+		}
+
+		var slashIsoMatch = datePart.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+		if (slashIsoMatch) {
+			return formatTrackDateFromParts(slashIsoMatch[1], slashIsoMatch[2], slashIsoMatch[3]);
+		}
+
+		var slashMatch = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+		if (slashMatch) {
+			var yearNumber = Number(slashMatch[3]);
+			if (slashMatch[3].length === 4 && yearNumber < 2400) {
+				yearNumber += 543;
+			}
+			return padDatePart(slashMatch[1]) + '/' + padDatePart(slashMatch[2]) + '/' + padDatePart(yearNumber % 100);
+		}
+
+		return raw;
+	}
+
 	function getCurrentBillId() {
-		logger.log('getCurrentBillId');
 		var hidden = getElement('h_bill_id');
 		var visible = getElement('bill_id');
 		return String((hidden && hidden.value) || (visible && visible.value) || '').trim();
 	}
 
+	function getTrackInputId(refIdOff) {
+		return 'creditTermTrackInput_' + String(refIdOff || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	function getTrackClearButtonId(refIdOff) {
+		return 'creditTermTrackClear_' + String(refIdOff || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+	}
+
+	function getTrackDraftValue(refIdOff) {
+		return String(creditTermState.draftsByRefId[String(refIdOff || '')] || '');
+	}
+
+	function setTrackDraftValue(refIdOff, value) {
+		var normalizedRefIdOff = String(refIdOff || '');
+		if (normalizedRefIdOff === '') {
+			return;
+		}
+		creditTermState.draftsByRefId[normalizedRefIdOff] = String(value === undefined || value === null ? '' : value);
+	}
+
+	function clearTrackDraftValue(refIdOff) {
+		delete creditTermState.draftsByRefId[String(refIdOff || '')];
+	}
+
 	function findDebtByRefId(refIdOff) {
 		var target = String(refIdOff || '');
 		for (var i = 0; i < creditTermState.debts.length; i++) {
-			if (String(creditTermState.debts[i].id_off) === target) {
+			if (String((creditTermState.debts[i] || {}).id_off || '') === target) {
 				return creditTermState.debts[i];
 			}
 		}
 		return null;
+	}
+
+	function findDebtFromList(debts, refIdOff) {
+		var target = String(refIdOff || '');
+		for (var i = 0; i < debts.length; i++) {
+			if (String((debts[i] || {}).id_off || '') === target) {
+				return debts[i];
+			}
+		}
+		return null;
+	}
+
+	function isDebtExpanded(refIdOff) {
+		return String(creditTermState.expandedRefIdOff || '') === String(refIdOff || '');
 	}
 
 	function updateSummaryValues(summary) {
@@ -60,67 +144,74 @@
 		getElement('creditTermSummaryRemaining').textContent = formatMoney(safeSummary.remaining_credit || 0);
 	}
 
-	function renderTrackColumn(containerId, html) {
-		var element = getElement(containerId);
-		if (element) {
-			element.innerHTML = html;
-		}
-	}
+	function buildTrackRowsHtml(tracks) {
+		var html = '<div class="credit-term-inline-rows">';
 
-	function renderTrackDetails() {
-		var selectedDebt = findDebtByRefId(creditTermState.selectedRefIdOff);
-		var input = getElement('creditTermTrackInput');
-		var button = getElement('creditTermTrackSaveButton');
-		var selectedDoc = getElement('creditTermSelectedDoc');
-
-		if (button) {
-			button.disabled = creditTermState.saving || !selectedDebt;
-			button.textContent = creditTermState.saving ? 'กําลังบันทึก...' : 'บันทึกการติดตาม';
-		}
-
-		if (!selectedDebt) {
-			if (selectedDoc) {
-				selectedDoc.textContent = 'เลือกรายการหนี้เพื่อดูรายละเอียดการติดตาม';
-			}
-			renderTrackColumn('creditTermTrackDateList', '<p class="credit-term-detail-empty">ยังไม่ได้เลือกรายการ</p>');
-			renderTrackColumn('creditTermTrackDescList', '<p class="credit-term-detail-empty">เลือกรายการหนี้ทางด้านบนก่อน</p>');
-			renderTrackColumn('creditTermTrackByList', '<p class="credit-term-detail-empty">ยังไม่มีข้อมูลผู้ติดตาม</p>');
-			if (input) {
-				input.disabled = true;
-			}
-			return;
-		}
-
-		if (selectedDoc) {
-			selectedDoc.textContent = 'ใบสั่งขาย ' + (selectedDebt.IV_number || '-') + ' | ยอดหนี้คงค้าง ' + formatMoney(selectedDebt.balance_amount || 0) + ' บาท';
-		}
-
-		var tracks = creditTermState.tracksByRefId[String(selectedDebt.id_off)] || [];
 		if (!tracks.length) {
-			renderTrackColumn('creditTermTrackDateList', '<p class="credit-term-detail-empty">ยังไม่มีประวัติการติดตาม</p>');
-			renderTrackColumn('creditTermTrackDescList', '<p class="credit-term-detail-empty">กรอกข้อมูลด้านล่างเพื่อเพิ่มการติดตามรายการนี้</p>');
-			renderTrackColumn('creditTermTrackByList', '<p class="credit-term-detail-empty">ยังไม่มีชื่อผู้ติดตาม</p>');
+			html += '<div class="credit-term-inline-data-row is-empty">'
+				+ '<div class="credit-term-inline-row-text">ยังไม่มีประวัติการติดตาม</div>'
+				+ '<div class="credit-term-inline-row-text">กรอกข้อมูลด้านล่างเพื่อเพิ่มการติดตามรายการนี้</div>'
+				+ '<div class="credit-term-inline-row-text">ยังไม่มีชื่อผู้ติดตาม</div>'
+				+ '</div>';
 		} else {
-			var dateHtml = '';
-			var descHtml = '';
-			var byHtml = '';
-
 			for (var i = 0; i < tracks.length; i++) {
 				var track = tracks[i] || {};
-				dateHtml += '<div class="credit-term-detail-item">' + escapeHtml(track.add_date || '-') + '</div>';
-				descHtml += '<div class="credit-term-detail-item">' + escapeHtml(track.des_track || '-') + '</div>';
-				byHtml += '<div class="credit-term-detail-item">' + escapeHtml(track.add_by || '-') + '</div>';
+				html += '<div class="credit-term-inline-data-row">'
+					+ '<div class="credit-term-inline-row-text">' + escapeHtml(formatTrackDate(track.add_date || '')) + '</div>'
+					+ '<div class="credit-term-inline-row-text">' + escapeHtml(track.des_track || '-') + '</div>'
+					+ '<div class="credit-term-inline-row-text">' + escapeHtml(track.add_by || '-') + '</div>'
+					+ '</div>';
 			}
-
-			renderTrackColumn('creditTermTrackDateList', dateHtml);
-			renderTrackColumn('creditTermTrackDescList', descHtml);
-			renderTrackColumn('creditTermTrackByList', byHtml);
 		}
 
-		if (input) {
-			input.disabled = false;
-			input.placeholder = 'บันทึกข้อมูลการติดตามสำหรับใบสั่งขาย ' + (selectedDebt.IV_number || '');
-		}
+		html += '</div>';
+		return html;
+	}
+
+	function renderSubrow(debt) {
+		var refIdOff = String((debt && debt.id_off) || '');
+		var tracks = creditTermState.tracksByRefId[refIdOff] || [];
+		var inputId = getTrackInputId(refIdOff);
+		var clearButtonId = getTrackClearButtonId(refIdOff);
+		var isSaving = creditTermState.savingRefIdOff === refIdOff;
+		var draftValue = getTrackDraftValue(refIdOff);
+		var hasDraftValue = draftValue.trim() !== '';
+		var productNames = String((debt && debt.product_names) || '').trim();
+
+		return '<tr class="credit-term-subrow">'
+			+ '<td colspan="6">'
+			+ '<div class="credit-term-inline-panel">'
+			+ '<div class="credit-term-inline-summary-row">'
+			+ '<div class="credit-term-inline-summary-caret"><span class="credit-term-caret" aria-hidden="true"></span></div>'
+			+ '<div class="credit-term-inline-summary-cell">' + escapeHtml(debt.IV_number || '-') + '</div>'
+			+ '<div class="credit-term-inline-summary-cell">' + escapeHtml(productNames !== '' ? productNames : '-') + '</div>'
+			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.unit_cash || 0) + '</div>'
+			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.paid_amount || 0) + '</div>'
+			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.balance_amount || 0) + '</div>'
+			+ '</div>'
+			+ '<div class="credit-term-inline-detail">'
+			+ '<div class="credit-term-inline-label-row">'
+			+ '<p class="credit-term-inline-title">วันที่ติดตาม</p>'
+			+ '<p class="credit-term-inline-title">การติดตาม</p>'
+			+ '<p class="credit-term-inline-title">ชื่อผู้ติดตาม</p>'
+			+ '</div>'
+			+ buildTrackRowsHtml(tracks)
+			+ '<div class="credit-term-inline-compose-row">'
+			+ '<div></div>'
+			+ '<div class="credit-term-inline-compose-field">'
+			+ '<div class="credit-term-inline-input-shell' + (isSaving ? ' is-disabled' : '') + '">'
+			+ '<input type="text" id="' + inputId + '" class="credit-term-textarea credit-term-inline-input" data-ref-id-off="' + escapeHtml(refIdOff) + '" value="' + escapeHtml(draftValue) + '" placeholder="กรอกข้อมูลการติดตามสำหรับใบสั่งขาย ' + escapeHtml(debt.IV_number || '') + '"' + (isSaving ? ' disabled' : '') + '>'
+			+ '<button type="button" id="' + clearButtonId + '" class="credit-term-inline-clear-btn' + (hasDraftValue ? '' : ' is-hidden') + '" aria-label="ล้างข้อความการติดตาม" onclick="clearCreditTermTrackInput(\'' + escapeHtml(refIdOff) + '\')"' + (isSaving ? ' disabled' : '') + '><i class="fas fa-times" aria-hidden="true"></i></button>'
+			+ '</div>'
+			+ '</div>'
+			+ '<div class="credit-term-actions">'
+			+ '<button type="button" class="credit-term-save-btn" onclick="saveCreditTermTrack(\'' + escapeHtml(refIdOff) + '\')"' + (isSaving ? ' disabled' : '') + '>' + (isSaving ? 'กำลังบันทึก...' : 'บันทึก') + '</button>'
+			+ '</div>'
+			+ '</div>'
+			+ '</div>'
+			+ '</div>'
+			+ '</td>'
+			+ '</tr>';
 	}
 
 	function renderDebtRows(message) {
@@ -131,13 +222,11 @@
 
 		if (message) {
 			tableBody.innerHTML = '<tr class="credit-term-empty-row"><td><span class="credit-term-caret" aria-hidden="true"></span></td><td colspan="5">' + escapeHtml(message) + '</td></tr>';
-			renderTrackDetails();
 			return;
 		}
 
 		if (!creditTermState.debts.length) {
 			tableBody.innerHTML = '<tr class="credit-term-empty-row"><td><span class="credit-term-caret" aria-hidden="true"></span></td><td colspan="5">ไม่พบรายการหนี้คงค้าง</td></tr>';
-			renderTrackDetails();
 			return;
 		}
 
@@ -146,22 +235,51 @@
 			var debt = creditTermState.debts[i] || {};
 			var refIdOff = String(debt.id_off || '');
 			var isSelected = refIdOff === String(creditTermState.selectedRefIdOff || '');
+			var isExpanded = isDebtExpanded(refIdOff);
 			var productNames = String(debt.product_names || '').trim();
 			var trackCount = Number(debt.track_count || 0);
 			var countHtml = trackCount > 0 ? '<span class="credit-term-track-count">' + trackCount + ' รายการ</span>' : '<span class="credit-term-track-count">ยังไม่มี</span>';
 
 			html += '<tr class="' + (isSelected ? 'credit-term-row-selected' : '') + '" onclick="selectCreditTermDebt(\'' + escapeHtml(refIdOff) + '\')">';
-			html += '<td><button type="button" class="credit-term-row-btn ' + (isSelected ? 'is-selected' : '') + '" onclick="selectCreditTermDebt(\'' + escapeHtml(refIdOff) + '\'); event.stopPropagation();"><span class="credit-term-caret" aria-hidden="true"></span></button></td>';
+			html += '<td><button type="button" class="credit-term-row-btn ' + (isSelected ? 'is-selected ' : '') + (isExpanded ? 'is-expanded' : '') + '" aria-label="สลับรายละเอียดติดตาม" aria-expanded="' + (isExpanded ? 'true' : 'false') + '" onclick="toggleCreditTermDebt(\'' + escapeHtml(refIdOff) + '\'); event.stopPropagation();"><span class="credit-term-caret" aria-hidden="true"></span></button></td>';
 			html += '<td>' + escapeHtml(debt.IV_number || '-') + '<br>' + countHtml + '</td>';
 			html += '<td>' + escapeHtml(productNames !== '' ? productNames : '-') + '</td>';
 			html += '<td>' + formatMoney(debt.unit_cash || 0) + '</td>';
 			html += '<td>' + formatMoney(debt.paid_amount || 0) + '</td>';
 			html += '<td>' + formatMoney(debt.balance_amount || 0) + '</td>';
 			html += '</tr>';
+
+			if (isExpanded) {
+				html += renderSubrow(debt);
+			}
 		}
 
 		tableBody.innerHTML = html;
-		renderTrackDetails();
+	}
+
+	function updateTrackClearButton(refIdOff) {
+		var input = getElement(getTrackInputId(refIdOff));
+		var clearButton = getElement(getTrackClearButtonId(refIdOff));
+		if (!input || !clearButton) {
+			return;
+		}
+
+		var hasValue = String(input.value || '').trim() !== '';
+		clearButton.classList.toggle('is-hidden', !hasValue);
+		clearButton.disabled = input.disabled;
+	}
+
+	function clearTrackInput(refIdOff) {
+		var normalizedRefIdOff = String(refIdOff || '');
+		var input = getElement(getTrackInputId(normalizedRefIdOff));
+		if (!input || input.disabled) {
+			return;
+		}
+
+		input.value = '';
+		setTrackDraftValue(normalizedRefIdOff, '');
+		updateTrackClearButton(normalizedRefIdOff);
+		input.focus();
 	}
 
 	function setSelectedDebt(refIdOff) {
@@ -169,6 +287,17 @@
 			return;
 		}
 		creditTermState.selectedRefIdOff = String(refIdOff || '');
+		renderDebtRows();
+	}
+
+	function toggleDebtExpansion(refIdOff) {
+		if (!findDebtByRefId(refIdOff)) {
+			return;
+		}
+
+		var normalizedRefIdOff = String(refIdOff || '');
+		creditTermState.selectedRefIdOff = normalizedRefIdOff;
+		creditTermState.expandedRefIdOff = isDebtExpanded(normalizedRefIdOff) ? '' : normalizedRefIdOff;
 		renderDebtRows();
 	}
 
@@ -185,19 +314,25 @@
 
 		creditTermState.loading = true;
 		creditTermState.billId = billId;
+		creditTermState.expandedRefIdOff = '';
+		creditTermState.savingRefIdOff = '';
+		creditTermState.draftsByRefId = {};
 		updateSummaryValues({
 			credit_day: '-',
 			credit_amount: 0,
 			total_outstanding: 0,
 			remaining_credit: 0
 		});
-		renderDebtRows('กําลังโหลดข้อมูลเครดิตเทอม...');
+		renderDebtRows('กำลังโหลดข้อมูลเครดิตเทอม...');
 
 		fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(billId), {
 			credentials: 'same-origin',
 			cache: 'no-store'
 		})
 			.then(function(response) {
+				if (!response.ok) {
+					throw new Error('ไม่สามารถโหลดข้อมูลเครดิตเทอมได้');
+				}
 				return response.json();
 			})
 			.then(function(data) {
@@ -230,22 +365,13 @@
 			});
 	}
 
-	function findDebtFromList(debts, refIdOff) {
-		var target = String(refIdOff || '');
-		for (var i = 0; i < debts.length; i++) {
-			if (String((debts[i] || {}).id_off || '') === target) {
-				return debts[i];
-			}
-		}
-		return null;
-	}
-
-	function saveCreditTermTrack() {
-		var input = getElement('creditTermTrackInput');
-		var refIdOff = String(creditTermState.selectedRefIdOff || '');
+	function saveCreditTermTrack(refIdOff) {
+		var normalizedRefIdOff = String(refIdOff || creditTermState.selectedRefIdOff || '');
+		var input = getElement(getTrackInputId(normalizedRefIdOff));
 		var description = input ? String(input.value || '').trim() : '';
+		var saveFailed = false;
 
-		if (refIdOff === '') {
+		if (normalizedRefIdOff === '') {
 			alert('กรุณาเลือกรายการหนี้ก่อนบันทึกการติดตาม');
 			return;
 		}
@@ -258,8 +384,16 @@
 			return;
 		}
 
-		creditTermState.saving = true;
-		renderTrackDetails();
+		creditTermState.savingRefIdOff = normalizedRefIdOff;
+		creditTermState.selectedRefIdOff = normalizedRefIdOff;
+		creditTermState.expandedRefIdOff = normalizedRefIdOff;
+		setTrackDraftValue(normalizedRefIdOff, description);
+		renderDebtRows();
+		input = getElement(getTrackInputId(normalizedRefIdOff));
+		if (input) {
+			input.value = description;
+			updateTrackClearButton(normalizedRefIdOff);
+		}
 
 		fetch('ajax_credit_term_track_save.php', {
 			method: 'POST',
@@ -267,9 +401,12 @@
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
 			},
-			body: 'ref_id_off=' + encodeURIComponent(refIdOff) + '&des_track=' + encodeURIComponent(description)
+			body: 'ref_id_off=' + encodeURIComponent(normalizedRefIdOff) + '&des_track=' + encodeURIComponent(description)
 		})
 			.then(function(response) {
+				if (!response.ok) {
+					throw new Error('ไม่สามารถบันทึกการติดตามได้');
+				}
 				return response.json();
 			})
 			.then(function(data) {
@@ -277,33 +414,43 @@
 					throw new Error((data && data.message) ? data.message : 'ไม่สามารถบันทึกการติดตามได้');
 				}
 
-				creditTermState.tracksByRefId[refIdOff] = Array.isArray(data.tracks) ? data.tracks : [];
+				creditTermState.tracksByRefId[normalizedRefIdOff] = Array.isArray(data.tracks) ? data.tracks : [];
+				creditTermState.expandedRefIdOff = normalizedRefIdOff;
+				clearTrackDraftValue(normalizedRefIdOff);
 
-				var debt = findDebtByRefId(refIdOff);
+				var debt = findDebtByRefId(normalizedRefIdOff);
 				if (debt) {
-					debt.track_count = Number(data.track_count || creditTermState.tracksByRefId[refIdOff].length || 0);
-				}
-
-				if (input) {
-					input.value = '';
-				}
-
-				renderDebtRows();
-				if (input) {
-					input.focus();
+					debt.track_count = Number(data.track_count || creditTermState.tracksByRefId[normalizedRefIdOff].length || 0);
 				}
 			})
 			.catch(function(error) {
+				saveFailed = true;
 				alert(error && error.message ? error.message : 'ไม่สามารถบันทึกการติดตามได้');
 			})
 			.finally(function() {
-				creditTermState.saving = false;
-				renderTrackDetails();
+				creditTermState.savingRefIdOff = '';
+				renderDebtRows();
+				var finalInput = getElement(getTrackInputId(normalizedRefIdOff));
+				if (finalInput) {
+					if (saveFailed) {
+						finalInput.value = description;
+						updateTrackClearButton(normalizedRefIdOff);
+					}
+					finalInput.focus();
+				}
 			});
 	}
 
 	window.selectCreditTermDebt = function(refIdOff) {
 		setSelectedDebt(refIdOff);
+	};
+
+	window.toggleCreditTermDebt = function(refIdOff) {
+		toggleDebtExpansion(refIdOff);
+	};
+
+	window.clearCreditTermTrackInput = function(refIdOff) {
+		clearTrackInput(refIdOff);
 	};
 
 	window.saveCreditTermTrack = saveCreditTermTrack;
@@ -340,14 +487,14 @@
 		});
 		renderDebtRows('เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล');
 
-		var input = getElement('creditTermTrackInput');
-		if (input) {
-			input.addEventListener('keydown', function(event) {
-				if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-					event.preventDefault();
-					saveCreditTermTrack();
-				}
-			});
-		}
+		document.addEventListener('input', function(event) {
+			var target = event.target;
+			if (!target || !target.classList || !target.classList.contains('credit-term-inline-input')) {
+				return;
+			}
+			var refIdOff = target.getAttribute('data-ref-id-off') || '';
+			setTrackDraftValue(refIdOff, target.value || '');
+			updateTrackClearButton(refIdOff);
+		});
 	});
 })();
