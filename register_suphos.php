@@ -1,4 +1,4 @@
-<?php header("Content-Type: text/html; charset=utf-8");
+﻿<?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -8041,9 +8041,15 @@ include("head.php"); ?>
 			return true;
 		}
 
-		function getClearLoanAvailableRows(limit) {
+		function getClearLoanAvailableRows() {
 			var rows = [];
-			for (var rowIndex = 1; rowIndex <= limit; rowIndex++) {
+			var productRows = document.querySelectorAll('.so-product-row[id^="product_row_"]');
+			for (var i = 0; i < productRows.length; i++) {
+				var match = /^product_row_(\d+)$/.exec(productRows[i].id);
+				if (!match) {
+					continue;
+				}
+				var rowIndex = parseInt(match[1], 10);
 				if (getClearLoanRowField('product_id', rowIndex) && isClearLoanRowEmpty(rowIndex)) {
 					rows.push(rowIndex);
 				}
@@ -8518,7 +8524,7 @@ include("head.php"); ?>
 					alert(compatibility.message);
 					return;
 				}
-				var availableRows = getClearLoanAvailableRows(30);
+				var availableRows = getClearLoanAvailableRows();
 				if (availableRows.length < importItems.length) {
 					alert('แถวสินค้าว่างไม่เพียงพอ กรุณาเคลียร์หรือเพิ่มแถวก่อน');
 					return;
