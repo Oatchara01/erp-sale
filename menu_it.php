@@ -806,7 +806,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
                    
 <div class="content_nav">
 <a href="main_allwell_so.php"> &nbsp;&nbsp;&nbsp; Online</a>
-<a href="main_suphos_so.php" > &nbsp;&nbsp;&nbsp; Hospital</a>
+<a href="register_suphos.php" > &nbsp;&nbsp;&nbsp; Hospital</a>
 
 </div>
 

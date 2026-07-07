@@ -121,9 +121,12 @@ $debtSql = "
         r.ref_id,
         r.IV_number,
         r.date_inv,
-        CAST(r.unit_cash AS DECIMAL(18,2)) AS unit_cash,
+        CAST(r.unit_cash AS DECIMAL(18,2)) AS amount_due,
         COALESCE(rc.paid_amount, 0) AS paid_amount,
-        (CAST(r.unit_cash AS DECIMAL(18,2)) - COALESCE(rc.paid_amount, 0)) AS balance_amount,
+        GREATEST(
+            CAST(r.unit_cash AS DECIMAL(18,2)) - COALESCE(rc.paid_amount, 0),
+            0
+        ) AS outstanding_amount,
         COALESCE(tt.track_count, 0) AS track_count,
         GROUP_CONCAT(DISTINCT NULLIF(TRIM(p.sol_name), '') ORDER BY p.sol_name SEPARATOR ' | ') AS product_names
     FROM tb_register_data AS r
@@ -155,7 +158,7 @@ $debtSql = "
       AND r.ref_id NOT LIKE '%BL%'
       AND r.bill_id = ?
     GROUP BY r.id_off, r.ref_id, r.IV_number, r.date_inv, r.unit_cash, rc.paid_amount, tt.track_count
-    HAVING balance_amount > 0
+    HAVING outstanding_amount > 0
     ORDER BY r.date_inv ASC, r.IV_number ASC
 ";
 
@@ -180,8 +183,10 @@ $totalOutstanding = 0.0;
 
 if ($debtResult) {
     while ($row = mysqli_fetch_assoc($debtResult)) {
-        $balanceAmount = (float)$row['balance_amount'];
-        if ($balanceAmount <= 0) {
+        $amountDue = (float)$row['amount_due'];
+        $paidAmount = (float)$row['paid_amount'];
+        $outstandingAmount = (float)$row['outstanding_amount'];
+        if ($outstandingAmount <= 0) {
             continue;
         }
 
@@ -190,18 +195,22 @@ if ($debtResult) {
 
         $debts[] = array(
             'id_off' => $refIdOff,
+            'ref_id_off' => $refIdOff,
             'ref_id' => (string)$row['ref_id'],
             'IV_number' => (string)$row['IV_number'],
             'date_inv' => (string)$row['date_inv'],
-            'unit_cash' => (float)$row['unit_cash'],
-            'paid_amount' => (float)$row['paid_amount'],
-            'balance_amount' => $balanceAmount,
+            'amount_due' => $amountDue,
+            'paid_amount' => $paidAmount,
+            'outstanding_amount' => $outstandingAmount,
+            // Legacy keys keep older cached clients compatible during deployment.
+            'unit_cash' => $amountDue,
+            'balance_amount' => $outstandingAmount,
             'track_count' => (int)$row['track_count'],
             'product_names' => $productNames
         );
 
         $refIdOffList[] = $refIdOff;
-        $totalOutstanding += $balanceAmount;
+        $totalOutstanding += $outstandingAmount;
     }
 }
 

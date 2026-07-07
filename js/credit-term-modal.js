@@ -35,6 +35,15 @@
 		});
 	}
 
+	function getDebtAmount(debt, primaryKey, legacyKey) {
+		var item = debt || {};
+		var value = item[primaryKey];
+		if (value === undefined || value === null || value === '') {
+			value = item[legacyKey];
+		}
+		return value === undefined || value === null || value === '' ? 0 : value;
+	}
+
 	function padDatePart(value) {
 		var normalized = String(value === undefined || value === null ? '' : value).trim();
 		return normalized.length >= 2 ? normalized : ('0' + normalized).slice(-2);
@@ -185,9 +194,9 @@
 			+ '<div class="credit-term-inline-summary-caret"><span class="credit-term-caret" aria-hidden="true"></span></div>'
 			+ '<div class="credit-term-inline-summary-cell">' + escapeHtml(debt.IV_number || '-') + '</div>'
 			+ '<div class="credit-term-inline-summary-cell">' + escapeHtml(productNames !== '' ? productNames : '-') + '</div>'
-			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.unit_cash || 0) + '</div>'
+			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(getDebtAmount(debt, 'amount_due', 'unit_cash')) + '</div>'
 			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.paid_amount || 0) + '</div>'
-			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(debt.balance_amount || 0) + '</div>'
+			+ '<div class="credit-term-inline-summary-cell is-number">' + formatMoney(getDebtAmount(debt, 'outstanding_amount', 'balance_amount')) + '</div>'
 			+ '</div>'
 			+ '<div class="credit-term-inline-detail">'
 			+ '<div class="credit-term-inline-label-row">'
@@ -244,9 +253,9 @@
 			html += '<td><button type="button" class="credit-term-row-btn ' + (isSelected ? 'is-selected ' : '') + (isExpanded ? 'is-expanded' : '') + '" aria-label="สลับรายละเอียดติดตาม" aria-expanded="' + (isExpanded ? 'true' : 'false') + '" onclick="toggleCreditTermDebt(\'' + escapeHtml(refIdOff) + '\'); event.stopPropagation();"><span class="credit-term-caret" aria-hidden="true"></span></button></td>';
 			html += '<td>' + escapeHtml(debt.IV_number || '-') + '<br>' + countHtml + '</td>';
 			html += '<td>' + escapeHtml(productNames !== '' ? productNames : '-') + '</td>';
-			html += '<td>' + formatMoney(debt.unit_cash || 0) + '</td>';
+			html += '<td>' + formatMoney(getDebtAmount(debt, 'amount_due', 'unit_cash')) + '</td>';
 			html += '<td>' + formatMoney(debt.paid_amount || 0) + '</td>';
-			html += '<td>' + formatMoney(debt.balance_amount || 0) + '</td>';
+			html += '<td>' + formatMoney(getDebtAmount(debt, 'outstanding_amount', 'balance_amount')) + '</td>';
 			html += '</tr>';
 
 			if (isExpanded) {

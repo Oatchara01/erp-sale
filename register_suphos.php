@@ -1,4 +1,4 @@
-<?php header("Content-Type: text/html; charset=utf-8");
+﻿<?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

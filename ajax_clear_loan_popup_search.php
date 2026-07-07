@@ -169,7 +169,7 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
         while ($detail = mysqli_fetch_assoc($detailQuery)) {
             $items[] = array(
                 'item_key' => 'reserve-' . $documentNo . '-' . $itemIndex,
-                'product_id' => clearLoanNormalizeText($detail['product_id']),
+                'product_id' => clearLoanNormalizeText($detail['access_code']),
                 'product_name' => clearLoanNormalizeText($detail['sol_name']),
                 'product_code' => clearLoanNormalizeText($detail['access_code']),
                 'quantity' => (string)$detail['qty'],
