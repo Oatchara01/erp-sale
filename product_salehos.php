@@ -85,12 +85,11 @@
         }
 
         if (!HttPRequest) {
-
             alert('Cannot create XMLHTTP instance');
             return false;
         }
         var url = 'data_product_hos1.php';
-        var pmeters = "product_code=" + encodeURI(document.getElementById(product_code).value);
+        var pmeters = "product_code=" + encodeURIComponent(document.getElementById(product_code).value) + "&format=json";
         HttPRequest.open('POST', url, true);
 
         HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -103,40 +102,61 @@
             {
                 var myProduct = HttPRequest.responseText;
 
-                if (myProduct != "") {
+                if (myProduct.trim() != "") {
+                    try {
+                        var product = JSON.parse(myProduct);
 
-                    var myArr = myProduct.split("|");
+                        document.getElementById(product_id).value = product.product_ID;
+                        // Set hidden input and label span for product_name
+                        document.getElementById(product_name).value = product.sol_name;
+                        var labelEl = document.getElementById(product_name.replace('product_name', 'product_name_label'));
+                        if (labelEl) labelEl.textContent = product.sol_name;
+                        document.getElementById(unit_name).value = product.unit_name;
+                        document.getElementById(product_price).value = product.sol_price;
+                        document.getElementById(discount_unit).value = product.discount;
+                        document.getElementById(warranty).value = product.war_hc;
 
-                    document.getElementById(product_id).value = myArr[0];
-                    // Set hidden input and label span for product_name
-                    document.getElementById(product_name).value = myArr[1];
-                    var labelEl = document.getElementById(product_name.replace('product_name', 'product_name_label'));
-                    if (labelEl) labelEl.textContent = myArr[1];
-                    document.getElementById(unit_name).value = myArr[2];
-                    document.getElementById(product_price).value = myArr[3];
-                    document.getElementById(discount_unit).value = myArr[4];
-                    document.getElementById(warranty).value = myArr[5];
-
-                    // Extract row index from the product_price element ID (e.g. "product_price3" -> 3)
-                    var rowIdx = parseInt(product_price.replace('product_price', ''));
-                    if (!isNaN(rowIdx) && typeof updateRowTotal === 'function') {
-                        var rowDeletedEl = document.getElementById('row_deleted' + rowIdx);
-                        var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIdx);
-                        var deletedProductCodeEl = document.getElementById('deleted_product_code' + rowIdx);
-                        if (rowDeletedEl) rowDeletedEl.value = '0';
-                        if (deletedSubsoEl) deletedSubsoEl.value = '';
-                        if (deletedProductCodeEl) deletedProductCodeEl.value = '';
-                        // Format the price and discount fields
-                        var priceEl = document.getElementById(product_price);
-                        var discEl = document.getElementById(discount_unit);
-                        if (typeof formatNumberInput === 'function') {
-                            if (priceEl) formatNumberInput(priceEl);
-                            if (discEl) formatNumberInput(discEl);
+                        // Extract row index and set warranty unit
+                        var rowIdx = parseInt(product_price.replace('product_price', ''));
+                        var remarkInput = document.getElementById('remark_hc' + rowIdx);
+                        if (remarkInput) {
+                            remarkInput.value = product.remark_hc || '';
                         }
-                        updateRowTotal(rowIdx);
-                    }
-                    if (typeof calculateSummary === 'function') {
-                        calculateSummary();
+                        var unit = 'ปี';
+                        if (product.vvv) {
+                            var cleanVvv = product.vvv.trim();
+                            var parts = cleanVvv.split(/\s+/);
+                            if (parts.length > 1) {
+                                unit = parts[parts.length - 1];
+                            } else if (parts.length === 1 && isNaN(cleanVvv)) {
+                                unit = cleanVvv;
+                            }
+                        }
+                        var unitInput = document.getElementById('warranty_unit' + rowIdx);
+                        if (unitInput) {
+                            unitInput.value = unit;
+                        }
+                        if (!isNaN(rowIdx) && typeof updateRowTotal === 'function') {
+                            var rowDeletedEl = document.getElementById('row_deleted' + rowIdx);
+                            var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIdx);
+                            var deletedProductCodeEl = document.getElementById('deleted_product_code' + rowIdx);
+                            if (rowDeletedEl) rowDeletedEl.value = '0';
+                            if (deletedSubsoEl) deletedSubsoEl.value = '';
+                            if (deletedProductCodeEl) deletedProductCodeEl.value = '';
+                            // Format the price and discount fields
+                            var priceEl = document.getElementById(product_price);
+                            var discEl = document.getElementById(discount_unit);
+                            if (typeof formatNumberInput === 'function') {
+                                if (priceEl) formatNumberInput(priceEl);
+                                if (discEl) formatNumberInput(discEl);
+                            }
+                            updateRowTotal(rowIdx);
+                        }
+                        if (typeof calculateSummary === 'function') {
+                            calculateSummary();
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse JSON response:", e, myProduct);
                     }
                 }
             }
@@ -448,6 +468,69 @@
             color: #E24B7A;
         }
 
+        /* สไตล์กล่อง Tooltip สำหรับความเห็นประกอบ/ประกันสินค้า */
+        .so-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        /* ข้อความ Tooltip (ซ่อนเป็นค่าเริ่มต้น) */
+        .so-tooltip .so-tooltiptext {
+            display: none;
+            visibility: hidden;
+            width: 220px;
+            max-width: 280px;
+            background-color: #333333;
+            color: #ffffff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 10px 12px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%; /* แสดงเหนือไอคอน */
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.4;
+            pointer-events: none; /* เพื่อไม่ให้ขวางทิศทางเมาส์ */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            white-space: normal; /* รองรับการตัดคำยาวๆ */
+        }
+
+        /* ลูกศรชี้ลงของ Tooltip */
+        .so-tooltip .so-tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #333333 transparent transparent transparent;
+        }
+
+        /* แสดงผลเฉพาะเมื่อมีคลาส active */
+        .so-tooltip.active .so-tooltiptext {
+            display: block;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* ปรับแต่งเพื่อรองรับการแสดงผลบนหน้าจอมือถือ (Responsive) */
+        @media screen and (max-width: 768px) {
+            .so-tooltip .so-tooltiptext {
+                width: 180px;
+                max-width: 70vw; /* จำกัดความกว้างไม่ให้ล้นหน้าจอมือถือ */
+                font-size: 11px;
+                padding: 8px 10px;
+                bottom: 130%; /* ยกสูงขึ้นเล็กน้อยเพื่อหลบขอบ */
+            }
+        }
+
         .so-modal-input-wrap {
             position: relative;
         }
@@ -692,6 +775,8 @@
 
                         <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
                         <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
+                        <input type="hidden" name="warranty_unit<?php echo $i; ?>" id="warranty_unit<?php echo $i; ?>" value="ปี">
+                        <input type="hidden" name="remark_hc<?php echo $i; ?>" id="remark_hc<?php echo $i; ?>">
                         <input type="hidden" name="cal<?php echo $i; ?>" id="cal<?php echo $i; ?>">
                         <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
                         <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
@@ -752,7 +837,7 @@
 
             <div class="so-modal-grid-5">
                 <div class="so-modal-field">
-                    <label>รับประกัน(ปี)<span class="so-modal-required">*</span></label>
+                    <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
                     <div class="so-modal-input-wrap">
                         <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
@@ -818,7 +903,7 @@
         const rowFields = [
             'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name', 'subso_db_id', 'row_deleted', 'deleted_subso_db_id', 'deleted_product_code',
             'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name', 'product_sn',
-            'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount'
+            'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'remark_hc'
         ];
 
         function getRowData(index) {
@@ -1037,6 +1122,7 @@
             document.getElementById('discount_unit' + rowIndex).value = '';
             document.getElementById('product_id' + rowIndex).value = '';
             document.getElementById('product_sn' + rowIndex).value = '';
+            document.getElementById('remark_hc' + rowIndex).value = '';
             document.getElementById('product_row_' + rowIndex).style.display = 'none';
 
             var cb = document.querySelector('#product_row_' + rowIndex + ' .so-row-checkbox');
@@ -1051,12 +1137,58 @@
             calculateSummary();
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function toggleWarrantyTooltip(event, element) {
+            event.stopPropagation();
+            var isActive = element.classList.contains('active');
+            var activeTooltips = document.querySelectorAll('.so-tooltip.active');
+            activeTooltips.forEach(function(el) {
+                el.classList.remove('active');
+            });
+            if (!isActive) {
+                element.classList.add('active');
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var activeTooltip = document.querySelector('.so-tooltip.active');
+            if (activeTooltip && !activeTooltip.contains(event.target)) {
+                activeTooltip.classList.remove('active');
+            }
+        });
+
         function openEditModal(rowIndex) {
             document.getElementById('current_editing_row').value = rowIndex;
             document.getElementById('modal_row_number').value = rowIndex;
 
             // Load data from hidden inputs
             document.getElementById('m_warranty').value = document.getElementById('warranty' + rowIndex).value;
+
+            // Set dynamic warranty unit label
+            var unitInput = document.getElementById('warranty_unit' + rowIndex);
+            var unit = (unitInput && unitInput.value) ? unitInput.value : 'ปี';
+            var warrantyLabel = document.getElementById('modal_warranty_label');
+            if (warrantyLabel) {
+                var remarkHcVal = document.getElementById('remark_hc' + rowIndex) ? document.getElementById('remark_hc' + rowIndex).value : '';
+                var iconHtml = '';
+                if (remarkHcVal && remarkHcVal.trim() !== '') {
+                    iconHtml = ' <span class="so-tooltip" onclick="toggleWarrantyTooltip(event, this)">' +
+                               '<img src="img/icons/question.png" alt="help" style="width: 14px; height: 14px; cursor: pointer; vertical-align: middle; margin-left: 4px;">' +
+                               '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
+                               '</span>';
+                }
+                warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')<span class="so-modal-required">*</span>' + iconHtml;
+            }
+
             document.getElementById('m_cal').value = document.getElementById('cal' + rowIndex).value;
             document.getElementById('m_pm_year').value = document.getElementById('pm_year' + rowIndex).value;
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;

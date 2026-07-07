@@ -2944,7 +2944,7 @@ include("head.php"); ?>
 			}
 		}
 
-		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1'");
+		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name, tb_product.remark_hc AS master_remark_hc FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1'");
 		if ($savedProductQuery) {
 			while ($savedProduct = mysqli_fetch_assoc($savedProductQuery)) {
 				$savedProducts[] = $savedProduct;
@@ -2974,7 +2974,8 @@ include("head.php"); ?>
 				'jong_ckk' => (string)($savedProduct["jong_ckk"] ?? ""),
 				'jong_no' => (string)($savedProduct["jong_no"] ?? ""),
 				'display_name' => (string)($savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? ""),
-				'subso_db_id' => (string)($savedProduct["id"] ?? "")
+				'subso_db_id' => (string)($savedProduct["id"] ?? ""),
+				'remark_hc' => (string)($savedProduct["master_remark_hc"] ?? "")
 			);
 		}
 	}
@@ -3267,6 +3268,7 @@ include("head.php"); ?>
 					setValue('jong_no', product.jong_no);
 					setValue('display_name', product.display_name);
 					setValue('subso_db_id', product.subso_db_id);
+					setValue('remark_hc', product.remark_hc);
 
 					var productNameLabel = document.getElementById('product_name_label' + rowIndex);
 					if (productNameLabel) {
@@ -6353,6 +6355,8 @@ include("head.php"); ?>
 		var customerPopupHasMore = false;
 		var customerPopupLoading = false;
 		var customerPopupPageSize = 20;
+		var customerPopupAbortController = null;
+		var customerPopupRequestId = 0;
 		var fullBillPopupSelected = null;
 		var fullBillPopupTimer = null;
 		var fullBillPopupData = [];
@@ -6677,7 +6681,16 @@ include("head.php"); ?>
 		// โหลดลูกค้าจาก backend แบบ initial load หรือ append สำหรับ pagination
 		function loadCustomerPopupRows(keyword, append) {
 			var tbody = document.getElementById('customerPopupRows');
-			if (customerPopupLoading) return;
+			if (append && customerPopupLoading) return;
+
+			// A new search supersedes any request still running for an older keyword.
+			if (!append && customerPopupAbortController) {
+				customerPopupAbortController.abort();
+			}
+
+			customerPopupAbortController = new AbortController();
+			var requestController = customerPopupAbortController;
+			var requestId = ++customerPopupRequestId;
 			customerPopupLoading = true;
 
 			// initial search จะแสดง loading state ในตาราง ส่วน append จะคงข้อมูลเดิมไว้
@@ -6704,12 +6717,15 @@ include("head.php"); ?>
 
 			// ใช้ last_id เป็น cursor สำหรับ "โหลดเพิ่ม" แทนการ reload ทั้งชุด
 			fetch(requestUrl, {
-					credentials: 'same-origin'
+					credentials: 'same-origin',
+					signal: requestController.signal
 				})
 				.then(function(response) {
 					return response.json();
 				})
 				.then(function(data) {
+					if (requestId !== customerPopupRequestId) return;
+
 					if (!data || !data.success) {
 						customerPopupData = [];
 						customerPopupHasMore = false;
@@ -6724,7 +6740,10 @@ include("head.php"); ?>
 					customerPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
 					renderCustomerPopupRows(customerPopupData);
 				})
-				.catch(function() {
+				.catch(function(error) {
+					if (error && error.name === 'AbortError') return;
+					if (requestId !== customerPopupRequestId) return;
+
 					customerPopupHasMore = false;
 					customerPopupNextLastId = null;
 					if (tbody) {
@@ -6733,7 +6752,10 @@ include("head.php"); ?>
 					toggleCustomerPopupLoadMore(false, false);
 				})
 				.finally(function() {
+					if (requestId !== customerPopupRequestId) return;
+
 					customerPopupLoading = false;
+					customerPopupAbortController = null;
 					if (customerPopupHasMore) {
 						toggleCustomerPopupLoadMore(true, false);
 					}
