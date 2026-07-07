@@ -1,4 +1,4 @@
-﻿<?php header("Content-Type: text/html; charset=utf-8");
+<?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -3389,6 +3389,27 @@ include("head.php"); ?>
 					return false;
 				}
 
+				// กรณีที่ 2: ตรวจสอบวงเงินไม่เพียงพอสีส้มก่อนบันทึก
+				var remainingInput = document.getElementById('remaining_credit_thb');
+				if (remainingInput && remainingInput.value !== '') {
+					var remaining = parseFloat(remainingInput.value || 0);
+					var netTotalElem = document.getElementById('summary_net_total');
+					var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
+
+					if ((netTotal > remaining) || (remaining <= 0)) {
+						var customerName = '';
+						var displayBillNameElem = document.getElementById('display_bill_name');
+						if (displayBillNameElem) {
+							customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
+						}
+						var creditLimitElem = document.getElementById('credit_thb');
+						var creditAmount = creditLimitElem ? parseFloat(creditLimitElem.value || 0) : 0;
+
+						showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
+						return false;
+					}
+				}
+
 				if (window.soSubmitConfirmed) {
 					return true;
 				}
@@ -4352,6 +4373,7 @@ include("head.php"); ?>
 
 					<!-- วงเงิน (ซ่อน/เก็บค่าเหมือนเดิม) -->
 					<input type="hidden" name="credit_thb" id="credit_thb">
+					<input type="hidden" name="remaining_credit_thb" id="remaining_credit_thb">
 					<input type="hidden" name="sum_ca" id="sum_ca">
 					<input type="hidden" name="sum_amount_total" id="sum_amount_total" value="0">
 
@@ -6057,7 +6079,7 @@ include("head.php"); ?>
 		</div>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px;">
-				<button type="submit" name="submit" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
 					<i class="far fa-save"></i> บันทึกข้อมูล
 				</button>
 				<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
@@ -6240,6 +6262,34 @@ include("head.php"); ?>
 			</div>
 		</div>
 	</div>
+
+	<!-- Dual Warning Modal: แสดงสำหรับทั้งกรณีหนี้ค้างชำระ (สีแดง) และ วงเงินไม่พอ (สีส้ม) -->
+	<div id="creditWarningPopupModal" class="customer-popup-modal warning-popup-modal" style="display: none;" aria-hidden="true">
+		<div class="customer-popup-box warning-popup-box" role="dialog" aria-modal="true" style="padding: 48px 40px; border-radius: 24px; max-width: 553px; width: 90%; height: 470px; background-color: #fff; text-align: center; font-family: 'Prompt', sans-serif; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12); position: relative;">
+			<button type="button" class="customer-popup-close" onclick="closeCreditWarningPopup(false)" aria-label="Close" style="position: absolute; right: 24px; top: 24px; font-size: 28px; font-weight: normal; color: #8E8B94; background: none; border: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#000'" onmouseout="this.style.color='#8E8B94'">&times;</button>
+
+			<div style="margin-top: 12px; margin-bottom: 24px; display: flex; justify-content: center; align-items: center;">
+				<i id="creditWarningIcon" class="fas fa-exclamation-triangle" style="font-size: 80px; color: #EF5350;"></i>
+			</div>
+
+			<p id="creditWarningCustomerName" style="font-size: 18px; font-weight: 500; color: #4A4A4A; margin-bottom: 8px; font-family: 'Prompt', sans-serif;"></p>
+
+			<h2 id="creditWarningTitle" style="font-size: 24px; font-weight: 600; color: #1C1B1F; margin-bottom: 12px; font-family: 'Prompt', sans-serif;"></h2>
+
+			<p id="creditWarningDescription" style="font-size: 14px; color: #8E8B94; margin-bottom: 24px; line-height: 1.5; font-family: 'Prompt', sans-serif;"></p>
+
+			<div id="creditWarningDetailsWrap" style="margin: 0 auto 32px auto; max-width: 320px; width: 100%;">
+				<!-- รายละเอียดจำนวนเงิน/ยอดหนี้/วงเงินคงเหลือ จะถูกเติมผ่าน JS -->
+			</div>
+
+			<div style="display: flex; gap: 12px; justify-content: center;">
+				<button id="creditWarningActionButton" type="button" onclick="closeCreditWarningPopup(true)" style="background-color: #612989; color: #fff; border: none; border-radius: 24px; padding: 12px 36px; font-size: 16px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 12px rgba(97, 41, 137, 0.25)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 10px rgba(97, 41, 137, 0.2)';">
+					แสดงรายละเอียด
+				</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- Modal ที่อยู่จัดส่ง: ใช้เลือก shipping address ของลูกค้าที่ถูกเลือกอยู่ก่อนหน้า -->
 	<div id="shippingAddressPopupModal" class="customer-popup-modal shipping-popup-modal" aria-hidden="true">
 		<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
@@ -7238,7 +7288,8 @@ include("head.php"); ?>
 				return;
 			}
 
-			if (!String(customerPopupSelected.customer_id || '').trim()) {
+			var selectedCustId = String(customerPopupSelected.customer_id || '').trim();
+			if (!selectedCustId) {
 				alert('ข้อมูลลูกค้าที่เลือกไม่มีรหัสลูกค้า');
 				return;
 			}
@@ -7246,15 +7297,15 @@ include("head.php"); ?>
 			var billId = document.getElementById('bill_id');
 			if (billId) {
 				console.log(billId);
-				billId.value = customerPopupSelected.customer_id || '';
+				billId.value = selectedCustId;
 			}
 			var hiddenBillId = document.getElementById('h_bill_id');
 			if (hiddenBillId) {
-				hiddenBillId.value = customerPopupSelected.customer_id || '';
+				hiddenBillId.value = selectedCustId;
 			}
 			var displayBillId = document.getElementById('display_bill_id');
 			if (displayBillId) {
-				displayBillId.textContent = customerPopupSelected.customer_id || '';
+				displayBillId.textContent = selectedCustId;
 			}
 
 			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
@@ -7263,9 +7314,209 @@ include("head.php"); ?>
 					alert('ไม่สามารถดึงข้อมูลลูกค้าได้ครบ: ' + missingMessage);
 					return;
 				}
+
+				// ดึงและเช็คยอดเครดิตคงเหลือ
+				if (selectedCustId) {
+					fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(selectedCustId), {
+							credentials: 'same-origin',
+							cache: 'no-store'
+						})
+						.then(function(response) {
+							if (!response.ok) throw new Error('Network response not ok');
+							return response.json();
+						})
+						.then(function(data) {
+							if (data && data.success && data.summary) {
+								var remaining = parseFloat(data.summary.remaining_credit || 0);
+								var totalOutstanding = parseFloat(data.summary.total_outstanding || 0);
+								var creditAmount = parseFloat(data.summary.credit_amount || 0);
+
+								var remainingInput = document.getElementById('remaining_credit_thb');
+								if (remainingInput) {
+									remainingInput.value = remaining;
+								}
+
+								// ค้นหาชื่อลูกค้า
+								var customerName = '';
+								var displayBillNameElem = document.getElementById('display_bill_name');
+								if (displayBillNameElem) {
+									customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
+								}
+								if (!customerName && customerPopupSelected) {
+									customerName = customerPopupSelected.customer_name || customerPopupSelected.bill_name || '';
+								}
+
+								// คำนวณและอัปเดตสถานะปุ่มบันทึกข้อมูล
+								var netTotalElem = document.getElementById('summary_net_total');
+								var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
+								var isOverLimit = (netTotal > remaining) || (remaining <= 0);
+								updateSubmitButtonState(isOverLimit);
+
+								// กรณีที่ 1: มียอดหนี้คงค้างเก่าเตือนสีแดง (ตามเงื่อนไขที่กำหนด)
+								console.log(remaining);
+
+								if (remaining <= 0) {
+									showCreditWarningModal('debt', customerName, totalOutstanding, creditAmount, remaining);
+								} else if (isOverLimit) {
+									// กรณีที่ 2: วงเงินไม่เพียงพอเตือนสีส้ม
+									showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
+								}
+							}
+						})
+						.catch(function(err) {
+							console.error('Error fetching remaining credit:', err);
+						});
+				}
+
 				closeCustomerPopup();
 			});
 		}
+
+		function showCreditWarningModal(type, customerName, totalOutstanding, creditAmount, remainingValue) {
+			var modal = document.getElementById('creditWarningPopupModal');
+			var icon = document.getElementById('creditWarningIcon');
+			var custNameElem = document.getElementById('creditWarningCustomerName');
+			var titleElem = document.getElementById('creditWarningTitle');
+			var descElem = document.getElementById('creditWarningDescription');
+			var detailsWrap = document.getElementById('creditWarningDetailsWrap');
+			var actionBtn = document.getElementById('creditWarningActionButton');
+
+			if (!modal) return;
+
+			// แสดงชื่อลูกค้าในเครื่องหมายคำพูดคู่
+			if (custNameElem) {
+				custNameElem.textContent = '“' + (customerName || '-') + '”';
+			}
+
+			var formatVal = function(val) {
+				return Number(val).toLocaleString('en-US', {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2
+				});
+			};
+
+			if (type === 'debt') {
+				// 1. แบบยอดหนี้คงค้าง
+				if (icon) {
+					icon.className = "fas fa-exclamation-triangle";
+					icon.style.color = "#EF5350";
+					icon.style.fontSize = "80px";
+					icon.style.background = "linear-gradient(to bottom, #FF5252, #D32F2F)";
+					icon.style.webkitBackgroundClip = "text";
+					icon.style.webkitTextFillColor = "transparent";
+					icon.style.filter = "drop-shadow(0 4px 8px rgba(211, 47, 47, 0.2))";
+				}
+				if (titleElem) {
+					titleElem.textContent = "มียอดหนี้คงค้างของที่ครบกำหนดชำระ";
+				}
+				if (descElem) {
+					descElem.textContent = "กรุณาติดต่อแผนกบัญชี";
+				}
+				if (detailsWrap) {
+					detailsWrap.innerHTML =
+						'<div style="display: flex; justify-content: space-between; font-size: 16px; color: #4A4A4A; font-family: \'Prompt\', sans-serif;">' +
+						'<span>ยอดหนี้คงค้าง :</span>' +
+						'<span style="color: #EF5350; font-weight: 600;">-' + formatVal(totalOutstanding) + ' บาท</span>' +
+						'</div>';
+				}
+				if (actionBtn) {
+					actionBtn.style.display = "inline-flex";
+				}
+			} else {
+				// 2. แบบวงเงินไม่เพียงพอ
+				if (icon) {
+					icon.className = "fas fa-exclamation-triangle";
+					icon.style.color = "#FFA726";
+					icon.style.fontSize = "80px";
+					icon.style.background = "linear-gradient(to bottom, #FFD54F, #F57C00)";
+					icon.style.webkitBackgroundClip = "text";
+					icon.style.webkitTextFillColor = "transparent";
+					icon.style.filter = "drop-shadow(0 4px 8px rgba(245, 124, 0, 0.2))";
+				}
+				if (titleElem) {
+					titleElem.textContent = "วงเงินไม่เพียงพอ";
+				}
+				if (descElem) {
+					descElem.textContent = "กรุณาติดต่อแผนกบัญชีเพื่อขอเพิ่มวงเงิน";
+				}
+				if (detailsWrap) {
+					detailsWrap.innerHTML =
+						'<div style="display: flex; justify-content: space-between; font-size: 16px; color: #4A4A4A; margin-bottom: 12px; font-family: \'Prompt\', sans-serif;">' +
+						'<span>วงเงิน :</span>' +
+						'<span style="font-weight: 500; color: #1C1B1F;">' + formatVal(creditAmount) + ' บาท</span>' +
+						'</div>' +
+						'<div style="display: flex; justify-content: space-between; font-size: 16px; color: #4A4A4A; font-family: \'Prompt\', sans-serif;">' +
+						'<span>วงเงินคงเหลือ :</span>' +
+						'<span style="color: #EF5350; font-weight: 600;">' + formatVal(remainingValue) + ' บาท</span>' +
+						'</div>';
+				}
+				if (actionBtn) {
+					actionBtn.style.display = "inline-flex";
+				}
+			}
+
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+		}
+
+		window.closeCreditWarningPopup = function(showDetails) {
+			var modal = document.getElementById('creditWarningPopupModal');
+			if (modal) {
+				modal.style.display = 'none';
+				modal.setAttribute('aria-hidden', 'true');
+			}
+			if (showDetails) {
+				invokeCreditTermPopupOpen();
+			}
+		};
+
+		function updateSubmitButtonState(disabled) {
+			var btn = document.getElementById('btn_submit_form');
+			if (!btn) return;
+
+			btn.disabled = disabled;
+			if (disabled) {
+				btn.style.backgroundColor = '#a0a0a0';
+				btn.style.borderColor = '#a0a0a0';
+				btn.style.cursor = 'not-allowed';
+				btn.style.opacity = '0.6';
+			} else {
+				btn.style.backgroundColor = '#612989';
+				btn.style.borderColor = '#612989';
+				btn.style.cursor = 'pointer';
+				btn.style.opacity = '1';
+			}
+		}
+
+		window.checkCreditLimitOnChange = function() {
+			var remainingInput = document.getElementById('remaining_credit_thb');
+			if (!remainingInput || remainingInput.value === '') {
+				updateSubmitButtonState(false);
+				return;
+			}
+
+			var remaining = parseFloat(remainingInput.value || 0);
+			var netTotalElem = document.getElementById('summary_net_total');
+			var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
+
+			var isOverLimit = (netTotal > remaining) || (remaining <= 0);
+			updateSubmitButtonState(isOverLimit);
+
+			if (isOverLimit) {
+				var modal = document.getElementById('creditWarningPopupModal');
+				if (modal && modal.style.display !== 'flex') {
+					var customerName = '';
+					var displayBillNameElem = document.getElementById('display_bill_name');
+					if (displayBillNameElem) {
+						customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
+					}
+					var creditLimitElem = document.getElementById('credit_thb');
+					var creditAmount = creditLimitElem ? parseFloat(creditLimitElem.value || 0) : 0;
+
+					showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
+				}
+			}
+		};
 
 		document.addEventListener('DOMContentLoaded', function() {
 			syncCreditTermTriggerState();

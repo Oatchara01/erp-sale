@@ -1257,6 +1257,21 @@
         window.addEventListener('load', function() {
             calculateSummary();
         });
+
+        // Listen to product inputs change to check credit limit
+        document.addEventListener('DOMContentLoaded', function() {
+            var productTable = document.getElementById('product_table');
+            if (productTable) {
+                productTable.addEventListener('change', function(event) {
+                    var target = event.target;
+                    if (target && (target.classList.contains('calc-qty') || target.classList.contains('calc-price') || target.classList.contains('calc-discount'))) {
+                        if (typeof window.checkCreditLimitOnChange === 'function') {
+                            setTimeout(window.checkCreditLimitOnChange, 250);
+                        }
+                    }
+                });
+            }
+        });
     </script>
 
     <?php for ($i = 1; $i <= 30; $i++): ?>
