@@ -27,11 +27,11 @@ $surname =	$_SESSION['surname'];
 $add_by = "$name $surname";
 
 
-$id = $_POST["id"];
-$sale_count = $_POST["sale_count"];
-$sale_remarkk = $_POST["sale_remarkk"];
-$product_id = $_POST["product_id"];
-$amount  = $_POST["amount"];
+$id = $_POST["id"] ?? [];
+$sale_count = $_POST["sale_count"] ?? [];
+$sale_remarkk = $_POST["sale_remarkk"] ?? [];
+$product_id = $_POST["product_id"] ?? [];
+$amount  = $_POST["amount"] ?? [];
 
 
 $yearMonth = substr(date("Y")+543, -2).date("m");
@@ -73,11 +73,13 @@ $qsave=mysqli_query($conn,$save);
 
 foreach($id as $key =>$value)
 	{
-		$id_new=$id[$key];
-		$sale_count_new=$sale_count[$key];
-		$sale_remarkk_new=$sale_remarkk[$key];
-		$product_id_new =$product_id[$key];
-	$amount_new =$amount[$key];
+		$id_new = $id[$key] ?? '';
+		$sale_count_new = $sale_count[$key] ?? 0;
+		if ($sale_count_new === '') { $sale_count_new = 0; }
+		$sale_remarkk_new = $sale_remarkk[$key] ?? '';
+		$product_id_new = $product_id[$key] ?? '';
+		$amount_new = $amount[$key] ?? 0;
+		if ($amount_new === '') { $amount_new = 0; }
 
 
 	if($product_id_new !=""){

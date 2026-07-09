@@ -133,10 +133,10 @@ $fetch1 = mysqli_fetch_array($query1,MYSQLI_ASSOC);
 			เลขที่เอกสาร :<input type="text" name="iv_noref" value = "<?php echo $rs1["iv_no"]; ?>" style="width:90%;" class="w3-input"  required>
 			<input type="hidden" name="ref_iddoc" value = "<?php echo $rs1["ref_id"]; ?>" style="width:90%;" class="w3-input"  required>
 			<input type="hidden" name="type_doc" value = "<?php echo "SO"; ?>" style="width:90%;" class="w3-input"  required>
-		<input type="hidden" name="type_customer" value="<?php echo $fetch1["type_customer"]; ?>" style="width:90%;" class="w3-input"  required>
+		<input type="hidden" name="type_customer" value="<?php echo $fetch1["type_customer"] ?? ''; ?>" style="width:90%;" class="w3-input"  required>
 </div>
 <div class="w3-bar w3-margin-bottom">
-			วันที่ส่งของ:<input type="date" name="delivery_date" value = "<?php echo $fetch1["start_date"]; ?>" style="width:30%;" class="w3-input"  >
+			วันที่ส่งของ:<input type="date" name="delivery_date" value = "<?php echo $fetch1["start_date"] ?? ''; ?>" style="width:30%;" class="w3-input"  >
 </div>					
 <div class="w3-bar w3-margin-bottom">
 เขตการขาย :
@@ -168,11 +168,11 @@ $sel = "";
 <div class="w3-half 1">
 <div class="w3-bar w3-margin-bottom">
 			ชื่อลูกค้า 
-			<input type="text" name="customer" id="customer" value="<?php echo $fetch1["customer_name"]; ?>" class="w3-input" style="width:90%;"  required>
+			<input type="text" name="customer" id="customer" value="<?php echo $fetch1["customer_name"] ?? ''; ?>" class="w3-input" style="width:90%;"  required>
 </div>
 
 <div class="w3-bar w3-margin-bottom">
-ที่อยุ่ :<textarea name="address" id="address" class="w3-input" style="width:90%;"  required><?php echo $fetch1["address_name"]; ?></textarea>
+ที่อยุ่ :<textarea name="address" id="address" class="w3-input" style="width:90%;"  required><?php echo $fetch1["address_name"] ?? ''; ?></textarea>
 </div>
 
 <div class="w3-bar w3-margin-bottom">

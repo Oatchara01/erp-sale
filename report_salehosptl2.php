@@ -203,7 +203,7 @@ $dep_no = $objResult['dep_no'];
 $bill_name = $objResult['bill_name'];
 $bill_address = $objResult['bill_address'];
 $bill_tel = $objResult['bill_tel'];
-$credit_name = $objResult['credit_name'];
+$credit_name = $objResult['credit_name'] ?? '';
 $payment = $objResult['payment'];
 
 $delivery = $objResult['delivery_contact'];
@@ -239,6 +239,13 @@ $delivery_date = $objResult3['between_date'];
 $mk_research = $objResult3['mk_research'];
 $delivery_time = $objResult['delivery_time'];
 $sale_comment  = $objResult['sale_comment'];
+$time_delivery = $objResult['time_delivery'] ?? '';
+$packing_remark = $objResult['packing_remark'] ?? '';
+$delivery_name = $objResult['delivery_name'] ?? '';
+$customer_no = $objResult['customer_no'] ?? '';
+$order_no = $objResult['order_no'] ?? '';
+$cm_no = $objResult['cm_no'] ?? '';
+
 
 if ($objResult['sale_date']!='0000-00-00') {
 $sale_date = DateThai($objResult['sale_date']);
@@ -254,7 +261,8 @@ $approve_date = '-';
 }
 $iv_no  = $objResult['iv_no'];
 $product_free = $objResult['product_free'];
-$sale_code = $objResult['sale'];
+$sale = $objResult['sale'] ?? '';
+$sale_code = $objResult['sale_code'] ?? $sale;
 $delivery_type = $objResult['delivery_type'];
 $address_name  = $objResult3['address_name'];
 $address_1  = $objResult3['address_1'];
@@ -264,7 +272,7 @@ $want_bus  = $objResult3['want_bus'];
 $call_customer  = $objResult3['call_customer'];
 $fix_date  = $objResult3['fix_date'];
 $on_time = $objResult3['on_time'];
-$call_back = $objResult3['call_back'];
+$call_back = $objResult3['call_back'] ?? '';
 $no_money = $objResult3['no_price'];
 
 $product_free1 = $objResult['product_free1'];
@@ -701,32 +709,50 @@ $discount= number_format($discount1,2)."";
 	<br><br>
 	
 	<?php
+$ffirst = array();
+$ffirst1 = array();
+$ffirst2 = array();
 
-$qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
-$first = mysqli_query($conn,$qfirst);
-$ffirst = mysqli_fetch_array($first);
+try {
+    $qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
+    $first = mysqli_query($conn, $qfirst);
+    if ($first) {
+        $ffirst = mysqli_fetch_array($first) ?: array();
+    }
+} catch (mysqli_sql_exception $e) {
+    // st__signature table might not exist in the local environment
+}
 
-$qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
-$first1 = mysqli_query($conn,$qfirst1);
-$ffirst1 = mysqli_fetch_array($first1);
+if (!empty($ffirst)) {
+    try {
+        $qfirst1 = "select name,surname from tb_user where em_id = '".($ffirst["en_code"] ?? '')."'";
+        $first1 = mysqli_query($conn, $qfirst1);
+        if ($first1) {
+            $ffirst1 = mysqli_fetch_array($first1) ?: array();
+        }
+    } catch (mysqli_sql_exception $e) {}
 
-$qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
-$first2 = mysqli_query($conn,$qfirst2);
-$ffirst2 = mysqli_fetch_array($first2);
-
+    try {
+        $qfirst2 = "select name,surname from tb_user where em_id = '".($ffirst["cs_code"] ?? '')."'";
+        $first2 = mysqli_query($conn, $qfirst2);
+        if ($first2) {
+            $ffirst2 = mysqli_fetch_array($first2) ?: array();
+        }
+    } catch (mysqli_sql_exception $e) {}
+}
 	?>
 
 		<table style="width:100%;" >
 	
 	<tr>
-	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"]; echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"] ?? ''; echo ")";  ?></td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["en_name"]!=''){ ?>
+		<?php if(($ffirst["en_name"] ?? '') !=''){ ?>
 		<img src="data:<?php echo $ffirst["en_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["cs_name"]!=''){ ?>
+		<?php if(($ffirst["cs_name"] ?? '') !=''){ ?>
 		<img src="data:<?php echo $ffirst["cs_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
@@ -734,8 +760,8 @@ $ffirst2 = mysqli_fetch_array($first2);
 			
 	<tr>
 	<td style="width:33%;text-align:center;"></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"]; ?> <?php echo $ffirst1["surname"]; ?>  <?php echo ")";  ?></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"]; ?> <?php echo $ffirst2["surname"]; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"] ?? ''; ?> <?php echo $ffirst1["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"] ?? ''; ?> <?php echo $ffirst2["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
 	</tr>			
 			
 	<tr>
@@ -745,9 +771,9 @@ $ffirst2 = mysqli_fetch_array($first2);
 	</tr>
 		
 		<tr>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["stock_dt"]; ?></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"]; ?></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"]; ?></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["stock_dt"] ?? ''; ?></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"] ?? ''; ?></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"] ?? ''; ?></td>
 		</tr>
 </table>
 <br>

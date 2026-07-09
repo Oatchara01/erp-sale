@@ -70,6 +70,7 @@ return $ret;
 
 
 $ref_id=$_GET["ref_id"];
+$code = isset($_GET['code']) ? $_GET['code'] : '';
 
 
 include"dbconnect.php";

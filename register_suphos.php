@@ -8603,7 +8603,7 @@ include("head.php"); ?>
 	</script>
 
 
-	<div id="cr_bar"> <?php include "foot.php"; ?></div>
+	<!-- <div id="cr_bar"> <?php include "foot.php"; ?></div> -->
 </body>
 
 
