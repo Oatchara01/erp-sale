@@ -14,11 +14,16 @@ include "dbconnect_sale.php";
 		color: #4A4A4A !important;
 	}
 
+	.status-so-page,
+	.status-so-page * {
+		box-sizing: border-box;
+	}
+
 	.status-so-page {
 		font-family: 'Prompt', sans-serif !important;
 		background-color: transparent;
-		padding: 24px 16px;
-		min-height: 100vh;
+		padding: clamp(16px, 2vw, 24px) clamp(10px, 2vw, 16px);
+		min-height: 100dvh;
 		max-width: 1490px;
 		margin: 0 auto;
 	}
@@ -184,21 +189,23 @@ include "dbconnect_sale.php";
 
 	/* Modern Table */
 	.so-table-wrapper {
-		overflow: visible;
+		overflow-x: auto;
+		overflow-y: visible;
 		border-radius: 10px;
 		border: 1px solid #EDE9F0;
 		background: #FFFFFF;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.so-table {
 		width: 100%;
+		min-width: 1120px;
 		border-collapse: collapse;
 		font-size: 14px;
 	}
 
 	.so-table th {
 		background: #FFFFFF;
-		color: #612989;
 		font-size: 16px;
 		font-weight: 600;
 		padding: 25px 16px;
@@ -211,6 +218,7 @@ include "dbconnect_sale.php";
 		border-bottom: 1px solid #EDE9F0;
 		color: #3B3B3B;
 		background: #FFFFFF;
+		vertical-align: middle;
 	}
 
 	/* ปรับระยะห่างขอบสุดทางซ้ายและขวาของตาราง */
@@ -321,15 +329,18 @@ include "dbconnect_sale.php";
 
 	.expanded-products-card {
 		flex: 1;
-		min-width: 300px;
+		min-width: min(300px, 100%);
 		background: transparent;
 		border: none;
 		padding: 0;
 		box-shadow: none;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.sub-table {
 		width: 100%;
+		min-width: 760px;
 		border-collapse: collapse;
 		font-size: 12px;
 		table-layout: fixed;
@@ -481,6 +492,7 @@ include "dbconnect_sale.php";
 
 	.pagination-links {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 6px;
 	}
 
@@ -585,6 +597,145 @@ include "dbconnect_sale.php";
 	@media (max-width: 600px) {
 		.so-form-row {
 			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.status-so-page {
+			padding: 16px 10px;
+		}
+
+		.status-so-page h4 {
+			font-size: 18px;
+		}
+
+		.so-input-group {
+			align-items: stretch !important;
+		}
+
+		.so-input-group>div:first-child {
+			width: 100%;
+			max-width: none !important;
+			min-width: 0 !important;
+		}
+
+		.so-input-group>div:first-child>div:last-child {
+			flex-wrap: wrap;
+			align-items: stretch !important;
+		}
+
+		.so-search-wrapper {
+			width: 100%;
+			flex: 1 1 100% !important;
+		}
+
+		.btn-so-outline,
+		.btn-so-secondary,
+		.btn-filter-submit,
+		.btn-filter-reset {
+			width: 100%;
+			min-height: 44px;
+			justify-content: center;
+			text-align: center;
+		}
+
+		.so-modal-footer {
+			flex-direction: column;
+		}
+
+		.so-form-pills {
+			flex-wrap: wrap;
+		}
+
+		.filter-pill {
+			flex: 1 1 100%;
+			min-height: 44px;
+		}
+
+		.w3-modal-content {
+			width: calc(100vw - 20px) !important;
+			margin: 24px auto !important;
+		}
+
+		.w3-modal-content>.w3-container {
+			padding: 20px !important;
+		}
+
+		.so-table {
+			min-width: 980px;
+			font-size: 13px;
+		}
+
+		.so-table th {
+			font-size: 13px;
+			padding: 14px 10px;
+			white-space: nowrap;
+		}
+
+		.so-table td {
+			padding: 12px 10px;
+		}
+
+		.so-table th:first-child,
+		.so-table td:first-child {
+			padding-left: 12px;
+		}
+
+		.so-table th:last-child,
+		.so-table td:last-child {
+			padding-right: 12px;
+		}
+
+		.expanded-container {
+			padding: 14px 12px;
+			gap: 12px;
+		}
+
+		.sub-table {
+			min-width: 680px;
+		}
+
+		.sub-table th,
+		.sub-table td {
+			font-size: 12px;
+			padding: 8px 8px !important;
+		}
+
+		.pagination-wrapper,
+		.pagination-links {
+			justify-content: center;
+			width: 100%;
+		}
+
+		.pagination-wrapper>div:first-child {
+			width: 100%;
+			text-align: center;
+		}
+
+		.pagination-btn {
+			min-width: 36px;
+			height: 36px;
+		}
+	}
+
+	@media (max-width: 420px) {
+		.status-so-page {
+			padding-left: 8px;
+			padding-right: 8px;
+		}
+
+		.so-input {
+			font-size: 13px;
+		}
+
+		.badge-status {
+			padding: 4px 8px;
+			font-size: 11px;
+		}
+
+		.so-dropdown-menu {
+			right: -8px;
+			width: min(186px, calc(100vw - 32px));
 		}
 	}
 </style>

@@ -1578,12 +1578,14 @@ include("head.php"); ?>
 	.so-header-left {
 		display: flex;
 		flex-direction: column;
+		min-width: 0;
 	}
 
 	.so-title {
 		font-size: 28px;
 		font-weight: 600;
 		color: #612989;
+		line-height: 1.15;
 		margin: 0 0 8px 0;
 	}
 
@@ -1606,6 +1608,7 @@ include("head.php"); ?>
 	.so-header-right {
 		display: flex;
 		gap: 12px;
+		flex-wrap: wrap;
 	}
 
 	/* Buttons */
@@ -2623,8 +2626,15 @@ include("head.php"); ?>
 	}
 
 	/* Responsive refinements for dense form layouts */
+	form[name="frmMain"] {
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.register-so-main,
 	.w3-container[style*="max-width: 1200px"] {
-		width: min(100%, 1200px);
+		width: 100%;
+		max-width: 1200px;
 		padding-inline: 16px;
 		box-sizing: border-box;
 	}
@@ -2828,9 +2838,114 @@ include("head.php"); ?>
 		.so-fieldset {
 			padding: 18px 14px;
 		}
+
+		#del_info .so-grid-6-col {
+			grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+		}
+
+		#del_info .so-grid-6-col>.so-field-group {
+			grid-column: span 2 !important;
+			min-width: 0;
+		}
+
+		#del_info .so-delivery-toggle-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		#del_info .so-delivery-toggle-row .so-toggle-btn {
+			width: 100%;
+			min-height: 44px;
+			height: auto;
+		}
 	}
 
 	@media (max-width: 640px) {
+		html,
+		body {
+			width: 100%;
+			overflow-x: hidden;
+		}
+
+		form[name="frmMain"],
+		.register-so-main {
+			width: 100% !important;
+			max-width: none !important;
+			margin-left: 0 !important;
+			margin-right: 0 !important;
+		}
+
+		.register-so-main {
+			padding-inline: 10px !important;
+		}
+
+		.so-header-container,
+		.so-tabs-container,
+		.so-card {
+			width: 100% !important;
+			max-width: none !important;
+			margin-left: 0 !important;
+			margin-right: 0 !important;
+		}
+
+		.so-header-container {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 12px;
+			padding: 14px 0 12px;
+		}
+
+		.so-header-left {
+			width: 100%;
+		}
+
+		.so-title {
+			font-size: 24px;
+			line-height: 1.15;
+			margin-bottom: 6px;
+		}
+
+		.so-ref-info {
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 4px 8px;
+			font-size: 13px;
+		}
+
+		.so-header-right {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			width: 100%;
+		}
+
+		.so-header-right>button {
+			width: 100%;
+			min-height: 44px;
+			padding: 0 12px;
+			justify-content: center;
+			line-height: 1.25;
+			white-space: normal;
+		}
+
+		.btn-preview-so img {
+			flex: 0 0 16px;
+		}
+
+		.so-tabs-container {
+			padding-left: 0;
+			gap: 8px;
+			margin-top: 4px;
+		}
+
+		.so-tab-btn {
+			flex: 1 1 0;
+			min-height: 44px;
+			padding: 10px 12px;
+			text-align: center;
+			border-radius: 12px;
+		}
+
 		.so-sticky-actions {
 			padding: 14px 12px !important;
 		}
@@ -2845,6 +2960,15 @@ include("head.php"); ?>
 			width: 100%;
 			justify-content: center;
 		}
+
+		#del_info .so-grid-6-col {
+			grid-template-columns: 1fr !important;
+		}
+
+		#del_info .so-grid-6-col>.so-field-group {
+			grid-column: span 1 !important;
+		}
+	}
 </style>
 
 <body>
@@ -3567,7 +3691,7 @@ include("head.php"); ?>
 			}
 		</script>
 
-		<div class="w3-container" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
+		<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
 
 			<!-- Header Section -->
 			<div class="so-header-container">
@@ -3597,7 +3721,6 @@ include("head.php"); ?>
 
 			<!-- Card Container -->
 			<div>
-
 				<!-- TAB 1: ข้อมูลเอกสาร -->
 				<div id="tab-document-info" class="so-tab-content active">
 
@@ -4581,7 +4704,7 @@ include("head.php"); ?>
 							</div>
 						</div>
 
-						<div style="display: flex; gap: 16px; margin-top: 24px;">
+						<div class="so-delivery-toggle-row" style="display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap;">
 							<label class="so-toggle-btn">
 								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;" <?php echo so_saved_checked($savedRegister, 'call_customer') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ต้องการให้โทรแจ้ง</span>
@@ -9377,6 +9500,7 @@ include("head.php"); ?>
 	#overLimitModal,
 	#overLimitModal * {
 		font-family: 'Prompt', sans-serif;
+	}
 </style>
 
 <div id="overLimitModal">
