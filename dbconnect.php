@@ -6,6 +6,8 @@ if (mysqli_connect_errno()) {
   echo "Failed to connect to MySQL: " . mysqli_connect_error();
 }
 mysqli_set_charset($conn, "utf8");
+mysqli_query($conn, "SET sql_mode = ''");
+
 
 
 /*$salso = mysqli_connect("localhost:3306","joe","secret","allwell_sol_test");

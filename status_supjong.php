@@ -398,6 +398,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 					else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
 				<?php }
+					else if ($objResult["status_doc"]=='Draft'){ ?>
+				<td bgcolor="#FFA500" style="color: white; font-weight: bold;"><?php echo $objResult["status_doc"];?></td>
+				<?php }
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>

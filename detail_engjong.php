@@ -93,18 +93,79 @@ ele.onKeyPress=vchar;
 
 </script>
 
-<script src="dist/jautocalc.js"></script></head>
+<script src="dist/jautocalc.js"></script>
 
-<body>
-<table width="100%" border="0" class="w3-table">
+<style>
+	.so-product-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 10px;
+		font-family: 'Prompt', sans-serif !important;
+	}
+	.so-product-table th {
+		background-color: #612989;
+		color: #FFFFFF;
+		padding: 12px;
+		text-align: left;
+		font-weight: 500;
+		font-size: 14px;
+	}
+	.so-product-table th:first-child {
+		border-top-left-radius: 8px;
+	}
+	.so-product-table th:last-child {
+		border-top-right-radius: 8px;
+	}
+	.so-product-table td {
+		padding: 10px 8px;
+		border-bottom: 1px solid #EDE9F0;
+		vertical-align: top;
+	}
+	.so-product-table .w3-input {
+		background-color: #F5F6F8 !important;
+		border: 1px solid transparent !important;
+		border-radius: 6px !important;
+		padding: 8px 12px !important;
+		height: 38px !important;
+		font-size: 13px !important;
+		font-family: 'Prompt', sans-serif !important;
+		color: #3B3B3B !important;
+		transition: all 0.2s ease !important;
+		box-sizing: border-box;
+	}
+	.so-product-table .w3-input:focus {
+		background-color: #FFFFFF !important;
+		border-color: #612989 !important;
+		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1) !important;
+		outline: none !important;
+	}
+	.so-product-table textarea.w3-input {
+		height: auto !important;
+		min-height: 38px;
+		resize: vertical;
+	}
+	.so-product-table img {
+		cursor: pointer;
+		opacity: 0.6;
+		transition: opacity 0.2s;
+	}
+	.so-product-table img:hover {
+		opacity: 1;
+	}
+</style>
 
-    <th>รหัสสินค้า</th>
-    <th>ชื่อสินค้า</th>
-    <th>จำนวน</th>
-    <th>หน่วย</th>
-	<th>หมายเหตุ</th>
-
-<tbody>
+<table class="so-product-table">
+	<thead>
+		<tr>
+			<th style="width: 25%;">รหัสสินค้า</th>
+			<th>ชื่อสินค้า</th>
+			<th style="width: 10%;">จำนวน</th>
+			<th style="width: 10%;">หน่วย</th>
+			<th style="width: 25%;">หมายเหตุ</th>
+			<th style="width: 5%;">ลบ</th>
+		</tr>
+	</thead>
+	<tbody>
 <tr>
 <td style="width:10%;">
 
@@ -318,9 +379,18 @@ document.getElementById('product_id5').value  = '';
 <div id="frm_txt" style="display:none;">
 
 
-<table width="100%" border="0" class="w3-table">
+<table class="so-product-table">
 <thead>
-
+	<tr>
+		<th style="width: 25%;">รหัสสินค้า</th>
+		<th>ชื่อสินค้า</th>
+		<th style="width: 10%;">จำนวน</th>
+		<th style="width: 10%;">หน่วย</th>
+		<th style="width: 25%;">หมายเหตุ</th>
+		<th style="width: 5%;">ลบ</th>
+	</tr>
+</thead>
+<tbody>
 <tr>
 <td  style="width:10%;">
 <input type='text' name = "product_codet6"  id = "product_codet6" class="w3-input" placeholder="Search รหัส" size="7"  OnChange="JavaScript:doCallAjax('product_codet6','product_id6','product_name6','unit_name6');"/> 
