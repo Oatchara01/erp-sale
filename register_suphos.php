@@ -3179,10 +3179,7 @@ include("head.php"); ?>
 		array('label' => 'a4nbm', 'file' => 'reportb_ha4nbm.php')
 	);
 
-	function so_saved_h($value)
-	{
-		return htmlspecialchars((string)($value ?? ""), ENT_QUOTES, "UTF-8");
-	}
+	require_once __DIR__ . '/includes/so_saved_helpers.php';
 
 	function so_saved_display($value)
 	{
@@ -3225,28 +3222,6 @@ include("head.php"); ?>
 
 		$fallbackKey = $partIndex === 0 ? "start_time" : "end_time";
 		return so_saved_time_value($savedRegister[$fallbackKey] ?? "");
-	}
-
-	function so_saved_buddhist_date_input($value)
-	{
-		$value = trim((string)($value ?? ""));
-		if ($value === "") {
-			return "";
-		}
-
-		if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/', $value, $matches)) {
-			return sprintf('%02d/%02d/%04d', (int)$matches[3], (int)$matches[2], (int)$matches[1] + 543);
-		}
-
-		if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $matches)) {
-			$year = (int)$matches[3];
-			if ($year < 2400) {
-				$year += 543;
-			}
-			return sprintf('%02d/%02d/%04d', (int)$matches[1], (int)$matches[2], $year);
-		}
-
-		return $value;
 	}
 
 
@@ -3936,226 +3911,36 @@ include("head.php"); ?>
 				</div><!-- End TAB 1 -->
 
 				<!-- TAB 2: Admin -->
-				<div id="tab-admin-info" class="so-tab-content">
-					<style>
-						.admin-ui-title {
-							font-size: 20px;
-							font-weight: 500;
-							color: #3B3B3B;
-							margin: 0 0 24px 0;
-							padding-bottom: 16px;
-							border-bottom: 1px solid #EFEBEF;
-						}
-
-						.admin-ui-grid {
-							display: grid;
-							grid-template-columns: repeat(4, 1fr);
-							gap: 24px;
-							margin-bottom: 24px;
-						}
-
-						@media (max-width: 992px) {
-							.admin-ui-grid {
-								grid-template-columns: repeat(2, 1fr);
-							}
-
-							.admin-ui-field.span-3 {
-								grid-column: span 2;
-							}
-						}
-
-						@media (max-width: 768px) {
-							.admin-ui-grid {
-								grid-template-columns: 1fr;
-							}
-
-							.admin-ui-field.span-3 {
-								grid-column: span 1;
-							}
-						}
-
-						.admin-ui-field {
-							display: flex;
-							flex-direction: column;
-							gap: 8px;
-						}
-
-						.admin-ui-field.span-3 {
-							grid-column: span 3;
-						}
-
-						.admin-ui-label {
-							font-size: 14px;
-							font-weight: 400;
-							color: #6E3CBC;
-						}
-
-						.admin-ui-input-wrapper {
-							position: relative;
-							display: flex;
-							align-items: center;
-						}
-
-						.admin-ui-input {
-							width: 100%;
-							background-color: #F5F5F7;
-							border: 1px solid transparent;
-							border-radius: 12px;
-							padding: 0 16px;
-							font-size: 16px;
-							font-weight: 400;
-							color: #612989;
-							font-family: 'Prompt', sans-serif;
-							outline: none;
-							height: 48px;
-							box-sizing: border-box;
-							transition: all 0.2s ease;
-						}
-
-						.admin-ui-input:focus {
-							background-color: #FFFFFF;
-							border-color: #6E3CBC;
-							box-shadow: 0 0 0 3px rgba(110, 60, 188, 0.1);
-						}
-
-						.admin-ui-input.has-icon {
-							padding-right: 48px;
-						}
-
-						.admin-ui-icon {
-							position: absolute;
-							right: 16px;
-							color: #3B3B3B;
-							font-size: 18px;
-							pointer-events: none;
-						}
-
-						.admin-ui-icon-clickable {
-							position: absolute;
-							right: 16px;
-							color: #8E8B94;
-							font-size: 16px;
-							cursor: pointer;
-						}
-
-						.admin-ui-btn {
-							background-color: #F1E1FF;
-							color: #612989;
-							border: none;
-							border-radius: 24px;
-							height: 48px;
-							padding: 0 24px;
-							font-size: 16px;
-							font-weight: 500;
-							cursor: pointer;
-							display: flex;
-							align-items: center;
-							justify-content: center;
-							gap: 8px;
-							font-family: 'Prompt', sans-serif;
-							margin-top: 25px;
-						}
-					</style>
-
-					<div class="so-card">
-						<h2 class="admin-ui-title">ข้อมูลเพิ่มเติม (Admin)</h2>
-
-						<!-- Row 1 -->
-						<div class="admin-ui-grid" style="margin-bottom: 24px;">
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">เลขที่เอกสาร</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_doc_no" class="admin-ui-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : ''; ?>" placeholder="No.">
-								</div>
-							</div>
-							<div class="admin-ui-field">
-								<button type="button" class="admin-ui-btn">
-									<img src="img/icons/doc.png" alt="doc" style="width: 16px; height: 16px;"> Run เอกสาร
-								</button>
-							</div>
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">เลขที่ลงงาน</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_work_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : ''; ?>">
-									<i class="fas fa-search admin-ui-icon"></i>
-								</div>
-							</div>
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">เลขที่ SR ลดหนี้</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_sr_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : ''; ?>">
-									<i class="fas fa-search admin-ui-icon"></i>
-								</div>
-							</div>
-						</div>
-
-						<!-- Row 2 -->
-						<div class="admin-ui-grid" style="margin-bottom: 24px;">
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">เลขที่ใบฝาก</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_deposit_no" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : ''; ?>">
-									<i class="fas fa-search admin-ui-icon"></i>
-								</div>
-							</div>
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">วันที่ออกเอกสาร</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_doc_date" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h(so_saved_buddhist_date_input($savedSo['iv_date'] ?? '')) : ''; ?>">
-									<i class="far fa-calendar-alt admin-ui-icon"></i>
-								</div>
-							</div>
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">จำนวนกล่อง</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_box_count" class="admin-ui-input" value="<?php echo ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : ''; ?>" placeholder="Numbers only">
-								</div>
-							</div>
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">จำนวนครั้งที่แก้ไขบิล</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_edit_count" class="admin-ui-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : ''; ?>" placeholder="Numbers only">
-								</div>
-							</div>
-						</div>
-
-						<!-- Row 3 -->
-						<div class="admin-ui-grid" style="margin-bottom: 24px;">
-							<div class="admin-ui-field">
-								<label class="admin-ui-label">วันที่ออกเอกสาร (เดิม)</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_old_doc_date" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h(so_saved_buddhist_date_input($savedSo['date_oldbill'] ?? '')) : ''; ?>">
-									<i class="far fa-calendar-alt admin-ui-icon"></i>
-								</div>
-							</div>
-							<div class="admin-ui-field span-3">
-								<label class="admin-ui-label">สาเหตุการแก้ไขบิล</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_edit_reason" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : ''; ?>">
-									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
-								</div>
-							</div>
-						</div>
-
-						<!-- Row 4 -->
-						<div class="admin-ui-grid">
-							<div class="admin-ui-field">
-								<button type="button" class="admin-ui-btn">
-									<img src="img/icons/circle_x.png" alt="circle_x" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
-								</button>
-							</div>
-							<div class="admin-ui-field span-3">
-								<label class="admin-ui-label">หมายเหตุการยกเลิก</label>
-								<div class="admin-ui-input-wrapper">
-									<input type="text" name="admin_cancel_reason" class="admin-ui-input has-icon" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : ''; ?>">
-									<i class="fas fa-times admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
-								</div>
-							</div>
-						</div>
-
-					</div>
-
-				</div>
+				<?php
+				$adminInfoTab = [
+					'tab_id' => 'tab-admin-info',
+					'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
+					'rows'   => [
+						[
+							['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
+							['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'fas fa-search'],
+							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'fas fa-search'],
+						],
+						[
+							['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : '', 'icon' => 'fas fa-search'],
+							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? ($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : '', 'placeholder' => 'Numbers only'],
+							['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : '', 'placeholder' => 'Numbers only'],
+						],
+						[
+							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? ($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+						],
+						[
+							['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
+							['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+						],
+					],
+				];
+				include __DIR__ . '/partials/admin_info_tab.php';
+				unset($adminInfoTab);
+				?>
 				<!-- End TAB 2 -->
 
 				<div class="so-card">

@@ -1,9 +1,15 @@
-
 <?php
 
 define('FPDF_FONTPATH', 'font/');
 
 require('fpdf.php');
+
+// แปลง UTF-8 -> cp874 อย่างปลอดภัย: อักขระที่ cp874 แทนไม่ได้จะถูกแปลงใกล้เคียง (TRANSLIT)
+// หรือตัดทิ้ง (IGNORE) แทนที่จะยิง Notice ซึ่งทำให้เอาต์พุต PDF พัง
+function thai_cp874($str)
+{
+	return @iconv('UTF-8', 'cp874//TRANSLIT//IGNORE', (string)$str);
+}
 
 $ref_id = isset($_GET["ref_id"]) ? $_GET["ref_id"] : '';
 $isPreview = ($_SERVER['REQUEST_METHOD'] === 'POST') && isset($_POST['preview_mode']) && $_POST['preview_mode'] === '1';
@@ -34,27 +40,31 @@ if ($isPreview) {
 
 	$objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");;
 	$objResult = mysqli_fetch_array($objQuery);
-	if (!$objResult) {
-		$objResult = array(
-			'date_jong'     => '',
-			'date_receive'  => '',
-			'customer'      => '',
-			'address_send'  => '',
-			'sale_name'     => '',
-			'sale_code'     => '',
-			'register_ckk'  => '',
-			'cancel_ckk'    => '',
-			'status_doc'    => '',
-			'type_jong'     => '',
-			'bq_no'         => '',
-			'drescription'  => '',
-			'approve_name'  => '',
-			'date_approve'  => '0000-00-00',
-			'remark'        => '',
-			'iv_no'         => '',
-		);
-	}
 }
+
+// รวมกับค่า default เสมอ กันกรณีคอลัมน์ที่โค้ดอ้างถึงไม่มีในตาราง/แถว หรือเป็น null
+// ซึ่งจะยิง PHP Warning: Undefined array key และทำให้เอาต์พุต PDF พัง
+$objResultDefaults = array(
+	'date_jong'     => '',
+	'date_receive'  => '',
+	'customer'      => '',
+	'address_send'  => '',
+	'sale_name'     => '',
+	'sale_code'     => '',
+	'register_ckk'  => '',
+	'cancel_ckk'    => '',
+	'status_doc'    => '',
+	'type_jong'     => '',
+	'bq_no'         => '',
+	'drescription'  => '',
+	'approve_name'  => '',
+	'date_approve'  => '0000-00-00',
+	'remark'        => '',
+	'iv_no'         => '',
+);
+$objResult = array_merge($objResultDefaults, array_filter(is_array($objResult) ? $objResult : array(), function ($v) {
+	return $v !== null;
+}));
 
 $items = array();
 if ($isPreview) {
@@ -96,11 +106,15 @@ function DateThai($strDate)
 	if ($strDate === '' || $strDate === null) {
 		return '';
 	}
-	$strYear = date("Y", strtotime($strDate)) + 543;
-	$strMonth = date("n", strtotime($strDate));
-	$strDay = date("j", strtotime($strDate));
+	$timestamp = strtotime($strDate);
+	if ($timestamp === false) {
+		return '';
+	}
+	$strYear = date("Y", $timestamp) + 543;
+	$strMonth = (int)date("n", $timestamp);
+	$strDay = date("j", $timestamp);
 	$strMonthCut = array("", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.");
-	$strMonthThai = $strMonthCut[$strMonth];
+	$strMonthThai = isset($strMonthCut[$strMonth]) ? $strMonthCut[$strMonth] : '';
 	return "$strDay $strMonthThai $strYear";
 }
 
@@ -138,9 +152,9 @@ $pdf->SetFont('angsana', 'BU', 20);
 
 
 $pdf->setXY(8.9, 1.0);
-$pdf->MultiCell(9, 0.6, iconv('UTF-8', 'cp874', "ใบจองสินค้า"), 0, 'L');
+$pdf->MultiCell(9, 0.6, thai_cp874("ใบจองสินค้า"), 0, 'L');
 $pdf->setXY(8.2, 1.5);
-$pdf->MultiCell(5.5, 0.6, iconv('UTF-8', 'cp874', "(Product Booking)"), 0, 'L');
+$pdf->MultiCell(5.5, 0.6, thai_cp874("(Product Booking)"), 0, 'L');
 
 
 
@@ -181,20 +195,20 @@ $pdf->Cell(19.0, 0, '', 'T', 0, 'C', 0);
 
 
 $pdf->setXY(3.8, 3.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ข้อมูลการจอง"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ข้อมูลการจอง"), 0, 'L');
 
 
 $pdf->setXY(8.0, 3.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "รหัสสินค้า"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("รหัสสินค้า"), 0, 'L');
 
 $pdf->setXY(13.5, 3.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "รายการ"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("รายการ"), 0, 'L');
 
 $pdf->setXY(17.5, 3.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "จำนวน"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("จำนวน"), 0, 'L');
 
 $pdf->setXY(19.1, 3.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "หน่วย"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("หน่วย"), 0, 'L');
 
 
 
@@ -206,37 +220,37 @@ $pdf->SetFont('angsa', '', 14);
 
 
 $pdf->setX(17.0);
-$pdf->MultiCell(9.0, 0.5, iconv('UTF-8', 'cp874', ""), 0, 'L');
+$pdf->MultiCell(9.0, 0.5, thai_cp874(""), 0, 'L');
 
 $i = 1;
 foreach ($items as $objResult1) {
 
-	$unit_name  = $objResult1["unit_name"];
-	$product_code1  = $objResult1["access_code"];
+	$unit_name  = (string)($objResult1["unit_name"] ?? '');
+	$product_code1  = (string)($objResult1["access_code"] ?? '');
 	$product_code = substr($product_code1, 0, 10);
-	$product_name  = $objResult1["sol_name"];
-	//$product_name = substr($product_name1,0,70);	
-	$sale_count  = $objResult1["count"];
-	$sale_remark  = $objResult1["sale_remark"];
+	$product_name  = (string)($objResult1["sol_name"] ?? '');
+	//$product_name = substr($product_name1,0,70);
+	$sale_count  = (string)($objResult1["count"] ?? '');
+	$sale_remark  = (string)($objResult1["sale_remark"] ?? '');
 
 
 
 	$pdf->setX(7.6);
-	$pdf->MultiCell(9.0, 0, iconv('UTF-8', 'cp874', "$product_code"), 0, 'L');
+	$pdf->MultiCell(9.0, 0, thai_cp874("$product_code"), 0, 'L');
 
 	$pdf->setX(10.5);
-	$pdf->Cell(10, 0, iconv('UTF-8', 'cp874', "$product_name $sale_remark"), 0, 'L');
+	$pdf->Cell(10, 0, thai_cp874("$product_name $sale_remark"), 0, 'L');
 
 
 	$pdf->setX(16.9);
-	$pdf->MultiCell(1.9, 0, iconv('UTF-8', 'cp874', "$sale_count"), 0, 'R');
+	$pdf->MultiCell(1.9, 0, thai_cp874("$sale_count"), 0, 'R');
 
 	$pdf->setX(18.0);
-	$pdf->MultiCell(2.0, 0, iconv('UTF-8', 'cp874', "$unit_name"), 0, 'R');
+	$pdf->MultiCell(2.0, 0, thai_cp874("$unit_name"), 0, 'R');
 
 
 	$pdf->setX(18.3);
-	$pdf->MultiCell(9.0, 0.7, iconv('UTF-8', 'cp874', ""), 0, 'L');
+	$pdf->MultiCell(9.0, 0.7, thai_cp874(""), 0, 'L');
 
 
 	$i++;
@@ -278,57 +292,57 @@ $pdf->Cell(13.0, 0, '', 'T', 0, 'c', 0);
 
 
 $pdf->setXY(1.4, 4.0);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "วันที่แจ้ง :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("วันที่แจ้ง :"), 0, 'L');
 
 
 $pdf->setXY(3.4, 4.55);
 $pdf->Cell(4.0, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(4.0, 4.0);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$date_jong"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$date_jong"), 0, 'L');
 
 
 $pdf->setXY(1.4, 4.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ชื่อลูกค้า :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ชื่อลูกค้า :"), 0, 'L');
 
 $pdf->setXY(3.4, 5.15);
 $pdf->Cell(4.0, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(3.5, 4.6);
-$pdf->MultiCell(4.0, 0.5, iconv('UTF-8', 'cp874', "$customer"), 0, 'L');
+$pdf->MultiCell(4.0, 0.5, thai_cp874("$customer"), 0, 'L');
 
 $pdf->setXY(1.4, 5.8);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "วันที่ต้องการรับสินค้า :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("วันที่ต้องการรับสินค้า :"), 0, 'L');
 
 $pdf->setXY(4.7, 6.35);
 $pdf->Cell(2.7, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(4.7, 5.8);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$date_receive"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$date_receive"), 0, 'L');
 
 $pdf->setXY(1.4, 6.4);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ชื่อพนักงาน :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ชื่อพนักงาน :"), 0, 'L');
 
 $pdf->setXY(3.4, 6.95);
 $pdf->Cell(4.0, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(3.4, 6.4);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$sale_name "), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$sale_name "), 0, 'L');
 
 $pdf->setXY(1.4, 7.0);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "เลขที่ BQ :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("เลขที่ BQ :"), 0, 'L');
 
 $pdf->setXY(3.4, 7.0);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$bq_no"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$bq_no"), 0, 'L');
 
 $pdf->setXY(3.4, 7.55);
 $pdf->Cell(4.0, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(1.4, 7.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ผู้จองสินค้า :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ผู้จองสินค้า :"), 0, 'L');
 
 $pdf->setXY(3.4, 8.4);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$sale_name "), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$sale_name "), 0, 'L');
 
 $pdf->setXY(3.4, 9.0);
 $pdf->Cell(4.0, 0, '', 'T', 0, 'c', 0);
@@ -341,20 +355,20 @@ if ($status_doc == "Approve") {
 
 
 	$pdf->setXY(5.5, 9.4);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 } else if ($status_doc == "Rejected") {
 
 	$pdf->setXY(3.0, 9.4);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 
 	$pdf->Image("img/cor.jpeg", 5.3, 9.3, 0.9, 0.5);
 } else {
 
 	$pdf->setXY(3.0, 9.4);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 
 	$pdf->setXY(5.5, 9.4);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 }
 
 
@@ -362,37 +376,37 @@ if ($status_doc == "Approve") {
 
 
 $pdf->setXY(1.4, 9.3);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ผู้อนุมัติ :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ผู้อนุมัติ :"), 0, 'L');
 
 /*$pdf->setXY( 3.0,9.4);
 $pdf->MultiCell( 0.40, 0.40 , iconv( 'UTF-8','cp874' , "" ),1,'L' );*/
 
 $pdf->setXY(3.5, 9.3);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "อนุมัติ"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("อนุมัติ"), 0, 'L');
 
 /*$pdf->setXY(5.5,9.4);
 $pdf->MultiCell( 0.40, 0.40 , iconv( 'UTF-8','cp874' , "" ),1,'L' );*/
 
 $pdf->setXY(6.0, 9.3);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ไม่อนุมัติ"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ไม่อนุมัติ"), 0, 'L');
 
 $pdf->setXY(3.0, 10.5);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$approve_name "), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$approve_name "), 0, 'L');
 
 $pdf->setXY(2.9, 11.1);
 $pdf->Cell(4.5, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(3.5, 11.2);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$date_approve"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$date_approve"), 0, 'L');
 
 $pdf->setXY(2.9, 11.8);
 $pdf->Cell(4.5, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(1.4, 12.1);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "หมายเหตุ :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("หมายเหตุ :"), 0, 'L');
 
 $pdf->setXY(3.5, 12.1);
-$pdf->MultiCell(16.5, 0.6, iconv('UTF-8', 'cp874', "$drescription $address_send"), 0, 'L');
+$pdf->MultiCell(16.5, 0.6, thai_cp874("$drescription $address_send"), 0, 'L');
 
 
 $pdf->setXY(3.5, 12.7);
@@ -403,10 +417,10 @@ $pdf->Cell(16.5, 0, '', 'T', 0, 'c', 0);
 
 
 $pdf->setXY(1.4, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "คลังสินค้า :"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("คลังสินค้า :"), 0, 'L');
 
 $pdf->setXY(3.5, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$iv_no"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$iv_no"), 0, 'L');
 
 
 $pdf->setXY(3.5, 14.1);
@@ -417,31 +431,31 @@ if ($register_ckk == '1') {
 } else {
 
 	$pdf->setXY(8.0, 13.7);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 }
 
 $pdf->setXY(8.5, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ลงทะเบียน"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ลงทะเบียน"), 0, 'L');
 
 if ($cancel_ckk == '1') {
 	$pdf->Image("img/cor.jpeg", 10.2, 13.6, 0.9, 0.5);
 } else {
 
 	$pdf->setXY(10.5, 13.7);
-	$pdf->MultiCell(0.40, 0.40, iconv('UTF-8', 'cp874', ""), 1, 'L');
+	$pdf->MultiCell(0.40, 0.40, thai_cp874(""), 1, 'L');
 }
 
 $pdf->setXY(11.0, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "ยกเลิก"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("ยกเลิก"), 0, 'L');
 
 $pdf->setXY(13.0, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "หมายเหตุ"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("หมายเหตุ"), 0, 'L');
 
 $pdf->setXY(14.5, 14.1);
 $pdf->Cell(5.8, 0, '', 'T', 0, 'c', 0);
 
 $pdf->setXY(14.5, 13.6);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "$remark"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("$remark"), 0, 'L');
 
 
 
@@ -458,11 +472,11 @@ $pdf->SetFont('angsa', '', 11);
 
 
 $pdf->setXY(1.4, 14.5);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "อนุมัติวันที่ 18 มี.ค. 2557"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("อนุมัติวันที่ 18 มี.ค. 2557"), 0, 'L');
 
 
 $pdf->setXY(18.5, 14.5);
-$pdf->MultiCell(10, 0.6, iconv('UTF-8', 'cp874', "FM-SA-14:Rev.4"), 0, 'L');
+$pdf->MultiCell(10, 0.6, thai_cp874("FM-SA-14:Rev.4"), 0, 'L');
 
 
 $pdf->Output();

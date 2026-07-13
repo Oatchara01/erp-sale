@@ -1,8 +1,10 @@
 <?php include('head.php');
 include('dbconnect.php');
 include('dbconnect_sale.php');
+require_once __DIR__ . '/includes/so_saved_helpers.php';
 
 $savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+$isCopy = isset($_GET["copy"]) && $_GET["copy"] == "1";
 $savedJong = null;
 $savedProducts = [];
 
@@ -1216,7 +1218,7 @@ if ($savedRefId !== "") {
 			<h1 class="so-title">Product Booking</h1>
 			<div class="so-ref-info">
 				<span class="so-ref-label">เลขที่จอง</span>
-				<span class="so-ref-value"><?php echo $savedJong !== null ? $savedJong['ref_id'] : ($so . $nextId); ?></span>
+				<span class="so-ref-value"><?php echo ($savedJong !== null && !$isCopy) ? $savedJong['ref_id'] : ($so . $nextId); ?></span>
 			</div>
 		</div>
 		<div class="so-header-right">
@@ -1226,8 +1228,8 @@ if ($savedRefId !== "") {
 		</div>
 	</div>
 
-	<form action="<?php echo ($savedJong !== null) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data">
-		<?php if ($savedJong !== null) { ?>
+	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data">
+		<?php if ($savedJong !== null && !$isCopy) { ?>
 			<input type="hidden" name="ref_id" value="<?php echo htmlspecialchars($savedJong['ref_id'], ENT_QUOTES, 'UTF-8'); ?>">
 		<?php } else { ?>
 			<input type="hidden" name="ref_idsmp" value="<?php echo $so;
@@ -1364,18 +1366,51 @@ if ($savedRefId !== "") {
 				<div class="so-grid-2">
 					<div class="so-field-group">
 						<label class="so-label" for="date_jong">วันที่แจ้ง</label>
-						<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
+						<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
-						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null) ? $savedJong['date_receive'] : ''; ?>" required>
+						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
 					</div>
 				</div>
 
 			</div>
+		</div>
 
-			<!-- กล่อง: ข้อมูลลูกค้า -->
-			<div class="so-card">
+		<!-- TAB 2: Admin -->
+		<?php
+		$adminInfoTab = [
+			'tab_id' => 'tabAdmin',
+			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
+			'rows'   => [
+				[
+					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => '', 'placeholder' => 'No.'],
+					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'fas fa-search'],
+					['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => '', 'icon' => 'fas fa-search'],
+				],
+				[
+					['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => '', 'icon' => 'fas fa-search'],
+					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'],
+					['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => '', 'placeholder' => 'Numbers only'],
+					['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => '', 'placeholder' => 'Numbers only'],
+				],
+				[
+					['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => '', 'icon' => 'far fa-calendar-alt'],
+					['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+				],
+				[
+					['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
+					['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+				],
+			],
+		];
+		include __DIR__ . '/partials/admin_info_tab.php';
+		unset($adminInfoTab);
+		?>
+
+		<!-- กล่อง: ข้อมูลลูกค้า -->
+		<div class="so-card">
 				<div class="so-section-title-container">
 					<h2 class="so-section-title">ข้อมูลลูกค้า</h2>
 					<hr class="so-divider">
@@ -1517,17 +1552,6 @@ if ($savedRefId !== "") {
 
 				<div id="productHiddenInputs"></div>
 			</div>
-		</div>
-
-		<!-- TAB 2: Admin -->
-		<div id="tabAdmin" class="so-tab-content">
-			<div class="so-card">
-				<div class="so-section-title-container">
-					<h2 class="so-section-title">Admin</h2>
-					<hr class="so-divider">
-				</div>
-			</div>
-		</div>
 </div>
 
 <div class="so-sticky-actions">
@@ -1918,7 +1942,7 @@ if ($savedRefId !== "") {
 				'</tr>';
 		}).join('');
 
-		var isEditMode = <?php echo ($savedJong !== null) ? 'true' : 'false'; ?>;
+		var isEditMode = <?php echo ($savedJong !== null && !$isCopy) ? 'true' : 'false'; ?>;
 		hiddenWrap.innerHTML = productRows.map(function(row) {
 			if (isEditMode) {
 				return '<input type="hidden" name="id[]" value="' + escapeProductHtml(row.id || '') + '">' +
