@@ -37,9 +37,11 @@ if ($savedRefId !== "") {
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=20260704">
+<link rel="stylesheet" href="css/customer-popup.css">
 
 <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
 <script type="text/javascript" src="js/autocomplete.js"></script>
+<script type="text/javascript" src="js/customer-popup.js"></script>
 
 <style>
 	@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -119,13 +121,15 @@ if ($savedRefId !== "") {
 		color: #612989;
 		border: 1px solid transparent;
 		border-radius: 20px;
-		padding: 10px 24px;
+		height: 44px;
+		padding: 0 24px;
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
 		transition: all 0.2s ease;
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 8px;
 		font-family: 'Prompt', sans-serif;
 		box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
@@ -217,6 +221,12 @@ if ($savedRefId !== "") {
 		display: grid;
 		grid-template-columns: 1fr 1fr 1fr;
 		gap: 24px;
+	}
+
+	@media (max-width: 900px) {
+		.so-grid-3 {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 
 	@media (max-width: 768px) {
@@ -543,277 +553,7 @@ if ($savedRefId !== "") {
 		color: #612989 !important;
 	}
 
-	/* Customer Popup Modal Styling (Identical to register_suphos.php) */
-	.customer-popup-modal {
-		display: none;
-		position: fixed;
-		z-index: 99998;
-		inset: 0;
-		align-items: center;
-		justify-content: center;
-		background: rgba(0, 0, 0, 0.45);
-		padding: 24px;
-		box-sizing: border-box;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.customer-popup-box {
-		width: min(1096px, 96vw);
-		height: min(720px, 90vh);
-		background: #fff;
-		border-radius: 10px;
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-		box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
-	}
-
-	.customer-popup-close {
-		position: absolute;
-		top: 4px;
-		right: 18px;
-		width: 28px;
-		height: 28px;
-		border: 0;
-		background: transparent;
-		color: #3b3b3b;
-		font-size: 52px;
-		line-height: 1;
-		cursor: pointer;
-		z-index: 1;
-	}
-
-	.customer-popup-header {
-		padding: 24px 32px 10px;
-		border-bottom: 1px solid #eee7f4;
-	}
-
-	.customer-popup-header h2 {
-		margin: 0;
-		color: #3b3b3b;
-		font-size: 20px;
-		font-weight: 500;
-		line-height: 1.35;
-		border-bottom: 1px solid #eee7f4;
-		padding-bottom: 14px;
-	}
-
-	.customer-popup-toolbar {
-		display: flex;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 20px;
-		flex-wrap: nowrap;
-		width: 100%;
-		margin-top: 14px;
-	}
-
-	.customer-popup-search-wrap {
-		flex: 1 1 auto;
-		max-width: none;
-		min-width: 0;
-	}
-
-	.customer-popup-search-wrap label {
-		display: block;
-		margin-bottom: 4px;
-		color: #612989;
-		font-size: 14px;
-		font-weight: 400;
-	}
-
-	.customer-popup-search {
-		height: 42px;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		background: #f5f6f8;
-		border-radius: 10px;
-		padding: 0 14px;
-		box-sizing: border-box;
-		border: 1px solid transparent;
-	}
-
-	.customer-popup-search:focus-within {
-		background: #FFF;
-		border-color: #612989;
-		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
-	}
-
-	.customer-popup-search i {
-		color: #8E8B94;
-		font-size: 16px;
-	}
-
-	.customer-popup-search input {
-		width: 100%;
-		border: 0;
-		outline: none;
-		background: transparent;
-		color: #3b3b3b;
-		font-size: 16px;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.customer-popup-table-wrap {
-		flex: 1;
-		overflow: auto;
-		border-top: 1px solid #612989;
-		border-bottom: 1px solid #f0edf2;
-	}
-
-	.customer-popup-table {
-		width: 100%;
-		border-collapse: collapse;
-		table-layout: fixed;
-		color: #3b3b3b;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.customer-popup-table th {
-		height: 40px;
-		padding: 0 16px;
-		text-align: left;
-		color: #612989;
-		font-size: 15px;
-		font-weight: 600;
-		border-bottom: 1px solid #612989;
-		white-space: nowrap;
-		background: #FFFFFF;
-	}
-
-	.customer-popup-table th:nth-child(1) {
-		width: 30%;
-	}
-
-	.customer-popup-table th:nth-child(2) {
-		width: 20%;
-	}
-
-	.customer-popup-table th:nth-child(3) {
-		width: 42%;
-	}
-
-	.customer-popup-table th:nth-child(4) {
-		width: 8%;
-	}
-
-	.customer-popup-table td {
-		height: 54px;
-		padding: 8px 16px;
-		font-size: 14px;
-		font-weight: 500;
-		border-bottom: 1px solid #ebebeb;
-		vertical-align: middle;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.customer-popup-table tbody tr {
-		cursor: pointer;
-	}
-
-	.customer-popup-table tbody tr:hover,
-	.customer-popup-table tbody tr.selected {
-		background: #f1e1ff;
-	}
-
-	.customer-popup-name {
-		border: 0;
-		background: transparent;
-		color: #3B3B3B;
-		font-family: 'Prompt', sans-serif;
-		font-size: 14px;
-		font-weight: 500;
-		text-decoration: underline;
-		cursor: pointer;
-		padding: 0;
-		text-align: left;
-	}
-
-	.customer-popup-empty {
-		text-align: center;
-		color: #8E8B94;
-		cursor: default;
-		padding: 24px;
-	}
-
-	.customer-popup-pagination {
-		display: flex;
-		justify-content: center;
-		padding: 12px 32px 0;
-	}
-
-	.customer-popup-loadmore {
-		min-width: 152px;
-		height: 40px;
-		border: 1px solid #d9c8ea;
-		border-radius: 20px;
-		background: #fff;
-		color: #612989;
-		font-family: 'Prompt', sans-serif;
-		font-size: 14px;
-		font-weight: 500;
-		cursor: pointer;
-		box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
-		transition: all 0.2s;
-	}
-
-	.customer-popup-loadmore:hover:not(:disabled) {
-		background: #612989;
-		color: #fff;
-		border-color: #612989;
-		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2);
-	}
-
-	.customer-popup-loadmore:disabled {
-		opacity: 0.7;
-		cursor: wait;
-	}
-
-	.customer-popup-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 16px;
-		padding: 16px 32px;
-		border-top: 1px solid #f0edf2;
-	}
-
-	.customer-popup-actions button {
-		width: 120px;
-		height: 40px;
-		border-radius: 20px;
-		font-family: 'Prompt', sans-serif;
-		font-size: 14px;
-		font-weight: 500;
-		cursor: pointer;
-		box-shadow: 0 0 4px rgba(0, 0, 0, 0.15);
-		transition: all 0.2s;
-	}
-
-	.customer-popup-confirm {
-		border: 0;
-		background: #612989;
-		color: #fff;
-	}
-
-	.customer-popup-confirm:hover {
-		background: #54237a;
-		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.3);
-	}
-
-	.customer-popup-cancel {
-		border: 1px solid #EDE9F0;
-		background: #fff;
-		color: #3b3b3b;
-	}
-
-	.customer-popup-cancel:hover {
-		background: #f6effd;
-		color: #612989;
-	}
+	/* Customer Popup Modal Styling moved to css/customer-popup.css */
 
 	/* Dynamic product list */
 	.so-product-section-header {
@@ -830,26 +570,27 @@ if ($savedRefId !== "") {
 	}
 
 	.so-product-total-box {
-		background: #F1E1FF;
+		background: #F5F6F8;
 		border-radius: 10px;
 		padding: 14px 20px;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 12px;
+		gap: 6px;
 		margin-bottom: 16px;
 	}
 
 	.so-product-total-label {
 		font-size: 14px;
-		color: #612989;
-		font-weight: 500;
+		color: #8E8B94;
+		font-weight: 400;
 	}
 
 	.so-product-total-value {
 		font-size: 20px;
-		color: #612989;
-		font-weight: 700;
+		color: #3B3B3B;
+		font-weight: 600;
 	}
 
 	.so-product-search-wrap {
@@ -919,8 +660,15 @@ if ($savedRefId !== "") {
 		font-size: 14px;
 	}
 
+	.so-product-table-wrap {
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	.so-product-dyn-table {
 		width: 100%;
+		min-width: 480px;
 		border-collapse: collapse;
 		font-family: 'Prompt', sans-serif;
 	}
@@ -980,14 +728,10 @@ if ($savedRefId !== "") {
 		color: #612989;
 	}
 
-	.product-row-remark {
-		margin-top: 8px;
-	}
-
-	.product-row-remark input {
-		height: 34px !important;
-		font-size: 13px !important;
-		color: #000000 !important;
+	.product-row-remark-text {
+		margin-top: 4px;
+		font-size: 13px;
+		color: #8E8B94;
 	}
 
 	.product-empty {
@@ -1228,6 +972,15 @@ if ($savedRefId !== "") {
 		height: min(884px, 92vh);
 	}
 
+	.product-remark-popup-box {
+		width: min(1096px, 92vw);
+		height: auto;
+	}
+
+	.product-remark-popup-body {
+		padding: 24px 32px 28px;
+	}
+
 	.credit-term-popup-content {
 		display: flex;
 		flex: 1;
@@ -1352,20 +1105,72 @@ if ($savedRefId !== "") {
 		}
 	}
 
-	.so-sticky-actions,
-	.so-sticky-actions-inner {
+	.so-sticky-actions {
+		width: 100%;
+		background-color: #FFFFFF;
+		padding: 16px 24px;
+		display: flex;
+		gap: 16px;
+		justify-content: flex-end;
+		align-items: center;
+		box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+		border-top: 1px solid #EBEBEB;
+		margin-top: 24px;
 		box-sizing: border-box;
+	}
+
+	.so-sticky-actions-inner {
+		max-width: 1200px;
+		width: 100%;
+		display: flex;
+		gap: 16px;
+		justify-content: flex-end;
+		margin: 0 auto;
+		padding-right: 24px;
+		box-sizing: border-box;
+	}
+
+	.btn-so-submit {
+		background-color: #612989;
+		color: #FFFFFF;
+		border: 1px solid #612989;
+		border-radius: 24px;
+		padding: 12px 32px;
+		font-family: 'Prompt', sans-serif;
+		font-size: 16px;
+		font-weight: 500;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+	}
+
+	.btn-so-draft {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EBEBEB;
+		border-radius: 24px;
+		padding: 12px 32px;
+		font-family: 'Prompt', sans-serif;
+		font-size: 16px;
+		font-weight: 500;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 	}
 
 	@media (max-width: 768px) {
 		.so-sticky-actions {
-			padding: 14px 12px !important;
+			padding: 14px 12px;
 		}
 
 		.so-sticky-actions-inner {
-			padding-right: 0 !important;
+			padding-right: 0;
 			flex-direction: column;
-			align-items: stretch !important;
+			align-items: stretch;
 		}
 
 		.so-sticky-actions-inner>button {
@@ -1415,8 +1220,8 @@ if ($savedRefId !== "") {
 			</div>
 		</div>
 		<div class="so-header-right">
-			<button type="button" class="btn-preview-so" onclick="window.print();">
-				<i class="fas fa-eye"></i> Preview
+			<button type="button" class="btn-preview-so" onclick="previewBooking();">
+				<img src="img\icons\preview.png" alt=""> Preview
 			</button>
 		</div>
 	</div>
@@ -1425,7 +1230,8 @@ if ($savedRefId !== "") {
 		<?php if ($savedJong !== null) { ?>
 			<input type="hidden" name="ref_id" value="<?php echo htmlspecialchars($savedJong['ref_id'], ENT_QUOTES, 'UTF-8'); ?>">
 		<?php } else { ?>
-			<input type="hidden" name="ref_idsmp" value="<?php echo $so; echo $nextId; ?>">
+			<input type="hidden" name="ref_idsmp" value="<?php echo $so;
+															echo $nextId; ?>">
 		<?php } ?>
 
 
@@ -1660,9 +1466,8 @@ if ($savedRefId !== "") {
 
 			<!-- กล่อง: หมายเหตุ -->
 			<div class="so-card">
-				<div class="so-section-title-container" style="display: flex; align-items: center; justify-content: space-between;">
+				<div class="so-section-title-container">
 					<h2 class="so-section-title">หมายเหตุ</h2>
-					<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('drescription');"></i>
 				</div>
 				<hr class="so-divider" style="margin: -12px 0 24px 0;">
 				<div class="so-field-group" style="margin-bottom: 0;">
@@ -1691,22 +1496,24 @@ if ($savedRefId !== "") {
 					<div id="productSearchResults" class="product-search-dropdown"></div>
 				</div>
 
-				<table class="so-product-dyn-table">
-					<thead>
-						<tr>
-							<th class="col-handle"></th>
-							<th>รหัสสินค้า</th>
-							<th>รายการสินค้า</th>
-							<th class="col-qty">จำนวน</th>
-							<th class="col-actions"></th>
-						</tr>
-					</thead>
-					<tbody id="productTableBody">
-						<tr id="productEmptyRow">
-							<td colspan="5" class="product-empty">ยังไม่มีรายการสินค้า ค้นหาด้านบนเพื่อเพิ่มรายการ</td>
-						</tr>
-					</tbody>
-				</table>
+				<div class="so-product-table-wrap">
+					<table class="so-product-dyn-table">
+						<thead>
+							<tr>
+								<th class="col-handle"></th>
+								<th>รหัสสินค้า</th>
+								<th>รายการสินค้า</th>
+								<th class="col-qty">จำนวน</th>
+								<th class="col-actions"></th>
+							</tr>
+						</thead>
+						<tbody id="productTableBody">
+							<tr id="productEmptyRow">
+								<td colspan="5" class="product-empty">ยังไม่มีรายการสินค้า ค้นหาด้านบนเพื่อเพิ่มรายการ</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 
 				<div id="productHiddenInputs"></div>
 			</div>
@@ -1721,54 +1528,64 @@ if ($savedRefId !== "") {
 				</div>
 			</div>
 		</div>
-	</div>
+</div>
 
-	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
-		<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px;">
-			<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
-				<i class="far fa-save"></i> บันทึกข้อมูล
-			</button>
-			<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-				<i class="far fa-save"></i> Save Draft
-			</button>
-		</div>
+<div class="so-sticky-actions">
+	<div class="so-sticky-actions-inner">
+		<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit">
+			<i class="far fa-save"></i> บันทึกข้อมูล
+		</button>
+		<button type="button" name="save_draft" onclick="saveDraft()" class="btn-so-draft">
+			<i class="far fa-save"></i> Save Draft
+		</button>
 	</div>
+</div>
 </form>
 
 <!-- HTML โครงสร้างป๊อปอัปค้นหาลูกค้า (ตามสไตล์ของ register_suphos.php) -->
 <div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true">
 	<div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="customerPopupTitle">
 		<button type="button" class="customer-popup-close" onclick="closeCustomerPopup()" aria-label="Close">&times;</button>
-		<div class="customer-popup-header">
+
+		<div class="clear-loan-header">
 			<h2 id="customerPopupTitle">ข้อมูลลูกค้า</h2>
-			<div class="customer-popup-toolbar">
+			<div class="customer-popup-toolbar" style="margin-top: 18px;">
 				<div class="customer-popup-search-wrap">
 					<label for="customerPopupSearch">ค้นหาลูกค้า</label>
 					<div class="customer-popup-search">
-						<i class="fas fa-search"></i>
+						<i class="fas fa-search" aria-hidden="true"></i>
 						<input type="text" id="customerPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
 					</div>
 				</div>
+				<button type="button" class="customer-popup-add" onclick="window.open('customer_add.php', '_blank');">
+					<i class="fas fa-sliders-h" aria-hidden="true"></i>
+					เพิ่มข้อมูลลูกค้า
+				</button>
 			</div>
 		</div>
+
 		<div class="customer-popup-table-wrap">
 			<table class="customer-popup-table">
 				<thead>
 					<tr>
-						<th>ชื่อบิล/ลูกค้า</th>
+						<th>ชื่อลูกค้า</th>
 						<th>เบอร์โทร</th>
-						<th>ที่อยู่จัดส่ง</th>
-						<th>จัดการ</th>
+						<th>ที่อยู่</th>
+						<th></th>
 					</tr>
 				</thead>
 				<tbody id="customerPopupRows">
-					<!-- โหลดรายการลูกค้าแบบ Dynamic -->
+					<tr>
+						<td colspan="4" class="customer-popup-empty">พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา</td>
+					</tr>
 				</tbody>
 			</table>
 		</div>
+
 		<div class="customer-popup-pagination" id="customerPopupPagination" style="display:none;">
 			<button type="button" class="customer-popup-loadmore" id="customerPopupLoadMore" onclick="loadMoreCustomerPopupRows()">โหลดเพิ่ม</button>
 		</div>
+
 		<div class="customer-popup-actions">
 			<button type="button" class="customer-popup-confirm" onclick="confirmCustomerPopupSelection()">ตกลง</button>
 			<button type="button" class="customer-popup-cancel" onclick="closeCustomerPopup()">ยกเลิก</button>
@@ -1827,6 +1644,29 @@ if ($savedRefId !== "") {
 					</table>
 				</div>
 			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ป๊อปอัปหมายเหตุสินค้า (แก้ไขหมายเหตุรายการสินค้าในตาราง) -->
+<div id="productRemarkModal" class="customer-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box product-remark-popup-box" role="dialog" aria-modal="true" aria-labelledby="productRemarkModalTitle">
+		<button type="button" class="customer-popup-close" onclick="closeProductRemarkModal()" aria-label="Close">&times;</button>
+		<div class="customer-popup-header">
+			<h2 id="productRemarkModalTitle">ข้อมูลรายการสินค้าเพิ่มเติม</h2>
+		</div>
+		<div class="product-remark-popup-body">
+			<div class="so-field-group" style="margin-bottom:0;">
+				<label class="so-label" for="productRemarkModalInput">หมายเหตุสินค้า</label>
+				<div class="so-input-wrapper">
+					<input type="text" id="productRemarkModalInput" class="so-input" placeholder="ระบุหมายเหตุสินค้า...">
+					<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('productRemarkModalInput')"></i>
+				</div>
+			</div>
+		</div>
+		<div class="customer-popup-actions">
+			<button type="button" class="customer-popup-confirm" onclick="confirmProductRemarkModal()">อัพเดท</button>
+			<button type="button" class="customer-popup-cancel" onclick="closeProductRemarkModal()">ยกเลิก</button>
 		</div>
 	</div>
 </div>
@@ -1942,18 +1782,6 @@ if ($savedRefId !== "") {
 		modal.setAttribute('aria-hidden', 'true');
 	}
 
-	// JavaScript State สำหรับจัดการ Popup ลูกค้า
-	var customerPopupSelected = null;
-	var customerPopupTimer = null;
-	var customerPopupData = [];
-	var customerPopupKeyword = '';
-	var customerPopupNextLastId = null;
-	var customerPopupHasMore = false;
-	var customerPopupLoading = false;
-	var customerPopupPageSize = 20;
-	var customerPopupAbortController = null;
-	var customerPopupRequestId = 0;
-
 	// ฟังก์ชัน AJAX หลักในการเชื่อมต่อข้อมูลออกบิลลูกค้า
 	var HttPRequest = false;
 
@@ -2022,219 +1850,9 @@ if ($savedRefId !== "") {
 		}
 	}
 
-	// ฟังก์ชันควบคุมป๊อปอัปรายชื่อลูกค้า
-	function openCustomerPopup() {
-		var modal = document.getElementById('customerPopupModal');
-		var search = document.getElementById('customerPopupSearch');
-		if (!modal) return;
-
-		modal.style.display = 'flex';
-		modal.setAttribute('aria-hidden', 'false');
-		customerPopupSelected = null;
-		customerPopupData = [];
-		customerPopupKeyword = search ? (search.value || '') : '';
-		customerPopupNextLastId = null;
-		customerPopupHasMore = false;
-		toggleCustomerPopupLoadMore(false, false);
-
-		loadCustomerPopupRows(customerPopupKeyword, false);
-		setTimeout(function() {
-			if (search) {
-				search.focus();
-				search.select();
-			}
-		}, 50);
-	}
-
-	function closeCustomerPopup() {
-		var modal = document.getElementById('customerPopupModal');
-		if (!modal) return;
-
-		modal.style.display = 'none';
-		modal.setAttribute('aria-hidden', 'true');
-	}
-
-	function toggleCustomerPopupLoadMore(visible, loading) {
-		var wrap = document.getElementById('customerPopupPagination');
-		var button = document.getElementById('customerPopupLoadMore');
-		if (!wrap || !button) return;
-
-		wrap.style.display = visible ? 'flex' : 'none';
-		button.disabled = !!loading;
-		button.textContent = loading ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
-	}
-
-	function loadCustomerPopupRows(keyword, append) {
-		var tbody = document.getElementById('customerPopupRows');
-		if (append && customerPopupLoading) return;
-
-		if (!append && customerPopupAbortController) {
-			customerPopupAbortController.abort();
-		}
-
-		customerPopupAbortController = new AbortController();
-		var requestController = customerPopupAbortController;
-		var requestId = ++customerPopupRequestId;
-		customerPopupLoading = true;
-
-		if (!append && tbody) {
-			tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
-		}
-
-		if (!append) {
-			customerPopupSelected = null;
-			customerPopupData = [];
-			customerPopupNextLastId = null;
-			customerPopupHasMore = false;
-			customerPopupKeyword = keyword || '';
-		}
-
-		toggleCustomerPopupLoadMore(append || customerPopupHasMore, append);
-
-		var requestUrl = 'ajax_customer_popup_search.php?q=' + encodeURIComponent(customerPopupKeyword || '') +
-			'&limit=' + encodeURIComponent(customerPopupPageSize);
-
-		if (append && customerPopupNextLastId) {
-			requestUrl += '&last_id=' + encodeURIComponent(customerPopupNextLastId);
-		}
-
-		fetch(requestUrl, {
-				credentials: 'same-origin',
-				signal: requestController.signal
-			})
-			.then(function(response) {
-				return response.json();
-			})
-			.then(function(data) {
-				if (requestId !== customerPopupRequestId) return;
-
-				if (!data || !data.success) {
-					customerPopupData = [];
-					customerPopupHasMore = false;
-					customerPopupNextLastId = null;
-					renderCustomerPopupRows([]);
-					return;
-				}
-
-				var newCustomers = data.customers || [];
-				customerPopupData = append ? customerPopupData.concat(newCustomers) : newCustomers;
-				customerPopupHasMore = !!(data.pagination && data.pagination.has_more);
-				customerPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
-				renderCustomerPopupRows(customerPopupData);
-			})
-			.catch(function(error) {
-				if (error && error.name === 'AbortError') return;
-				if (requestId !== customerPopupRequestId) return;
-
-				customerPopupHasMore = false;
-				customerPopupNextLastId = null;
-				if (tbody) {
-					tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
-				}
-				toggleCustomerPopupLoadMore(false, false);
-			})
-			.finally(function() {
-				if (requestId !== customerPopupRequestId) return;
-
-				customerPopupLoading = false;
-				customerPopupAbortController = null;
-				if (customerPopupHasMore) {
-					toggleCustomerPopupLoadMore(true, false);
-				}
-			});
-	}
-
-	function escapeCustomerPopupHtml(value) {
-		return String(value || '').replace(/[&<>"']/g, function(char) {
-			return {
-				'&': '&amp;',
-				'<': '&lt;',
-				'>': '&gt;',
-				'"': '&quot;',
-				"'": '&#039;'
-			} [char];
-		});
-	}
-
-	function renderCustomerPopupRows(customers) {
-		var tbody = document.getElementById('customerPopupRows');
-		if (!tbody) return;
-
-		customers = customers || customerPopupData || [];
-
-		if (!customers || customers.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="4" class="customer-popup-empty">ไม่พบข้อมูลลูกค้า</td></tr>';
-			toggleCustomerPopupLoadMore(false, false);
-			return;
-		}
-
-		tbody.innerHTML = customers.map(function(customer, index) {
-			var name = customer.customer_name || customer.bill_name || '-';
-			var tel = customer.cus_tel || '-';
-			var address = customer.cus_address || '-';
-
-			return '<tr data-index="' + index + '" onclick="selectCustomerPopupRow(' + index + ')">' +
-				'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); selectCustomerPopupRow(' + index + ');">' + escapeCustomerPopupHtml(name) + '</button></td>' +
-				'<td>' + escapeCustomerPopupHtml(tel) + '</td>' +
-				'<td>' + escapeCustomerPopupHtml(address) + '</td>' +
-				'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openCustomerPopupEdit(' + index + ');"><img src="img/icons/edit.png" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
-				'</tr>';
-		}).join('');
-
-		customerPopupData = customers;
-
-		if (customerPopupSelected && customerPopupSelected.customer_id) {
-			var rows = document.querySelectorAll('#customerPopupRows tr');
-			rows.forEach(function(row) {
-				row.classList.remove('selected');
-			});
-			for (var i = 0; i < customerPopupData.length; i++) {
-				if (String(customerPopupData[i].customer_id) === String(customerPopupSelected.customer_id)) {
-					if (rows[i]) rows[i].classList.add('selected');
-					break;
-				}
-			}
-		}
-	}
-
-	// เปิดหน้าแก้ไขลูกค้าในแท็บใหม่
-	function openCustomerPopupEdit(index) {
-		var customer = (customerPopupData || [])[index];
-		if (!customer || !customer.customer_id) {
-			alert('ไม่พบรหัสลูกค้า');
-			return;
-		}
-		window.open('customer_add.php?customer_id=' + encodeURIComponent(customer.customer_id), '_blank');
-	}
-
-	function loadMoreCustomerPopupRows() {
-		if (!customerPopupHasMore || !customerPopupNextLastId) return;
-		loadCustomerPopupRows(customerPopupKeyword, true);
-	}
-
-	function selectCustomerPopupRow(index) {
-		var rows = document.querySelectorAll('#customerPopupRows tr');
-		var customer = (customerPopupData || [])[index];
-		if (!customer) return;
-
-		rows.forEach(function(row) {
-			row.classList.remove('selected');
-		});
-		if (rows[index]) rows[index].classList.add('selected');
-		customerPopupSelected = customer;
-	}
-
-	function confirmCustomerPopupSelection() {
-		if (!customerPopupSelected) {
-			alert('กรุณาเลือกลูกค้าก่อน');
-			return;
-		}
-
-		var selectedCustId = String(customerPopupSelected.customer_id || '').trim();
-		if (!selectedCustId) {
-			alert('ข้อมูลลูกค้าที่เลือกไม่มีรหัสลูกค้า');
-			return;
-		}
+	// Hook เรียกโดย js/customer-popup.js เมื่อผู้ใช้กด "ตกลง" เลือกลูกค้าในป๊อปอัป
+	window.customerPopupOnConfirm = function(selectedCustomer) {
+		var selectedCustId = String((selectedCustomer && selectedCustomer.customer_id) || '').trim();
 
 		var billId = document.getElementById('bill_id');
 		if (billId) {
@@ -2247,8 +1865,7 @@ if ($savedRefId !== "") {
 
 		// เรียกดึงข้อมูลบิลลูกค้าและกรอกลงที่อยู่และชื่อฟิลด์จริง
 		doCallAjax1('bill_id', 'customer', 'address_send');
-		closeCustomerPopup();
-	}
+	};
 
 	// ===== รายการสินค้าแบบไดนามิก =====
 	var productRows = <?php echo count($savedProducts) > 0 ? json_encode($savedProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '[]'; ?>;
@@ -2285,8 +1902,8 @@ if ($savedRefId !== "") {
 		}
 
 		tbody.innerHTML = productRows.map(function(row, idx) {
-			var remarkBlock = row.showRemark ?
-				('<div class="product-row-remark"><input type="text" class="so-input" placeholder="หมายเหตุ" value="' + escapeProductHtml(row.remark) + '" oninput="updateProductRemark(' + idx + ',this.value)"></div>') : '';
+			var remarkBlock = row.remark ?
+				('<div class="product-row-remark-text">' + escapeProductHtml(row.remark) + '</div>') : '';
 
 			return '<tr draggable="true" class="product-row" data-idx="' + idx + '" ' +
 				'ondragstart="productDragStart(event,' + idx + ')" ondragover="productDragOver(event,' + idx + ')" ondrop="productDrop(event,' + idx + ')" ondragend="productDragEnd(event)" ondragleave="productDragLeave(event)">' +
@@ -2295,7 +1912,7 @@ if ($savedRefId !== "") {
 				'<td>' + escapeProductHtml(row.product_name) + remarkBlock + '</td>' +
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
 				'<td class="col-actions">' +
-				'<button type="button" class="product-row-icon-btn" onclick="toggleProductRemark(' + idx + ')" title="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
 				'<button type="button" class="product-row-icon-btn" onclick="removeProductRow(' + idx + ')" title="ลบ"><i class="fas fa-trash"></i></button>' +
 				'</td>' +
 				'</tr>';
@@ -2324,8 +1941,7 @@ if ($savedRefId !== "") {
 			product_name: product.product_name,
 			unit_name: product.unit_name,
 			count: 1,
-			remark: '',
-			showRemark: false
+			remark: ''
 		});
 		renderProductTable();
 	}
@@ -2357,9 +1973,36 @@ if ($savedRefId !== "") {
 		}
 	}
 
-	function toggleProductRemark(idx) {
-		productRows[idx].showRemark = !productRows[idx].showRemark;
+	var productRemarkEditIndex = null;
+
+	function openProductRemarkModal(idx) {
+		productRemarkEditIndex = idx;
+		var input = document.getElementById('productRemarkModalInput');
+		if (input) input.value = productRows[idx].remark || '';
+
+		var modal = document.getElementById('productRemarkModal');
+		if (modal) {
+			modal.style.display = 'flex';
+			modal.setAttribute('aria-hidden', 'false');
+		}
+	}
+
+	function closeProductRemarkModal() {
+		var modal = document.getElementById('productRemarkModal');
+		if (modal) {
+			modal.style.display = 'none';
+			modal.setAttribute('aria-hidden', 'true');
+		}
+		productRemarkEditIndex = null;
+	}
+
+	function confirmProductRemarkModal() {
+		if (productRemarkEditIndex === null) return;
+		var input = document.getElementById('productRemarkModalInput');
+		var value = input ? input.value : '';
+		updateProductRemark(productRemarkEditIndex, value);
 		renderProductTable();
+		closeProductRemarkModal();
 	}
 
 	function productDragStart(e, idx) {
@@ -2395,17 +2038,6 @@ if ($savedRefId !== "") {
 
 	// ควบคุมเหตุการณ์หลังโหลดเอกสารเสร็จสิ้น
 	document.addEventListener('DOMContentLoaded', function() {
-		var search = document.getElementById('customerPopupSearch');
-		if (search) {
-			search.addEventListener('input', function() {
-				clearTimeout(customerPopupTimer);
-				customerPopupTimer = setTimeout(function() {
-					customerPopupSelected = null;
-					loadCustomerPopupRows(search.value, false);
-				}, 250);
-			});
-		}
-
 		syncCreditTermTriggerState();
 
 		var creditTermTrigger = document.getElementById('display_credit_thb_trigger');
@@ -2493,7 +2125,7 @@ if ($savedRefId !== "") {
 		<?php if ($savedJong !== null) { ?>
 			// Load customer info (passing null for address to not overwrite saved shipping address)
 			doCallAjax1('bill_id', 'customer', null);
-			
+
 			// Restore the custom saved shipping address
 			var addrInput = document.getElementById('address_send');
 			if (addrInput) {
@@ -2501,6 +2133,28 @@ if ($savedRefId !== "") {
 			}
 		<?php } ?>
 	});
+
+	function previewBooking() {
+		var form = document.forms['frmMain'];
+		if (!form) return;
+
+		var flag = document.createElement('input');
+		flag.type = 'hidden';
+		flag.name = 'preview_mode';
+		flag.value = '1';
+		form.appendChild(flag);
+
+		var originalAction = form.action;
+		var originalTarget = form.target;
+		form.action = 'report_jongpro.php';
+		form.target = '_blank';
+
+		HTMLFormElement.prototype.submit.call(form);
+
+		form.action = originalAction;
+		form.target = originalTarget;
+		form.removeChild(flag);
+	}
 
 	function saveDraft() {
 		var form = document.forms['frmMain'];

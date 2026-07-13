@@ -1,32 +1,39 @@
-<?php include("head.php"); ?>
-
-
 <?php
+$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+if (!$isDraftRequest) {
+	include("head.php");
+}
+
 include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
-if ($_POST["submit"] = "submit") {
+if ($_POST["submit"] == "submit") {
 
-	$date_jong = $_POST["date_jong"];
-	$company = $_POST["company"];
-	$sale_code = $_POST["sale_code"];
-	$customer_id = $_POST["bill_id"];
-	$customer = $_POST["customer"];
-	$drescription = $_POST["drescription"];
-	$date_receive = $_POST["date_receive"];
+	$ref_id = mysqli_real_escape_string($conn, $_POST["ref_id"]);
+	$date_jong = mysqli_real_escape_string($conn, $_POST["date_jong"]);
+	$company = mysqli_real_escape_string($conn, $_POST["company"]);
+	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
+	$customer_id = mysqli_real_escape_string($conn, $_POST["bill_id"]);
+	$customer = mysqli_real_escape_string($conn, $_POST["customer"]);
+	$drescription = mysqli_real_escape_string($conn, $_POST["drescription"]);
+	$date_receive = mysqli_real_escape_string($conn, $_POST["date_receive"]);
 	$ref_receive =  substr($date_receive, 0, 7);
-	$address_send = $_POST["address_send"];
-	$send_stock = $_POST["send_stock"];
-	$contact_ckk = $_POST["contact_ckk"];
-	$type_jong = $_POST["type_jong"];
-	$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+	$address_send = mysqli_real_escape_string($conn, $_POST["address_send"]);
+	$send_stock = mysqli_real_escape_string($conn, $_POST["send_stock"] ?? '');
+	$contact_ckk = mysqli_real_escape_string($conn, $_POST["contact_ckk"] ?? '');
+	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
 	$status_doc = $isDraftRequest ? "Draft" : "Approve";
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
 	$add_by = "$name $surname";
 	$add_date = date('Y-m-d H:i:s');
-	$ref_id = $_POST["ref_id"];
+
+	$iv_no = '';
+	$ivNoQuery = mysqli_query($conn, "SELECT iv_no FROM hos__jongproduct WHERE ref_id = '" . $ref_id . "' LIMIT 1");
+	if ($ivNoQuery && ($ivNoRow = mysqli_fetch_assoc($ivNoQuery))) {
+		$iv_no = $ivNoRow['iv_no'];
+	}
 
 
 	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "'";
@@ -48,140 +55,59 @@ values
 
 
 
-	$id = $_POST["id"];
-	$product_id = $_POST["product_id"];
-	$count = $_POST["count"];
-	$sale_remarkk = $_POST["sale_remarkk"];
+	// รายการสินค้าแบบไดนามิก: id[] ว่าง = แถวใหม่ที่เพิ่มระหว่างแก้ไข, id[] ที่มีค่า = แถวเดิมให้ UPDATE
+	// แถวเดิมในฐานข้อมูลที่ไม่ถูกส่งกลับมา (ถูกลบออกจากหน้าจอ) จะถูก DELETE ทิ้ง
+	$idList = isset($_POST['id']) && is_array($_POST['id']) ? $_POST['id'] : array();
+	$productIdList = isset($_POST['product_id']) && is_array($_POST['product_id']) ? $_POST['product_id'] : array();
+	$countList = isset($_POST['count']) && is_array($_POST['count']) ? $_POST['count'] : array();
+	$saleRemarkkList = isset($_POST['sale_remarkk']) && is_array($_POST['sale_remarkk']) ? $_POST['sale_remarkk'] : array();
 
+	$keptIds = array();
 
-	$strSQL1 = "SELECT * FROM  hos__subjongpro WHERE ref_idd = '" . $ref_id . "' ";
-	$objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
-	$Num_Rows1 = mysqli_num_rows($objQuery1);
+	for ($i = 0; $i < count($productIdList); $i++) {
 
-	if ($Num_Rows1 > 0) {
-		foreach ($id as $key => $value) {
-			$id_new = $id[$key];
-			$sale_count_new = $count[$key];
-			$product_id_new = $product_id[$key];
-			$sale_remarkk_new = $sale_remarkk[$key];
+		$row_id = isset($idList[$i]) ? trim($idList[$i]) : '';
+		$row_product_id = trim($productIdList[$i]);
+		$row_count = isset($countList[$i]) ? trim($countList[$i]) : '';
+		$row_remark = isset($saleRemarkkList[$i]) ? $saleRemarkkList[$i] : '';
 
-
-			$strSQL1 = "Update  hos__subjongpro set  product_id = '" . $product_id_new . "',product_code = '" . $product_id_new . "',count ='" . $sale_count_new . "',sale_remark = '" . $sale_remarkk_new . "' where id = '" . $id_new . "'";
-			$objQuery1 = mysqli_query($conn, $strSQL1);
-
-
-
-			$strSQLs1 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id_new . "','" . $product_id_new . "','" . $sale_count_new . "','" . $sale_remarkk_new . "','" . $add_date . "','" . $add_by . "')";
-			$objQuerys1 = mysqli_query($conn, $strSQLs1);
+		if ($row_product_id === '') {
+			continue;
 		}
+
+		$row_product_id_esc = mysqli_real_escape_string($conn, $row_product_id);
+		$row_count_esc = mysqli_real_escape_string($conn, $row_count);
+		$row_remark_esc = mysqli_real_escape_string($conn, $row_remark);
+
+		if ($row_id !== '' && ctype_digit($row_id)) {
+			$strSQL1 = "UPDATE hos__subjongpro SET product_id = '" . $row_product_id_esc . "', product_code = '" . $row_product_id_esc . "', count = '" . $row_count_esc . "', sale_remark = '" . $row_remark_esc . "' WHERE id = '" . $row_id . "' AND ref_idd = '" . $ref_id . "'";
+			mysqli_query($conn, $strSQL1);
+			$keptIds[] = $row_id;
+		} else {
+			$strSQL1 = "INSERT INTO hos__subjongpro
+(ref_idd,product_id,product_code,count,sale_remark)
+VALUES ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc . "','" . $row_count_esc . "','" . $row_remark_esc . "')";
+			mysqli_query($conn, $strSQL1);
+			$newId = mysqli_insert_id($conn);
+			if ($newId) {
+				$keptIds[] = (string)$newId;
+			}
+		}
+
+		$strSQLs1 = "insert into hos__subjongpro_ref
+(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
+values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc . "','" . $row_count_esc . "','" . $row_remark_esc . "','" . $add_date . "','" . $add_by . "')";
+		mysqli_query($conn, $strSQLs1);
 	}
 
-
-
-
-	$product_id6 = $_POST["product_id6"];
-	$sale_count6 = $_POST["sale_count6"];
-	$sale_remarkk6 = $_POST["sale_remarkk6"];
-
-
-	$product_id7 = $_POST["product_id7"];
-	$sale_count7 = $_POST["sale_count7"];
-	$sale_remarkk7 = $_POST["sale_remarkk7"];
-
-
-	$product_id8 = $_POST["product_id8"];
-	$sale_count8 = $_POST["sale_count8"];
-	$sale_remarkk8 = $_POST["sale_remarkk8"];
-
-
-	$product_id9 = $_POST["product_id9"];
-	$sale_count9 = $_POST["sale_count9"];
-	$sale_remarkk9 = $_POST["sale_remarkk9"];
-
-
-	$product_id10 = $_POST["product_id10"];
-	$sale_count10 = $_POST["sale_count10"];
-	$sale_remarkk10 = $_POST["sale_remarkk10"];
-
-
-
-
-
-
-	if ($product_id6 !== '') {
-
-		$strSQL6 = "insert into hos__subjongpro
-(ref_idd,product_id,product_code,count,sale_remark)
-values ('" . $ref_id . "','" . $product_id6 . "','" . $product_id6 . "','" . $sale_count6 . "','" . $sale_remarkk6 . "')";
-		$objQuery6 = mysqli_query($conn, $strSQL6);
-
-
-		$strSQLs2 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id6 . "','" . $product_id6 . "','" . $sale_count6 . "','" . $sale_remarkk6 . "','" . $add_date . "','" . $add_by . "')";
-		$objQuerys2 = mysqli_query($conn, $strSQLs2);
-	}
-
-
-	if ($product_id7 !== '') {
-
-		$strSQL7 = "insert into hos__subjongpro
-(ref_idd,product_id,product_code,count,sale_remark)
-values ('" . $ref_id . "','" . $product_id7 . "','" . $product_id7 . "','" . $sale_count7 . "','" . $sale_remarkk7 . "')";
-		$objQuery7 = mysqli_query($conn, $strSQL7);
-
-
-		$strSQLs2 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id7 . "','" . $product_id7 . "','" . $sale_count7 . "','" . $sale_remarkk7 . "','" . $add_date . "','" . $add_by . "')";
-		$objQuerys2 = mysqli_query($conn, $strSQLs2);
-	}
-
-
-	if ($product_id8 !== '') {
-
-		$strSQL8 = "insert into hos__subjongpro
-(ref_idd,product_id,product_code,count,sale_remark)
-values ('" . $ref_id . "','" . $product_id8 . "','" . $product_id8 . "','" . $sale_count8 . "','" . $sale_remarkk8 . "')";
-		$objQuery8 = mysqli_query($conn, $strSQL8);
-
-
-		$strSQLs2 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id8 . "','" . $product_id8 . "','" . $sale_count8 . "','" . $sale_remarkk8 . "','" . $add_date . "','" . $add_by . "')";
-		$objQuerys2 = mysqli_query($conn, $strSQLs2);
-	}
-
-
-	if ($product_id9 !== '') {
-
-		$strSQL9 = "insert into hos__subjongpro
-(ref_idd,product_id,product_code,count,sale_remark)
-values ('" . $ref_id . "','" . $product_id9 . "','" . $product_id9 . "','" . $sale_count9 . "','" . $sale_remarkk9 . "')";
-		$objQuery9 = mysqli_query($conn, $strSQL9);
-
-
-		$strSQLs2 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id9 . "','" . $product_id9 . "','" . $sale_count9 . "','" . $sale_remarkk9 . "','" . $add_date . "','" . $add_by . "')";
-		$objQuerys2 = mysqli_query($conn, $strSQLs2);
-	}
-
-
-	if ($product_id10 !== '') {
-
-		$strSQL10 = "insert into hos__subjongpro
-(ref_idd,product_id,product_code,count,sale_remark)
-values ('" . $ref_id . "','" . $product_id10 . "','" . $product_id10 . "','" . $sale_count10 . "','" . $sale_remarkk10 . "')";
-		$objQuery10 = mysqli_query($conn, $strSQL10);
-
-
-		$strSQLs2 = "insert into hos__subjongpro_ref
-(ref_idd,product_id,product_code,count,sale_remark,add_date,add_by)
-values ('" . $ref_id . "','" . $product_id10 . "','" . $product_id10 . "','" . $sale_count10 . "','" . $sale_remarkk10 . "','" . $add_date . "','" . $add_by . "')";
-		$objQuerys2 = mysqli_query($conn, $strSQLs2);
+	$strSQLExisting = "SELECT id FROM hos__subjongpro WHERE ref_idd = '" . $ref_id . "'";
+	$objQueryExisting = mysqli_query($conn, $strSQLExisting);
+	if ($objQueryExisting) {
+		while ($existingRow = mysqli_fetch_assoc($objQueryExisting)) {
+			if (!in_array((string)$existingRow['id'], $keptIds, true)) {
+				mysqli_query($conn, "DELETE FROM hos__subjongpro WHERE id = '" . (int)$existingRow['id'] . "'");
+			}
+		}
 	}
 
 	if ($send_stock == '1' && !$isDraftRequest) {

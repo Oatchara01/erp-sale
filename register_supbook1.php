@@ -1,27 +1,28 @@
-<?php include("head.php"); ?>
-
-
 <?php
+$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+if (!$isDraftRequest) {
+	include("head.php");
+}
+
 include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
-if ($_POST["submit"] = "submit") {
+if ($_POST["submit"] == "submit") {
 
-	$date_jong = $_POST["date_jong"];
-	$company = $_POST["company"];
-	$customer_id = $_POST["bill_id"];
-	$customer = $_POST["customer"];
-	$drescription = $_POST["drescription"];
-	$date_receive = $_POST["date_receive"];
+	$date_jong = mysqli_real_escape_string($conn, $_POST["date_jong"]);
+	$company = mysqli_real_escape_string($conn, $_POST["company"]);
+	$customer_id = mysqli_real_escape_string($conn, $_POST["bill_id"]);
+	$customer = mysqli_real_escape_string($conn, $_POST["customer"]);
+	$drescription = mysqli_real_escape_string($conn, $_POST["drescription"]);
+	$date_receive = mysqli_real_escape_string($conn, $_POST["date_receive"]);
 	$ref_receive =  substr($date_receive, 0, 7);
-	$address_send = $_POST["address_send"];
-	$type_jong = $_POST["type_jong"];
-	$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+	$address_send = mysqli_real_escape_string($conn, $_POST["address_send"]);
+	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
 	$send_sup = $isDraftRequest ? '0' : '1';
 	$date_approve = date('Y-m-d');
 	$status_doc = $isDraftRequest ? "Draft" : "Approve";
-	$sale_code = $_POST["sale_code"];
+	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
 	$add_by = "$name $surname";
