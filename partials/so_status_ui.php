@@ -302,6 +302,12 @@ if (!defined('SO_STATUS_UI_STYLE_PRINTED')) {
 	}
 
 	/* ยกเลิก */
+	.badge-status.closed {
+		background-color: #F9F0FF;
+		color: #612989;
+	}
+
+	/* ปิดใบจอง */
 	.badge-status.pending-mgr {
 		background-color: #FFF7E6;
 		color: #D48806;

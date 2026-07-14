@@ -178,8 +178,8 @@ if ($savedRefId !== "") {
 	}
 
 	.so-subsection-title {
-		font-size: 15px;
-		font-weight: 600;
+		font-size: 20px;
+		font-weight: 500;
 		color: #3B3B3B;
 		margin: 0;
 	}
@@ -235,6 +235,19 @@ if ($savedRefId !== "") {
 
 		.so-grid-2,
 		.so-grid-3 {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+	}
+
+	.so-grid-cancel {
+		display: grid;
+		grid-template-columns: 200px 1fr;
+		gap: 32px;
+	}
+
+	@media (max-width: 768px) {
+		.so-grid-cancel {
 			grid-template-columns: 1fr;
 			gap: 16px;
 		}
@@ -414,6 +427,41 @@ if ($savedRefId !== "") {
 	.btn-so-secondary:hover {
 		background: #EFEBFF;
 		border-color: #612989;
+	}
+
+	.btn-so-danger {
+		background-color: #FFFFFF;
+		color: #612989;
+		border: 1px solid #EFEBEF;
+		border-radius: 24px;
+		height: 45px;
+		padding: 0 24px;
+		font-weight: 500;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+		font-family: 'Prompt', sans-serif;
+		transition: all 0.2s ease;
+		box-sizing: border-box;
+	}
+
+	.btn-so-danger:hover {
+		background-color: #EFEBFF;
+		border-color: #612989;
+	}
+
+	.btn-so-danger:active,
+	.btn-so-danger.is-active {
+		background-color: #FEE2E2 !important;
+		color: #DC2626 !important;
+		border-color: transparent !important;
+	}
+
+	.btn-so-danger:active img,
+	.btn-so-danger.is-active img {
+		filter: invert(24%) sepia(85%) saturate(3015%) hue-rotate(345deg) brightness(92%) contrast(92%) !important;
 	}
 
 	/* Tabs (เหมือน register_suphos.php) */
@@ -1180,6 +1228,98 @@ if ($savedRefId !== "") {
 			justify-content: center;
 		}
 	}
+
+	/* Custom SweetAlert2 Delete Popup (Figma style 648x319) */
+	.figma-delete-popup {
+		width: min(525px, 94vw) !important;
+		min-height: 319px !important;
+		padding: 40px 32px 32px !important;
+		border-radius: 24px !important;
+		font-family: 'Prompt', sans-serif !important;
+		box-sizing: border-box !important;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+	}
+
+	.figma-delete-icon {
+		border: none !important;
+		margin: 0 auto 20px !important;
+		width: 80px !important;
+		height: 80px !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+	}
+
+	.figma-delete-title {
+		font-size: 22px !important;
+		font-weight: 600 !important;
+		color: #1C1B1F !important;
+		margin: 0 0 10px 0 !important;
+		padding: 0 !important;
+	}
+
+	.figma-delete-html {
+		font-size: 15px !important;
+		color: #8E8B94 !important;
+		margin: 0 0 28px 0 !important;
+		line-height: 1.5 !important;
+	}
+
+	.figma-delete-actions {
+		display: flex !important;
+		gap: 16px !important;
+		justify-content: center !important;
+		width: 100% !important;
+		max-width: 320px !important;
+		margin: 0 auto !important;
+	}
+
+	.figma-delete-confirm-btn {
+		flex: 1 !important;
+		height: 44px !important;
+		border-radius: 22px !important;
+		border: none !important;
+		background-color: #EF5350 !important;
+		/* Figma Red */
+		color: #ffffff !important;
+		font-family: 'Prompt', sans-serif !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		cursor: pointer !important;
+		box-shadow: 0 4px 10px rgba(239, 83, 80, 0.2) !important;
+		transition: background-color 0.2s, transform 0.1s !important;
+	}
+
+	.figma-delete-confirm-btn:hover {
+		background-color: #e53935 !important;
+	}
+
+	.figma-delete-confirm-btn:active {
+		transform: scale(0.98) !important;
+	}
+
+	.figma-delete-cancel-btn {
+		flex: 1 !important;
+		height: 44px !important;
+		border-radius: 22px !important;
+		border: 1px solid #EDE9F0 !important;
+		background-color: #F5F6F8 !important;
+		color: #3b3b3b !important;
+		font-family: 'Prompt', sans-serif !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		cursor: pointer !important;
+		transition: background-color 0.2s, transform 0.1s !important;
+	}
+
+	.figma-delete-cancel-btn:hover {
+		background-color: #e8e9eb !important;
+		color: #1c1b1f !important;
+	}
+
+	.figma-delete-cancel-btn:active {
+		transform: scale(0.98) !important;
+	}
 </style>
 
 <div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
@@ -1228,7 +1368,7 @@ if ($savedRefId !== "") {
 		</div>
 	</div>
 
-	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data">
+	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return lockSubmitForm(this);">
 		<?php if ($savedJong !== null && !$isCopy) { ?>
 			<input type="hidden" name="ref_id" value="<?php echo htmlspecialchars($savedJong['ref_id'], ENT_QUOTES, 'UTF-8'); ?>">
 		<?php } else { ?>
@@ -1236,12 +1376,6 @@ if ($savedRefId !== "") {
 															echo $nextId; ?>">
 		<?php } ?>
 
-
-		<!-- Tab buttons -->
-		<div class="so-tabs-container">
-			<button type="button" class="so-tab-btn active" onclick="switchSoTab(event, 'tabDoc')">ข้อมูลเอกสาร</button>
-			<button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tabAdmin')">Admin</button>
-		</div>
 
 		<!-- TAB 1: ข้อมูลเอกสาร -->
 		<div id="tabDoc" class="so-tab-content active">
@@ -1260,7 +1394,7 @@ if ($savedRefId !== "") {
 					</div>
 
 					<div class="so-field-group">
-						<label class="so-label">ประเภทการจอง <span style="color:red;">*</span></label>
+						<label class="so-label">ประเภท <span style="color:red;">*</span></label>
 						<select name="type_jong" id="type_jong" class="so-select" required>
 							<option value="">**Please Select**</option>
 							<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
@@ -1363,7 +1497,7 @@ if ($savedRefId !== "") {
 					<h3 class="so-subsection-title">ข้อมูลเอกสาร</h3>
 				</div>
 
-				<div class="so-grid-2">
+				<div class="so-grid-3">
 					<div class="so-field-group">
 						<label class="so-label" for="date_jong">วันที่แจ้ง</label>
 						<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
@@ -1372,186 +1506,176 @@ if ($savedRefId !== "") {
 						<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
 						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
 					</div>
+					<div class="so-field-group">
+						<label class="so-label" for="admin_doc_no">เลขที่เอกสาร</label>
+						<input type="text" name="admin_doc_no" id="admin_doc_no" class="so-input" placeholder="ระบบสร้างให้อัตโนมัติ" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['iv_no'], ENT_QUOTES, 'UTF-8') : ''; ?>" readonly>
+					</div>
+				</div>
+
+				<?php $isCancelled = ($savedJong !== null && !$isCopy && $savedJong['cancel_ckk'] == '1'); ?>
+				<div class="so-grid-cancel">
+					<div class="so-field-group">
+						<label class="so-label">&nbsp;</label>
+						<input type="hidden" name="cancel_ckk" id="cancel_ckk" value="<?php echo $isCancelled ? '1' : '0'; ?>">
+						<button type="button" class="btn-so-danger<?php echo $isCancelled ? ' is-active' : ''; ?>" style="width: 100%; justify-content: center;" onclick="this.classList.toggle('is-active'); document.getElementById('cancel_ckk').value = this.classList.contains('is-active') ? '1' : '0';">
+							<img src="img/icons/circle_x.png" alt="" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
+						</button>
+					</div>
+					<div class="so-field-group">
+						<label class="so-label" for="admin_cancel_reason">หมายเหตุการยกเลิก</label>
+						<div class="so-input-wrapper">
+							<input type="text" name="admin_cancel_reason" id="admin_cancel_reason" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['remark'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="กรอกหมายเหตุ">
+							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('admin_cancel_reason');"></i>
+						</div>
+					</div>
 				</div>
 
 			</div>
 		</div>
 
-		<!-- TAB 2: Admin -->
-		<?php
-		$adminInfoTab = [
-			'tab_id' => 'tabAdmin',
-			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
-			'rows'   => [
-				[
-					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => '', 'placeholder' => 'No.'],
-					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
-					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'fas fa-search'],
-					['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => '', 'icon' => 'fas fa-search'],
-				],
-				[
-					['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => '', 'icon' => 'fas fa-search'],
-					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'],
-					['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => '', 'placeholder' => 'Numbers only'],
-					['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => '', 'placeholder' => 'Numbers only'],
-				],
-				[
-					['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => '', 'icon' => 'far fa-calendar-alt'],
-					['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
-				],
-				[
-					['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
-					['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
-				],
-			],
-		];
-		include __DIR__ . '/partials/admin_info_tab.php';
-		unset($adminInfoTab);
-		?>
-
 		<!-- กล่อง: ข้อมูลลูกค้า -->
 		<div class="so-card">
-				<div class="so-section-title-container">
-					<h2 class="so-section-title">ข้อมูลลูกค้า</h2>
-					<hr class="so-divider">
-				</div>
+			<div class="so-section-title-container">
+				<h2 class="so-section-title">ข้อมูลลูกค้า</h2>
+				<hr class="so-divider">
+			</div>
 
-				<div class="so-customer-top-grid">
-					<div class="so-customer-top-left">
-						<div class="so-customer-pills-row">
-							<button type="button" class="btn-add-customer-pill" onclick="openCustomerPopup();">
-								<img src="img/icons/add_user.png" alt="add_user" style="width: 23px;"> ข้อมูลลูกค้า
-							</button>
-						</div>
-
-						<div class="so-field-group" style="margin-bottom: 0;">
-							<label class="so-label" for="customer">ชื่อลูกค้า</label>
-							<div class="so-input-wrapper">
-								<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-								<i class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();"></i>
-							</div>
-						</div>
+			<div class="so-customer-top-grid">
+				<div class="so-customer-top-left">
+					<div class="so-customer-pills-row">
+						<button type="button" class="btn-add-customer-pill" onclick="openCustomerPopup();">
+							<img src="img/icons/add_user.png" alt="add_user" style="width: 23px;"> ข้อมูลลูกค้า
+						</button>
 					</div>
 
-					<div class="so-customer-top-right">
-						<div class="so-field-group" style="height: 100%; margin-bottom: 0;">
-							<label class="so-label">ข้อมูลลูกค้า</label>
-							<div class="customer-info-display-card">
-								<div class="cidc-col">
-									<div class="cidc-row">
-										<div class="cidc-label">รหัสลูกค้า</div>
-										<div class="cidc-value">
-											<span id="display_bill_id" class="cidc-display-text"><?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
-											<input type="hidden" name="bill_id" id="bill_id" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-											<input type="hidden" name="h_bill_id" id="h_bill_id" readonly value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-										</div>
-									</div>
-									<div class="cidc-row">
-										<div class="cidc-label">เบอร์โทร</div>
-										<div class="cidc-value">
-											<input type="text" id="display_bill_tel" class="cidc-value-input" readonly>
-										</div>
-									</div>
-									<div class="cidc-row">
-										<div class="cidc-label">สถานะลูกค้า</div>
-										<div class="cidc-value">
-											<img src="img/icons/vip.png" class="cidc-status-icon" id="display_vip_icon" alt="VIP" style="display: none;">
-											<input type="text" id="display_mode_name" class="cidc-value-input" readonly>
-										</div>
+					<div class="so-field-group" style="margin-bottom: 0;">
+						<label class="so-label" for="customer">ชื่อลูกค้า</label>
+						<div class="so-input-wrapper">
+							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+							<i class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();"></i>
+						</div>
+					</div>
+				</div>
+
+				<div class="so-customer-top-right">
+					<div class="so-field-group" style="height: 100%; margin-bottom: 0;">
+						<label class="so-label">ข้อมูลลูกค้า</label>
+						<div class="customer-info-display-card">
+							<div class="cidc-col">
+								<div class="cidc-row">
+									<div class="cidc-label">รหัสลูกค้า</div>
+									<div class="cidc-value">
+										<span id="display_bill_id" class="cidc-display-text"><?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?></span>
+										<input type="hidden" name="bill_id" id="bill_id" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+										<input type="hidden" name="h_bill_id" id="h_bill_id" readonly value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer_id'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 									</div>
 								</div>
-								<div class="cidc-col">
-									<div class="cidc-row">
-										<div class="cidc-label">ชื่อลูกค้า</div>
-										<div class="cidc-value">
-											<input type="text" id="display_bill_name" class="cidc-value-input" readonly>
-										</div>
+								<div class="cidc-row">
+									<div class="cidc-label">เบอร์โทร</div>
+									<div class="cidc-value">
+										<input type="text" id="display_bill_tel" class="cidc-value-input" readonly>
 									</div>
-									<div class="cidc-row">
-										<div class="cidc-label">ประเภทลูกค้า</div>
-										<div class="cidc-value">
-											<input type="text" id="display_customer_typename" class="cidc-value-input" readonly>
-										</div>
-									</div>
-									<div class="cidc-row">
-										<div class="cidc-label">เครดิตยอดขาย</div>
-										<div class="cidc-value">
-											<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled>
-												<span id="display_credit_thb" class="credit-term-trigger-text"></span>
-												<img src="img/icons/edit.png?v=20260610" class="credit-term-trigger-icon" alt="แก้ไข">
-											</button>
-										</div>
+								</div>
+								<div class="cidc-row">
+									<div class="cidc-label">สถานะลูกค้า</div>
+									<div class="cidc-value">
+										<img src="img/icons/vip.png" class="cidc-status-icon" id="display_vip_icon" alt="VIP" style="display: none;">
+										<input type="text" id="display_mode_name" class="cidc-value-input" readonly>
 									</div>
 								</div>
 							</div>
-						</div>
-					</div>
-
-					<div class="so-customer-address-wrap">
-						<div class="so-field-group" style="margin-bottom: 0;">
-							<label class="so-label" for="address_send">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
-							<div class="so-input-wrapper">
-								<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
-								<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');"></i>
+							<div class="cidc-col">
+								<div class="cidc-row">
+									<div class="cidc-label">ชื่อลูกค้า</div>
+									<div class="cidc-value">
+										<input type="text" id="display_bill_name" class="cidc-value-input" readonly>
+									</div>
+								</div>
+								<div class="cidc-row">
+									<div class="cidc-label">ประเภทลูกค้า</div>
+									<div class="cidc-value">
+										<input type="text" id="display_customer_typename" class="cidc-value-input" readonly>
+									</div>
+								</div>
+								<div class="cidc-row">
+									<div class="cidc-label">เครดิตยอดขาย</div>
+									<div class="cidc-value">
+										<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled>
+											<span id="display_credit_thb" class="credit-term-trigger-text"></span>
+											<img src="img/icons/edit.png?v=20260610" class="credit-term-trigger-icon" alt="แก้ไข">
+										</button>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-			</div>
 
-			<!-- กล่อง: หมายเหตุ -->
-			<div class="so-card">
-				<div class="so-section-title-container">
-					<h2 class="so-section-title">หมายเหตุ</h2>
-				</div>
-				<hr class="so-divider" style="margin: -12px 0 24px 0;">
-				<div class="so-field-group" style="margin-bottom: 0;">
-					<label class="so-label" for="drescription">หมายเหตุ</label>
-					<textarea name="drescription" id="drescription" class="so-textarea" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="margin-bottom: 0;"><?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['drescription'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+				<div class="so-customer-address-wrap">
+					<div class="so-field-group" style="margin-bottom: 0;">
+						<label class="so-label" for="address_send">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
+						<div class="so-input-wrapper">
+							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');"></i>
+						</div>
+					</div>
 				</div>
 			</div>
+		</div>
 
-
-			<!-- กล่อง: รายการสินค้า -->
-			<div class="so-card">
-				<div class="so-section-title-container so-product-section-header">
-					<h2 class="so-section-title">รายการสินค้า</h2>
-					<span class="so-product-count" id="productItemCount">0 รายการ</span>
-				</div>
-				<hr class="so-divider" style="margin: -12px 0 24px 0;">
-
-				<div class="so-product-total-box">
-					<span class="so-product-total-label">จำนวนรวม(ชิ้น)</span>
-					<span class="so-product-total-value" id="productTotalQty">0</span>
-				</div>
-
-				<div class="so-product-search-wrap">
-					<i class="fas fa-search"></i>
-					<input type="text" id="productSearchInput" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off">
-					<div id="productSearchResults" class="product-search-dropdown"></div>
-				</div>
-
-				<div class="so-product-table-wrap">
-					<table class="so-product-dyn-table">
-						<thead>
-							<tr>
-								<th class="col-handle"></th>
-								<th>รหัสสินค้า</th>
-								<th>รายการสินค้า</th>
-								<th class="col-qty">จำนวน</th>
-								<th class="col-actions"></th>
-							</tr>
-						</thead>
-						<tbody id="productTableBody">
-							<tr id="productEmptyRow">
-								<td colspan="5" class="product-empty">ยังไม่มีรายการสินค้า ค้นหาด้านบนเพื่อเพิ่มรายการ</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<div id="productHiddenInputs"></div>
+		<!-- กล่อง: หมายเหตุ -->
+		<div class="so-card">
+			<div class="so-section-title-container">
+				<h2 class="so-section-title">หมายเหตุ</h2>
 			</div>
+			<hr class="so-divider" style="margin: -12px 0 24px 0;">
+			<div class="so-field-group" style="margin-bottom: 0;">
+				<label class="so-label" for="drescription">หมายเหตุ</label>
+				<textarea name="drescription" id="drescription" class="so-textarea" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="margin-bottom: 0;"><?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['drescription'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+			</div>
+		</div>
+
+
+		<!-- กล่อง: รายการสินค้า -->
+		<div class="so-card">
+			<div class="so-section-title-container so-product-section-header">
+				<h2 class="so-section-title">รายการสินค้า</h2>
+				<span class="so-product-count" id="productItemCount">0 รายการ</span>
+			</div>
+			<hr class="so-divider" style="margin: -12px 0 24px 0;">
+
+			<div class="so-product-total-box">
+				<span class="so-product-total-label">จำนวนรวม(ชิ้น)</span>
+				<span class="so-product-total-value" id="productTotalQty">0</span>
+			</div>
+
+			<div class="so-product-search-wrap">
+				<i class="fas fa-search"></i>
+				<input type="text" id="productSearchInput" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off">
+				<div id="productSearchResults" class="product-search-dropdown"></div>
+			</div>
+
+			<div class="so-product-table-wrap">
+				<table class="so-product-dyn-table">
+					<thead>
+						<tr>
+							<th class="col-handle"></th>
+							<th>รหัสสินค้า</th>
+							<th>รายการสินค้า</th>
+							<th class="col-qty">จำนวน</th>
+							<th class="col-actions"></th>
+						</tr>
+					</thead>
+					<tbody id="productTableBody">
+						<tr id="productEmptyRow">
+							<td colspan="5" class="product-empty">ยังไม่มีรายการสินค้า ค้นหาด้านบนเพื่อเพิ่มรายการ</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div id="productHiddenInputs"></div>
+		</div>
 </div>
 
 <div class="so-sticky-actions">
@@ -1937,7 +2061,7 @@ if ($savedRefId !== "") {
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
 				'<td class="col-actions">' +
 				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
-				'<button type="button" class="product-row-icon-btn" onclick="removeProductRow(' + idx + ')" title="ลบ"><i class="fas fa-trash"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="askDeleteProductRow(' + idx + ')" title="ลบ"><i class="fas fa-trash"></i></button>' +
 				'</td>' +
 				'</tr>';
 		}).join('');
@@ -1959,6 +2083,14 @@ if ($savedRefId !== "") {
 	}
 
 	function addProductRow(product) {
+		var existing = productRows.find(function(r) {
+			return String(r.product_id) === String(product.product_id);
+		});
+		if (existing) {
+			existing.count = (parseFloat(existing.count) || 0) + 1;
+			renderProductTable();
+			return;
+		}
 		productRows.push({
 			product_id: product.product_id,
 			product_code: product.product_code,
@@ -1975,24 +2107,63 @@ if ($savedRefId !== "") {
 		renderProductTable();
 	}
 
+	function askDeleteProductRow(idx) {
+		var product = productRows[idx];
+		if (!product) return;
+
+		Swal.fire({
+			title: 'ลบรายการสินค้า ?',
+			html: 'คุณต้องการลบ "' + escapeProductHtml(product.product_name) + '" ในรายการสินค้านี้',
+			showCancelButton: true,
+			confirmButtonText: 'ตกลง',
+			cancelButtonText: 'ยกเลิก',
+			reverseButtons: true,
+			iconHtml: `
+				<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+					<path d="M4 6H20V8H4V6Z" fill="#EF5350"/>
+					<path d="M10 2H14V4H10V2Z" fill="#EF5350"/>
+					<path d="M5 9H19V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V9Z" fill="#EF5350"/>
+					<rect x="9" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+					<rect x="13" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+				</svg>
+			`,
+			customClass: {
+				popup: 'figma-delete-popup',
+				title: 'figma-delete-title',
+				htmlContainer: 'figma-delete-html',
+				confirmButton: 'figma-delete-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn',
+				actions: 'figma-delete-actions',
+				icon: 'figma-delete-icon'
+			},
+			buttonsStyling: false
+		}).then(function(result) {
+			if (result.isConfirmed) {
+				removeProductRow(idx);
+			}
+		});
+	}
+
 	function updateProductCount(idx, val) {
 		productRows[idx].count = val;
+		var hiddenWrap = document.getElementById('productHiddenInputs');
+		var countInputName = <?php echo ($savedJong !== null && !$isCopy) ? "'count[]'" : "'sale_count[]'"; ?>;
+		if (hiddenWrap) {
+			var inputs = hiddenWrap.querySelectorAll('input[name="' + countInputName + '"]');
+			if (inputs[idx]) inputs[idx].value = val;
+		}
 		var totalQty = productRows.reduce(function(sum, r) {
 			return sum + (parseFloat(r.count) || 0);
 		}, 0);
 		document.getElementById('productTotalQty').textContent = totalQty;
-		var hiddenWrap = document.getElementById('productHiddenInputs');
-		if (hiddenWrap) {
-			var inputs = hiddenWrap.querySelectorAll('input[name="sale_count[]"]');
-			if (inputs[idx]) inputs[idx].value = val;
-		}
 	}
 
 	function updateProductRemark(idx, val) {
 		productRows[idx].remark = val;
 		var hiddenWrap = document.getElementById('productHiddenInputs');
+		var remarkInputName = <?php echo ($savedJong !== null && !$isCopy) ? "'sale_remarkk[]'" : "'sale_remark[]'"; ?>;
 		if (hiddenWrap) {
-			var inputs = hiddenWrap.querySelectorAll('input[name="sale_remark[]"]');
+			var inputs = hiddenWrap.querySelectorAll('input[name="' + remarkInputName + '"]');
 			if (inputs[idx]) inputs[idx].value = val;
 		}
 	}
@@ -2157,6 +2328,24 @@ if ($savedRefId !== "") {
 			}
 		<?php } ?>
 	});
+
+	var __formSubmitting = false;
+
+	function lockSubmitForm(form) {
+		if (__formSubmitting) return false;
+		__formSubmitting = true;
+		var btn = document.getElementById('btn_submit_form');
+		if (btn) {
+			// ต้อง disable แบบ deferred (setTimeout 0) เพราะถ้า disable ทันทีใน onsubmit
+			// เบราว์เซอร์จะไม่ส่งค่า name="submit" ของปุ่มนี้ไปกับฟอร์ม (input ที่ disabled จะไม่ถูก serialize)
+			// ทำให้ $_POST["submit"] หายไปฝั่ง PHP
+			btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+			setTimeout(function() {
+				btn.disabled = true;
+			}, 0);
+		}
+		return true;
+	}
 
 	function previewBooking() {
 		var form = document.forms['frmMain'];

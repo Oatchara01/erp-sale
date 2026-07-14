@@ -5,6 +5,151 @@ include "dbconnect.php";
 include "dbconnect_sale.php";
 
 ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+	/* Custom SweetAlert2 Close SO Popup (Figma style 648x319) */
+	.figma-close-so-popup {
+		width: min(648px, 94vw) !important;
+		min-height: 319px !important;
+		padding: 40px 32px 32px !important;
+		border-radius: 24px !important;
+		font-family: 'Prompt', sans-serif !important;
+		box-sizing: border-box !important;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+	}
+
+	.figma-close-so-icon {
+		border: none !important;
+		margin: 0 auto 20px !important;
+		width: 80px !important;
+		height: 80px !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+	}
+
+	.figma-close-so-title {
+		font-size: 22px !important;
+		font-weight: 600 !important;
+		color: #1C1B1F !important;
+		margin: 0 0 10px 0 !important;
+		padding: 0 !important;
+	}
+
+	.figma-close-so-html {
+		font-size: 15px !important;
+		color: #8E8B94 !important;
+		margin: 0 0 28px 0 !important;
+		line-height: 1.5 !important;
+	}
+
+	.figma-close-so-actions {
+		display: flex !important;
+		gap: 16px !important;
+		justify-content: center !important;
+		width: 100% !important;
+		max-width: 320px !important;
+		margin: 0 auto !important;
+	}
+
+	.figma-close-so-confirm-btn {
+		flex: 1 !important;
+		height: 44px !important;
+		border-radius: 22px !important;
+		border: none !important;
+		background-color: #612989 !important;
+		/* สีม่วงหลัก */
+		color: #ffffff !important;
+		font-family: 'Prompt', sans-serif !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		cursor: pointer !important;
+		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2) !important;
+		transition: background-color 0.2s, transform 0.1s !important;
+	}
+
+	.figma-close-so-confirm-btn:hover {
+		background-color: #502173 !important;
+	}
+
+	.figma-close-so-confirm-btn:active {
+		transform: scale(0.98) !important;
+	}
+
+	.figma-close-so-cancel-btn {
+		flex: 1 !important;
+		height: 44px !important;
+		border-radius: 22px !important;
+		border: 1px solid #EDE9F0 !important;
+		background-color: #F5F6F8 !important;
+		color: #3b3b3b !important;
+		font-family: 'Prompt', sans-serif !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		cursor: pointer !important;
+		transition: background-color 0.2s, transform 0.1s !important;
+	}
+
+	.figma-close-so-cancel-btn:hover {
+		background-color: #e8e9eb !important;
+		color: #1c1b1f !important;
+	}
+
+	.figma-close-so-cancel-btn:active {
+		transform: scale(0.98) !important;
+	}
+
+	/* Custom SweetAlert2 Result Popup (Figma style 648x319) */
+	.figma-result-popup {
+		width: min(648px, 94vw) !important;
+		min-height: 319px !important;
+		padding: 40px 32px 32px !important;
+		border-radius: 24px !important;
+		font-family: 'Prompt', sans-serif !important;
+		box-sizing: border-box !important;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+	}
+
+	.figma-result-title {
+		font-size: 24px !important;
+		font-weight: 600 !important;
+		color: #1C1B1F !important;
+		margin: 0 0 16px 0 !important;
+		padding: 0 !important;
+	}
+
+	.figma-result-actions {
+		display: flex !important;
+		justify-content: center !important;
+		width: 100% !important;
+		max-width: 160px !important;
+		margin: 24px auto 0 !important;
+	}
+
+	.figma-result-confirm-btn {
+		width: 100% !important;
+		height: 44px !important;
+		border-radius: 22px !important;
+		border: none !important;
+		background-color: #612989 !important;
+		color: #ffffff !important;
+		font-family: 'Prompt', sans-serif !important;
+		font-size: 16px !important;
+		font-weight: 500 !important;
+		cursor: pointer !important;
+		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2) !important;
+		transition: background-color 0.2s, transform 0.1s !important;
+	}
+
+	.figma-result-confirm-btn:hover {
+		background-color: #502173 !important;
+	}
+
+	.figma-result-confirm-btn:active {
+		transform: scale(0.98) !important;
+	}
+</style>
+
 
 <body>
 	<div class="status-so-page">
@@ -155,7 +300,7 @@ include "dbconnect_sale.php";
 							<th style="white-space:nowrap;">ชื่อลูกค้า</th>
 							<th style="white-space:nowrap;">หมายเหตุ</th>
 							<th style="white-space:nowrap;">เขตการขาย</th>
-							<th style="white-space:nowrap;">สถานะ</th>
+							<th style="white-space:nowrap; width:10%;">สถานะ</th>
 							<th width="5%" style="text-align:center;"></th>
 						</tr>
 					</thead>
@@ -283,6 +428,8 @@ include "dbconnect_sale.php";
 									<span class="badge-status cancel">ยกเลิก</span>
 								<?php } else if ($objResult["status_doc"] == 'Rejected') { ?>
 									<span class="badge-status rejected">ไม่อนุมัติ</span>
+								<?php } else if ($objResult["close_jong"] == '1') { ?>
+									<span class="badge-status closed">ปิดใบจอง</span>
 								<?php } else if ($objResult["status_doc"] == 'Approve') { ?>
 									<span class="badge-status approve">อนุมัติแล้ว</span>
 								<?php } else if ($objResult["status_doc"] == 'Request') { ?>
@@ -307,6 +454,9 @@ include "dbconnect_sale.php";
 										</a>
 										<a href="report_jongpro.php?ref_id=<?php echo $objResult["ref_id"]; ?>" class="so-dropdown-item" target="_blank">
 											<i class="fas fa-print" style="width:16px;"></i> พิมพ์รายงาน
+										</a>
+										<a href="javascript:void(0);" onclick="confirmCloseJongSup('<?php echo $objResult["ref_id"]; ?>')" class="so-dropdown-item">
+											<i class="fas fa-lock" style="width:16px;"></i> ปิดใบจอง
 										</a>
 									</div>
 								</div>
@@ -392,6 +542,104 @@ include "dbconnect_sale.php";
 
 		<!-- JS Helpers for Expandable Rows, Kebab Dropdowns, and Filter Modal -->
 		<script>
+			function confirmCloseJongSup(refId) {
+				Swal.fire({
+					title: 'ปิดใบจอง ?',
+					html: 'คุณต้องการปิดใบจอง เลขที่เอกสาร " ' + refId + ' " ใช่ไหม ?',
+					showCancelButton: true,
+					confirmButtonText: 'ตกลง',
+					cancelButtonText: 'ยกเลิก',
+					reverseButtons: true,
+					iconHtml: `
+						<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+							<path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#4A4A4A"/>
+							<path d="M14 2V8H20L14 2Z" fill="#333333"/>
+							<path d="M9 11L15 17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+							<path d="M15 11L9 17" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+						</svg>
+					`,
+					customClass: {
+						popup: 'figma-close-so-popup',
+						title: 'figma-close-so-title',
+						htmlContainer: 'figma-close-so-html',
+						confirmButton: 'figma-close-so-confirm-btn',
+						cancelButton: 'figma-close-so-cancel-btn',
+						actions: 'figma-close-so-actions',
+						icon: 'figma-close-so-icon'
+					},
+					buttonsStyling: false
+				}).then(function(result) {
+					if (!result.isConfirmed) return;
+
+					Swal.fire({
+						title: 'กำลังปิดใบจอง...',
+						allowOutsideClick: false,
+						allowEscapeKey: false,
+						showConfirmButton: false,
+						didOpen: function() {
+							Swal.showLoading();
+						},
+						customClass: {
+							popup: 'figma-result-popup',
+							title: 'figma-result-title'
+						}
+					});
+
+					fetch('close_jongsup1.php?ref_id=' + encodeURIComponent(refId))
+						.then(function(res) {
+							return res.json();
+						})
+						.then(function(data) {
+							if (data && data.success) {
+								Swal.fire({
+									title: data.message || 'ปิดใบจองเรียบร้อยแล้ว',
+									icon: 'success',
+									confirmButtonText: 'ตกลง',
+									iconColor: '#612989',
+									customClass: {
+										popup: 'figma-result-popup',
+										title: 'figma-result-title',
+										confirmButton: 'figma-result-confirm-btn',
+										actions: 'figma-result-actions'
+									},
+									buttonsStyling: false
+								}).then(function() {
+									location.reload();
+								});
+							} else {
+								Swal.fire({
+									title: (data && data.message) || 'ไม่สามารถปิดใบจองได้',
+									icon: 'error',
+									confirmButtonText: 'ตกลง',
+									iconColor: '#EF5350',
+									customClass: {
+										popup: 'figma-result-popup',
+										title: 'figma-result-title',
+										confirmButton: 'figma-result-confirm-btn',
+										actions: 'figma-result-actions'
+									},
+									buttonsStyling: false
+								});
+							}
+						})
+						.catch(function() {
+							Swal.fire({
+								title: 'เกิดข้อผิดพลาด ไม่สามารถปิดใบจองได้',
+								icon: 'error',
+								confirmButtonText: 'ตกลง',
+								iconColor: '#EF5350',
+								customClass: {
+									popup: 'figma-result-popup',
+									title: 'figma-result-title',
+									confirmButton: 'figma-result-confirm-btn',
+									actions: 'figma-result-actions'
+								},
+								buttonsStyling: false
+							});
+						});
+				});
+			}
+
 			function toggleRow(rowClass, triggerEl) {
 				const rows = document.querySelectorAll('.' + rowClass);
 				const isVisible = rows.length > 0 && rows[0].style.display !== 'none';

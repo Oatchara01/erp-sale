@@ -4,8 +4,106 @@
     <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
     <script type="text/javascript" src="js/autocomplete.js"></script>
     <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof Swal === 'undefined') {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+            document.head.appendChild(script);
+        }
+    </script>
+    <style>
+        /* Custom SweetAlert2 Delete Popup (Figma style 648x319) */
+        .figma-delete-popup {
+            width: min(525px, 94vw) !important;
+            min-height: 319px !important;
+            padding: 40px 32px 32px !important;
+            border-radius: 24px !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            box-sizing: border-box !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+        }
 
+        .figma-delete-icon {
+            border: none !important;
+            margin: 0 auto 20px !important;
+            width: 80px !important;
+            height: 80px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
 
+        .figma-delete-title {
+            font-size: 22px !important;
+            font-weight: 600 !important;
+            color: #1C1B1F !important;
+            margin: 0 0 10px 0 !important;
+            padding: 0 !important;
+        }
+
+        .figma-delete-html {
+            font-size: 15px !important;
+            color: #8E8B94 !important;
+            margin: 0 0 28px 0 !important;
+            line-height: 1.5 !important;
+        }
+
+        .figma-delete-actions {
+            display: flex !important;
+            gap: 16px !important;
+            justify-content: center !important;
+            width: 100% !important;
+            max-width: 320px !important;
+            margin: 0 auto !important;
+        }
+
+        .figma-delete-confirm-btn {
+            flex: 1 !important;
+            height: 44px !important;
+            border-radius: 22px !important;
+            border: none !important;
+            background-color: #EF5350 !important;
+            /* Figma Red */
+            color: #ffffff !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 10px rgba(239, 83, 80, 0.2) !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+
+        .figma-delete-confirm-btn:hover {
+            background-color: #e53935 !important;
+        }
+
+        .figma-delete-confirm-btn:active {
+            transform: scale(0.98) !important;
+        }
+
+        .figma-delete-cancel-btn {
+            flex: 1 !important;
+            height: 44px !important;
+            border-radius: 22px !important;
+            border: 1px solid #EDE9F0 !important;
+            background-color: #F5F6F8 !important;
+            color: #3b3b3b !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+
+        .figma-delete-cancel-btn:hover {
+            background-color: #e8e9eb !important;
+            color: #1c1b1f !important;
+        }
+
+        .figma-delete-cancel-btn:active {
+            transform: scale(0.98) !important;
+        }
+    </style>
 </head>
 
 <script type="text/javascript">
@@ -488,7 +586,8 @@
             padding: 10px 12px;
             position: absolute;
             z-index: 1000;
-            bottom: 125%; /* แสดงเหนือไอคอน */
+            bottom: 125%;
+            /* แสดงเหนือไอคอน */
             left: 50%;
             transform: translateX(-50%);
             opacity: 0;
@@ -496,9 +595,11 @@
             font-size: 12px;
             font-weight: normal;
             line-height: 1.4;
-            pointer-events: none; /* เพื่อไม่ให้ขวางทิศทางเมาส์ */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            white-space: normal; /* รองรับการตัดคำยาวๆ */
+            pointer-events: none;
+            /* เพื่อไม่ให้ขวางทิศทางเมาส์ */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            white-space: normal;
+            /* รองรับการตัดคำยาวๆ */
         }
 
         /* ลูกศรชี้ลงของ Tooltip */
@@ -524,10 +625,12 @@
         @media screen and (max-width: 768px) {
             .so-tooltip .so-tooltiptext {
                 width: 180px;
-                max-width: 70vw; /* จำกัดความกว้างไม่ให้ล้นหน้าจอมือถือ */
+                max-width: 70vw;
+                /* จำกัดความกว้างไม่ให้ล้นหน้าจอมือถือ */
                 font-size: 11px;
                 padding: 8px 10px;
-                bottom: 130%; /* ยกสูงขึ้นเล็กน้อยเพื่อหลบขอบ */
+                bottom: 130%;
+                /* ยกสูงขึ้นเล็กน้อยเพื่อหลบขอบ */
             }
         }
 
@@ -1035,7 +1138,7 @@
                 var checkboxes = document.querySelectorAll('.so-row-checkbox:not(#select_all_rows)');
                 for (var i = 0; i < checkboxes.length; i++) {
                     if (checkboxes[i].checked) {
-                        clearRow(i + 1);
+                        clearRow(i + 1, true);
                         checkboxes[i].checked = false;
                         var row = document.getElementById('product_row_' + (i + 1));
                         if (row) {
@@ -1093,7 +1196,7 @@
             updateDeleteButtonVisibility();
         }
 
-        function clearRow(rowIndex) {
+        function executeClearRow(rowIndex) {
             var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
             var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
 
@@ -1135,6 +1238,61 @@
             }
 
             calculateSummary();
+        }
+
+        function clearRow(rowIndex, skipConfirm) {
+            var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
+            var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
+            var currentProductId = document.getElementById('product_id' + rowIndex).value || '';
+
+            var hasData = (currentSubsoId !== '' || currentProductCode !== '' || currentProductId !== '');
+
+            if (hasData && !skipConfirm) {
+                var productName = document.getElementById('product_name' + rowIndex).value || '';
+                if (!productName) {
+                    var nameLabel = document.getElementById('product_name_label' + rowIndex);
+                    if (nameLabel) productName = nameLabel.textContent || '';
+                }
+
+                var displayMsg = 'คุณต้องการลบรายการนี้ ใช่หรือไม่ ?';
+                if (productName) {
+                    displayMsg = 'คุณต้องการลบรายการ "' + productName + '" ใช่หรือไม่ ?';
+                }
+
+                Swal.fire({
+                    title: 'ยืนยันการลบรายการ',
+                    html: displayMsg,
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยันลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    iconHtml: `
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+                            <path d="M4 6H20V8H4V6Z" fill="#EF5350"/>
+                            <path d="M10 2H14V4H10V2Z" fill="#EF5350"/>
+                            <path d="M5 9H19V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V9Z" fill="#EF5350"/>
+                            <rect x="9" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+                            <rect x="13" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+                        </svg>
+                    `,
+                    customClass: {
+                        popup: 'figma-delete-popup',
+                        title: 'figma-delete-title',
+                        htmlContainer: 'figma-delete-html',
+                        confirmButton: 'figma-delete-confirm-btn',
+                        cancelButton: 'figma-delete-cancel-btn',
+                        actions: 'figma-delete-actions',
+                        icon: 'figma-delete-icon'
+                    },
+                    buttonsStyling: false
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        executeClearRow(rowIndex);
+                    }
+                });
+            } else {
+                executeClearRow(rowIndex);
+            }
         }
 
         function escapeHtml(text) {
@@ -1182,9 +1340,9 @@
                 var iconHtml = '';
                 if (remarkHcVal && remarkHcVal.trim() !== '') {
                     iconHtml = ' <span class="so-tooltip" onclick="toggleWarrantyTooltip(event, this)">' +
-                               '<img src="img/icons/question.png" alt="help" style="width: 14px; height: 14px; cursor: pointer; vertical-align: middle; margin-left: 4px;">' +
-                               '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
-                               '</span>';
+                        '<img src="img/icons/question.png" alt="help" style="width: 14px; height: 14px; cursor: pointer; vertical-align: middle; margin-left: 4px;">' +
+                        '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
+                        '</span>';
                 }
                 warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')<span class="so-modal-required">*</span>' + iconHtml;
             }

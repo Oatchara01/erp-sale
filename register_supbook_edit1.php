@@ -23,10 +23,12 @@ if ($_POST["submit"] == "submit") {
 	$send_stock = mysqli_real_escape_string($conn, $_POST["send_stock"] ?? '');
 	$contact_ckk = mysqli_real_escape_string($conn, $_POST["contact_ckk"] ?? '');
 	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
+	$cancel_ckk = mysqli_real_escape_string($conn, $_POST["cancel_ckk"] ?? '0');
+	$admin_cancel_reason = mysqli_real_escape_string($conn, $_POST["admin_cancel_reason"] ?? '');
 	$status_doc = $isDraftRequest ? "Draft" : "Approve";
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
-	$add_by = "$name $surname";
+	$add_by = mysqli_real_escape_string($conn, "$name $surname");
 	$add_date = date('Y-m-d H:i:s');
 
 	$iv_no = '';
@@ -36,7 +38,7 @@ if ($_POST["submit"] == "submit") {
 	}
 
 
-	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "'";
+	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "',remark='" . $admin_cancel_reason . "',cancel_ckk='" . $cancel_ckk . "',close_jong='" . $cancel_ckk . "'";
 	if (!$isDraftRequest) {
 		$save .= ", status_doc = 'Approve'";
 	}
@@ -147,7 +149,7 @@ values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc
 			exit();
 		}
 		echo "<script language=\"JavaScript\">";
-		echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbook.php?ref_id=$ref_id&saved=1';";
+		echo "window.location='register_supbook.php?ref_id=$ref_id&saved=1';";
 		echo "</script>";
 	} else {
 		if ($isDraftRequest) {

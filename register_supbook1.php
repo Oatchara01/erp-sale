@@ -25,7 +25,7 @@ if ($_POST["submit"] == "submit") {
 	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
-	$add_by = "$name $surname";
+	$add_by = mysqli_real_escape_string($conn, "$name $surname");
 	$add_date = date('Y-m-d H:i:s');
 
 	$yearMonth = substr(date("Y") + 543, -2) . date("m");
@@ -158,7 +158,7 @@ values
 			exit();
 		}
 		echo "<script language=\"JavaScript\">";
-		echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbook.php?ref_id=$ref_id&saved=1';";
+		echo "window.location='register_supbook.php?ref_id=$ref_id&saved=1';";
 		echo "</script>";
 	} else {
 		if ($isDraftRequest) {
