@@ -29,6 +29,7 @@ session_start();
 <link rel="stylesheet" href="css/tab.css">
 <link rel="stylesheet" href="awesome/css/all.css">
 <link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
+<link rel="stylesheet" href="css/sidebar.css?v=<?php echo time(); ?>">
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/w3open.js"></script>
 <script type="text/javascript" src="js/tab.js"></script>
@@ -205,6 +206,10 @@ function DateThai($strDate)
 	
 <?php if ($_SESSION['type_login']=='Engineer') { require('menu_engineer.php'); } ?>
 	
-<?php if ($_SESSION['type_login']=='RPA') { require('menu_rpa.php'); } ?>	
-	
+<?php if ($_SESSION['type_login']=='RPA') { require('menu_rpa.php'); } ?>
+
+<?php require_once('navbar.php'); ?>
+
+<script type="text/javascript" src="js/sidebar.js?v=<?php echo time(); ?>"></script>
+
 	
