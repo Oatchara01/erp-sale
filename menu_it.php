@@ -136,7 +136,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 						<div class="sidebar-subgroup">
 							<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">Hospital</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 							<div class="sidebar-submenu">
-								<a href="status_suphos1.php">Status ใบสั่งขาย (SO)</a>
+								<a href="status_adminhos.php">Status ใบสั่งขาย (SO)</a>
 								<a href="status_adminhos1.php">Status (SO)ค้างเลขที่ IV</a>
 								<a href="status_adminhos.php">สถานะ (SO)</a>
 								<a href="status_admin_jong.php">Status (SO) ใบฝาก</a>

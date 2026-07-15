@@ -32,1295 +32,19 @@ if ($savedRefId !== "") {
 	}
 }
 ?>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="sweetalert2/dist/sweetalert2.min.css">
+<script src="sweetalert2/dist/sweetalert2.min.js"></script>
 
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=20260704">
-<link rel="stylesheet" href="css/customer-popup.css">
 
 <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/customer-popup.js"></script>
 
-<style>
-	@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-
-	body {
-		background-color: #F4EFF8 !important;
-		background-image: none !important;
-		font-family: 'Prompt', sans-serif !important;
-		color: #3B3B3B !important;
-		margin: 0;
-		padding: 20px 0 0 0;
-	}
-
-	.so-card {
-		background: #FFFFFF;
-		border-radius: 10px;
-		border: 1px solid #EFEBEF;
-		box-shadow: 0 4px 20px rgba(97, 41, 137, 0.04);
-		padding: clamp(16px, 3vw, 32px);
-		max-width: 1096px;
-		margin: 0 auto 30px auto;
-		box-sizing: border-box;
-	}
-
-	/* Modern Header Layout (เหมือน register_suphos.php) */
-	.so-header-container {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin: 0 auto;
-		padding: 16px 0;
-		width: 100%;
-		max-width: 1096px;
-		box-sizing: border-box;
-		flex-wrap: wrap;
-		gap: 12px;
-	}
-
-	.so-header-left {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-
-	.so-title {
-		font-size: 28px;
-		font-weight: 600;
-		color: #612989;
-		line-height: 1.15;
-		margin: 0 0 8px 0;
-	}
-
-	.so-ref-info {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-	}
-
-	.so-ref-label {
-		color: #8E8B94;
-	}
-
-	.so-ref-value {
-		color: #612989;
-		font-weight: 700;
-	}
-
-	.so-header-right {
-		display: flex;
-		gap: 12px;
-		flex-wrap: wrap;
-	}
-
-	.btn-preview-so {
-		background-color: #FFFFFF;
-		color: #612989;
-		border: 1px solid transparent;
-		border-radius: 20px;
-		height: 44px;
-		padding: 0 24px;
-		font-size: 14px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		font-family: 'Prompt', sans-serif;
-		box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
-	}
-
-	.btn-preview-so:hover {
-		background-color: #FAF9FC;
-		opacity: 0.9;
-	}
-
-	/* Tab content */
-	.so-tab-content {
-		display: none;
-	}
-
-	.so-tab-content.active {
-		display: block;
-		background-color: transparent;
-	}
-
-	/* Section Title (หัวข้อภายในกล่อง so-card) */
-	.so-section-title-container {
-		margin: 0 0 24px 0;
-		border-bottom: 1px solid #EFEBEF;
-		padding-bottom: 12px;
-	}
-
-	.so-section-title {
-		font-size: 20px;
-		font-weight: 500;
-		color: #3B3B3B;
-		margin: 0;
-	}
-
-	.so-divider {
-		border: 2px solid #EDE9F0;
-	}
-
-	/* หัวข้อย่อยภายในกล่อง (เล็กกว่าชื่อกล่องหลัก) */
-	.so-subsection-title-container {
-		margin: 24px 0 24px 0;
-		border-bottom: 1px solid #EFEBEF;
-		padding-bottom: 12px;
-	}
-
-	.so-subsection-title {
-		font-size: 20px;
-		font-weight: 500;
-		color: #3B3B3B;
-		margin: 0;
-	}
-
-	@media (max-width: 768px) {
-		.so-header-container {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 16px;
-		}
-
-		.so-header-right {
-			width: 100%;
-		}
-
-		.so-header-right>button {
-			flex: 1 1 220px;
-			justify-content: center;
-		}
-
-		.so-card {
-			padding: 24px 18px;
-		}
-
-		.so-title {
-			font-size: clamp(24px, 6vw, 28px);
-		}
-
-		.so-section-title {
-			font-size: 18px;
-		}
-	}
-
-	.so-grid-2 {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 32px;
-	}
-
-	.so-grid-3 {
-		display: grid;
-		grid-template-columns: 1fr 1fr 1fr;
-		gap: 24px;
-	}
-
-	@media (max-width: 900px) {
-		.so-grid-3 {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-
-	@media (max-width: 768px) {
-
-		.so-grid-2,
-		.so-grid-3 {
-			grid-template-columns: 1fr;
-			gap: 16px;
-		}
-	}
-
-	.so-grid-cancel {
-		display: grid;
-		grid-template-columns: 200px 1fr;
-		gap: 32px;
-	}
-
-	@media (max-width: 768px) {
-		.so-grid-cancel {
-			grid-template-columns: 1fr;
-			gap: 16px;
-		}
-	}
-
-	.so-field-group {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		margin-bottom: 18px;
-	}
-
-	.so-label {
-		font-size: 14px;
-		font-weight: 500;
-		color: #612989;
-		margin-bottom: 2px;
-		display: inline-block;
-	}
-
-	.so-input,
-	.so-select,
-	.so-textarea {
-		width: 100%;
-		border-radius: 10px;
-		background: #F5F6F8;
-		border: 1px solid transparent;
-		font-size: 14px;
-		font-family: 'Prompt', sans-serif !important;
-		transition: all 0.3s ease;
-		color: #3B3B3B;
-		box-sizing: border-box;
-	}
-
-	.so-input,
-	.so-select {
-		height: 42px;
-		padding: 0 16px;
-	}
-
-	.so-textarea {
-		padding: 12px 16px;
-		min-height: 80px;
-		resize: vertical;
-	}
-
-	.so-input:focus,
-	.so-select:focus,
-	.so-textarea:focus {
-		background: #FFFFFF;
-		border-color: #612989;
-		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
-		outline: none;
-	}
-
-	.so-input:disabled,
-	.so-select:disabled {
-		color: #8E8B94;
-		cursor: not-allowed;
-	}
-
-	.so-input-wrapper {
-		position: relative;
-		width: 100%;
-	}
-
-	.so-input-wrapper .so-input {
-		padding-right: 36px;
-	}
-
-	.so-select-wrapper {
-		position: relative;
-		width: 100%;
-		display: flex;
-	}
-
-	.so-select-wrapper .so-select {
-		padding-right: 32px;
-		appearance: none;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-	}
-
-	.so-select-wrapper::after {
-		content: '\f078';
-		font-family: 'Font Awesome 5 Free';
-		font-weight: 900;
-		position: absolute;
-		right: 16px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #8E8B94;
-		pointer-events: none;
-		font-size: 12px;
-	}
-
-	.so-clear-icon {
-		position: absolute;
-		right: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		cursor: pointer;
-		color: #8E8B94;
-		font-size: 14px;
-	}
-
-	.so-clear-icon:hover {
-		color: #612989;
-	}
-
-	.so-radio-group {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 20px;
-		margin-top: 4px;
-		margin-bottom: 4px;
-	}
-
-	.so-radio-label {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-		font-weight: 500;
-		color: #3B3B3B;
-		cursor: pointer;
-	}
-
-	.so-radio-label input[type="radio"] {
-		accent-color: #612989;
-		width: 18px;
-		height: 18px;
-		cursor: pointer;
-		margin: 0;
-	}
-
-	.btn-so-primary {
-		background: #612989;
-		color: #FFFFFF;
-		border: none;
-		border-radius: 24px;
-		height: 44px;
-		padding: 0 48px;
-		font-size: 16px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.2);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		text-decoration: none;
-	}
-
-	.btn-so-primary:hover {
-		background: #502173;
-		box-shadow: 0 6px 16px rgba(97, 41, 137, 0.3);
-		color: #FFFFFF;
-	}
-
-	.btn-so-secondary {
-		background: #FFFFFF;
-		color: #612989;
-		border: 1px solid #EFEBEF;
-		border-radius: 24px;
-		height: 42px;
-		padding: 0 24px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.btn-so-secondary:hover {
-		background: #EFEBFF;
-		border-color: #612989;
-	}
-
-	.btn-so-danger {
-		background-color: #FFFFFF;
-		color: #612989;
-		border: 1px solid #EFEBEF;
-		border-radius: 24px;
-		height: 45px;
-		padding: 0 24px;
-		font-weight: 500;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-		font-family: 'Prompt', sans-serif;
-		transition: all 0.2s ease;
-		box-sizing: border-box;
-	}
-
-	.btn-so-danger:hover {
-		background-color: #EFEBFF;
-		border-color: #612989;
-	}
-
-	.btn-so-danger:active,
-	.btn-so-danger.is-active {
-		background-color: #FEE2E2 !important;
-		color: #DC2626 !important;
-		border-color: transparent !important;
-	}
-
-	.btn-so-danger:active img,
-	.btn-so-danger.is-active img {
-		filter: invert(24%) sepia(85%) saturate(3015%) hue-rotate(345deg) brightness(92%) contrast(92%) !important;
-	}
-
-	/* Tabs (เหมือน register_suphos.php) */
-	.so-tabs-container {
-		display: flex;
-		background-color: transparent;
-		margin: 0 auto -1px auto;
-		padding-left: 50px;
-		position: relative;
-		max-width: 1096px;
-		box-sizing: border-box;
-	}
-
-	.so-tab-btn {
-		background: #FFFFFF;
-		border: 1px solid #FFFFFF;
-		border-bottom: none;
-		outline: none;
-		padding: 12px 28px;
-		font-size: 14px;
-		font-weight: 500;
-		color: #3B3B3B;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		position: relative;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.so-tab-btn:first-child {
-		border-radius: 12px 0 0 0;
-	}
-
-	.so-tab-btn:last-child {
-		border-radius: 0 12px 0 0;
-	}
-
-	.so-tab-btn:hover {
-		color: #612989;
-		background: #EFEBFF;
-	}
-
-	.so-tab-btn.active {
-		color: #612989;
-		font-weight: 500;
-		font-size: 14px;
-		background: #FFFFFF;
-		padding-bottom: 11px;
-	}
-
-	.so-tab-btn.active::after {
-		content: "";
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 4px;
-		background-color: #612989;
-		border-radius: 25px;
-	}
-
-	@media (max-width: 768px) {
-		.so-tabs-container {
-			padding-left: 0;
-			flex-wrap: wrap;
-			gap: 8px;
-		}
-
-		.so-tab-btn {
-			flex: 1 1 220px;
-			text-align: center;
-			border-radius: 12px;
-			border-bottom: 1px solid #ffffff;
-		}
-
-		.so-tab-btn.active {
-			padding-bottom: 12px;
-		}
-	}
-
-	.so-search-input-wrapper {
-		position: relative;
-		width: 100%;
-		display: flex;
-		align-items: center;
-	}
-
-	.so-search-input-wrapper input {
-		padding-right: 46px;
-		cursor: pointer;
-	}
-
-	.so-search-input-btn {
-		position: absolute;
-		right: 6px;
-		background: transparent;
-		border: none;
-		color: #612989;
-		cursor: pointer;
-		font-size: 16px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		height: 30px;
-		width: 36px;
-		transition: color 0.2s;
-	}
-
-	.so-search-input-btn:hover {
-		color: #502173;
-	}
-
-	/* Autocomplete Overrides */
-	.autocomplete_list {
-		background: #FFFFFF !important;
-		border: 1px solid #EFEBEF !important;
-		border-radius: 8px !important;
-		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.08) !important;
-		padding: 4px 0 !important;
-		z-index: 99999 !important;
-		max-height: 250px !important;
-		overflow-y: auto !important;
-	}
-
-	.autocomplete_list li {
-		font-family: 'Prompt', sans-serif !important;
-		padding: 8px 16px !important;
-		color: #3B3B3B !important;
-		border-bottom: 1px solid #F5F6F8 !important;
-		font-size: 14px !important;
-		transition: background 0.2s, color 0.2s;
-	}
-
-	.autocomplete_list li b {
-		color: #612989 !important;
-	}
-
-	.autocomplete_list .current_item {
-		background: #EFEBFF !important;
-		color: #612989 !important;
-	}
-
-	/* Customer Popup Modal Styling moved to css/customer-popup.css */
-
-	/* Dynamic product list */
-	.so-product-section-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 16px;
-	}
-
-	.so-product-count {
-		font-size: 14px;
-		color: #612989;
-		font-weight: 500;
-	}
-
-	.so-product-total-box {
-		background: #F5F6F8;
-		border-radius: 10px;
-		padding: 14px 20px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		margin-bottom: 16px;
-	}
-
-	.so-product-total-label {
-		font-size: 14px;
-		color: #8E8B94;
-		font-weight: 400;
-	}
-
-	.so-product-total-value {
-		font-size: 20px;
-		color: #3B3B3B;
-		font-weight: 600;
-	}
-
-	.so-product-search-wrap {
-		position: relative;
-		display: flex;
-		align-items: center;
-		background: #F5F6F8;
-		border-radius: 10px;
-		border: 1px solid transparent;
-		padding: 0 16px;
-		height: 42px;
-		gap: 10px;
-		margin-bottom: 16px;
-	}
-
-	.so-product-search-wrap:focus-within {
-		background: #FFFFFF;
-		border-color: #612989;
-		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
-	}
-
-	.so-product-search-wrap i {
-		color: #8E8B94;
-	}
-
-	.so-product-search-wrap input {
-		border: 0;
-		outline: none;
-		background: transparent;
-		width: 100%;
-		font-size: 14px;
-		font-family: 'Prompt', sans-serif;
-		color: #000000;
-	}
-
-	.product-search-dropdown {
-		display: none;
-		position: absolute;
-		top: calc(100% + 4px);
-		left: 0;
-		right: 0;
-		background: #FFFFFF;
-		border: 1px solid #EFEBEF;
-		border-radius: 8px;
-		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.08);
-		max-height: 260px;
-		overflow-y: auto;
-		z-index: 500;
-	}
-
-	.product-search-item {
-		padding: 10px 16px;
-		font-size: 14px;
-		cursor: pointer;
-		border-bottom: 1px solid #F5F6F8;
-		color: #000000;
-	}
-
-	.product-search-item:hover {
-		background: #F1E1FF;
-	}
-
-	.product-search-empty {
-		padding: 16px;
-		text-align: center;
-		color: #8E8B94;
-		font-size: 14px;
-	}
-
-	.so-product-table-wrap {
-		width: 100%;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	.so-product-dyn-table {
-		width: 100%;
-		min-width: 480px;
-		border-collapse: collapse;
-		font-family: 'Prompt', sans-serif;
-	}
-
-	.so-product-dyn-table th {
-		text-align: left;
-		font-size: 14px;
-		font-weight: 500;
-		color: #612989;
-		border-bottom: 1px solid #612989;
-		padding: 10px 8px;
-	}
-
-	.so-product-dyn-table td {
-		padding: 10px 8px;
-		border-bottom: 1px solid #EDE9F0;
-		font-size: 14px;
-		vertical-align: middle;
-		color: #000000;
-	}
-
-	.so-product-dyn-table .col-handle {
-		width: 32px;
-		text-align: center;
-		color: #C9C2D4;
-		cursor: grab;
-	}
-
-	.so-product-dyn-table .col-qty {
-		width: 110px;
-	}
-
-	.so-product-dyn-table .col-actions {
-		width: 80px;
-		text-align: right;
-		white-space: nowrap;
-	}
-
-	.product-qty-input {
-		height: 36px !important;
-		padding: 0 10px !important;
-		text-align: center;
-		color: #000000 !important;
-	}
-
-	.product-row-icon-btn {
-		background: transparent;
-		border: none;
-		color: #8E8B94;
-		cursor: pointer;
-		font-size: 14px;
-		padding: 6px;
-		transition: color 0.2s;
-	}
-
-	.product-row-icon-btn:hover {
-		color: #612989;
-	}
-
-	.product-row-remark-text {
-		margin-top: 4px;
-		font-size: 13px;
-		color: #8E8B94;
-	}
-
-	.product-empty {
-		text-align: center;
-		color: #8E8B94;
-		padding: 24px !important;
-	}
-
-	.product-row.drag-over {
-		background: #F1E1FF;
-	}
-
-	/* Customer info card (ข้อมูลลูกค้า) */
-	.so-customer-top-grid {
-		display: grid;
-		grid-template-columns: 328px 1fr;
-		gap: 24px;
-		margin-bottom: 0;
-	}
-
-	.so-customer-top-left {
-		grid-column: 1;
-		grid-row: 1;
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-	}
-
-	.so-customer-top-right {
-		grid-column: 2;
-		grid-row: 1;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.so-customer-address-wrap {
-		grid-column: 1 / span 2;
-		grid-row: 2;
-	}
-
-	.so-customer-pills-row {
-		display: flex;
-		gap: 16px;
-		align-items: center;
-		height: 42px;
-		margin-bottom: 4px;
-	}
-
-	.btn-add-customer-pill {
-		background-color: #FFFFFF;
-		color: #612989;
-		border: 1px solid #EFEBEF;
-		border-radius: 24px;
-		height: 42px;
-		padding: 0 24px;
-		font-size: 14px;
-		font-weight: 500;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-		font-family: 'Prompt', sans-serif;
-		transition: all 0.2s ease;
-		box-sizing: border-box;
-	}
-
-	.btn-add-customer-pill:hover {
-		background-color: #EFEBFF;
-		border-color: #612989;
-	}
-
-	.customer-info-display-card {
-		background-color: #F4F5F7;
-		border-radius: 12px;
-		padding: 24px;
-		display: flex;
-		gap: 48px;
-		font-family: 'Prompt', sans-serif;
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.cidc-col {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.cidc-row {
-		display: flex;
-		align-items: center;
-	}
-
-	.cidc-label {
-		width: 100px;
-		font-size: 14px;
-		color: #6C757D;
-		font-weight: 400;
-	}
-
-	.cidc-value {
-		flex: 1;
-		font-size: 14px;
-		color: #3B3B3B;
-		display: flex;
-		align-items: center;
-	}
-
-	.cidc-value-input {
-		background: transparent;
-		border: none;
-		outline: none;
-		font-size: 14px;
-		color: #3B3B3B;
-		width: 100%;
-		font-family: 'Prompt', sans-serif;
-		resize: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.cidc-value-input.purple-text {
-		color: #612989;
-	}
-
-	.cidc-value-input.underline {
-		text-decoration: underline;
-	}
-
-	.cidc-display-text {
-		font-size: 14px;
-		color: #3B3B3B;
-		font-family: 'Prompt', sans-serif;
-		line-height: 24px;
-		min-height: 24px;
-		display: inline-block;
-	}
-
-	.cidc-status-icon {
-		width: 24px;
-		height: 20px;
-		margin-right: 8px;
-		object-fit: contain;
-	}
-
-	@media (max-width: 768px) {
-		.so-customer-top-grid {
-			grid-template-columns: 1fr;
-			gap: 16px;
-		}
-
-		.so-customer-top-left {
-			grid-column: auto;
-			grid-row: auto;
-			justify-content: flex-start;
-			gap: 16px;
-		}
-
-		.so-customer-top-right {
-			grid-column: auto;
-			grid-row: auto;
-		}
-
-		.so-customer-address-wrap {
-			grid-column: auto;
-			grid-row: auto;
-		}
-
-		.customer-info-display-card {
-			flex-direction: column;
-			gap: 18px;
-			padding: 18px;
-		}
-
-		.cidc-row {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 4px;
-		}
-
-		.cidc-label {
-			width: auto;
-			flex: none;
-		}
-	}
-
-	/* Credit term trigger + popup (shared logic lives in js/credit-term-modal.js & css/credit-term-modal.css) */
-	.credit-term-trigger {
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: 'Prompt', sans-serif;
-		color: #612989;
-	}
-
-	.credit-term-trigger.is-empty {
-		display: none;
-	}
-
-	.credit-term-trigger:disabled {
-		cursor: default;
-	}
-
-	.credit-term-trigger:focus-visible {
-		outline: 2px solid rgba(97, 41, 137, 0.35);
-		outline-offset: 4px;
-		border-radius: 8px;
-	}
-
-	.credit-term-trigger-text {
-		font-size: 14px;
-		line-height: 1.4;
-		color: #612989;
-		text-decoration: underline;
-		text-underline-offset: 2px;
-	}
-
-	.credit-term-trigger-icon {
-		width: 19.5px;
-		height: 19.5px;
-		object-fit: contain;
-		flex: 0 0 19.5px;
-	}
-
-	.clear-loan-header {
-		padding: 24px 32px 0;
-		border-bottom: 1px solid #eee7f4;
-	}
-
-	.credit-term-popup-box {
-		width: min(1096px, 96vw);
-		height: min(884px, 92vh);
-	}
-
-	.product-remark-popup-box {
-		width: min(1096px, 92vw);
-		height: auto;
-	}
-
-	.product-remark-popup-body {
-		padding: 24px 32px 28px;
-	}
-
-	.credit-term-popup-content {
-		display: flex;
-		flex: 1;
-		flex-direction: column;
-		min-height: 0;
-		padding: 22px 30px 30px;
-		gap: 20px;
-	}
-
-	.credit-term-summary {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		background: #F5F6F8;
-		border-radius: 10px;
-		overflow: hidden;
-	}
-
-	.credit-term-summary-item {
-		padding: 18px 20px 16px;
-		text-align: center;
-		position: relative;
-	}
-
-	.credit-term-summary-item:not(:last-child)::after {
-		content: "";
-		position: absolute;
-		top: 14px;
-		right: 0;
-		width: 1px;
-		height: calc(100% - 28px);
-		background: #C9C3CE;
-	}
-
-	.credit-term-summary-label {
-		margin: 0 0 10px;
-		font-size: 16px;
-		font-weight: 400;
-		color: #696969;
-	}
-
-	.credit-term-summary-value {
-		margin: 0;
-		font-size: 20px;
-		font-weight: 400;
-		color: #3B3B3B;
-		min-height: 30px;
-	}
-
-	.credit-term-summary-item.is-highlight .credit-term-summary-label {
-		color: #3B3B3B;
-	}
-
-	.credit-term-summary-item.is-highlight .credit-term-summary-value {
-		color: #612989;
-		font-size: 24px;
-	}
-
-	.credit-term-table {
-		width: 100%;
-		min-width: 920px;
-		border-collapse: collapse;
-		font-family: 'Prompt', sans-serif;
-		color: #3B3B3B;
-	}
-
-	.credit-term-table th,
-	.credit-term-table td {
-		padding: 18px 14px;
-		font-size: 14px;
-		border-bottom: 1px solid #EFEBEF;
-		vertical-align: middle;
-	}
-
-	.credit-term-table th {
-		padding-top: 16px;
-		padding-bottom: 16px;
-		font-size: 16px;
-		font-weight: 500;
-		color: #612989;
-		text-align: left;
-		white-space: nowrap;
-	}
-
-	.credit-term-table th:first-child,
-	.credit-term-table td:first-child {
-		width: 42px;
-		padding-left: 18px;
-		padding-right: 6px;
-	}
-
-	.credit-term-table th:nth-child(2) {
-		width: 15%;
-	}
-
-	.credit-term-table th:nth-child(3) {
-		width: 41%;
-	}
-
-	.credit-term-table th:nth-child(4),
-	.credit-term-table th:nth-child(5),
-	.credit-term-table th:nth-child(6) {
-		width: 14%;
-		text-align: right;
-	}
-
-	.credit-term-table td:nth-child(4),
-	.credit-term-table td:nth-child(5),
-	.credit-term-table td:nth-child(6) {
-		text-align: right;
-	}
-
-	.credit-term-empty-row td {
-		padding-top: 22px;
-		padding-bottom: 22px;
-		color: #8E8B94;
-		text-align: center !important;
-	}
-
-	@media (max-width: 768px) {
-		.clear-loan-header {
-			padding: 22px 18px 0;
-		}
-	}
-
-	.so-sticky-actions {
-		width: 100%;
-		background-color: #FFFFFF;
-		padding: 16px 24px;
-		display: flex;
-		gap: 16px;
-		justify-content: flex-end;
-		align-items: center;
-		box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
-		border-top: 1px solid #EBEBEB;
-		margin-top: 24px;
-		box-sizing: border-box;
-	}
-
-	.so-sticky-actions-inner {
-		max-width: 1200px;
-		width: 100%;
-		display: flex;
-		gap: 16px;
-		justify-content: flex-end;
-		margin: 0 auto;
-		padding-right: 24px;
-		box-sizing: border-box;
-	}
-
-	.btn-so-submit {
-		background-color: #612989;
-		color: #FFFFFF;
-		border: 1px solid #612989;
-		border-radius: 24px;
-		padding: 12px 32px;
-		font-family: 'Prompt', sans-serif;
-		font-size: 16px;
-		font-weight: 500;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
-	}
-
-	.btn-so-draft {
-		background-color: #FFFFFF;
-		color: #612989;
-		border: 1px solid #EBEBEB;
-		border-radius: 24px;
-		padding: 12px 32px;
-		font-family: 'Prompt', sans-serif;
-		font-size: 16px;
-		font-weight: 500;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-	}
-
-	@media (max-width: 768px) {
-		.so-sticky-actions {
-			padding: 14px 12px;
-		}
-
-		.so-sticky-actions-inner {
-			padding-right: 0;
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.so-sticky-actions-inner>button {
-			width: 100%;
-			justify-content: center;
-		}
-	}
-
-	/* Custom SweetAlert2 Delete Popup (Figma style 648x319) */
-	.figma-delete-popup {
-		width: min(525px, 94vw) !important;
-		min-height: 319px !important;
-		padding: 40px 32px 32px !important;
-		border-radius: 24px !important;
-		font-family: 'Prompt', sans-serif !important;
-		box-sizing: border-box !important;
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-	}
-
-	.figma-delete-icon {
-		border: none !important;
-		margin: 0 auto 20px !important;
-		width: 80px !important;
-		height: 80px !important;
-		display: flex !important;
-		align-items: center !important;
-		justify-content: center !important;
-	}
-
-	.figma-delete-title {
-		font-size: 22px !important;
-		font-weight: 600 !important;
-		color: #1C1B1F !important;
-		margin: 0 0 10px 0 !important;
-		padding: 0 !important;
-	}
-
-	.figma-delete-html {
-		font-size: 15px !important;
-		color: #8E8B94 !important;
-		margin: 0 0 28px 0 !important;
-		line-height: 1.5 !important;
-	}
-
-	.figma-delete-actions {
-		display: flex !important;
-		gap: 16px !important;
-		justify-content: center !important;
-		width: 100% !important;
-		max-width: 320px !important;
-		margin: 0 auto !important;
-	}
-
-	.figma-delete-confirm-btn {
-		flex: 1 !important;
-		height: 44px !important;
-		border-radius: 22px !important;
-		border: none !important;
-		background-color: #EF5350 !important;
-		/* Figma Red */
-		color: #ffffff !important;
-		font-family: 'Prompt', sans-serif !important;
-		font-size: 16px !important;
-		font-weight: 500 !important;
-		cursor: pointer !important;
-		box-shadow: 0 4px 10px rgba(239, 83, 80, 0.2) !important;
-		transition: background-color 0.2s, transform 0.1s !important;
-	}
-
-	.figma-delete-confirm-btn:hover {
-		background-color: #e53935 !important;
-	}
-
-	.figma-delete-confirm-btn:active {
-		transform: scale(0.98) !important;
-	}
-
-	.figma-delete-cancel-btn {
-		flex: 1 !important;
-		height: 44px !important;
-		border-radius: 22px !important;
-		border: 1px solid #EDE9F0 !important;
-		background-color: #F5F6F8 !important;
-		color: #3b3b3b !important;
-		font-family: 'Prompt', sans-serif !important;
-		font-size: 16px !important;
-		font-weight: 500 !important;
-		cursor: pointer !important;
-		transition: background-color 0.2s, transform 0.1s !important;
-	}
-
-	.figma-delete-cancel-btn:hover {
-		background-color: #e8e9eb !important;
-		color: #1c1b1f !important;
-	}
-
-	.figma-delete-cancel-btn:active {
-		transform: scale(0.98) !important;
-	}
-</style>
+<!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, credit-term modal, etc.) -->
+<link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
+<!-- Page-specific styling for register_supbook.php -->
+<link rel="stylesheet" href="css/register-supbook.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbook.css'); ?>">
 
 <div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 	<?php
@@ -1377,160 +101,156 @@ if ($savedRefId !== "") {
 		<?php } ?>
 
 
-		<!-- TAB 1: ข้อมูลเอกสาร -->
-		<div id="tabDoc" class="so-tab-content active">
-
-			<!-- กล่อง: ข้อมูลเอกสาร -->
-			<div class="so-card">
-				<div class="so-grid-3">
-					<div class="so-field-group">
-						<label class="so-label">บริษัท <span style="color:red;">*</span></label>
-						<div class="so-select-wrapper">
-							<select class="so-select" name="company" id="company_select">
-								<option value="1" <?php echo ($savedJong !== null && $savedJong['company'] == '1') ? 'selected' : ''; ?>>AWL</option>
-								<option value="2" <?php echo ($savedJong !== null && $savedJong['company'] == '2') ? 'selected' : ''; ?>>NBM</option>
-							</select>
-						</div>
-					</div>
-
-					<div class="so-field-group">
-						<label class="so-label">ประเภท <span style="color:red;">*</span></label>
-						<select name="type_jong" id="type_jong" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
-							<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
-							<option value="3" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '3') ? 'selected' : ''; ?>>จองสินค้าสาธิต</option>
+		<!-- กล่อง: ข้อมูลเอกสาร -->
+		<div class="so-card">
+			<div class="so-grid-3">
+				<div class="so-field-group">
+					<label class="so-label">บริษัท <span style="color:red;">*</span></label>
+					<div class="so-select-wrapper">
+						<select class="so-select" name="company" id="company_select">
+							<option value="1" <?php echo ($savedJong !== null && $savedJong['company'] == '1') ? 'selected' : ''; ?>>AWL</option>
+							<option value="2" <?php echo ($savedJong !== null && $savedJong['company'] == '2') ? 'selected' : ''; ?>>NBM</option>
 						</select>
 					</div>
-
-					<div class="so-field-group">
-						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-						<?php
-						$selected_sale_code = ($savedJong !== null) ? $savedJong['sale_code'] : ($_GET['sale_code'] ?? '');
-
-						if ($_SESSION['code'] == 'SS1') {
-						?>
-							<select name="sale_code" id="sale_code" class="so-select" required>
-								<option value="">**Please Select**</option>
-								<?php
-								$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-								$objQuery5 = mysqli_query($com, $strSQL5);
-								while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-								?>
-									<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php echo $sel; ?>><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						<?php
-						} else if ($_SESSION['code'] == 'SS2') {
-						?>
-							<select name="sale_code" id="sale_code" class="so-select" required>
-								<option value="">**Please Select**</option>
-								<?php
-								$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-								$objQuery5 = mysqli_query($com, $strSQL5);
-								while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-								?>
-									<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php echo $sel; ?>><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						<?php
-						} else if ($_SESSION['code'] == 'SS5') {
-						?>
-							<select name="sale_code" id="sale_code" class="so-select">
-								<option value="">**Please Select**</option>
-								<?php
-								$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-								$objQuery5 = mysqli_query($com, $strSQL5);
-								while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-								?>
-									<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php echo $sel; ?>><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						<?php
-						} else if ($_SESSION['code'] == 'SUP_EN') {
-						?>
-							<select name="sale_code" id="sale_code" class="so-select" required>
-								<option value="">**Please Select**</option>
-								<?php
-								$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-								$objQuery5 = mysqli_query($com, $strSQL5);
-								while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-								?>
-									<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php echo $sel; ?>><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						<?php
-						} else {
-						?>
-							<select name="sale_code" id="sale_code" class="so-select" required>
-								<option value="">**Please Select**</option>
-								<?php
-								$strSQL5 = "SELECT * FROM tb_team_all ORDER BY sale_code ASC";
-								$objQuery5 = mysqli_query($com, $strSQL5);
-								while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-								?>
-									<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php echo $sel; ?>><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						<?php
-						}
-						?>
-					</div>
 				</div>
 
-				<div class="so-subsection-title-container">
-					<h3 class="so-subsection-title">ข้อมูลเอกสาร</h3>
+				<div class="so-field-group">
+					<label class="so-label">ประเภท <span style="color:red;">*</span></label>
+					<select name="type_jong" id="type_jong" class="so-select" required>
+						<option value="">**Please Select**</option>
+						<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
+						<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
+						<option value="3" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '3') ? 'selected' : ''; ?>>จองสินค้าสาธิต</option>
+					</select>
 				</div>
 
-				<div class="so-grid-3">
-					<div class="so-field-group">
-						<label class="so-label" for="date_jong">วันที่แจ้ง</label>
-						<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
-					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
-						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
-					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="admin_doc_no">เลขที่เอกสาร</label>
-						<input type="text" name="admin_doc_no" id="admin_doc_no" class="so-input" placeholder="ระบบสร้างให้อัตโนมัติ" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['iv_no'], ENT_QUOTES, 'UTF-8') : ''; ?>" readonly>
-					</div>
-				</div>
+				<div class="so-field-group">
+					<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
+					<?php
+					$selected_sale_code = ($savedJong !== null) ? $savedJong['sale_code'] : ($_GET['sale_code'] ?? '');
 
-				<?php $isCancelled = ($savedJong !== null && !$isCopy && $savedJong['cancel_ckk'] == '1'); ?>
-				<div class="so-grid-cancel">
-					<div class="so-field-group">
-						<label class="so-label">&nbsp;</label>
-						<input type="hidden" name="cancel_ckk" id="cancel_ckk" value="<?php echo $isCancelled ? '1' : '0'; ?>">
-						<button type="button" class="btn-so-danger<?php echo $isCancelled ? ' is-active' : ''; ?>" style="width: 100%; justify-content: center;" onclick="this.classList.toggle('is-active'); document.getElementById('cancel_ckk').value = this.classList.contains('is-active') ? '1' : '0';">
-							<img src="img/icons/circle_x.png" alt="" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
-						</button>
-					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="admin_cancel_reason">หมายเหตุการยกเลิก</label>
-						<div class="so-input-wrapper">
-							<input type="text" name="admin_cancel_reason" id="admin_cancel_reason" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['remark'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="กรอกหมายเหตุ">
-							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('admin_cancel_reason');"></i>
-						</div>
-					</div>
+					if ($_SESSION['code'] == 'SS1') {
+					?>
+						<select name="sale_code" id="sale_code" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<?php
+							$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
+							$objQuery5 = mysqli_query($com, $strSQL5);
+							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
+							?>
+								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
+							<?php
+							}
+							?>
+						</select>
+					<?php
+					} else if ($_SESSION['code'] == 'SS2') {
+					?>
+						<select name="sale_code" id="sale_code" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<?php
+							$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
+							$objQuery5 = mysqli_query($com, $strSQL5);
+							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
+							?>
+								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
+							<?php
+							}
+							?>
+						</select>
+					<?php
+					} else if ($_SESSION['code'] == 'SS5') {
+					?>
+						<select name="sale_code" id="sale_code" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<?php
+							$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
+							$objQuery5 = mysqli_query($com, $strSQL5);
+							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
+							?>
+								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
+							<?php
+							}
+							?>
+						</select>
+					<?php
+					} else if ($_SESSION['code'] == 'SUP_EN') {
+					?>
+						<select name="sale_code" id="sale_code" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<?php
+							$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
+							$objQuery5 = mysqli_query($com, $strSQL5);
+							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
+							?>
+								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
+							<?php
+							}
+							?>
+						</select>
+					<?php
+					} else {
+					?>
+						<select name="sale_code" id="sale_code" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<?php
+							$strSQL5 = "SELECT * FROM tb_team_all ORDER BY sale_code ASC";
+							$objQuery5 = mysqli_query($com, $strSQL5);
+							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
+							?>
+								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
+							<?php
+							}
+							?>
+						</select>
+					<?php
+					}
+					?>
 				</div>
-
 			</div>
+
+			<div class="so-subsection-title-container">
+				<h3 class="so-subsection-title">ข้อมูลเอกสาร</h3>
+			</div>
+
+			<div class="so-grid-3">
+				<div class="so-field-group">
+					<label class="so-label" for="date_jong">วันที่แจ้ง</label>
+					<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
+				</div>
+				<div class="so-field-group">
+					<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
+					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
+				</div>
+				<div class="so-field-group">
+					<label class="so-label" for="admin_doc_no">เลขที่เอกสาร</label>
+					<input type="text" name="admin_doc_no" id="admin_doc_no" class="so-input" placeholder="ระบบสร้างให้อัตโนมัติ" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['iv_no'], ENT_QUOTES, 'UTF-8') : ''; ?>" readonly>
+				</div>
+			</div>
+
+			<?php $isCancelled = ($savedJong !== null && !$isCopy && $savedJong['cancel_ckk'] == '1'); ?>
+			<div class="so-grid-cancel">
+				<div class="so-field-group">
+					<label class="so-label">&nbsp;</label>
+					<input type="hidden" name="cancel_ckk" id="cancel_ckk" value="<?php echo $isCancelled ? '1' : '0'; ?>">
+					<button type="button" class="btn-so-danger<?php echo $isCancelled ? ' is-active' : ''; ?>" style="width: 100%; justify-content: center;" onclick="this.classList.toggle('is-active'); document.getElementById('cancel_ckk').value = this.classList.contains('is-active') ? '1' : '0';">
+						<img src="img/icons/circle_x.png" alt="" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
+					</button>
+				</div>
+				<div class="so-field-group">
+					<label class="so-label" for="admin_cancel_reason">หมายเหตุการยกเลิก</label>
+					<div class="so-input-wrapper">
+						<input type="text" name="admin_cancel_reason" id="admin_cancel_reason" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['remark'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="กรอกหมายเหตุ">
+						<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('admin_cancel_reason');" role="button" tabindex="0" aria-label="ล้างค่าหมายเหตุการยกเลิก"></i>
+					</div>
+				</div>
+			</div>
+
 		</div>
 
 		<!-- กล่อง: ข้อมูลลูกค้า -->
@@ -1552,7 +272,7 @@ if ($savedRefId !== "") {
 						<label class="so-label" for="customer">ชื่อลูกค้า</label>
 						<div class="so-input-wrapper">
 							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['customer'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-							<i class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();"></i>
+							<i class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" role="button" tabindex="0" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></i>
 						</div>
 					</div>
 				</div>
@@ -1616,7 +336,7 @@ if ($savedRefId !== "") {
 						<label class="so-label" for="address_send">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
 							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
-							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');"></i>
+							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');" role="button" tabindex="0" aria-label="ล้างที่อยู่ลูกค้า"></i>
 						</div>
 					</div>
 				</div>
@@ -1676,19 +396,19 @@ if ($savedRefId !== "") {
 
 			<div id="productHiddenInputs"></div>
 		</div>
-</div>
+		</div>
 
-<div class="so-sticky-actions">
-	<div class="so-sticky-actions-inner">
-		<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit">
-			<i class="far fa-save"></i> บันทึกข้อมูล
-		</button>
-		<button type="button" name="save_draft" onclick="saveDraft()" class="btn-so-draft">
-			<i class="far fa-save"></i> Save Draft
-		</button>
-	</div>
-</div>
-</form>
+		<div class="so-sticky-actions">
+			<div class="so-sticky-actions-inner">
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit">
+					<i class="far fa-save"></i> บันทึกข้อมูล
+				</button>
+				<button type="button" name="save_draft" onclick="saveDraft()" class="btn-so-draft">
+					<i class="far fa-save"></i> Save Draft
+				</button>
+			</div>
+		</div>
+	</form>
 
 <!-- HTML โครงสร้างป๊อปอัปค้นหาลูกค้า (ตามสไตล์ของ register_suphos.php) -->
 <div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true">
@@ -1808,7 +528,7 @@ if ($savedRefId !== "") {
 				<label class="so-label" for="productRemarkModalInput">หมายเหตุสินค้า</label>
 				<div class="so-input-wrapper">
 					<input type="text" id="productRemarkModalInput" class="so-input" placeholder="ระบุหมายเหตุสินค้า...">
-					<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('productRemarkModalInput')"></i>
+					<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('productRemarkModalInput')" role="button" tabindex="0" aria-label="ล้างหมายเหตุสินค้า"></i>
 				</div>
 			</div>
 		</div>
@@ -1819,28 +539,8 @@ if ($savedRefId !== "") {
 	</div>
 </div>
 
-<!-- <div id="cr_bar"><?php include "foot.php"; ?></div> -->
-
 <script>
-	var PRODUCT_SEARCH_DEPT = '<?php echo ($_SESSION['department'] == "วิศวกรรม") ? "eng" : "sale"; ?>';
-
-	function switchSoTab(evt, tabId) {
-		evt.preventDefault();
-		var i, tabcontent, tablinks;
-
-		tabcontent = document.getElementsByClassName("so-tab-content");
-		for (i = 0; i < tabcontent.length; i++) {
-			tabcontent[i].classList.remove("active");
-		}
-
-		tablinks = document.getElementsByClassName("so-tab-btn");
-		for (i = 0; i < tablinks.length; i++) {
-			tablinks[i].classList.remove("active");
-		}
-
-		document.getElementById(tabId).classList.add("active");
-		evt.currentTarget.classList.add("active");
-	}
+	var PRODUCT_SEARCH_DEPT = '<?php echo (isset($_SESSION['department']) && $_SESSION['department'] == "วิศวกรรม") ? "eng" : "sale"; ?>';
 
 	function clearFieldValue(id) {
 		var el = document.getElementById(id);
@@ -2016,7 +716,7 @@ if ($savedRefId !== "") {
 	};
 
 	// ===== รายการสินค้าแบบไดนามิก =====
-	var productRows = <?php echo count($savedProducts) > 0 ? json_encode($savedProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '[]'; ?>;
+	var productRows = <?php echo count($savedProducts) > 0 ? json_encode($savedProducts, JSON_UNESCAPED_UNICODE) : '[]'; ?>;
 	var productSearchTimer = null;
 	var productDragIndex = null;
 
@@ -2060,8 +760,8 @@ if ($savedRefId !== "") {
 				'<td>' + escapeProductHtml(row.product_name) + remarkBlock + '</td>' +
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
 				'<td class="col-actions">' +
-				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
-				'<button type="button" class="product-row-icon-btn" onclick="askDeleteProductRow(' + idx + ')" title="ลบ"><i class="fas fa-trash"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ" aria-label="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="askDeleteProductRow(' + idx + ')" title="ลบ" aria-label="ลบรายการสินค้า"><i class="fas fa-trash"></i></button>' +
 				'</td>' +
 				'</tr>';
 		}).join('');
@@ -2324,14 +1024,50 @@ if ($savedRefId !== "") {
 			// Restore the custom saved shipping address
 			var addrInput = document.getElementById('address_send');
 			if (addrInput) {
-				addrInput.value = <?php echo json_encode($savedJong['address_send'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+				addrInput.value = <?php echo json_encode($savedJong['address_send'], JSON_UNESCAPED_UNICODE); ?>;
 			}
 		<?php } ?>
 	});
 
+	function fncSubmit(form) {
+		var requiredFields = [{
+				id: 'type_jong',
+				label: 'ประเภท'
+			},
+			{
+				id: 'sale_code',
+				label: 'แผนก/เขตการขาย'
+			},
+			{
+				id: 'date_receive',
+				label: 'วันที่ต้องการสินค้า'
+			},
+			{
+				id: 'address_send',
+				label: 'ที่อยู่ลูกค้า'
+			}
+		];
+
+		for (var i = 0; i < requiredFields.length; i++) {
+			var field = document.getElementById(requiredFields[i].id);
+			if (field && field.hasAttribute('required') && !field.value.trim()) {
+				Swal.fire('แจ้งเตือน', 'กรุณากรอก "' + requiredFields[i].label + '" ให้ครบถ้วน', 'warning');
+				return false;
+			}
+		}
+
+		if (!productRows.length) {
+			Swal.fire('แจ้งเตือน', 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ', 'warning');
+			return false;
+		}
+
+		return true;
+	}
+
 	var __formSubmitting = false;
 
 	function lockSubmitForm(form) {
+		if (!fncSubmit(form)) return false;
 		if (__formSubmitting) return false;
 		__formSubmitting = true;
 		var btn = document.getElementById('btn_submit_form');

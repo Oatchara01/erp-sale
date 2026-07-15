@@ -1,157 +1,25 @@
 <?php include('head.php');
-include 'partials/so_status_ui.php';
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
 
 ?>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
-	/* Custom SweetAlert2 Close SO Popup (Figma style 648x319) */
-	.figma-close-so-popup {
-		width: min(648px, 94vw) !important;
-		min-height: 319px !important;
-		padding: 40px 32px 32px !important;
-		border-radius: 24px !important;
-		font-family: 'Prompt', sans-serif !important;
-		box-sizing: border-box !important;
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-	}
-
-	.figma-close-so-icon {
-		border: none !important;
-		margin: 0 auto 20px !important;
-		width: 80px !important;
-		height: 80px !important;
-		display: flex !important;
-		align-items: center !important;
-		justify-content: center !important;
-	}
-
-	.figma-close-so-title {
-		font-size: 22px !important;
-		font-weight: 600 !important;
-		color: #1C1B1F !important;
-		margin: 0 0 10px 0 !important;
-		padding: 0 !important;
-	}
-
-	.figma-close-so-html {
-		font-size: 15px !important;
-		color: #8E8B94 !important;
-		margin: 0 0 28px 0 !important;
-		line-height: 1.5 !important;
-	}
-
-	.figma-close-so-actions {
-		display: flex !important;
-		gap: 16px !important;
-		justify-content: center !important;
-		width: 100% !important;
-		max-width: 320px !important;
-		margin: 0 auto !important;
-	}
-
-	.figma-close-so-confirm-btn {
-		flex: 1 !important;
-		height: 44px !important;
-		border-radius: 22px !important;
-		border: none !important;
-		background-color: #612989 !important;
-		/* สีม่วงหลัก */
-		color: #ffffff !important;
-		font-family: 'Prompt', sans-serif !important;
-		font-size: 16px !important;
-		font-weight: 500 !important;
-		cursor: pointer !important;
-		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2) !important;
-		transition: background-color 0.2s, transform 0.1s !important;
-	}
-
-	.figma-close-so-confirm-btn:hover {
-		background-color: #502173 !important;
-	}
-
-	.figma-close-so-confirm-btn:active {
-		transform: scale(0.98) !important;
-	}
-
-	.figma-close-so-cancel-btn {
-		flex: 1 !important;
-		height: 44px !important;
-		border-radius: 22px !important;
-		border: 1px solid #EDE9F0 !important;
-		background-color: #F5F6F8 !important;
-		color: #3b3b3b !important;
-		font-family: 'Prompt', sans-serif !important;
-		font-size: 16px !important;
-		font-weight: 500 !important;
-		cursor: pointer !important;
-		transition: background-color 0.2s, transform 0.1s !important;
-	}
-
-	.figma-close-so-cancel-btn:hover {
-		background-color: #e8e9eb !important;
-		color: #1c1b1f !important;
-	}
-
-	.figma-close-so-cancel-btn:active {
-		transform: scale(0.98) !important;
-	}
-
-	/* Custom SweetAlert2 Result Popup (Figma style 648x319) */
-	.figma-result-popup {
-		width: min(648px, 94vw) !important;
-		min-height: 319px !important;
-		padding: 40px 32px 32px !important;
-		border-radius: 24px !important;
-		font-family: 'Prompt', sans-serif !important;
-		box-sizing: border-box !important;
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-	}
-
-	.figma-result-title {
-		font-size: 24px !important;
-		font-weight: 600 !important;
-		color: #1C1B1F !important;
-		margin: 0 0 16px 0 !important;
-		padding: 0 !important;
-	}
-
-	.figma-result-actions {
-		display: flex !important;
-		justify-content: center !important;
-		width: 100% !important;
-		max-width: 160px !important;
-		margin: 24px auto 0 !important;
-	}
-
-	.figma-result-confirm-btn {
-		width: 100% !important;
-		height: 44px !important;
-		border-radius: 22px !important;
-		border: none !important;
-		background-color: #612989 !important;
-		color: #ffffff !important;
-		font-family: 'Prompt', sans-serif !important;
-		font-size: 16px !important;
-		font-weight: 500 !important;
-		cursor: pointer !important;
-		box-shadow: 0 4px 10px rgba(97, 41, 137, 0.2) !important;
-		transition: background-color 0.2s, transform 0.1s !important;
-	}
-
-	.figma-result-confirm-btn:hover {
-		background-color: #502173 !important;
-	}
-
-	.figma-result-confirm-btn:active {
-		transform: scale(0.98) !important;
-	}
-</style>
-
+<link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="sweetalert2/dist/sweetalert2.min.css">
+<script src="sweetalert2/dist/sweetalert2.min.js"></script>
 
 <body>
+	<script>
+		(function() {
+			var collapsed = localStorage.getItem("sidebar_collapsed") === "1";
+			document.body.classList.add("has-sidebar");
+			if (collapsed) {
+				document.body.classList.add("sidebar-collapsed");
+				var sidebar = document.getElementById("sidebar");
+				if (sidebar) sidebar.classList.add("sidebar-collapsed");
+			}
+		})();
+	</script>
 	<div class="status-so-page">
 		<div class="so-card">
 			<div class="w3-container w3-bar w3-margin-bottom" style="padding-left:0;padding-right:0;">
@@ -161,14 +29,14 @@ include "dbconnect_sale.php";
 			<form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>">
 				<div class="so-input-group" style="align-items: flex-end; margin-bottom: 20px;">
 					<div style="flex: 1; max-width: 680px; min-width: 250px; display: flex; flex-direction: column; gap: 6px;">
-						<div style="font-size: 14px; color: #612989; font-weight: 500;">ค้นหาด้วยเลขที่เอกสาร/ชื่อลูกค้า</div>
+						<label for="Keyword" style="font-size: 14px; color: #612989; font-weight: 500;">ค้นหาด้วยเลขที่เอกสาร/ชื่อลูกค้า</label>
 						<div style="display: flex; gap: 12px; align-items: center;">
 							<div class="so-search-wrapper" style="flex: 1; width: auto;">
 								<i class="fas fa-search so-search-icon"></i>
-								<input name="Keyword" class="so-input" type="text" placeholder="ค้นหา..." value="<?php echo htmlspecialchars(isset($_GET['Keyword']) ? $_GET['Keyword'] : ''); ?>">
+								<input name="Keyword" id="Keyword" class="so-input" type="text" placeholder="ค้นหา..." value="<?php echo htmlspecialchars(isset($_GET['Keyword']) ? $_GET['Keyword'] : ''); ?>">
 							</div>
 							<a href="register_supbook.php" class="btn-so-outline" style="flex-shrink: 0; font-weight: 500;">
-								<img src="img\icons\add_message.png" alt=""> เพิ่มใบจอง
+								<img src="img/icons/add_message.png" alt=""> เพิ่มใบจอง
 							</a>
 						</div>
 					</div>
@@ -184,17 +52,17 @@ include "dbconnect_sale.php";
 						<div class="w3-container" style="padding:32px;">
 							<div class="so-modal-header">
 								<h5 style="margin:0; font-weight:600; color:#3B3B3B; font-size:20px;">Filters</h5>
-								<span onclick="closeFilterModal()" style="font-size:28px; cursor:pointer; color:#8E8B94; line-height:1;">&times;</span>
+								<button type="button" onclick="closeFilterModal()" aria-label="ปิด" style="background:none; border:none; font-size:28px; cursor:pointer; color:#8E8B94; line-height:1; padding:0;">&times;</button>
 							</div>
 
 							<!-- Row 1: ช่วงวันที่ -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">ตั้งแต่วันที่</label>
+									<label class="so-label" for="start_date">ตั้งแต่วันที่</label>
 									<input type="date" name="start_date" id="start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['start_date']) ? $_GET['start_date'] : ''); ?>">
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">ถึงวันที่</label>
+									<label class="so-label" for="end_date">ถึงวันที่</label>
 									<input type="date" name="end_date" id="end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['end_date']) ? $_GET['end_date'] : ''); ?>">
 								</div>
 							</div>
@@ -202,7 +70,7 @@ include "dbconnect_sale.php";
 							<!-- Row 2: สถานะการอนุมัติ + ประเภทใบจอง -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">สถานะการอนุมัติ</label>
+									<label class="so-label" for="status_approve">สถานะการอนุมัติ</label>
 									<select name="status_approve" id="status_approve" class="so-select">
 										<option value="">-- ทั้งหมด --</option>
 										<option value="Request" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'Request') ? 'selected' : ''; ?>>รอหัวหน้า</option>
@@ -213,7 +81,7 @@ include "dbconnect_sale.php";
 									</select>
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">ประเภทใบจอง</label>
+									<label class="so-label" for="type_jong">ประเภทใบจอง</label>
 									<select name="type_jong" id="type_jong" class="so-select">
 										<option value="">-- ทั้งหมด --</option>
 										<option value="1" <?php echo (isset($_GET['type_jong']) && $_GET['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
@@ -226,7 +94,7 @@ include "dbconnect_sale.php";
 							<!-- Row 3: เขตการขาย + สถานะใบจอง -->
 							<div class="so-form-row" style="align-items: flex-start;">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">เขตการขาย</label>
+									<label class="so-label" for="sale_code">เขตการขาย</label>
 									<?php
 									$selected_sale = isset($_GET['sale_code']) ? $_GET['sale_code'] : '';
 									if ($_SESSION['code'] == 'SS1') {
@@ -255,7 +123,7 @@ include "dbconnect_sale.php";
 									</select>
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">สถานะใบจอง</label>
+									<label class="so-label" for="status_jong">สถานะใบจอง</label>
 									<select name="status_jong" id="status_jong" class="so-select">
 										<option value="">-- ทั้งหมด --</option>
 										<option value="open" <?php echo (isset($_GET['status_jong']) && $_GET['status_jong'] == 'open') ? 'selected' : ''; ?>>ใบจองคงค้าง</option>
@@ -304,7 +172,7 @@ include "dbconnect_sale.php";
 							<th width="5%" style="text-align:center;"></th>
 						</tr>
 					</thead>
-
+					<tbody>
 
 					<?php
 
@@ -375,11 +243,7 @@ include "dbconnect_sale.php";
 					$Num_Rows = mysqli_num_rows($objQuery);
 
 					$Per_Page = '20';
-					$Page = isset($_GET['Page']) ? $_GET['Page'] : '';
-
-					if (!isset($_GET['Page'])) {
-						$Page = 1;
-					}
+					$Page = max(1, (int)($_GET['Page'] ?? 1));
 
 					$Prev_Page = $Page - 1;
 					$Next_Page = $Page + 1;
@@ -397,20 +261,35 @@ include "dbconnect_sale.php";
 
 					$strSQL .= " order  by id_jong DESC   LIMIT $Page_Start , $Per_Page";
 					$objQuery  = mysqli_query($conn, $strSQL);
-
+					$Page_Num_Rows = $objQuery ? mysqli_num_rows($objQuery) : 0;
 
 					?>
 
+
+					<?php if ($Page_Num_Rows === 0) { ?>
+						<tr>
+							<td colspan="10" style="text-align:center; padding:40px 16px; color:#6B6875;">
+								<?php echo ($Num_Rows > 0)
+									? 'ไม่พบข้อมูลในหน้านี้ — ลองกลับไปหน้าแรก'
+									: 'ไม่พบใบจองที่ตรงกับเงื่อนไข ลองล้างตัวกรองหรือเปลี่ยนคำค้น'; ?>
+							</td>
+						</tr>
+					<?php } ?>
 
 					<?php
 					$i = 1;
 					while ($objResult = mysqli_fetch_array($objQuery)) {
 						$row_id = "row-" . $objResult["ref_id"];
 						$dropdown_id = "dropdown-" . $objResult["ref_id"];
+						// json_encode ต้องผ่าน htmlspecialchars ด้วย มิฉะนั้น double quote ที่ครอบ string
+						// จะไปปิด attribute onclick ก่อนกำหนด
+						$row_id_js = htmlspecialchars(json_encode($row_id), ENT_QUOTES, 'UTF-8');
+						$dropdown_id_js = htmlspecialchars(json_encode($dropdown_id), ENT_QUOTES, 'UTF-8');
+						$ref_id_js = htmlspecialchars(json_encode($objResult["ref_id"]), ENT_QUOTES, 'UTF-8');
 					?>
-						<tr class="so-row" onclick="toggleRow('<?php echo $row_id; ?>', this)">
-							<td style="text-align:center;"><img src="img/icons/arrow_down.png" class="caret-icon" style="width:12px; height:12px;"></td>
-							<td><a href="register_supbook.php?ref_id=<?php echo $objResult["ref_id"]; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" style="color: #612989; text-decoration: underline; font-weight: 500;"><?php echo htmlspecialchars($objResult["ref_id"]); ?></a></td>
+						<tr class="so-row" onclick="toggleRow(<?php echo $row_id_js; ?>, this)">
+							<td style="text-align:center;"><img src="img/icons/arrow_down.png" class="caret-icon" style="width:12px; height:12px;" alt=""></td>
+							<td><a href="register_supbook.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" style="color: #612989; text-decoration: underline; font-weight: 500;"><?php echo htmlspecialchars($objResult["ref_id"]); ?></a></td>
 							<td><?php echo DateThai($objResult["date_jong"]); ?></td>
 							<td><?php echo htmlspecialchars($objResult["iv_no"]); ?></td>
 							<td><?php echo Datethai($objResult["date_receive"]); ?></td>
@@ -442,20 +321,20 @@ include "dbconnect_sale.php";
 							</td>
 							<td style="text-align:center; position:relative;">
 								<div class="so-dropdown">
-									<button type="button" class="so-dropdown-trigger" onclick="toggleDropdown(event, '<?php echo $dropdown_id; ?>')">
+									<button type="button" class="so-dropdown-trigger" aria-label="ตัวเลือกเพิ่มเติม" onclick="toggleDropdown(event, <?php echo $dropdown_id_js; ?>)">
 										<i class="fas fa-ellipsis-v"></i>
 									</button>
-									<div id="<?php echo $dropdown_id; ?>" class="so-dropdown-menu">
-										<a href="register_supbook.php?ref_id=<?php echo $objResult["ref_id"]; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" class="so-dropdown-item">
+									<div id="<?php echo htmlspecialchars($dropdown_id); ?>" class="so-dropdown-menu">
+										<a href="register_supbook.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" class="so-dropdown-item">
 											<i class="fas fa-edit" style="width:16px;"></i> แก้ไข
 										</a>
-										<a href="register_supbook.php?ref_id=<?php echo $objResult["ref_id"]; ?>&copy=1" class="so-dropdown-item">
+										<a href="register_supbook.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>&copy=1" class="so-dropdown-item">
 											<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 										</a>
-										<a href="report_jongpro.php?ref_id=<?php echo $objResult["ref_id"]; ?>" class="so-dropdown-item" target="_blank">
+										<a href="report_jongpro.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item" target="_blank">
 											<i class="fas fa-print" style="width:16px;"></i> พิมพ์รายงาน
 										</a>
-										<a href="javascript:void(0);" onclick="confirmCloseJongSup('<?php echo $objResult["ref_id"]; ?>')" class="so-dropdown-item">
+										<a href="javascript:void(0);" onclick="confirmCloseJongSup(<?php echo $ref_id_js; ?>)" class="so-dropdown-item">
 											<i class="fas fa-lock" style="width:16px;"></i> ปิดใบจอง
 										</a>
 									</div>
@@ -471,7 +350,7 @@ include "dbconnect_sale.php";
 						while ($objResult2 = mysqli_fetch_array($objQuery2)) {
 							$displayName = (!empty($objResult2['sol_name'])) ? $objResult2['sol_name'] : ($objResult2['product_name'] ?? $objResult2['product_code']);
 						?>
-							<tr class="expanded-row <?php echo $row_id; ?>" style="display:none; background: #F1E1FF !important;">
+							<tr class="expanded-row" data-row="<?php echo htmlspecialchars($row_id); ?>" style="display:none; background: #F1E1FF !important;">
 								<td></td>
 
 								<!-- รายการสินค้า ชิดซ้าย -->
@@ -498,8 +377,9 @@ include "dbconnect_sale.php";
 						$i++;
 					}
 					?>
+					</tbody>
 				</table>
-			</div> <!-- so-card -->
+			</div> <!-- so-table-wrapper -->
 
 			<div class="pagination-wrapper">
 				<div>
@@ -507,7 +387,8 @@ include "dbconnect_sale.php";
 				</div>
 				<div class="pagination-links">
 					<?php
-					$pagParams = "&Keyword=" . urlencode($Keyword) . "&start_date=" . urlencode($start_date) . "&end_date=" . urlencode($end_date) . "&sale_code=" . urlencode($sale_code);
+					$pagParams = "&Keyword=" . urlencode($Keyword) . "&start_date=" . urlencode($start_date) . "&end_date=" . urlencode($end_date) . "&sale_code=" . urlencode($sale_code)
+						. "&status_approve=" . urlencode($status_approve) . "&type_jong=" . urlencode($type_jong) . "&status_jong=" . urlencode($status_jong);
 
 					if ($Prev_Page) {
 						echo "<a class='pagination-btn' href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page$pagParams'><i class='fas fa-chevron-left'></i></a>";
@@ -538,14 +419,15 @@ include "dbconnect_sale.php";
 					?>
 				</div>
 			</div>
-		</div> <!-- status-so-page -->
+		</div> <!-- so-card -->
+	</div> <!-- status-so-page -->
 
-		<!-- JS Helpers for Expandable Rows, Kebab Dropdowns, and Filter Modal -->
+	<!-- JS Helpers for Expandable Rows, Kebab Dropdowns, and Filter Modal -->
 		<script>
 			function confirmCloseJongSup(refId) {
 				Swal.fire({
 					title: 'ปิดใบจอง ?',
-					html: 'คุณต้องการปิดใบจอง เลขที่เอกสาร " ' + refId + ' " ใช่ไหม ?',
+					text: 'คุณต้องการปิดใบจอง เลขที่เอกสาร " ' + refId + ' " ใช่ไหม ?',
 					showCancelButton: true,
 					confirmButtonText: 'ตกลง',
 					cancelButtonText: 'ยกเลิก',
@@ -640,12 +522,13 @@ include "dbconnect_sale.php";
 				});
 			}
 
-			function toggleRow(rowClass, triggerEl) {
-				const rows = document.querySelectorAll('.' + rowClass);
+			function toggleRow(rowKey, triggerEl) {
+				const rows = Array.from(document.querySelectorAll('.expanded-row'))
+					.filter(r => r.dataset.row === rowKey);
 				const isVisible = rows.length > 0 && rows[0].style.display !== 'none';
 
 				document.querySelectorAll('.expanded-row').forEach(r => {
-					if (!r.classList.contains(rowClass)) r.style.display = 'none';
+					if (r.dataset.row !== rowKey) r.style.display = 'none';
 				});
 				document.querySelectorAll('.so-row').forEach(r => {
 					if (r !== triggerEl) r.classList.remove('is-expanded');

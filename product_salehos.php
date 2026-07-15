@@ -317,6 +317,24 @@
             border-right: none;
         }
 
+        .so-product-table-wrap {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .so-product-summary {
+                flex-wrap: wrap;
+                text-align: left;
+                gap: 12px 0;
+            }
+
+            .so-product-summary-col {
+                flex: 1 1 50%;
+                border-right: none;
+            }
+        }
+
         .so-summary-label {
             font-size: 16px;
             color: #8E8B94;
@@ -830,6 +848,7 @@
         </div>
     </div>
 
+    <div class="so-product-table-wrap">
     <table class="so-product-table" id="product_table">
         <thead>
             <tr>
@@ -926,6 +945,7 @@
 
         </tbody>
     </table>
+    </div>
 
     <!-- Edit Modal -->
     <div class="so-modal-overlay" id="productEditModal">

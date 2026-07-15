@@ -2,745 +2,21 @@
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
-
 ?>
-<style>
-	@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-
-	body {
-		background-color: #F4EFF8 !important;
-		background-image: none !important;
-		font-family: 'Prompt', sans-serif !important;
-		color: #4A4A4A !important;
-	}
-
-	.status-so-page,
-	.status-so-page * {
-		box-sizing: border-box;
-	}
-
-	.status-so-page {
-		font-family: 'Prompt', sans-serif !important;
-		background-color: transparent;
-		padding: clamp(16px, 2vw, 24px) clamp(10px, 2vw, 16px);
-		min-height: 100dvh;
-		max-width: 1490px;
-		margin: 0 auto;
-	}
-
-	.status-so-page h4 {
-		font-family: 'Prompt', sans-serif !important;
-		font-weight: 600;
-		color: #612989;
-		margin-top: 0;
-	}
-
-	.so-card {
-		background: transparent;
-		border: none;
-		box-shadow: none;
-		padding: 0;
-		margin-bottom: 24px;
-	}
-
-	/* Form inputs & controls */
-	.so-input-group {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 12px;
-		margin-bottom: 20px;
-		flex-wrap: wrap;
-	}
-
-	.so-search-wrapper {
-		position: relative;
-		width: 680px;
-		max-width: 100%;
-	}
-
-	.so-search-icon {
-		position: absolute;
-		left: 16px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #8E8B94;
-	}
-
-	.so-input {
-		width: 100%;
-		height: 42px;
-		padding: 0 16px;
-		padding-left: 40px;
-		/* for search icon */
-		border-radius: 10px;
-		background: #F5F6F8;
-		border: 1px solid transparent;
-		font-size: 14px;
-		font-family: 'Prompt', sans-serif !important;
-		transition: all 0.3s ease;
-	}
-
-	.so-input:focus,
-	.so-select:focus {
-		background: #FFFFFF;
-		border-color: #612989;
-		box-shadow: 0 0 0 3px rgba(97, 41, 137, 0.1);
-		outline: none;
-	}
-
-	.so-modal-input {
-		padding-left: 16px;
-	}
-
-	.so-select {
-		width: 100%;
-		height: 42px;
-		padding: 0 16px;
-		border-radius: 10px;
-		background: #F5F6F8;
-		border: 1px solid transparent;
-		font-size: 14px;
-		font-family: 'Prompt', sans-serif !important;
-		transition: all 0.3s ease;
-	}
-
-	/* Buttons */
-	.btn-so-primary {
-		background: #612989;
-		color: #FFFFFF;
-		border: none;
-		border-radius: 24px;
-		height: 42px;
-		padding: 0 24px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		box-shadow: 0 4px 12px rgba(97, 41, 137, 0.2);
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		text-decoration: none;
-	}
-
-	.btn-so-primary:hover {
-		background: #502173;
-		box-shadow: 0 6px 16px rgba(97, 41, 137, 0.3);
-		color: #FFFFFF;
-	}
-
-	.btn-so-secondary {
-		background: #FFFFFF;
-		color: #612989;
-		border: 1px solid #EFEBEF;
-		border-radius: 24px;
-		height: 42px;
-		padding: 0 40px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.btn-so-secondary:hover {
-		background: #EFEBFF;
-		border-color: #612989;
-	}
-
-	.btn-so-outline {
-		background: #FFFFFF;
-		color: #612989 !important;
-		border: 1px solid #EDE9F0;
-		border-radius: 9999px;
-		height: 42px;
-		padding: 0 24px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		text-decoration: none;
-	}
-
-	.btn-so-outline:hover {
-		background: #F4EFF8;
-		color: #502173 !important;
-		border-color: #612989;
-	}
-
-	.btn-so-danger {
-		background: #DC3545;
-		color: #FFFFFF;
-		border: none;
-		border-radius: 24px;
-		height: 42px;
-		padding: 0 20px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.3s ease;
-	}
-
-	.btn-so-danger:hover {
-		background: #BD2130;
-	}
-
-	/* Modern Table */
-	.so-table-wrapper {
-		overflow-x: auto;
-		overflow-y: visible;
-		border-radius: 10px;
-		border: 1px solid #EDE9F0;
-		background: #FFFFFF;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	.so-table {
-		width: 100%;
-		min-width: 1120px;
-		border-collapse: collapse;
-		font-size: 14px;
-	}
-
-	.so-table th {
-		background: #FFFFFF;
-		font-size: 16px;
-		font-weight: 600;
-		padding: 25px 16px;
-		text-align: left;
-		border-bottom: 1px solid #612989;
-	}
-
-	.so-table td {
-		padding: 14px 16px;
-		border-bottom: 1px solid #EDE9F0;
-		color: #3B3B3B;
-		background: #FFFFFF;
-		vertical-align: middle;
-	}
-
-	/* ปรับระยะห่างขอบสุดทางซ้ายและขวาของตาราง */
-	.so-table th:first-child,
-	.so-table td:first-child {
-		padding-left: 40px;
-	}
-
-	.so-table th:last-child,
-	.so-table td:last-child {
-		padding-right: 40px;
-	}
-
-	.so-row {
-		cursor: pointer;
-		transition: background-color 0.2s ease;
-	}
-
-	.so-row:hover {
-		background-color: #FAF8FD;
-	}
-
-	.so-row.is-expanded {
-		background-color: #F6EFFC;
-	}
-
-	.caret-icon {
-		transition: transform 0.2s ease;
-	}
-
-	.so-row.is-expanded .caret-icon {
-		transform: rotate(180deg);
-		color: #612989;
-	}
-
-	/* Badges for status_doc */
-	.badge-status {
-		display: inline-flex;
-		align-items: center;
-		padding: 4px 12px;
-		border-radius: 20px;
-		font-size: 12px;
-		font-weight: 500;
-	}
-
-	.badge-status.approve {
-		background-color: #F6FFED;
-		color: #389E0D;
-	}
-
-	/* อนุมัติแล้ว / Approve */
-	.badge-status.draft {
-		background-color: #FFF7E6;
-		color: #D48806;
-	}
-
-	/* Draft */
-	.badge-status.rejected {
-		background-color: #FFF1F0;
-		color: #CF1322;
-	}
-
-	/* Rejected / ไม่อนุมัติ */
-	.badge-status.cancel {
-		background-color: #F5F5F5;
-		color: #595959;
-	}
-
-	/* ยกเลิก */
-	.badge-status.pending-mgr {
-		background-color: #FFF7E6;
-		color: #D48806;
-	}
-
-	/* รอหัวหน้า */
-	.badge-status.pending-exec {
-		background-color: #F9F0FF;
-		color: #531DAB;
-	}
-
-	/* รอผู้บริหาร */
-	.badge-status.returned {
-		background-color: #FFF2E8;
-		color: #D4380D;
-	}
-
-	/* ส่งกลับ */
-
-	/* Expanded Row Details */
-	.so-row.is-expanded,
-	.so-row.is-expanded td {
-		background-color: #F1E1FF !important;
-	}
-
-	.expanded-row td {
-		padding: 0 !important;
-		background: #F1E1FF !important;
-		border-bottom: 1px solid #EDE9F0;
-	}
-
-	.expanded-container {
-		padding: 20px 24px;
-		display: flex;
-		gap: 24px;
-		flex-wrap: wrap;
-		align-items: flex-start;
-	}
-
-	.expanded-products-card {
-		flex: 1;
-		min-width: min(300px, 100%);
-		background: transparent;
-		border: none;
-		padding: 0;
-		box-shadow: none;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	.sub-table {
-		width: 100%;
-		min-width: 760px;
-		border-collapse: collapse;
-		font-size: 12px;
-		table-layout: fixed;
-	}
-
-	.sub-table th {
-		background: transparent;
-		font-size: 15px;
-		font-weight: 500;
-		padding: 8px 12px !important;
-		text-align: left;
-		border-bottom: none;
-	}
-
-	.sub-table td {
-		font-size: 14px;
-		padding: 10px 12px !important;
-		border-bottom: none;
-		color: #3B3B3B;
-	}
-
-	/* Actions Menu */
-	.actions-menu-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.actions-menu-list li {
-		margin-bottom: 8px;
-	}
-
-	.actions-menu-list li:last-child {
-		margin-bottom: 0;
-	}
-
-	.btn-action-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		padding: 10px 14px;
-		border-radius: 8px;
-		color: #4A4A4A;
-		font-size: 13px;
-		font-weight: 500;
-		text-decoration: none;
-		transition: all 0.2s ease;
-		border: none;
-		background: transparent;
-		cursor: pointer;
-		text-align: left;
-	}
-
-	.btn-action-item:hover {
-		background: #F6EFFC;
-		color: #612989;
-	}
-
-	/* Modals */
-	.so-modal-header {
-		border-bottom: none;
-		padding-bottom: 0;
-		margin-bottom: 24px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.so-modal-footer {
-		border-top: none;
-		padding-top: 0;
-		margin-top: 24px;
-		display: flex;
-		justify-content: flex-end;
-		gap: 12px;
-	}
-
-	.so-form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 16px;
-		margin-bottom: 16px;
-	}
-
-	.filter-pill {
-		background-color: #F5F6F8;
-		border: 1px solid transparent;
-		color: #3B3B3B;
-		padding: 10px 20px;
-		border-radius: 50px;
-		font-size: 13px;
-		font-family: 'Prompt', sans-serif !important;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.filter-pill.active {
-		background-color: #612989;
-		color: #ffffff;
-	}
-
-	.btn-filter-submit {
-		background-color: #612989;
-		color: #ffffff;
-		border: none;
-		padding: 10px 32px;
-		border-radius: 50px;
-		font-size: 14px;
-		font-weight: 500;
-		cursor: pointer;
-		font-family: 'Prompt', sans-serif !important;
-		transition: background-color 0.2s;
-	}
-
-	.btn-filter-submit:hover {
-		background-color: #4A1E68;
-	}
-
-	.btn-filter-reset {
-		background-color: #ffffff;
-		color: #3B3B3B;
-		border: 1px solid #EDE9F0;
-		padding: 10px 32px;
-		border-radius: 50px;
-		font-size: 14px;
-		font-weight: 500;
-		cursor: pointer;
-		font-family: 'Prompt', sans-serif !important;
-		transition: background-color 0.2s;
-		display: inline-flex;
-		align-items: center;
-	}
-
-	.btn-filter-reset:hover {
-		background-color: #F5F6F8;
-	}
-
-	.pagination-wrapper {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-top: 20px;
-		font-size: 13px;
-		flex-wrap: wrap;
-		gap: 12px;
-	}
-
-	.pagination-links {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-	}
-
-	.pagination-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 32px;
-		height: 32px;
-		padding: 0 6px;
-		border-radius: 6px;
-		border: 1px solid #EFEBEF;
-		color: #3B3B3B;
-		text-decoration: none;
-		transition: all 0.2s ease;
-	}
-
-	.pagination-btn:hover {
-		background: #EFEBFF;
-		border-color: #612989;
-		color: #612989;
-	}
-
-	.pagination-btn.active {
-		background: #612989;
-		color: #FFFFFF;
-		border-color: #612989;
-	}
-
-	/* Dropdown style */
-	.so-dropdown {
-		position: relative;
-		display: inline-block;
-	}
-
-	.so-dropdown-trigger {
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 8px;
-		color: #8E8B94;
-		font-size: 16px;
-		transition: color 0.2s;
-	}
-
-	.so-dropdown-trigger:hover {
-		color: #612989;
-	}
-
-	.so-dropdown-menu {
-		display: none;
-		position: absolute;
-		right: 0;
-		top: 100%;
-		background-color: #ffffff;
-		width: 186px;
-		box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.1);
-		border-radius: 8px;
-		z-index: 1000;
-		border: 1px solid #EDE9F0;
-		padding: 0;
-		overflow: hidden;
-	}
-
-	.so-dropdown-menu.show {
-		display: block;
-	}
-
-	.so-dropdown-item {
-		color: #3B3B3B;
-		padding: 10px 16px;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		font-size: 13px;
-		text-align: left;
-		font-family: 'Prompt', sans-serif !important;
-		transition: background-color 0.2s, color 0.2s;
-		border-bottom: 1px solid #EDE9F0;
-	}
-
-	.so-dropdown-item:last-child {
-		border-bottom: none;
-	}
-
-	.so-dropdown-item i {
-		color: #8E8B94;
-		transition: color 0.2s;
-	}
-
-	.so-dropdown-item:hover {
-		background-color: #612989;
-		color: #ffffff !important;
-		text-decoration: none;
-	}
-
-	.so-dropdown-item:hover i {
-		color: #ffffff !important;
-	}
-
-	@media (max-width: 600px) {
-		.so-form-row {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.status-so-page {
-			padding: 16px 10px;
-		}
-
-		.status-so-page h4 {
-			font-size: 18px;
-		}
-
-		.so-input-group {
-			align-items: stretch !important;
-		}
-
-		.so-input-group>div:first-child {
-			width: 100%;
-			max-width: none !important;
-			min-width: 0 !important;
-		}
-
-		.so-input-group>div:first-child>div:last-child {
-			flex-wrap: wrap;
-			align-items: stretch !important;
-		}
-
-		.so-search-wrapper {
-			width: 100%;
-			flex: 1 1 100% !important;
-		}
-
-		.btn-so-outline,
-		.btn-so-secondary,
-		.btn-filter-submit,
-		.btn-filter-reset {
-			width: 100%;
-			min-height: 44px;
-			justify-content: center;
-			text-align: center;
-		}
-
-		.so-modal-footer {
-			flex-direction: column;
-		}
-
-		.so-form-pills {
-			flex-wrap: wrap;
-		}
-
-		.filter-pill {
-			flex: 1 1 100%;
-			min-height: 44px;
-		}
-
-		.w3-modal-content {
-			width: calc(100vw - 20px) !important;
-			margin: 24px auto !important;
-		}
-
-		.w3-modal-content>.w3-container {
-			padding: 20px !important;
-		}
-
-		.so-table {
-			min-width: 980px;
-			font-size: 13px;
-		}
-
-		.so-table th {
-			font-size: 13px;
-			padding: 14px 10px;
-			white-space: nowrap;
-		}
-
-		.so-table td {
-			padding: 12px 10px;
-		}
-
-		.so-table th:first-child,
-		.so-table td:first-child {
-			padding-left: 12px;
-		}
-
-		.so-table th:last-child,
-		.so-table td:last-child {
-			padding-right: 12px;
-		}
-
-		.expanded-container {
-			padding: 14px 12px;
-			gap: 12px;
-		}
-
-		.sub-table {
-			min-width: 680px;
-		}
-
-		.sub-table th,
-		.sub-table td {
-			font-size: 12px;
-			padding: 8px 8px !important;
-		}
-
-		.pagination-wrapper,
-		.pagination-links {
-			justify-content: center;
-			width: 100%;
-		}
-
-		.pagination-wrapper>div:first-child {
-			width: 100%;
-			text-align: center;
-		}
-
-		.pagination-btn {
-			min-width: 36px;
-			height: 36px;
-		}
-	}
-
-	@media (max-width: 420px) {
-		.status-so-page {
-			padding-left: 8px;
-			padding-right: 8px;
-		}
-
-		.so-input {
-			font-size: 13px;
-		}
-
-		.badge-status {
-			padding: 4px 8px;
-			font-size: 11px;
-		}
-
-		.so-dropdown-menu {
-			right: -8px;
-			width: min(186px, calc(100vw - 32px));
-		}
-	}
-</style>
+<link rel="stylesheet" href="css/so-status-ui.css">
 
 <body>
+	<script>
+		(function() {
+			var collapsed = localStorage.getItem("sidebar_collapsed") === "1";
+			document.body.classList.add("has-sidebar");
+			if (collapsed) {
+				document.body.classList.add("sidebar-collapsed");
+				var sidebar = document.getElementById("sidebar");
+				if (sidebar) sidebar.classList.add("sidebar-collapsed");
+			}
+		})();
+	</script>
 
 	<div class="status-so-page">
 		<div class="so-card">
@@ -758,9 +34,10 @@ include "dbconnect_sale.php";
 			$have_order = isset($_GET['have_order']) ? $_GET['have_order'] : '';
 			$no_iv = isset($_GET['no_iv']) ? $_GET['no_iv'] : '';
 			$is_deposit = isset($_GET['is_deposit']) ? $_GET['is_deposit'] : '';
+			$scriptName = htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, 'UTF-8');
 			?>
 
-			<form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>" id="mainSearchForm">
+			<form name="frmSearch" method="GET" action="<?php echo $scriptName; ?>" id="mainSearchForm">
 				<!-- preserve modal filter values as hidden fields in main search -->
 				<input type="hidden" name="start_date" value="<?php echo htmlspecialchars($start_date); ?>">
 				<input type="hidden" name="end_date" value="<?php echo htmlspecialchars($end_date); ?>">
@@ -785,7 +62,7 @@ include "dbconnect_sale.php";
 
 							<!-- + เพิ่มใบสั่งขาย button (next to Search Input) -->
 							<a href="register_suphos.php" class="btn-so-outline" style="text-decoration:none; flex-shrink: 0;">
-								<img src="img/icons/add_message.png" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"> เพิ่มใบสั่งขาย
+								<img src="img/icons/add_message.png" alt="" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"> เพิ่มใบสั่งขาย
 							</a>
 						</div>
 					</div>
@@ -799,25 +76,25 @@ include "dbconnect_sale.php";
 
 			<!-- Filter Modal -->
 			<div id="filterModal" class="w3-modal" style="display:none; z-index:9999;">
-				<div class="w3-modal-content w3-card-4" style="border-radius:16px; max-width:640px;">
+				<div class="w3-modal-content w3-card-4" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle" style="border-radius:16px; max-width:640px;">
 					<div class="w3-container" style="padding:32px;">
-						<form method="GET" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>" id="modalFilterForm">
+						<form method="GET" action="<?php echo $scriptName; ?>" id="modalFilterForm">
 							<!-- hidden keyword field synced from main search -->
 							<input type="hidden" name="Keyword" id="modalKeyword" value="<?php echo htmlspecialchars($Keyword); ?>">
 
 							<div class="so-modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 24px;">
-								<h5 style="margin:0; font-weight:600; color:#3B3B3B; font-size:20px; font-family: 'Prompt', sans-serif !important;">Filters</h5>
-								<span onclick="closeFilterModal()" style="font-size:28px; cursor:pointer; color:#8E8B94; line-height: 1;">&times;</span>
+								<h5 id="filterModalTitle" style="margin:0; font-weight:600; color:#3B3B3B; font-size:20px; font-family: 'Prompt', sans-serif !important;">Filters</h5>
+								<button type="button" onclick="closeFilterModal()" aria-label="ปิดหน้าต่างตัวกรอง" style="background:none; border:none; padding:0; font-size:28px; cursor:pointer; color:#8E8B94; line-height: 1;">&times;</button>
 							</div>
 
 							<!-- Row 1: Dates -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">ตั้งแต่วันที่</label>
+									<label class="so-label">ตั้งแต่วันที่</label>
 									<input type="date" name="start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">ถึงวันที่</label>
+									<label class="so-label">ถึงวันที่</label>
 									<input type="date" name="end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
 								</div>
 							</div>
@@ -825,7 +102,7 @@ include "dbconnect_sale.php";
 							<!-- Row 2: Status & Type -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">สถานะการอนุมัติ</label>
+									<label class="so-label">สถานะการอนุมัติ</label>
 									<select name="status_doc" id="modal_status_doc" class="so-select">
 										<option value="">Select</option>
 										<option value="รอหัวหน้า" <?php if ($status_doc == 'รอหัวหน้า') echo 'selected'; ?>>รอหัวหน้า</option>
@@ -838,7 +115,7 @@ include "dbconnect_sale.php";
 									</select>
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">ประเภท</label>
+									<label class="so-label">ประเภท</label>
 									<select name="type_doc" id="modal_type_doc" class="so-select">
 										<option value="">Select</option>
 										<option value="3" <?php if ($type_doc == '3') echo 'selected'; ?>>ใบสั่งขาย</option>
@@ -850,7 +127,7 @@ include "dbconnect_sale.php";
 							<!-- Row 3: Sales Channel & Zone -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">ช่องทางการขาย</label>
+									<label class="so-label">ช่องทางการขาย</label>
 									<select name="have_order" id="modal_have_order" class="so-select">
 										<option value="">Select</option>
 										<option value="1" <?php if ($have_order == '1') echo 'selected'; ?>>Shoppee / Lazada (API)</option>
@@ -858,7 +135,7 @@ include "dbconnect_sale.php";
 									</select>
 								</div>
 								<div>
-									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px; font-family: 'Prompt', sans-serif !important;">เขตการขาย (Sale)</label>
+									<label class="so-label">เขตการขาย (Sale)</label>
 									<select name="sale_code" id="modal_sale_code" class="so-select">
 										<option value="">Select</option>
 										<?php
@@ -866,8 +143,8 @@ include "dbconnect_sale.php";
 										$objQuery5 = mysqli_query($com, $strSQL5);
 										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
 										?>
-											<option value="<?php echo $objResuut5["sale_code"]; ?>" <?php if ($sale_code == $objResuut5["sale_code"]) echo 'selected'; ?>>
-												<?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?>
+											<option value="<?php echo htmlspecialchars($objResuut5["sale_code"]); ?>" <?php if ($sale_code == $objResuut5["sale_code"]) echo 'selected'; ?>>
+												<?php echo htmlspecialchars($objResuut5["sale_code"]); ?> - <?php echo htmlspecialchars($objResuut5["sale_name"]); ?>
 											</option>
 										<?php
 										}
@@ -903,11 +180,18 @@ include "dbconnect_sale.php";
 			<script>
 				function openFilterModal() {
 					document.getElementById('filterModal').style.display = 'block';
+					document.getElementById('modal_start_date').focus();
 				}
 
 				function closeFilterModal() {
 					document.getElementById('filterModal').style.display = 'none';
 				}
+
+				document.addEventListener('keydown', function(event) {
+					if (event.key === 'Escape' && document.getElementById('filterModal').style.display === 'block') {
+						closeFilterModal();
+					}
+				});
 
 				function syncKeyword() {
 					document.getElementById('modalKeyword').value = document.getElementById('Keyword').value;
@@ -917,7 +201,7 @@ include "dbconnect_sale.php";
 					const input = document.getElementById('modal_' + fieldId);
 					const pill = document.getElementById('pill_' + fieldId);
 					if (input.value === '1') {
-						input.value = '0';
+						input.value = '';
 						pill.classList.remove('active');
 					} else {
 						input.value = '1';
@@ -932,8 +216,8 @@ include "dbconnect_sale.php";
 					document.getElementById('modal_sale_code').value = '';
 					document.getElementById('modal_type_doc').value = '';
 					document.getElementById('modal_have_order').value = '';
-					document.getElementById('modal_no_iv').value = '0';
-					document.getElementById('modal_is_deposit').value = '0';
+					document.getElementById('modal_no_iv').value = '';
+					document.getElementById('modal_is_deposit').value = '';
 					document.getElementById('Keyword').value = '';
 					document.getElementById('modalKeyword').value = '';
 					document.getElementById('modalFilterForm').submit();
@@ -1016,10 +300,11 @@ include "dbconnect_sale.php";
 							$strSQL .= ' OR po_no LIKE "%' . $escKeyword . '%")';
 						}
 
-						// Copy of query to count total rows before LIMIT
-						$countSQL = $strSQL;
+						// Count total rows before LIMIT (COUNT(*) instead of fetching every row)
+						$countSQL = "SELECT COUNT(*) AS cnt" . substr($strSQL, strlen("SELECT *"));
 						$objQueryCount = mysqli_query($conn, $countSQL) or die("Error Query [" . $countSQL . "]");
-						$Num_Rows = mysqli_num_rows($objQueryCount);
+						$rsCount = mysqli_fetch_assoc($objQueryCount);
+						$Num_Rows = (int)$rsCount['cnt'];
 
 						$Per_Page = 20;
 						$Page = isset($_GET['Page']) ? (int)$_GET['Page'] : 1;
@@ -1043,6 +328,15 @@ include "dbconnect_sale.php";
 
 						$i = 1;
 						while ($objResult = mysqli_fetch_array($objQuery)) {
+							$ref_id = $objResult['ref_id'];
+							$ref_id_url = urlencode($ref_id);
+							$row_id = "row-" . $ref_id;
+							$dropdown_id = "dropdown-" . $ref_id;
+							// json_encode ต้องผ่าน htmlspecialchars ด้วย มิฉะนั้น double quote ที่ครอบ string
+							// จะไปปิด attribute onclick ก่อนกำหนด
+							$row_id_js = htmlspecialchars(json_encode($row_id), ENT_QUOTES, 'UTF-8');
+							$dropdown_id_js = htmlspecialchars(json_encode($dropdown_id), ENT_QUOTES, 'UTF-8');
+
 							// Check Customer VIP Status
 							$sqlCustomer = "SELECT vip_ckk FROM tb_customer WHERE customer_id = '" . mysqli_real_escape_string($conn, $objResult["bill_id"]) . "'";
 							$qryCustomer = mysqli_query($conn, $sqlCustomer);
@@ -1092,9 +386,9 @@ include "dbconnect_sale.php";
 
 						?>
 							<!-- Main Row -->
-							<tr class="so-row" onclick="toggleRow('row-<?php echo $objResult['ref_id']; ?>', this)">
+							<tr class="so-row" role="button" tabindex="0" aria-expanded="false" onclick="toggleRow(<?php echo $row_id_js; ?>, this)">
 								<td style="text-align:center; vertical-align:middle;">
-									<img src="img/icons/arrow_down.png" class="caret-icon">
+									<img src="img/icons/arrow_down.png" class="caret-icon" alt="">
 								</td>
 								<td style="text-align:center; vertical-align:middle;">
 									<?php if ($objResult["que_ckk"] == '1') { ?>
@@ -1102,7 +396,7 @@ include "dbconnect_sale.php";
 									<?php } ?>
 								</td>
 								<td>
-									<a href="register_suphos.php?ref_id=<?php echo $objResult['ref_id']; ?>" style="color:#612989; text-decoration:underline; font-weight:500;"><?php echo htmlspecialchars($objResult["ref_id"]); ?></a>
+									<a href="register_suphos.php?ref_id=<?php echo $ref_id_url; ?>" style="color:#612989; text-decoration:underline; font-weight:500;"><?php echo htmlspecialchars($objResult["ref_id"]); ?></a>
 								</td>
 								<td><?php echo htmlspecialchars($objResult["iv_no"]); ?></td>
 								<td><?php echo DateThai($objResult["date_so"]); ?></td>
@@ -1112,7 +406,7 @@ include "dbconnect_sale.php";
 								<td><?php echo htmlspecialchars($objResult["sale_code"]); ?></td>
 								<td>
 									<?php if ($vip_status == 'VIP') { ?>
-										<span><img src="img/icons/vip.png" style="width: 24px; height: 20px; margin-right: 4px; vertical-align: middle;">VIP</span>
+										<span><img src="img/icons/vip.png" alt="" style="width: 24px; height: 20px; margin-right: 4px; vertical-align: middle;">VIP</span>
 									<?php } else { ?>
 										-
 									<?php } ?>
@@ -1125,17 +419,17 @@ include "dbconnect_sale.php";
 								</td>
 								<td style="text-align:center; vertical-align:middle; position:relative;">
 									<div class="so-dropdown">
-										<button type="button" class="so-dropdown-trigger" onclick="toggleDropdown(event, 'dropdown-<?php echo $objResult['ref_id']; ?>')">
+										<button type="button" class="so-dropdown-trigger" aria-label="ตัวเลือกเพิ่มเติม" aria-haspopup="true" aria-expanded="false" onclick="toggleDropdown(event, <?php echo $dropdown_id_js; ?>)">
 											<i class="fas fa-ellipsis-v"></i>
 										</button>
-										<div id="dropdown-<?php echo $objResult['ref_id']; ?>" class="so-dropdown-menu">
+										<div id="<?php echo htmlspecialchars($dropdown_id); ?>" class="so-dropdown-menu">
 											<!-- แก้ไข -->
-											<a href="register_suphos.php?ref_id=<?php echo $objResult['ref_id']; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" class="so-dropdown-item">
+											<a href="register_suphos.php?ref_id=<?php echo $ref_id_url; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" class="so-dropdown-item">
 												<i class="fas fa-edit" style="width:16px;"></i> แก้ไข
 											</a>
 
 											<!-- คัดลอกใบเดิม -->
-											<a href="javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_adminhos_createnew.php?ref_id=<?php echo $objResult['ref_id']; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>'};" class="so-dropdown-item">
+											<a href="register_adminhos_createnew.php?ref_id=<?php echo $ref_id_url; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" onclick="return confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
 												<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 											</a>
 
@@ -1143,7 +437,7 @@ include "dbconnect_sale.php";
 											<?php
 											$preview_url = ($objResult['type_doc'] == '4') ? 'report_salehosnbm2.php' : 'report_salehosptl1.php';
 											?>
-											<a href="<?php echo $preview_url; ?>?ref_id=<?php echo $objResult['ref_id']; ?>" target="_blank" class="so-dropdown-item">
+											<a href="<?php echo $preview_url; ?>?ref_id=<?php echo $ref_id_url; ?>" target="_blank" class="so-dropdown-item">
 												<i class="fas fa-search" style="width:16px;"></i> Preview
 											</a>
 
@@ -1152,14 +446,14 @@ include "dbconnect_sale.php";
 												$ivv = substr($objResult['iv_no'], 0, 2);
 												$report_url = ($ivv == 'ET') ? 'report_EThos.php' : 'report_IEhos.php';
 											?>
-												<a href="<?php echo $report_url; ?>?ref_id=<?php echo $objResult['ref_id']; ?>" target="_blank" class="so-dropdown-item">
+												<a href="<?php echo $report_url; ?>?ref_id=<?php echo $ref_id_url; ?>" target="_blank" class="so-dropdown-item">
 													<i class="fas fa-file-invoice-dollar" style="width:16px;"></i> ใบกำกับภาษี ET/IE
 												</a>
 											<?php } ?>
 
 											<!-- ใบส่งสินค้า -->
 											<?php if ($objResult['send_admin'] == '1') { ?>
-												<a href="javascript:if(confirm('!!!ต้องการสร้างใบรับสินค้าใช่หรือไม่')==true){window.location='register_receivepro_so.php?ref_id=<?php echo $objResult['ref_id']; ?>'};" class="so-dropdown-item">
+												<a href="register_receivepro_so.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการสร้างใบรับสินค้าใช่หรือไม่')" class="so-dropdown-item">
 													<i class="fas fa-truck" style="width:16px;"></i> ใบส่งสินค้า
 												</a>
 											<?php } ?>
@@ -1169,7 +463,7 @@ include "dbconnect_sale.php";
 							</tr>
 
 							<!-- Expanded Row Detail -->
-							<tr id="row-<?php echo $objResult['ref_id']; ?>" class="expanded-row" style="display:none;">
+							<tr id="<?php echo htmlspecialchars($row_id); ?>" class="expanded-row" style="display:none;">
 								<td colspan="11">
 									<div class="expanded-container">
 										<!-- Left: Items Sub-table -->
@@ -1248,7 +542,7 @@ include "dbconnect_sale.php";
 					$pagParams = "&Keyword=" . urlencode($Keyword) . "&start_date=" . urlencode($start_date) . "&end_date=" . urlencode($end_date) . "&sale_code=" . urlencode($sale_code) . "&status_doc=" . urlencode($status_doc) . "&type_doc=" . urlencode($type_doc) . "&have_order=" . urlencode($have_order) . "&no_iv=" . urlencode($no_iv) . "&is_deposit=" . urlencode($is_deposit);
 
 					if ($Prev_Page) {
-						echo "<a class='pagination-btn' href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page$pagParams'><i class='fas fa-chevron-left'></i></a>";
+						echo "<a class='pagination-btn' aria-label='หน้าก่อนหน้า' href='$scriptName?Page=$Prev_Page$pagParams'><i class='fas fa-chevron-left'></i></a>";
 					}
 
 					// Show maximum of 7 page links for better responsiveness
@@ -1256,22 +550,22 @@ include "dbconnect_sale.php";
 					$end_p = min($Num_Pages, $Page + 3);
 
 					if ($start_p > 1) {
-						echo "<a class='pagination-btn' href='$_SERVER[SCRIPT_NAME]?Page=1$pagParams'>1</a>";
+						echo "<a class='pagination-btn' href='$scriptName?Page=1$pagParams'>1</a>";
 						if ($start_p > 2) echo "<span style='padding:4px;'>...</span>";
 					}
 
 					for ($p = $start_p; $p <= $end_p; $p++) {
 						$activeClass = ($p == $Page) ? 'active' : '';
-						echo "<a class='pagination-btn $activeClass' href='$_SERVER[SCRIPT_NAME]?Page=$p$pagParams'>$p</a>";
+						echo "<a class='pagination-btn $activeClass' href='$scriptName?Page=$p$pagParams'>$p</a>";
 					}
 
 					if ($end_p < $Num_Pages) {
 						if ($end_p < $Num_Pages - 1) echo "<span style='padding:4px;'>...</span>";
-						echo "<a class='pagination-btn' href='$_SERVER[SCRIPT_NAME]?Page=$Num_Pages$pagParams'>$Num_Pages</a>";
+						echo "<a class='pagination-btn' href='$scriptName?Page=$Num_Pages$pagParams'>$Num_Pages</a>";
 					}
 
 					if ($Page != $Num_Pages && $Num_Pages > 1) {
-						echo "<a class='pagination-btn' href='$_SERVER[SCRIPT_NAME]?Page=$Next_Page$pagParams'><i class='fas fa-chevron-right'></i></a>";
+						echo "<a class='pagination-btn' aria-label='หน้าถัดไป' href='$scriptName?Page=$Next_Page$pagParams'><i class='fas fa-chevron-right'></i></a>";
 					}
 					?>
 				</div>
@@ -1295,6 +589,7 @@ include "dbconnect_sale.php";
 			document.querySelectorAll('.so-row').forEach(r => {
 				if (r !== triggerEl) {
 					r.classList.remove('is-expanded');
+					r.setAttribute('aria-expanded', 'false');
 				}
 			});
 
@@ -1302,11 +597,21 @@ include "dbconnect_sale.php";
 			if (isVisible) {
 				row.style.display = 'none';
 				triggerEl.classList.remove('is-expanded');
+				triggerEl.setAttribute('aria-expanded', 'false');
 			} else {
 				row.style.display = 'table-row';
 				triggerEl.classList.add('is-expanded');
+				triggerEl.setAttribute('aria-expanded', 'true');
 			}
 		}
+
+		// Keyboard: Enter/Space บนแถวทำงานเหมือนคลิก
+		document.addEventListener('keydown', function(event) {
+			if ((event.key === 'Enter' || event.key === ' ') && event.target.classList && event.target.classList.contains('so-row')) {
+				event.preventDefault();
+				event.target.click();
+			}
+		});
 
 		function toggleDropdown(event, dropdownId) {
 			event.stopPropagation(); // Prevent row click expansion
@@ -1317,10 +622,16 @@ include "dbconnect_sale.php";
 					m.classList.remove('show');
 				}
 			});
+			document.querySelectorAll('.so-dropdown-trigger').forEach(t => {
+				if (t !== event.currentTarget) {
+					t.setAttribute('aria-expanded', 'false');
+				}
+			});
 
 			// Toggle target dropdown
 			const menu = document.getElementById(dropdownId);
-			menu.classList.toggle('show');
+			const isOpen = menu.classList.toggle('show');
+			event.currentTarget.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 		}
 
 		// Close dropdowns when clicking anywhere outside
@@ -1328,6 +639,9 @@ include "dbconnect_sale.php";
 			if (!event.target.closest('.so-dropdown')) {
 				document.querySelectorAll('.so-dropdown-menu').forEach(m => {
 					m.classList.remove('show');
+				});
+				document.querySelectorAll('.so-dropdown-trigger').forEach(t => {
+					t.setAttribute('aria-expanded', 'false');
 				});
 			}
 		});

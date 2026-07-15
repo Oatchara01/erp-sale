@@ -173,6 +173,21 @@ ele.onKeyPress=vchar;
 .so-product-summary-col:last-child {
     border-right: none;
 }
+.so-product-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+@media (max-width: 768px) {
+    .so-product-summary {
+        flex-wrap: wrap;
+        text-align: left;
+        gap: 12px 0;
+    }
+    .so-product-summary-col {
+        flex: 1 1 50%;
+        border-right: none;
+    }
+}
 .so-summary-label {
     font-size: 13px;
     color: #8E8B94;
@@ -387,6 +402,7 @@ ele.onKeyPress=vchar;
     <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
 </div>
 
+<div class="so-product-table-wrap">
 <table class="so-product-table" id="product_table">
     <thead>
         <tr>
@@ -452,6 +468,7 @@ ele.onKeyPress=vchar;
 
     </tbody>
 </table>
+</div>
 
 <button type="button" class="so-btn-add-row" onclick="addNewRow()"><i class="fas fa-plus"></i> เพิ่มรายการ</button>
 
