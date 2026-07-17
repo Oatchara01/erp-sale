@@ -29,7 +29,9 @@ if ($objResult) {
             'product_type' => $objResult["product_type"],
             'war_hc'       => $war_hc,
             'unit_hc'      => $unit_hc,
-            'vvv'          => $vvv
+            'vvv'          => $vvv,
+            'store'        => $objResult["store"],
+            'store_remark' => $objResult["store_remark"]
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }

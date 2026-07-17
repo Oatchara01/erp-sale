@@ -243,6 +243,10 @@ body {
 	flex-direction: column;
 }
 
+.so-customer-address-wrap {
+	grid-column: 1 / -1;
+}
+
 .so-customer-pills-row {
 	display: flex;
 	gap: 16px;
@@ -526,6 +530,17 @@ body {
 			gap: 16px;
 		}
 
+	/* .so-customer-top-left/right keep grid-column: 1 / grid-column: 2 from
+	   their base rules above. With only one explicit column left, the grid
+	   engine would otherwise create an implicit second column to satisfy
+	   grid-column: 2 and place the card beside (and overflowing past) the
+	   left column instead of stacking it underneath. */
+	.so-customer-top-left,
+	.so-customer-top-right {
+			grid-column: 1;
+			grid-row: auto;
+		}
+
 	.clear-loan-header {
 			padding: 22px 18px 0;
 		}
@@ -567,6 +582,16 @@ body {
 	cursor: pointer;
 	color: var(--so-muted);
 	font-size: 14px;
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	line-height: 1;
+}
+
+.so-clear-icon:focus-visible {
+	outline: 2px solid var(--so-primary);
+	outline-offset: 2px;
 }
 
 .so-clear-icon:hover {

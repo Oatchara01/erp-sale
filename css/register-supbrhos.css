@@ -1,0 +1,590 @@
+/* register-supbrhos.css
+ * Page-specific styles for register_supbrhos.php (Borrow Order).
+ * Shared .so-* primitives (cards, inputs, labels, buttons, sticky footer, etc.)
+ * live in css/so-core.css. Tabs, doc-pill grid, toggle pills, calendar/time
+ * wrappers, and the responsive container-query layer are reused as-is from
+ * css/register-suphos.css (not duplicated here) - link both files before this one.
+ */
+
+ .objective-grid {
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	gap: 32px;
+	align-items: end;
+ }
+
+@container (max-width: 560px) {
+	.objective-grid {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
+.br-returns-row-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 16px;
+	align-items: end;
+}
+
+ .objective-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 18px;
+}
+ 
+.so-product-table-wrap {
+	overflow-x: auto;
+	border-top: 1px solid var(--so-primary);
+	border-bottom: 1px solid #f0edf2;
+	margin: -24px;
+	margin-bottom: 16px;
+}
+
+/* detail_brhos_so.php's interactive table bleeds edge-to-edge without the
+   accent border (Figma removes it in favour of the two-tone <th> border). */
+#br_product_table_wrap {
+	border-top: none;
+	border-bottom: none;
+	background-color: transparent;
+}
+
+.so-product-table {
+	width: 100%;
+	min-width: 1180px;
+	border-collapse: collapse;
+	font-family: 'Prompt', sans-serif;
+	color: var(--so-text);
+}
+
+.so-product-table th,
+.so-product-table td {
+	padding: 14px 12px;
+	font-size: 13px;
+	border-bottom: 1px solid var(--so-border);
+	vertical-align: top;
+}
+
+.so-product-table th {
+	padding-top: 14px;
+	padding-bottom: 14px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--so-primary);
+	text-align: left;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.so-product-table tbody tr:hover {
+	background-color: #FAF8FC;
+}
+
+/* #br_product_table (detail_brhos_so.php) fits the card width instead of
+   forcing the base .so-product-table 1180px min-width (which made the wrap
+   scroll horizontally). Only 8 short columns, so it fills on desktop and
+   scrolls only below 720px. Scoped by ID so detail_breng_so.php keeps 1180px. */
+#br_product_table {
+	min-width: 720px;
+}
+
+/* #br_product_table (detail_brhos_so.php): two-tone accent border + bolder
+   head, middle-aligned body cells, per Figma. Scoped by ID so the older
+   detail_breng_so.php table (shares .so-product-table) is unaffected. */
+#br_product_table th {
+	background-color: #fff;
+	border-top: 2px solid var(--so-primary);
+	border-bottom: 1px solid var(--so-primary);
+	padding: 16px 12px;
+	font-weight: 600;
+}
+
+#br_product_table td {
+	padding: 14px 12px;
+	vertical-align: middle;
+	font-size: 14px;
+	color: var(--so-text);
+}
+
+#br_product_table .so-product-remove-cell {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.so-product-search-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 160px;
+}
+
+.so-product-search-stack .so-input {
+	height: 36px;
+	line-height: 34px;
+	font-size: 13px;
+}
+
+.br-product-search-wrap {
+	position: relative;
+	min-width: 200px;
+}
+
+.br-product-search-wrap .so-input {
+	height: 36px;
+	line-height: 34px;
+	font-size: 13px;
+}
+
+.br-product-search-dropdown {
+	display: none;
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 20;
+	background: #fff;
+	border: 1px solid var(--so-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+	max-height: 220px;
+	overflow-y: auto;
+}
+
+.br-product-search-item {
+	padding: 8px 12px;
+	font-size: 13px;
+	cursor: pointer;
+	color: var(--so-text);
+}
+
+.br-product-search-item:hover {
+	background-color: #F4E8FF;
+}
+
+.br-product-search-empty {
+	padding: 8px 12px;
+	font-size: 13px;
+	color: #8E8B94;
+}
+
+.so-product-summary-bar {
+	display: flex;
+	gap: 16px;
+	margin-bottom: 16px;
+	flex-wrap: wrap;
+}
+
+.so-product-summary-col {
+	flex: 1;
+	min-width: 160px;
+	background-color: #FAF8FC;
+	border-radius: 8px;
+	padding: 12px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.so-product-summary-label {
+	font-size: 12px;
+	color: #8E8B94;
+}
+
+.so-product-summary-value {
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--so-primary);
+}
+
+/* #br_summary_bar (detail_brhos_so.php): pill-shaped bar with vertical
+   dividers instead of individual cards, per Figma. Scoped by ID so
+   detail_breng_so.php's plain summary bar (shares .so-product-summary-*)
+   keeps its existing look. */
+/* Product-card header: collapse the redundant .so-section-title-container
+   divider/spacing so only the explicit <hr class="so-divider"> shows and the
+   summary bar sits directly beneath it (matches the target design). Scoped to
+   #pd (the BR product card) so so-core's utility is untouched elsewhere. */
+#pd > .so-section-title-container {
+	padding-bottom: 0;
+	margin-bottom: 0;
+	border-bottom: none;
+}
+
+#br_summary_bar {
+	gap: 0;
+	background-color: #F8F6FA;
+	border: 1px solid #EAE6F0;
+	border-radius: 12px;
+	padding: 16px 0;
+	margin-top: 12px;
+}
+
+#br_summary_bar .so-product-summary-col {
+	min-width: 140px;
+	background: transparent;
+	border-radius: 0;
+	padding: 0 24px;
+	border-right: 1px solid #E1DCE8;
+	align-items: center;
+	text-align: center;
+}
+
+#br_summary_bar .so-product-summary-col:last-child {
+	border-right: none;
+}
+
+#br_summary_bar .so-product-summary-label {
+	font-size: 13px;
+	font-weight: 500;
+}
+
+#br_summary_bar .so-product-summary-value {
+	font-size: 24px;
+	color: var(--so-text);
+}
+
+#br_summary_bar #br_summary_net {
+	color: var(--so-primary);
+	font-size: 28px;
+	font-weight: 700;
+}
+
+.so-product-table .so-input,
+.so-product-table .so-textarea,
+.so-product-table .so-select {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.so-product-table textarea.so-input {
+	min-height: 60px;
+	resize: vertical;
+	padding: 8px 12px;
+}
+
+.so-product-remove-cell {
+	text-align: center;
+	vertical-align: middle;
+}
+
+.so-product-remove-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	padding: 0;
+}
+
+.so-product-more-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--so-primary);
+	cursor: pointer;
+}
+
+.so-product-more-toggle input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--so-primary);
+	cursor: pointer;
+	margin: 0;
+}
+
+@media (max-width: 768px) {
+	.so-product-table-wrap {
+		margin: -16px;
+		margin-bottom: 16px;
+	}
+
+	/* .so-product-summary-bar wraps to multiple lines at this width; a
+	   border-right divider on the wrapped-away last item of each line would
+	   dangle, so drop dividers entirely and rely on the gap instead. */
+	#br_summary_bar {
+		gap: 12px 0;
+	}
+
+	#br_summary_bar .so-product-summary-col {
+		border-right: none;
+	}
+}
+
+/* ===== Salehos-style interactive product table (detail_brhos_so.php) ===== */
+
+.br-product-header-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-end;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-bottom: 32px;
+}
+
+.br-global-search-block {
+	flex: 1 1 320px;
+	min-width: 0;
+}
+
+.br-global-search-label {
+	display: block;
+	color: var(--so-primary);
+	font-size: 13px;
+	font-weight: 600;
+	margin-bottom: 6px;
+}
+
+.br-global-search-wrap {
+	max-width: 640px;
+}
+
+.br-global-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background-color: var(--so-input-bg);
+	border-radius: 8px;
+	padding: 0 14px;
+	height: 38px;
+}
+
+.br-global-search-bar i {
+	color: var(--so-muted);
+	font-size: 14px;
+}
+
+.br-global-search-bar input {
+	border: none;
+	background: transparent;
+	width: 100%;
+	outline: none;
+	font-size: 13px;
+	font-family: 'Prompt', sans-serif;
+	color: var(--so-text);
+}
+
+.br-delete-selected-btn {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 16px;
+	border-radius: 8px;
+	border: 1px solid #EDE8F5;
+	background-color: #F0ECF4;
+	color: var(--so-primary);
+	cursor: pointer;
+	font-family: 'Prompt', sans-serif;
+	font-size: 13px;
+	font-weight: 500;
+	transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.br-delete-selected-btn:hover {
+	background-color: var(--so-primary);
+	color: #fff;
+	border-color: var(--so-primary);
+}
+
+.br-row-handle-cell {
+	text-align: center;
+	white-space: nowrap;
+}
+
+.br-row-handle-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.br-drag-handle {
+	cursor: grab;
+	color: var(--so-muted);
+}
+
+/* Circular checkbox: the checkmark is drawn on a sibling <span>, not on the
+   <input> itself. Inputs are replaced elements and several browsers refuse
+   to render ::before/::after generated content on them, which would make
+   the checkmark vanish intermittently. The input stays in the DOM,
+   focusable and clickable, just visually hidden (opacity: 0) so its native
+   :checked/:focus-visible state can drive the decorative span via +. */
+.so-row-checkbox-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	cursor: pointer;
+}
+
+.so-row-checkbox {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.so-row-checkbox-dot {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background-color: var(--so-input-bg);
+	border: 1px solid var(--so-border);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.so-row-checkbox-dot::after {
+	content: "\f00c";
+	font-family: "Font Awesome 5 Free";
+	font-weight: 900;
+	color: #fff;
+	font-size: 10px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.so-row-checkbox:checked + .so-row-checkbox-dot {
+	background-color: var(--so-primary);
+	border-color: var(--so-primary);
+}
+
+.so-row-checkbox:checked + .so-row-checkbox-dot::after {
+	opacity: 1;
+}
+
+.so-row-checkbox:focus-visible + .so-row-checkbox-dot {
+	outline: 2px solid var(--so-primary);
+	outline-offset: 2px;
+}
+
+.so-product-name-label {
+	display: block;
+	font-size: 13px;
+	color: var(--so-text);
+	line-height: 1.4;
+	padding: 10px 0;
+	word-break: break-word;
+}
+
+.so-product-table input[readonly] {
+	background-color: transparent;
+	cursor: default;
+	border: none;
+	padding: 0;
+}
+
+/* #br_product_table's editable cells (sale_count, product_price, br_period)
+   need a compact input to fit 8 columns; readonly cells (product_code,
+   sum_amount) stay borderless via input[readonly] above. */
+#br_product_table .so-input:not([readonly]) {
+	background-color: var(--so-input-bg);
+	border: 1px solid var(--so-border);
+	border-radius: 8px;
+	padding: 8px 12px;
+	height: 38px;
+	line-height: 1.4;
+	font-size: 14px;
+}
+
+/* Our ID-scoped selector outranks so-core.css's plain .so-input:focus rule,
+   so re-declare the focus state here or it would never turn white. */
+#br_product_table .so-input:not([readonly]):focus {
+	background-color: #fff;
+	border-color: var(--so-primary);
+}
+
+#br_product_table .so-product-row.checked-row .so-input:not([readonly]) {
+	background-color: #EDE4FA;
+	border-color: #E2D5F2;
+}
+
+#br_product_table .so-product-row.checked-row .so-input:not([readonly]):focus {
+	background-color: #fff;
+	border-color: var(--so-primary);
+}
+
+.br-action-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	cursor: pointer;
+	color: var(--so-muted);
+	font-size: 15px;
+	margin: 0 4px;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.br-action-icon:hover {
+	background-color: #EDE4FA;
+	color: var(--so-primary);
+}
+
+.br-action-icon.fa-trash-alt:hover {
+	background-color: #FDEDED;
+	color: #D32F2F;
+}
+
+.br-action-icon:focus-visible {
+	outline: 2px solid var(--so-primary);
+	outline-offset: 2px;
+}
+
+.so-product-row.checked-row {
+	background-color: #F4EFFF;
+}
+
+.so-product-row.dragging {
+	opacity: 0.4;
+}
+
+.so-product-row.drag-over {
+	border-top: 2px solid var(--so-primary);
+}
+
+.br-edit-popup-box {
+	width: min(1096px, 96vw);
+	height: auto;
+}
+
+.br-edit-popup-body {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 24px;
+	padding: 24px 32px 8px;
+}
+
+@media (max-width: 768px) {
+	.br-global-search-wrap {
+		max-width: 100%;
+	}
+
+	.br-edit-popup-body {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+
+	/* register-suphos.css's mobile .so-header-right rule assumes 2 buttons
+	   (repeat(2, 1fr)); this page has only the single Preview button, so a
+	   2-col grid leaves it half-width. Override to 1 column so it spans full width. */
+	.so-header-right {
+		grid-template-columns: 1fr;
+	}
+}

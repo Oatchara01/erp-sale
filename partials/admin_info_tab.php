@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Reusable "Admin" tab renderer, driven by $adminInfoTab config.
  *
@@ -25,7 +26,7 @@
 
 if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 	define('ADMIN_INFO_TAB_STYLE_PRINTED', true);
-	?>
+?>
 	<style>
 		.admin-ui-title {
 			font-size: 20px;
@@ -145,7 +146,7 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			margin-top: 25px;
 		}
 	</style>
-	<?php
+<?php
 }
 
 $adminTabId = so_saved_h($adminInfoTab['tab_id'] ?? '');
@@ -161,7 +162,7 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 				<?php foreach ($adminTabRow as $adminTabField) {
 					$fieldType = $adminTabField['type'] ?? 'text';
 					$fieldSpanClass = (($adminTabField['span'] ?? 1) === 3) ? ' span-3' : '';
-					?>
+				?>
 					<div class="admin-ui-field<?php echo $fieldSpanClass; ?>">
 						<?php if ($fieldType === 'button') { ?>
 							<button type="button" class="admin-ui-btn">
@@ -169,22 +170,30 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 							</button>
 						<?php } else {
 							$fieldValue = $adminTabField['value'] ?? '';
-							if ($fieldType === 'date_th') {
-								$fieldValue = so_saved_h(so_saved_buddhist_date_input($fieldValue));
+							$htmlInputType = 'text';
+
+							if ($fieldType === 'date_th' || $fieldType === 'date') {
+								// Use native HTML5 date input. 
+								// Value must remain in YYYY-MM-DD format, so we do NOT convert to Buddhist date.
+								$htmlInputType = 'date';
 							}
+
 							$fieldIcon = $adminTabField['icon'] ?? '';
+							if ($htmlInputType === 'date') {
+								$fieldIcon = ''; // ไม่แสดงไอคอน custom หากเป็น native date picker เพราะมีไอคอนปฏิทินของบราวเซอร์อยู่แล้ว
+							}
 							$fieldClearable = $adminTabField['clearable'] ?? false;
 							$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
-							?>
+						?>
 							<label class="admin-ui-label"><?php echo so_saved_h($adminTabField['label'] ?? ''); ?></label>
 							<div class="admin-ui-input-wrapper">
-								<input type="text" name="<?php echo so_saved_h($adminTabField['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo $fieldValue; ?>"<?php echo isset($adminTabField['placeholder']) ? ' placeholder="' . so_saved_h($adminTabField['placeholder']) . '"' : ''; ?>>
+								<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($adminTabField['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($adminTabField['placeholder']) ? ' placeholder="' . so_saved_h($adminTabField['placeholder']) . '"' : ''; ?><?php echo $htmlInputType === 'date' ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?>>
 								<?php if ($fieldIcon !== '') {
 									if ($fieldClearable) { ?>
 										<i class="<?php echo so_saved_h($fieldIcon); ?> admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
 									<?php } else { ?>
 										<i class="<?php echo so_saved_h($fieldIcon); ?> admin-ui-icon"></i>
-									<?php }
+								<?php }
 								} ?>
 							</div>
 						<?php } ?>

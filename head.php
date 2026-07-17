@@ -28,18 +28,17 @@ session_start();
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/w3.css">
-<link rel="stylesheet" href="css/style.css?v=<?php echo time(); ?>">
+<link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
 <link rel="stylesheet" href="css/tab.css">
 <link rel="stylesheet" href="awesome/css/all.css">
 <link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
-<link rel="stylesheet" href="css/sidebar.css?v=<?php echo time(); ?>">
+<link rel="stylesheet" href="css/sidebar.css?v=<?php echo filemtime(__DIR__ . '/css/sidebar.css'); ?>">
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/w3open.js"></script>
 <script type="text/javascript" src="js/tab.js"></script>
 <script type="text/javascript" src="js/ready.js"></script>
 <script type="text/javascript" src="js/table.js"></script>
 <script src="js/jquery-3.4.1.min.js" type="text/javascript"></script>
-<script src="js/jquery-3.4.1.js" type="text/javascript"></script>
 
 
 	<script> //tab

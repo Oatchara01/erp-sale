@@ -64,9 +64,13 @@
     grid-template-columns: 1fr;
   }
 
+  .so-customer-top-left,
+  .so-customer-top-right {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .customer-info-display-card {
-    flex-direction: column;
-    gap: 18px;
     padding: 18px;
   }
 
@@ -105,6 +109,16 @@
     justify-content: center;
   }
 
+  /* .so-customer-pills-row's base height: 42px (so-core.css) assumes its
+     two pills sit side by side. Once they go width: 100% above, they need
+     to wrap onto separate lines instead of being squeezed into one row -
+     otherwise the second pill's content overflows the fixed height and
+     bleeds over the field below it. */
+  .so-customer-pills-row {
+    flex-wrap: wrap;
+    height: auto;
+  }
+
   .so-payment-modes {
     gap: 12px;
   }
@@ -126,6 +140,24 @@
     width: auto;
     flex: none;
   }
+}
+
+/* Customer info card (.so-customer-top-right): a fixed 2-column flex would
+   otherwise need a hard breakpoint to stack on narrow screens. An auto-fit
+   grid reflows the two label/value groups (.cidc-col) based on the actual
+   width available in .so-card, dropping to 1 column only once 2 no longer
+   fit at a readable size - shared by register_suphos.php and
+   register_supbrhos.php (both link this file). */
+.customer-info-display-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 48px;
+}
+
+.cidc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .shipping-custom-radio {
@@ -809,7 +841,7 @@
 
 .calendar-wrapper::after {
   content: "";
-  background-image: url("img/icons/calendar.png");
+  background-image: url("../img/icons/calendar.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -844,7 +876,7 @@
 
 .time-wrapper::after {
   content: "";
-  background-image: url("img/icons/clock.png");
+  background-image: url("../img/icons/clock.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -1691,6 +1723,20 @@ form[name="frmMain"] {
 .btn-dept-active {
   background-color: #612989 !important;
   color: #ffffff !important;
+}
+
+.btn-technician-required {
+  background-color: #F4F3F7;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  color: #333;
+  font-size: 16px;
+  font-family: 'Prompt', sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  width: 328px;
+  max-width: 100%;
 }
 
 .so-doc-pill {

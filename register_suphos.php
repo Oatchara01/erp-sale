@@ -2051,147 +2051,48 @@ include("head.php"); ?>
 				</div>
 
 				<!-- NEW DELIVERY CARD -->
-				<div class="so-tabs-container" style="margin-top: 24px;">
-					<button type="button" class="so-tab-btn active" onclick="openDelTab('del_info', this)">ข้อมูลการจัดส่ง</button>
-					<button type="button" class="so-tab-btn" onclick="openDelTab('del_cost', this)">ค่าจัดส่ง</button>
-				</div>
-				<div class="so-card" style="padding: 24px;">
-
-					<!-- TAB 1: ข้อมูลการจัดส่ง -->
-					<div id="del_info" class="so-del-tab-content">
-
-						<div class="so-section-title-container">
-							<h3 class="so-section-title">ข้อมูลการจัดส่ง</h3>
-							<hr class="so-divider">
-						</div>
-
-						<div class="so-grid-6-col">
-							<!-- วิธีการจัดส่ง -->
-							<div class="so-field-group" style="grid-column: span 2;">
-								<label class="so-label" for="delivery_type">วิธีการจัดส่ง<span style="color:red">*</span></label>
-								<div class="so-select-wrapper">
-									<select name="delivery_type" id="delivery_type" class="so-select">
-										<option value="1">Sale รับเอง</option>
-										<option value="2">ช่างรับเอง</option>
-										<option value="3">ลูกค้ารับเอง</option>
-										<option value="4">บริษัทจัดส่ง</option>
-									</select>
-								</div>
-							</div>
-
-							<!-- บริษัทขนส่ง -->
-							<div class="so-field-group" style="grid-column: span 2;">
-								<label class="so-label" for="transport_company">บริษัทขนส่ง<span style="color:red">*</span></label>
-								<div class="so-select-wrapper">
-									<select name="transport_company" id="transport_company" class="so-select">
-										<option value="">เลือกบริษัทขนส่ง</option>
-										<option value="1">Kerry</option>
-										<option value="2">Flash</option>
-										<option value="3">J&T</option>
-										<option value="4">ไปรษณีย์ไทย</option>
-									</select>
-								</div>
-							</div>
-
-							<!-- วันที่ในการจัดส่ง -->
-							<div class="so-field-group" style="grid-column: span 2;">
-								<label class="so-label" for="start_date">วันที่ในการจัดส่ง<span style="color:red">*</span></label>
-								<div class="calendar-wrapper" style="width: 100%; display: flex;">
-									<input name="start_date" type="date" id="start_date" class="so-input" style="padding-right: 40px;" />
-								</div>
-							</div>
-
-							<!-- เลือกช่วงเวลา -->
-							<div class="so-field-group" style="grid-column: span 1;">
-								<label class="so-label" for="time_range">ช่วงเวลา</label>
-								<div class="so-select-wrapper">
-									<select name="time_range" id="time_range" class="so-select">
-										<option value="">เลือกช่วงเวลา</option>
-										<option value="morning">ช่วงเช้า</option>
-										<option value="afternoon">ช่วงบ่าย</option>
-										<option value="allday">ทั้งวัน</option>
-										<option value="specific">กำหนดเวลา</option>
-									</select>
-								</div>
-							</div>
-
-							<!-- เวลาในการจัดส่ง -->
-							<div class="so-field-group" style="grid-column: span 1;">
-								<label class="so-label" for="start_time">เวลาในการจัดส่ง<span style="color:red">*</span></label>
-								<div class="time-wrapper">
-									<input id="start_time" name="start_time" class="so-input" type="time" value="<?php echo so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 0)); ?>" style="padding-right: 40px;" />
-								</div>
-							</div>
-
-							<!-- ช่วงวันที่โดยประมาณ -->
-							<div class="so-field-group" style="grid-column: span 4;">
-								<label class="so-label" for="between_date">ช่วงวันที่โดยประมาณ</label>
-								<div style="position: relative; display: flex; align-items: center; width: 100%;">
-									<input name="between_date" class="so-input" type="text" id="between_date" placeholder="ช่วงวันที่โดยประมาณ" style="padding-right: 36px !important;" />
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('between_date').value=''"></i>
-								</div>
-							</div>
-
-							<!-- หมายเหตุสถานะเพิ่มเติม -->
-							<div class="so-field-group" style="grid-column: span 6;">
-								<label class="so-label" for="status_comment">หมายเหตุสถานะเพิ่มเติม</label>
-								<div style="position: relative; display: flex; align-items: center; width: 100%;">
-									<input name="status_comment" type="text" id="status_comment" class="so-input" placeholder="หมายเหตุสถานะเพิ่มเติม" style="padding-right: 36px !important;" />
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('status_comment').value=''"></i>
-								</div>
-							</div>
-						</div>
-
-						<div class="so-delivery-toggle-row" style="display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap;">
-							<label class="so-toggle-btn">
-								<input type="checkbox" id="call_customer" name="call_customer" value="1" style="display:none;" <?php echo so_saved_checked($savedRegister, 'call_customer') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
-								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ต้องการให้โทรแจ้ง</span>
-							</label>
-
-							<label class="so-toggle-btn">
-								<input type="checkbox" name="ref_12" id="ref_12" value="1" style="display:none;" <?php echo so_saved_checked($savedOtherBill, 'ref_12') ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
-								<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;">ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)</span>
-							</label>
-						</div>
-					</div>
-
-					<!-- TAB 2: ค่าจัดส่ง -->
-					<div id="del_cost" class="so-del-tab-content" style="display:none;">
-						<h3 class="so-section-title" style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ค่าจัดส่ง</h3>
-
-						<div class="so-grid-3">
-							<div class="so-field-group">
-								<label class="so-label" style="color: #612989;">วันที่คีย์ค่าส่ง</label>
-								<div style="position: relative; display: flex; align-items: center;">
-									<input name="shipping_date" type="date" id="shipping_date" class="so-input" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; font-family: 'Prompt', sans-serif; height: 42px;" />
-								</div>
-							</div>
-
-							<div class="so-field-group">
-								<label class="so-label" style="color: #612989;">รหัสอ้างอิง 1</label>
-								<div style="position: relative; display: flex; align-items: center;">
-									<input name="shipping_ref1" type="text" id="shipping_ref1" class="so-input" placeholder="" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px; font-family: 'Prompt', sans-serif;" />
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('shipping_ref1').value=''"></i>
-								</div>
-							</div>
-
-							<div class="so-field-group">
-								<label class="so-label" style="color: #612989;">รหัสอ้างอิง 2</label>
-								<div style="position: relative; display: flex; align-items: center;">
-									<input name="shipping_ref2" type="text" id="shipping_ref2" class="so-input" placeholder="" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px; font-family: 'Prompt', sans-serif;" />
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('shipping_ref2').value=''"></i>
-								</div>
-							</div>
-						</div>
-
-						<div class="so-grid-3" style="margin-top: 16px;">
-							<div class="so-field-group">
-								<label class="so-label" style="color: #612989;">ค่าจัดส่ง</label>
-								<input name="shipping_cost" type="text" id="shipping_cost" class="so-input" value="0.00" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; font-family: 'Prompt', sans-serif;" />
-							</div>
-						</div>
-					</div>
-				</div>
+				<?php
+				$deliveryTab = [
+					'open_fn' => 'openDelTab',
+					'grid_fields' => [
+						['type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => 'วิธีการจัดส่ง', 'required' => true, 'options' => [
+							'1' => 'Sale รับเอง',
+							'2' => 'ช่างรับเอง',
+							'3' => 'ลูกค้ารับเอง',
+							'4' => 'บริษัทจัดส่ง',
+						]],
+						['type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => [
+							'' => 'เลือกบริษัทขนส่ง',
+							'1' => 'Kerry',
+							'2' => 'Flash',
+							'3' => 'J&T',
+							'4' => 'ไปรษณีย์ไทย',
+						]],
+						['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันที่ในการจัดส่ง', 'required' => true],
+						['type' => 'select', 'span' => 1, 'name' => 'time_range', 'label' => 'ช่วงเวลา', 'options' => [
+							'' => 'เลือกช่วงเวลา',
+							'morning' => 'ช่วงเช้า',
+							'afternoon' => 'ช่วงบ่าย',
+							'allday' => 'ทั้งวัน',
+							'specific' => 'กำหนดเวลา',
+						]],
+						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true, 'value' => so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 0))],
+						['type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'ช่วงวันที่โดยประมาณ', 'clearable' => true],
+						['type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
+					],
+					'toggle_buttons' => [
+						['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => so_saved_checked($savedRegister, 'call_customer')],
+						['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)', 'checked' => so_saved_checked($savedOtherBill, 'ref_12')],
+					],
+					'cost_fields' => [
+						['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
+						['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
+						['type' => 'text', 'name' => 'shipping_ref2', 'label' => 'รหัสอ้างอิง 2'],
+						['type' => 'text', 'name' => 'shipping_cost', 'label' => 'ค่าจัดส่ง', 'value' => '0.00'],
+					],
+				];
+				include __DIR__ . '/partials/delivery_info_tab.php';
+				?>
 				<!-- NEW DELIVERY CARD END -->
 
 				<!-- NEW ADDRESS CARD -->
@@ -2410,7 +2311,7 @@ include("head.php"); ?>
 							</div>
 
 							<div style="display: flex; gap: 20px; margin-top: 16px; align-items: flex-end;">
-								<div class="so-field-group" style="flex: 1;">
+								<div class="so-field-group" style="flex: 1; margin-bottom: 0;">
 									<label class="so-label" style="color: #612989;">ที่อยู่ส่งสินค้า</label>
 									<div style="position: relative; display: flex; align-items: center;">
 										<input name="bill_extra_shipping_address_2" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" value="<?php echo so_saved_h($savedDeliveryBillAddress['address']); ?>" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
@@ -2802,132 +2703,42 @@ include("head.php"); ?>
 
 
 				<!-- NEW DOCUMENT TABS CARD -->
-				<div class="so-tabs-container" style="margin-top: 24px;">
-					<button type="button" class="so-tab-btn active" onclick="open3Tab('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
-					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
-					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_attach_file', this)">แนบไฟล์</button>
-					<button type="button" class="so-tab-btn" onclick="open3Tab('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
-				</div>
-				<div class="so-card" style="padding: 24px;">
-
-					<!-- TAB 1: เอกสารเพิ่มเติม -->
-					<div id="tab_doc_extra" class="so-3tab-content">
-						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">เอกสารเพิ่มเติม</h3>
-						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
-
-						<div class="so-doc-grid">
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_3" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_3') ? ' checked' : ''; ?>>
-								<span>ใบ อย.</span>
-							</label>
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_6" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_6') ? ' checked' : ''; ?>>
-								<span>ใบนำเข้าสินค้า</span>
-							</label>
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_8" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_8') ? ' checked' : ''; ?>>
-								<span>ใบ PM</span>
-							</label>
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_9" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_9') ? ' checked' : ''; ?>>
-								<span>ใบ CAL</span>
-							</label>
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_11" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_11') ? ' checked' : ''; ?>>
-								<span>ใบประเมินสินค้า</span>
-							</label>
-							<label class="so-doc-pill">
-								<input type="checkbox" name="ref_5" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_5') ? ' checked' : ''; ?>>
-								<span>ใบช่างอบรม</span>
-							</label>
-							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_2" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_2') ? ' checked' : ''; ?>>
-								<span>เอกสารตามไฟล์แนบ</span>
-							</label>
-							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_1" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_1') ? ' checked' : ''; ?>>
-								<span>เอกสาร N-Health</span>
-							</label>
-							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_4" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_4') ? ' checked' : ''; ?>>
-								<span>ใบตัวแทนจำหน่าย</span>
-							</label>
-							<label class="so-doc-pill" style="grid-column: span 2;">
-								<input type="checkbox" name="ref_7" value="1" <?php echo so_saved_checked($savedOtherBill, 'ref_7') ? ' checked' : ''; ?>>
-								<span>ใบ CER เครื่องมือที่ใช้ทดสอบ</span>
-							</label>
-							<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
-								<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
-								<input type="text" name="ref_des" class="so-input" value="<?php echo so_saved_h($savedOtherBill['ref_des'] ?? ''); ?>" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('ref_10_hidden').checked = (this.value.trim() !== '');">
-								<input type="checkbox" name="ref_10" id="ref_10_hidden" value="1" style="display:none;" <?php echo (so_saved_checked($savedOtherBill, 'ref_10') || trim((string)($savedOtherBill['ref_des'] ?? '')) !== '') ? ' checked' : ''; ?>>
-								<!-- Hidden inputs to keep old compatibility if needed -->
-								<input type="checkbox" name="ref_13" value="1" style="display:none;" <?php echo so_saved_checked($savedOtherBill, 'ref_13') ? ' checked' : ''; ?>>
-							</div>
-						</div>
-					</div>
-
-					<!-- TAB 2: ข้อความแจ้งแผนก -->
-					<div id="tab_dept_comment" class="so-3tab-content" style="display:none;">
-						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ข้อความแจ้งแผนกที่เกี่ยวข้อง</h3>
-						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
-
-						<div style="display: flex; gap: 16px; align-items: center; margin-bottom: 24px;">
-							<button type="button" onclick="addDeptComment()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-								<img src="img/icons/add_message.png" alt="add_message" style="width: 16px; height: 16px;"> เพิ่มข้อความ
-							</button>
-							<button type="button" id="technician_required_btn" class="<?php echo ((isset($savedCommentSo['technician_required']) && (string)$savedCommentSo['technician_required'] === '1') ? 'btn-dept-active' : ''); ?>" onclick="toggleTechnicianRequired(this);" style="background-color: #F4F3F7; border: none; padding: 10px 24px; border-radius: 8px; color: #333; font-size: 16px; font-family: 'Prompt', sans-serif; cursor: pointer; transition: background-color 0.2s, color 0.2s; width: 328px;">
-								ต้องการช่างไปตรวจรับ
-							</button>
-							<input type="hidden" name="technician_required" id="hidden_technician_required" value="<?php echo ((isset($savedCommentSo['technician_required']) && (string)$savedCommentSo['technician_required'] === '1') ? '1' : '0'); ?>">
-						</div>
-
-						<div id="dept_comment_list">
-							<!-- Dynamic comments will go here -->
-						</div>
-
-						<!-- Hidden textareas to submit to backend -->
-						<textarea name="comment_cs" id="hidden_comment_cs" style="display:none;"></textarea>
-						<textarea name="comment_en" id="hidden_comment_en" style="display:none;"></textarea>
-						<textarea name="comment_st" id="hidden_comment_st" style="display:none;"></textarea>
-						<textarea name="comment_ad" id="hidden_comment_ad" style="display:none;"></textarea>
-						<input type="hidden" name="dept_comment_items" id="hidden_dept_comment_items" value="">
-					</div>
-
-					<!-- TAB 3: แนบไฟล์ -->
-					<div id="tab_attach_file" class="so-3tab-content" style="display:none;">
-						<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">แนบไฟล์เพิ่มเติม</h3>
-						<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
-
-						<button type="button" onclick="triggerAttachFile()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
-							<img src="img/icons/import_file.png" alt="import_file" style="width: 16px; height: 16px;"> เพิ่มไฟล์
-						</button>
-
-						<div id="attach_file_list" style="display: flex; flex-wrap: wrap; gap: 16px;">
-							<!-- Dynamic files will go here -->
-						</div>
-
-						<!-- slip1 is reserved for payment proof; additional files use slip2-slip5. -->
-						<input type="file" name="slip1" id="hidden_slip1" style="display:none;" onchange="handleFileSelect(this, 1)">
-						<input type="file" name="slip2" id="hidden_slip2" style="display:none;" onchange="handleFileSelect(this, 2)">
-						<input type="file" name="slip3" id="hidden_slip3" style="display:none;" onchange="handleFileSelect(this, 3)">
-						<input type="file" name="slip4" id="hidden_slip4" style="display:none;" onchange="handleFileSelect(this, 4)">
-						<input type="file" name="slip5" id="hidden_slip5" style="display:none;" onchange="handleFileSelect(this, 5)">
-					</div>
-
-					<!-- TAB 4: เอกสารที่เกี่ยวข้อง -->
-					<div id="tab_related_docs" class="so-3tab-content" style="display:none;">
-						<div class="so-related-doc-table">
-							<div class="so-related-doc-header">
-								<div>ชื่อเอกสาร</div>
-								<div>หมายเลข SN</div>
-								<div></div>
-							</div>
-							<div id="related_doc_rows">
-								<div class="so-related-doc-empty">ยังไม่มีเอกสารที่เกี่ยวข้อง</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				<?php
+				$docTabsCard = [
+					'open_fn' => 'open3Tab',
+					'doc_extra' => [
+						'pills' => [
+							['name' => 'ref_3', 'label' => 'ใบ อย.', 'checked' => so_saved_checked($savedOtherBill, 'ref_3')],
+							['name' => 'ref_6', 'label' => 'ใบนำเข้าสินค้า', 'checked' => so_saved_checked($savedOtherBill, 'ref_6')],
+							['name' => 'ref_8', 'label' => 'ใบ PM', 'checked' => so_saved_checked($savedOtherBill, 'ref_8')],
+							['name' => 'ref_9', 'label' => 'ใบ CAL', 'checked' => so_saved_checked($savedOtherBill, 'ref_9')],
+							['name' => 'ref_11', 'label' => 'ใบประเมินสินค้า', 'checked' => so_saved_checked($savedOtherBill, 'ref_11')],
+							['name' => 'ref_5', 'label' => 'ใบช่างอบรม', 'checked' => so_saved_checked($savedOtherBill, 'ref_5')],
+							['name' => 'ref_2', 'label' => 'เอกสารตามไฟล์แนบ', 'checked' => so_saved_checked($savedOtherBill, 'ref_2'), 'span' => 2],
+							['name' => 'ref_1', 'label' => 'เอกสาร N-Health', 'checked' => so_saved_checked($savedOtherBill, 'ref_1'), 'span' => 2],
+							['name' => 'ref_4', 'label' => 'ใบตัวแทนจำหน่าย', 'checked' => so_saved_checked($savedOtherBill, 'ref_4'), 'span' => 2],
+							['name' => 'ref_7', 'label' => 'ใบ CER เครื่องมือที่ใช้ทดสอบ', 'checked' => so_saved_checked($savedOtherBill, 'ref_7'), 'span' => 2],
+						],
+						'other_field' => [
+							'text_name' => 'ref_des',
+							'text_value' => so_saved_h($savedOtherBill['ref_des'] ?? ''),
+							'checkbox_name' => 'ref_10',
+							'checkbox_id' => 'ref_10_hidden',
+							'checkbox_checked' => (so_saved_checked($savedOtherBill, 'ref_10') || trim((string)($savedOtherBill['ref_des'] ?? '')) !== ''),
+						],
+						'hidden_compat' => [
+							['name' => 'ref_13', 'checked' => so_saved_checked($savedOtherBill, 'ref_13')],
+						],
+					],
+					'dept_comment' => [
+						'enabled' => true,
+						'technician_required_checked' => (isset($savedCommentSo['technician_required']) && (string)$savedCommentSo['technician_required'] === '1'),
+					],
+					'attach_file' => ['enabled' => true],
+					'related_docs' => ['enabled' => true],
+				];
+				include __DIR__ . '/partials/doc_tabs_card.php';
+				?>
 
 
 				<script>
@@ -3084,195 +2895,15 @@ include("head.php"); ?>
 						}
 					});
 
-					// === Department Comments JS ===
-					let commentIdCounter = 0;
+					// === Department Comments JS (functions shared via js/doc-tabs-dept-comment.js) ===
 					const savedCommentSoForDept = <?php echo json_encode($savedCommentSo); ?>;
 					const savedCommentSoItemsForDept = <?php echo json_encode($savedCommentSoItems); ?>;
-					const deptCodeToId = {
-						cs: '1',
-						en: '2',
-						st: '3',
-						ad: '4'
-					};
-					const deptIdToCode = {
-						'1': 'cs',
-						'2': 'en',
-						'3': 'st',
-						'4': 'ad'
-					};
+				</script>
+				<script src="js/doc-tabs-dept-comment.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-dept-comment.js'); ?>"></script>
+				<script>
+					// addDeptComment/syncDeptComments/restoreDeptComments now live in js/doc-tabs-dept-comment.js
 
-					function normalizeDeptValue(dept) {
-						const value = String(dept || '');
-						return deptCodeToId[value] || value;
-					}
-
-					function getDeptCode(dept) {
-						const value = String(dept || '');
-						return deptIdToCode[value] || value;
-					}
-
-					function escapeDeptCommentValue(value) {
-						return String(value || '')
-							.replace(/&/g, '&amp;')
-							.replace(/"/g, '&quot;')
-							.replace(/</g, '&lt;')
-							.replace(/>/g, '&gt;');
-					}
-
-					function setTechnicianRequired(required) {
-						const hidden = document.getElementById('hidden_technician_required');
-						const button = document.getElementById('technician_required_btn');
-						if (hidden) hidden.value = required ? '1' : '0';
-						if (button) button.classList.toggle('btn-dept-active', !!required);
-					}
-
-					function toggleTechnicianRequired(button) {
-						const isActive = !button.classList.contains('btn-dept-active');
-						setTechnicianRequired(isActive);
-					}
-
-					function addDeptComment(defaultDept = '', defaultText = '') {
-						const list = document.getElementById('dept_comment_list');
-						const rowId = 'dept_row_' + commentIdCounter++;
-						const selectedDept = normalizeDeptValue(defaultDept);
-						const defaultTextValue = escapeDeptCommentValue(defaultText);
-
-						const row = document.createElement('div');
-						row.className = 'dept-row';
-						row.id = rowId;
-
-						row.innerHTML = `
-        <div style="flex: 0 0 200px;">
-            <label style="color: #612989; font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">แผนก</label>
-            <div class="so-select-wrapper">
-                <select class="so-select" onchange="syncDeptComments()">
-                    <option value="">เลือกแผนก</option>
-                    <option value="1" ${selectedDept === '1' ? 'selected' : ''}>จัดส่ง</option>
-                    <option value="2" ${selectedDept === '2' ? 'selected' : ''}>ช่าง</option>
-                    <option value="3" ${selectedDept === '3' ? 'selected' : ''}>คลังสินค้า</option>
-                    <option value="4" ${selectedDept === '4' ? 'selected' : ''}>Admin</option>
-                    <option value="4" ${selectedDept === '5' ? 'selected' : ''}>บัญชี</option>
-                </select>
-            </div>
-        </div>
-        <div style="flex: 1; position: relative;">
-            <label style="color: #612989; font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">ข้อความ</label>
-            <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" class="so-input dept-text-input" placeholder="กรอกข้อความสำหรับแจ้งแผนก..." style="width: 100%; padding-right: 60px;" value="${defaultTextValue}" oninput="syncDeptComments(); this.nextElementSibling.style.display = this.value ? 'block' : 'none';">
-                <i class="fas fa-times" style="position: absolute; right: 40px; cursor: pointer; color: #8E8B94; display: ${defaultText ? 'block' : 'none'};" onclick="this.previousElementSibling.value=''; syncDeptComments(); this.style.display='none';"></i>
-                <i class="far fa-trash-alt" style="position: absolute; right: 16px; color: #DC3545; cursor: pointer;" onclick="document.getElementById('${rowId}').remove(); syncDeptComments();"></i>
-            </div>
-        </div>
-    `;
-						list.appendChild(row);
-						syncDeptComments();
-					}
-
-					function syncDeptComments() {
-						let cs = '',
-							en = '',
-							st = '',
-							ad = '';
-						let items = [];
-
-						const rows = document.querySelectorAll('.dept-row');
-						rows.forEach((row, index) => {
-							const dept = row.querySelector('select').value;
-							const deptCode = getDeptCode(dept);
-							const text = row.querySelector('.dept-text-input').value;
-
-							if (dept !== '' && text.trim() !== '') {
-								items.push({
-									department_id: parseInt(dept, 10),
-									message: text,
-									sort_order: index + 1
-								});
-
-								if (deptCode === 'cs') cs += (cs ? '\n' : '') + text;
-								if (deptCode === 'en') en += (en ? '\n' : '') + text;
-								if (deptCode === 'st') st += (st ? '\n' : '') + text;
-								if (deptCode === 'ad') ad += (ad ? '\n' : '') + text;
-							}
-						});
-
-						document.getElementById('hidden_comment_cs').value = cs;
-						document.getElementById('hidden_comment_en').value = en;
-						document.getElementById('hidden_comment_st').value = st;
-						document.getElementById('hidden_comment_ad').value = ad;
-						document.getElementById('hidden_dept_comment_items').value = JSON.stringify(items);
-					}
-
-					function restoreDeptComments() {
-						const list = document.getElementById('dept_comment_list');
-						if (!list) return;
-
-						list.innerHTML = '';
-						let addedAny = false;
-
-						if (savedCommentSoForDept && typeof setTechnicianRequired === 'function') {
-							setTechnicianRequired(savedCommentSoForDept.technician_required === '1' || savedCommentSoForDept.technician_required === 1);
-						}
-
-						if (Array.isArray(savedCommentSoItemsForDept) && savedCommentSoItemsForDept.length > 0) {
-							savedCommentSoItemsForDept.forEach(function(item) {
-								if (item.message && item.message.trim() !== '') {
-									addDeptComment(item.department_id, item.message);
-									addedAny = true;
-								}
-							});
-						} else if (savedCommentSoForDept) {
-							['cs', 'en', 'st', 'ad'].forEach(function(dept) {
-								const commentText = savedCommentSoForDept['comment_' + dept];
-								if (commentText && commentText.trim() !== '') {
-									commentText.split('\n').forEach(function(line) {
-										if (line.trim() !== '') {
-											addDeptComment(dept, line);
-											addedAny = true;
-										}
-									});
-								}
-							});
-						}
-
-						if (!addedAny) {
-							addDeptComment();
-						} else {
-							syncDeptComments();
-						}
-					}
-
-					document.addEventListener('DOMContentLoaded', restoreDeptComments);
-
-					// === Attach Files JS ===
-					function triggerAttachFile() {
-						for (let i = 2; i <= 5; i++) {
-							const input = document.getElementById('hidden_slip' + i);
-							const hiddenVal = document.getElementById('hidden_slip_val' + i);
-							if (input && !input.value && (!hiddenVal || !hiddenVal.value)) {
-								input.click();
-								return;
-							}
-						}
-						alert('สามารถแนบไฟล์เพิ่มเติมได้สูงสุด 4 ไฟล์ครับ');
-					}
-
-					function handleFileSelect(input, index) {
-						const maxFileSize = 1100000;
-						if (input.files && input.files[0] && input.files[0].size > maxFileSize) {
-							input.value = '';
-							if (typeof Swal !== 'undefined') {
-								Swal.fire({
-									icon: 'warning',
-									title: 'ไฟล์มีขนาดเกินกำหนด',
-									text: 'กรุณาแนบไฟล์ที่มีขนาดไม่เกิน 1 MB'
-								});
-							} else {
-								alert('กรุณาแนบไฟล์ที่มีขนาดไม่เกิน 1 MB');
-							}
-						}
-						renderFileList();
-					}
-
+					// === Attach Files JS (triggerAttachFile/handleFileSelect/renderFileList/removeFile/removeExistingFile now live in js/doc-tabs-attach.js) ===
 					function syncSlipUploadToSlip1(input) {
 						const fileNameDisplay = document.getElementById('file_name_display');
 						const slip1Input = document.getElementById('hidden_slip1');
@@ -3318,88 +2949,8 @@ include("head.php"); ?>
 
 						renderFileList();
 					}
-
-					function renderFileList() {
-						const list = document.getElementById('attach_file_list');
-						const fileNameDisplay = document.getElementById('file_name_display');
-						const slip1Input = document.getElementById('hidden_slip1');
-						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
-						list.innerHTML = '';
-
-						if (fileNameDisplay) {
-							if (slip1Input && slip1Input.files && slip1Input.files[0]) {
-								fileNameDisplay.textContent = slip1Input.files[0].name;
-							} else if (slip1HiddenVal && slip1HiddenVal.value) {
-								fileNameDisplay.textContent = slip1HiddenVal.value;
-							} else {
-								fileNameDisplay.textContent = 'Choose File';
-							}
-						}
-
-						for (let i = 2; i <= 5; i++) {
-							const input = document.getElementById('hidden_slip' + i);
-							const hiddenVal = document.getElementById('hidden_slip_val' + i);
-
-							if (input.files && input.files[0]) {
-								const fileName = input.files[0].name;
-
-								const fileBox = document.createElement('div');
-								fileBox.style.cssText = 'background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; width: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
-
-								fileBox.innerHTML = `
-                <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <span style="font-size: 12px; color: #612989; font-weight: 600;">ไฟล์ใหม่</span>
-                    <span style="color: #612989; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</span>
-                </div>
-                <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeFile(${i})"></i>
-            `;
-								list.appendChild(fileBox);
-							} else if (hiddenVal && hiddenVal.value) {
-								const fileName = hiddenVal.value;
-
-								const fileBox = document.createElement('div');
-								fileBox.style.cssText = 'background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; width: 300px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
-
-								fileBox.innerHTML = `
-                <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <span style="font-size: 12px; color: #28a745; font-weight: 600;">ไฟล์เดิม</span>
-                    <a href="upload/${fileName}" target="_blank" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
-                </div>
-                <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeExistingFile(${i})"></i>
-            `;
-								list.appendChild(fileBox);
-							}
-						}
-					}
-
-					function removeFile(index) {
-						const input = document.getElementById('hidden_slip' + index);
-						input.value = ''; // Clear file
-						if (index === 1) {
-							const slipUploadInput = document.getElementById('slip_upload');
-							const fileNameDisplay = document.getElementById('file_name_display');
-							if (slipUploadInput) {
-								slipUploadInput.value = '';
-							}
-							if (fileNameDisplay) {
-								fileNameDisplay.textContent = 'Choose File';
-							}
-						}
-						renderFileList();
-					}
-
-					function removeExistingFile(index) {
-						const hiddenVal = document.getElementById('hidden_slip_val' + index);
-						if (hiddenVal) {
-							hiddenVal.value = ''; // Clear file reference to delete from DB
-						}
-						renderFileList();
-					}
-
-					document.addEventListener('DOMContentLoaded', function() {
-						renderFileList();
-					});
 				</script>
+				<script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 				<!-- NEW 3 TABS CARD END -->
 
 
