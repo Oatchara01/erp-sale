@@ -244,7 +244,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 					<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">ใบยืม</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 					<div class="sidebar-submenu">
 						<a href="main_allwell_br.php">Online</a>
-						<a href="main_suphos_br.php">Hospital</a>
+						<a href="register_supbrhos.php">Hospital</a>
 					</div>
 				</div>
 

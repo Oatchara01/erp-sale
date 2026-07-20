@@ -109,7 +109,9 @@ include "src/BarcodeGeneratorPNG.php";
 
 
 function barcode($code){
-    
+    if (empty($code)) {
+        return '';
+    }
     $generator = new Picqer\Barcode\BarcodeGeneratorHTML();
     $border = 1.0;//กำหนดความหน้าของเส้น Barcode
     $height = 20;//กำหนดความสูงของ Barcode
@@ -131,37 +133,49 @@ function DateThai($strDate)
 		return "$strDay $strMonthThai $strYear";
 	}
 
-$ref_id_br=$_GET["ref_id_br"];
-
+include_once "report_loanhos_preview_helper.php";
+$isPreview = loanhos_is_preview_request();
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM  hos__br WHERE ref_id_br = '".$ref_id_br."' ";
-//echo  $strSQL;
-//exit();
+if ($isPreview) {
+	$previewContext = loanhos_build_preview_context($conn);
+	$objResult = $previewContext['br'];
+	$objResult3 = $previewContext['register'];
+	$objResult11 = $previewContext['other_bill'];
+	$previewProductRows = $previewContext['products'];
+	$objResult15 = array('amount_1' => $previewContext['summary']);
+	$ref_id_br = $objResult['ref_id_br'];
+} else {
+	$ref_id_br=$_GET["ref_id_br"];
 
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+	$strSQL = "SELECT * FROM  hos__br WHERE ref_id_br = '".$ref_id_br."' ";
+	//echo  $strSQL;
+	//exit();
 
-$strSQL1 = "SELECT * FROM (hos__subbr LEFT JOIN tb_product ON hos__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+	$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
+	$objResult = mysqli_fetch_array($objQuery);
 
-$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_br."' ";
-$objQuery3 = mysqli_query($conn,$strSQL3);
-$objResult3 = mysqli_fetch_array($objQuery3);
+	$strSQL1 = "SELECT * FROM (hos__subbr LEFT JOIN tb_product ON hos__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$Num_Rows1 = mysqli_num_rows($objQuery1);
+
+	$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_br."' ";
+	$objQuery3 = mysqli_query($conn,$strSQL3);
+	$objResult3 = mysqli_fetch_array($objQuery3);
 
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery15 = mysqli_query($conn,$strSQL15);
+	$objResult15= mysqli_fetch_array($objQuery15);
+
+	$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id_br."' ";
+	$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
+	$objResult11 = mysqli_fetch_array($objQuery11);
+}
 
 $summary_1=$objResult15['amount_1'];
 $summary= number_format( $summary_1,2)."";
-
-$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id_br."' ";
-$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
-$objResult11 = mysqli_fetch_array($objQuery11);
 
 
 $month = date('m');
@@ -172,17 +186,23 @@ $today1 = $year . '-' . $month . '-' . $day;
 $today=DateThai($today1);
 
 
-$ref_id_br=$objResult["ref_id_br"];
-$dep_no =$objResult["dep_no"];
-$job_no =$objResult["job_no"];
-$iv_no =$objResult["iv_no"];
-$company = $objResult["company"];
-$customer=$objResult["customer"];
-$address =$objResult["address"];
-$delivery_name =$objResult["delivery_name"];
-$delivery_address =$objResult["delivery_address"];
-$delivery_contact =$objResult["delivery_contact"];
-$delivery_tel =$objResult["delivery_tel"];
+$ref_id_br= $objResult["ref_id_br"] ?? '';
+$dep_no = $objResult["dep_no"] ?? '';
+$deposit_no = $dep_no !== '' ? $dep_no : ($objResult["deposit_no"] ?? '');
+$job_no = $objResult["job_no"] ?? '';
+$job_id = $job_no !== '' ? $job_no : ($objResult["job_id"] ?? '');
+$iv_no = $objResult["iv_no"] ?? '';
+$company = $objResult["company"] ?? '';
+$customer=$objResult["customer"] ?? '';
+$address =$objResult["address"] ?? '';
+$province_id = $objResult["province_id"] ?? ($objResult["province"] ?? ($objResult3["province"] ?? ($objResult3["province_id"] ?? '')));
+$zip_code = $objResult["zip_code"] ?? ($objResult["postcode"] ?? ($objResult3["postcode"] ?? ($objResult3["zip_code"] ?? '')));
+$maps = $objResult["maps"] ?? ($objResult3["maps"] ?? '');
+$ref_id = $objResult["ref_id"] ?? ($ref_id_br ?? '');
+$delivery_name =$objResult["delivery_name"] ?? '';
+$delivery_address =$objResult["delivery_address"] ?? '';
+$delivery_contact =$objResult["delivery_contact"] ?? '';
+$delivery_tel =$objResult["delivery_tel"] ?? '';
 $delivery_contact1="$delivery_contact / $delivery_tel";
 $date_br = DateThai($objResult["date_br"]);
 $objective =$objResult["objective"];
@@ -326,7 +346,7 @@ $ref_10 ="";
 	<tr>
 		<td>ฝากสินค้าเลขที่ <u><?php echo $deposit_no; ?></u></td>
 		<td>เลขที่ลงงาน <u><?php echo $job_id; ?></u></td>
-		<td><div align="right" class="style38"><?php echo $iv_no;?></div><div align="right"><?php echo barcode($iv_no);?></div></td>
+		<td><div align="right" class="style38"><?php echo $iv_no;?></div><div align="right"><?php echo !empty($iv_no) ? barcode($iv_no) : '';?></div></td>
 	</tr>
 </table>
 
@@ -425,13 +445,21 @@ $ref_10 ="";
 
 <?php
 
-$strSQL1 = "SELECT * FROM (hos__subbr LEFT JOIN tb_product ON hos__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+if ($isPreview) {
+	$reportProductRows = $previewProductRows;
+} else {
+	$strSQL1 = "SELECT * FROM (hos__subbr LEFT JOIN tb_product ON hos__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$reportProductRows = array();
+	while ($savedProductRow = mysqli_fetch_array($objQuery1)) {
+		$reportProductRows[] = $savedProductRow;
+	}
+}
+$Num_Rows1 = count($reportProductRows);
 
 
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
+foreach ($reportProductRows as $objResult1)
 {
 
 $sum_amount1  =$objResult1["amount"];
@@ -667,31 +695,55 @@ if ($returns =='1'){ ?>
 </p>
 	<?php
 
-$qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
-$first = mysqli_query($conn,$qfirst);
-$ffirst = mysqli_fetch_array($first);
+$ffirst = array();
+$ffirst1 = array();
+$ffirst2 = array();
 
-$qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
-$first1 = mysqli_query($conn,$qfirst1);
-$ffirst1 = mysqli_fetch_array($first1);
+try {
+    $qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
+    $first = mysqli_query($conn, $qfirst);
+    if ($first) {
+        $ffirst = mysqli_fetch_array($first) ?: array();
+    }
+} catch (Throwable $e) {
+    // st__signature table might not exist in local/test database
+}
 
-$qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
-$first2 = mysqli_query($conn,$qfirst2);
-$ffirst2 = mysqli_fetch_array($first2);
+if (!empty($ffirst)) {
+    try {
+        if (!empty($ffirst["en_code"])) {
+            $qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
+            $first1 = mysqli_query($conn, $qfirst1);
+            if ($first1) {
+                $ffirst1 = mysqli_fetch_array($first1) ?: array();
+            }
+        }
+    } catch (Throwable $e) {}
+
+    try {
+        if (!empty($ffirst["cs_code"])) {
+            $qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
+            $first2 = mysqli_query($conn, $qfirst2);
+            if ($first2) {
+                $ffirst2 = mysqli_fetch_array($first2) ?: array();
+            }
+        }
+    } catch (Throwable $e) {}
+}
 
 	?>
 
 		<table style="width:100%;">
 	
 	<tr>
-	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"]; echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"] ?? ''; echo ")";  ?></td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["en_name"]!=''){ ?>
+		<?php if (!empty($ffirst["en_name"])) { ?>
 		<img src="data:<?php echo $ffirst["en_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["cs_name"]!=''){ ?>
+		<?php if (!empty($ffirst["cs_name"])) { ?>
 		<img src="data:<?php echo $ffirst["cs_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
@@ -699,8 +751,8 @@ $ffirst2 = mysqli_fetch_array($first2);
 			
 	<tr>
 	<td style="width:33%;text-align:center;"></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"]; ?> <?php echo $ffirst1["surname"]; ?>  <?php echo ")";  ?></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"]; ?> <?php echo $ffirst2["surname"]; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"] ?? ''; ?> <?php echo $ffirst1["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"] ?? ''; ?> <?php echo $ffirst2["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
 	</tr>			
 			
 	<tr>
@@ -710,9 +762,9 @@ $ffirst2 = mysqli_fetch_array($first2);
 	</tr>
 		
 		<tr>
-		<td style="width:33%;text-align:center;"><span>วันที่ <?php echo $ffirst["stock_dt"]; ?></span></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"]; ?></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"]; ?></td>
+		<td style="width:33%;text-align:center;"><span>วันที่ <?php echo $ffirst["stock_dt"] ?? ''; ?></span></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"] ?? ''; ?></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"] ?? ''; ?></td>
 		</tr>
 </table>
 

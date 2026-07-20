@@ -1,5 +1,6 @@
 <?php include('head.php'); ?>
 <?php include('dbconnect_sale.php'); ?>
+<?php include('dbconnect.php'); ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -209,19 +210,49 @@
 
 	// วัตถุประสงค์: select เดียว + ช่อง "ข้อความ" เดียว แทน radio 6 ปุ่ม + 4 ช่องแยก
 	// ค่า POST เดิม (objective, objective_des1/2/4/5) ยังคงเหมือนเดิมทุกประการ
+	// need_des/des_label มาจาก tb_objective (data attribute บน <option>) แทนการ hardcode
 	function brSyncObjectiveDes() {
-		var val = document.getElementById('objective').value;
+		var objectiveEl = document.getElementById('objective');
+		var selectedOption = objectiveEl.options[objectiveEl.selectedIndex];
 		var shared = document.getElementById('objective_des_shared');
-		var showText = (val === '1' || val === '2' || val === '4' || val === '5');
-		shared.style.display = showText ? '' : 'none';
-		if (!showText) shared.value = '';
+		var group = document.getElementById('objective_des_group');
+		var label = document.getElementById('objective_des_label');
+		var showText = !!(selectedOption && selectedOption.dataset.needDes === '1');
+
+		if (group) {
+			group.style.display = showText ? '' : 'none';
+		} else if (shared) {
+			shared.style.display = showText ? '' : 'none';
+		}
+
+		if (shared) {
+			if (!showText) {
+				shared.value = '';
+			} else {
+				var desLabel = selectedOption.dataset.label || 'ข้อความ';
+				if (desLabel === 'ข้อความ') {
+					shared.placeholder = 'ใส่รายละเอียดเพิ่มเติม (ถ้ามี)';
+					if (label) label.innerHTML = 'ข้อความ';
+				} else {
+					shared.placeholder = 'ระบุ' + desLabel;
+					if (label) label.innerHTML = desLabel + ' <span style="color:red;">*</span>';
+				}
+			}
+		}
+
+		brWriteObjectiveDesHidden();
 	}
 
 	function brWriteObjectiveDesHidden() {
-		var val = document.getElementById('objective').value;
-		var shared = document.getElementById('objective_des_shared').value;
+		var valEl = document.getElementById('objective');
+		var val = valEl ? valEl.value : '';
+		var sharedEl = document.getElementById('objective_des_shared');
+		var shared = sharedEl ? sharedEl.value : '';
 		['1', '2', '4', '5'].forEach(function(v) {
-			document.getElementById('objective_des' + v).value = (v === val) ? shared : '';
+			var hiddenEl = document.getElementById('objective_des' + v);
+			if (hiddenEl) {
+				hiddenEl.value = (v === val) ? shared : '';
+			}
 		});
 	}
 
@@ -284,12 +315,54 @@
 	}
 
 	function brOpenPreview() {
-		Swal.fire({
-			icon: 'info',
-			title: 'Preview',
-			text: 'ฟังก์ชัน Preview ยังไม่พร้อมใช้งานในขณะนี้',
-			confirmButtonColor: '#612989'
-		});
+		brWriteObjectiveDesHidden();
+		var form = document.forms.frmMain;
+		var refInput = form ? form.querySelector('input[name="ref_id_br"]') : null;
+		var refId = refInput ? refInput.value.trim() : '';
+
+		if (!form || !refId) {
+			Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id_br)', 'warning');
+			return;
+		}
+
+		var reportUrl = 'report_loanhosptl1.php';
+
+		if (typeof brUpdateRowTotal === 'function') {
+			var brPreviewRowCount = (typeof BR_ROW_COUNT !== 'undefined') ? BR_ROW_COUNT : 0;
+			for (var rowIndex = 1; rowIndex <= brPreviewRowCount; rowIndex++) {
+				brUpdateRowTotal(rowIndex);
+			}
+		}
+
+		var previewTarget = 'loanhos_preview_' + Date.now();
+		var previewWindow = window.open('', previewTarget);
+		if (!previewWindow) {
+			Swal.fire('แจ้งเตือน', 'เบราว์เซอร์บล็อกหน้าต่าง Preview กรุณาอนุญาต Pop-up แล้วลองใหม่', 'warning');
+			return;
+		}
+
+		var previewFlag = document.createElement('input');
+		previewFlag.type = 'hidden';
+		previewFlag.name = '_report_preview';
+		previewFlag.value = '1';
+		form.appendChild(previewFlag);
+
+		var originalAction = form.getAttribute('action');
+		var originalMethod = form.getAttribute('method');
+		var originalTarget = form.getAttribute('target');
+
+		form.action = reportUrl;
+		form.method = 'post';
+		form.target = previewTarget;
+		HTMLFormElement.prototype.submit.call(form);
+
+		if (originalAction === null) form.removeAttribute('action');
+		else form.setAttribute('action', originalAction);
+		if (originalMethod === null) form.removeAttribute('method');
+		else form.setAttribute('method', originalMethod);
+		if (originalTarget === null) form.removeAttribute('target');
+		else form.setAttribute('target', originalTarget);
+		previewFlag.remove();
 	}
 
 	function brSaveDraft() {
@@ -417,6 +490,20 @@ $adminInfoTab = [
 			{
 				brWriteObjectiveDesHidden();
 
+				var objVal = document.getElementById('objective') ? document.getElementById('objective').value : '';
+				var objDesShared = document.getElementById('objective_des_shared') ? document.getElementById('objective_des_shared').value.trim() : '';
+
+				if (objVal === '4' && objDesShared === '') {
+					alert('กรุณาระบุเลขที่ใบงานบริการ');
+					document.getElementById('objective_des_shared').focus();
+					return false;
+				}
+				if (objVal === '5' && objDesShared === '') {
+					alert('กรุณาระบุรายละเอียดอื่น ๆ');
+					document.getElementById('objective_des_shared').focus();
+					return false;
+				}
+
 				if (document.frmMain.start_time.value == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
@@ -515,13 +602,13 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group">
-						<label class="so-label">ประเภท <span style="color:red;">*</span></label>
+						<label class="so-label" for="type_breng">ประเภท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
-							<select class="so-select" disabled>
-								<option selected>ใบยืมลูกค้า (BRNP)</option>
+							<select name="type_breng" id="type_breng" class="so-select" required>
+								<option value="1" selected>ใบยืมลูกค้า (BRNP)</option>
+								<option value="2">ใบยืมช่าง (BRES)</option>
 							</select>
 						</div>
-						<input type="hidden" name="type_breng" value="0">
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
@@ -809,19 +896,19 @@ $adminInfoTab = [
 					<div class="so-select-wrapper">
 						<select name="objective" id="objective" class="so-select" required onchange="brSyncObjectiveDes();">
 							<option value="">เลือกวัตถุประสงค์</option>
-							<option value="1">เป็นสินค้าสำรอง</option>
-							<option value="2">สำหรับลูกค้าทดลองใช้</option>
-							<option value="3">ส่งสินค้าล่วงหน้าเพื่อรอใบสั่งซื้อ</option>
-							<option value="4">แลกเปลี่ยนสินค้าตามใบงานบริการเลขที่</option>
-							<option value="6">สินค้าฝากขาย (มีใบรับประกัน)</option>
-							<option value="7">สินค้าออกบูธ</option>
-							<option value="5">อื่น ๆ</option>
+							<?php
+							$strSQLObjective = "SELECT objective_id, objective_name, need_des, des_label FROM tb_objective WHERE close_ckk = '0' ORDER BY number ASC";
+							$objQueryObjective = mysqli_query($conn, $strSQLObjective);
+							while ($rsObjective = mysqli_fetch_array($objQueryObjective)) {
+							?>
+								<option value="<?php echo $rsObjective["objective_id"]; ?>" data-need-des="<?php echo $rsObjective["need_des"]; ?>" data-label="<?php echo htmlspecialchars($rsObjective["des_label"], ENT_QUOTES); ?>"><?php echo $rsObjective["objective_name"]; ?></option>
+							<?php } ?>
 						</select>
 					</div>
 				</div>
-				<div class="so-field-group">
-					<label class="so-label" for="objective_des_shared">ข้อความ</label>
-					<input type="text" id="objective_des_shared" class="so-input" placeholder="ใส่รายละเอียดเพิ่มเติม">
+				<div class="so-field-group" id="objective_des_group" style="display: none;">
+					<label class="so-label" for="objective_des_shared" id="objective_des_label">ข้อความ</label>
+					<input type="text" id="objective_des_shared" class="so-input" placeholder="ใส่รายละเอียดเพิ่มเติม" oninput="brWriteObjectiveDesHidden();">
 				</div>
 			</div>
 
@@ -1638,7 +1725,7 @@ $adminInfoTab = [
 
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
-			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="far fa-save"></i> บันทึกข้อมูล</button>
+			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
 			<button type="button" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
 		</div>
 	</div>

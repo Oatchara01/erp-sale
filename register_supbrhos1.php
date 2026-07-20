@@ -53,9 +53,12 @@ if ($_POST["submit"] = "submit") {
 	$delivery_address = $_POST["address_send"];
 	$delivery_contact = $_POST["customer_name"];
 	$delivery_tel = $_POST["customer_tel"];
-	$date_send_key  = $_POST["between_date"];
-	//$ckk_war = $_POST["ckk_war"];
-	$iv_no = "BRNP";
+	$type_breng = $_POST["type_breng"] ?? "1";
+	if ($type_breng == '2') {
+		$iv_no = "BRES";
+	} else {
+		$iv_no = "BRNP";
+	}
 
 	$sale_date = date('Y-m-d');
 	$approve_date = date('Y-m-d');
