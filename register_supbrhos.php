@@ -873,13 +873,172 @@ if ($maxId1 == $yearMonth) {
 	$nextId = $yearMonth . $maxId1;
 }
 
+// ---- โหลดเอกสารที่บันทึกไว้แล้ว (edit mode) ----
+// หน้านี้ทำหน้าที่ทั้ง create และ edit เหมือน register_suphos.php:
+//   ไม่มี ?ref_id_br  -> ฟอร์มเปล่า, action = register_supbrhos1.php (INSERT)
+//   มี  ?ref_id_br    -> prefill จาก DB, action = register_supbrhos_edit1.php (UPDATE)
+// ตารางที่อ่านกลับมาคือชุดเดียวกับที่ register_supbrhos1.php เขียนตอนบันทึก
+$savedRefIdBr = isset($_GET["ref_id_br"]) ? mysqli_real_escape_string($conn, $_GET["ref_id_br"]) : "";
+$savedBr = null;
+$savedProducts = array();
+$savedOtherBill = null;
+$savedComment = null;
+$savedCommentItems = array();
+$savedTransaction = null;
+$savedShippingRows = array();
+$savedDeliveryBillRow = null;
+$savedRegister = null;
+
+if ($savedRefIdBr !== "") {
+	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__br WHERE ref_id_br = '" . $savedRefIdBr . "' LIMIT 1");
+	if ($savedBrQuery && mysqli_num_rows($savedBrQuery) > 0) {
+		$savedBr = mysqli_fetch_assoc($savedBrQuery);
+
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		if ($savedOtherBillQuery && mysqli_num_rows($savedOtherBillQuery) > 0) {
+			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
+		}
+
+		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		if ($savedCommentQuery && mysqli_num_rows($savedCommentQuery) > 0) {
+			$savedComment = mysqli_fetch_assoc($savedCommentQuery);
+		}
+
+		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $savedRefIdBr . "' ORDER BY sort_order ASC, id ASC");
+		if ($savedCommentItemsQuery) {
+			while ($savedCommentItemRow = mysqli_fetch_assoc($savedCommentItemsQuery)) {
+				$savedCommentItems[] = array(
+					'department_id' => (int)$savedCommentItemRow['department_id'],
+					'message' => $savedCommentItemRow['message'],
+					'sort_order' => (int)$savedCommentItemRow['sort_order'],
+				);
+			}
+		}
+
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		if ($savedTransactionQuery && mysqli_num_rows($savedTransactionQuery) > 0) {
+			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
+		}
+
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedRefIdBr . "' ORDER BY id ASC");
+		if ($savedShippingQuery) {
+			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
+				$savedShippingRows[] = $savedShippingRow;
+			}
+		}
+
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		if ($savedDeliveryBillQuery && mysqli_num_rows($savedDeliveryBillQuery) > 0) {
+			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
+		}
+
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		if ($savedRegisterQuery && mysqli_num_rows($savedRegisterQuery) > 0) {
+			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
+		}
+
+		// รายการสินค้า — เรียงตาม id เพื่อให้ลำดับแถวตรงกับตอนบันทึก
+		// tb_product ไม่มีคอลัมน์ product_code/product_name จริง: ฟอร์มใช้ access_code เป็นรหัส
+		// และ sol_name เป็นชื่อ (ดู mapping ตอนเลือกสินค้าใน detail_brhos_so.php:420-426)
+		// ส่วน hos__subbr.product_code เก็บค่า product_id ไว้ จึงเชื่อถือไม่ได้ ต้องดึงจาก tb_product
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subbr.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subbr LEFT JOIN tb_product ON hos__subbr.product_id = tb_product.product_ID WHERE hos__subbr.ref_idd_br = '" . $savedRefIdBr . "' ORDER BY hos__subbr.id ASC");
+		if ($savedProductsQuery) {
+			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
+				$savedProducts[] = array(
+					'product_id' => $savedProductRow['product_id'],
+					'product_code' => $savedProductRow['tb_access_code'] ?? '',
+					'product_name' => $savedProductRow['tb_sol_name'] ?? '',
+					'unit_name' => $savedProductRow['tb_unit_name'] ?? '',
+					'sale_count' => $savedProductRow['count'],
+					'product_price' => $savedProductRow['price'],
+					'sum_amount' => $savedProductRow['amount'],
+					'sale_remarkk' => $savedProductRow['sale_remark'],
+					'br_period' => $savedProductRow['br_periodd'],
+					'warranty' => $savedProductRow['warranty'],
+					'store' => $savedProductRow['store_name'],
+					'store_remark' => $savedProductRow['stock_remark'],
+				);
+			}
+		}
+	}
+}
+
+// แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
+// คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
+$savedSurvey = array(
+	'park_front' => '', 'park_location' => '', 'is_high_roof' => '', 'entrance_type' => '',
+	'stair_count' => '', 'install_floor' => '', 'room_type' => '', 'door_width' => '', 'door_height' => '',
+	'stair_width' => '', 'stair_height' => '', 'elev_door_width' => '', 'elev_door_height' => '',
+	'elev_width' => '', 'elev_height' => '', 'elev_depth' => '', 'elev_capacity' => '',
+	'move_furn' => '', 'move_furn_count' => '', 'move_furn_detail' => '', 'addr_note' => '',
+);
+
+if ($savedTransaction !== null) {
+	$brSplitDimension = function ($value, $expectedParts) {
+		$parts = array_map('trim', explode(' x ', (string)$value));
+		return array_pad(array_slice($parts, 0, $expectedParts), $expectedParts, '');
+	};
+
+	$savedSurvey['park_front'] = ($savedTransaction['car_home'] ?? '') === '1' ? '1' : ((($savedTransaction['car_road'] ?? '') === '1') ? '0' : '');
+	$savedSurvey['park_location'] = $savedTransaction['car_park'] ?? '';
+	$savedSurvey['is_high_roof'] = ($savedTransaction['height_ltd'] ?? '') === '1' ? '1' : '';
+
+	if (($savedTransaction['slope'] ?? '') === '1') {
+		$savedSurvey['entrance_type'] = '1';
+	} else if (($savedTransaction['bundai'] ?? '') === '1') {
+		$savedSurvey['entrance_type'] = '2';
+	}
+
+	$savedSurvey['stair_count'] = $savedTransaction['unit_bundai'] ?? '';
+	$savedSurvey['install_floor'] = $savedTransaction['install'] ?? '';
+	$savedSurvey['room_type'] = $savedTransaction['home_type'] ?? '';
+	$savedSurvey['door_width'] = $savedTransaction['room_bigger'] ?? '';
+	$savedSurvey['door_height'] = $savedTransaction['room_longer'] ?? '';
+
+	list($savedSurvey['stair_width'], $savedSurvey['stair_height']) = $brSplitDimension($savedTransaction['bundai_big'] ?? '', 2);
+	list($savedSurvey['elev_door_width'], $savedSurvey['elev_door_height']) = $brSplitDimension($savedTransaction['lip_big'] ?? '', 2);
+	list($savedSurvey['elev_width'], $savedSurvey['elev_height'], $savedSurvey['elev_depth']) = $brSplitDimension($savedTransaction['lip_long'] ?? '', 3);
+
+	$savedSurvey['elev_capacity'] = $savedTransaction['lip_weight'] ?? '';
+	$savedSurvey['move_furn'] = ($savedTransaction['want_employee'] ?? '') === '1' ? '1' : '0';
+	$savedSurvey['move_furn_count'] = $savedTransaction['employee_unit'] ?? '';
+	$savedSurvey['move_furn_detail'] = $savedTransaction['ferniger_name'] ?? '';
+	$savedSurvey['addr_note'] = $savedTransaction['description'] ?? '';
+}
+
+// start_time/end_time ถูกบันทึกรวมกันเป็น "start end" ในคอลัมน์ delivery_time จึงต้อง split กลับ
+$savedStartTime = '';
+$savedEndTime = '';
+if ($savedBr !== null && trim((string)$savedBr['delivery_time']) !== '') {
+	$savedDeliveryTimeParts = preg_split('/\s+/', trim((string)$savedBr['delivery_time']));
+	$savedStartTime = $savedDeliveryTimeParts[0] ?? '';
+	$savedEndTime = $savedDeliveryTimeParts[1] ?? '';
+}
+
 // ตัวแปรรองรับแท็บ 'ที่อยู่เพิ่มเติม' ที่ port มาจาก register_suphos.php
-// หน้านี้เป็น create-only (ยังไม่มีเอกสารที่บันทึกแล้ว) ค่าที่ saved ทั้งหมดจึงเป็นค่าว่าง
-// และ $printCoverRefId = '' ทำให้ปุ่มพิมพ์ใบปะขึ้น Swal "ยังพิมพ์ไม่ได้" เสมอ
-$printCoverRefId = '';
+// create mode = ค่าว่างทั้งหมด (ปุ่มพิมพ์ใบปะขึ้น Swal "ยังพิมพ์ไม่ได้"), edit mode = ค่าจากเอกสารที่บันทึกไว้
+$printCoverRefId = ($savedBr !== null) ? $savedBr['ref_id_br'] : '';
 $savedFirstExtraAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
 $savedDeliveryBillAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
-$savedExtraAddressRows = [];
+$savedExtraAddressRows = $savedShippingRows;
+
+if (count($savedShippingRows) > 0) {
+	$savedFirstExtraAddress = array(
+		'contact_name' => $savedShippingRows[0]['contact_name'] ?? '',
+		'telephone' => $savedShippingRows[0]['telephone'] ?? '',
+		'province' => $savedShippingRows[0]['province'] ?? '',
+		'address' => $savedShippingRows[0]['address'] ?? '',
+	);
+}
+
+if ($savedDeliveryBillRow !== null) {
+	$savedDeliveryBillAddress = array(
+		'contact_name' => $savedDeliveryBillRow['customer_nameb'] ?? '',
+		'telephone' => $savedDeliveryBillRow['customer_telb'] ?? '',
+		'province' => $savedDeliveryBillRow['province'] ?? '',
+		'address' => $savedDeliveryBillRow['address_nameb'] ?? '',
+	);
+}
 
 // NOTE: รายงานชุดนี้คัดลอกจาก register_suphos.php ซึ่งเป็นรายงานฝั่ง SO (report_h*.php)
 // ยังพิมพ์ไม่ได้อยู่แล้วเพราะ $printCoverRefId ว่าง — ถ้าจะเปิดใช้จริงต้องเปลี่ยนเป็นรายงานฝั่ง BR ก่อน
@@ -913,20 +1072,21 @@ $billDeliveryReports = array(
 
 // ข้อมูล Admin tab (partials/admin_info_tab.php) — reuse ของ Admin ที่มีอยู่แล้ว
 // Layout อ้างอิงจาก register_suphos.php บรรทัด ~1750 (Admin tab เดียวกัน)
-// หน้านี้เป็น create-only จึงยังไม่มีค่า saved ให้ผูก (ทุก value ว่าง)
+// ค่าที่ผูกเป็น inverse ของ $optionalHosBrFieldMap ใน register_supbrhos1.php
+// (admin_doc_date<-iv_date, admin_work_no<-job_no, admin_cancel_reason<-remark_cancel)
 $adminInfoTab = [
 	'tab_id' => 'tab-admin-info',
 	'title' => 'ข้อมูลเพิ่มเติม (Admin)',
 	'rows' => [
 		[
-			['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => '', 'placeholder' => 'No.'],
+			['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
 			['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
-			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'],
-			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'fas fa-search'],
+			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
+			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'fas fa-search'],
 		],
 		[
 			['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
-			['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+			['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
 		],
 	],
 ];
