@@ -11,6 +11,25 @@
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			if (typeof Swal === 'undefined') {
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				return;
+			}
+
+			Swal.fire({
+				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: 'success',
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+		});
+	</script>
+<?php } ?>
+
 <script language="JavaScript">
 	var HttPRequest = false;
 
@@ -1093,7 +1112,10 @@ $adminInfoTab = [
 
 ?>
 
-<form action="register_supbrhos1.php" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<?php
+// create mode -> INSERT handler, edit mode -> UPDATE handler (pattern เดียวกับ register_suphos.php)
+?>
+<form action="<?php echo ($savedBr !== null) ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 
 		<div class="so-header-container">
@@ -1101,13 +1123,16 @@ $adminInfoTab = [
 				<h1 class="so-title">Borrow Order</h1>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
-					<?php
-					// เลขนี้เป็นค่าคำนวณล่วงหน้าเท่านั้น ไม่ใช่เลขที่จะถูกบันทึกจริงเสมอไป
-					// backend คำนวณเลขจริงใหม่ตอนบันทึก (พร้อม retry กันชนกัน) จึงอาจไม่ตรงกับค่านี้
-					// ถ้ามีอีกคนบันทึกเอกสารแทรกก่อนหน้านี้ทันเวลา
+					<?php if ($savedBr !== null) { ?>
+						<span class="so-ref-value"><?php echo so_saved_h($savedBr['ref_id_br']); ?></span>
+					<?php } else {
+						// เลขนี้เป็นค่าคำนวณล่วงหน้าเท่านั้น ไม่ใช่เลขที่จะถูกบันทึกจริงเสมอไป
+						// backend คำนวณเลขจริงใหม่ตอนบันทึก (พร้อม retry กันชนกัน) จึงอาจไม่ตรงกับค่านี้
+						// ถ้ามีอีกคนบันทึกเอกสารแทรกก่อนหน้านี้ทันเวลา
 					?>
-					<span class="so-ref-value">จะออกเลขที่เมื่อกดบันทึก (ประมาณการ: <?php echo $so;
-																						echo $nextId; ?>)</span>
+						<span class="so-ref-value">จะออกเลขที่เมื่อกดบันทึก (ประมาณการ: <?php echo $so;
+																							echo $nextId; ?>)</span>
+					<?php } ?>
 				</div>
 			</div>
 			<div class="so-header-right">
@@ -1228,8 +1253,11 @@ $adminInfoTab = [
 		</script>
 
 		<input type="radio" name="company" value="1" checked='checked' required style="display:none;">
-		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo $so;
-																		echo $nextId; ?>">
+		<?php
+		// edit mode ต้องส่งเลขเอกสารจริงไปให้ register_supbrhos_edit1.php ใช้เป็น key ของ UPDATE
+		// create mode ส่งเลขประมาณการไปตามเดิม (backend คำนวณเลขจริงใหม่อยู่แล้ว)
+		?>
+		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id_br']) : so_saved_h($so . $nextId); ?>">
 
 		<!-- แท็บ ข้อมูลเอกสาร / Admin (แท็บ Admin แสดงเฉพาะ type_login == 'It' เหมือนเดิม) -->
 		<div class="so-tabs-container">
@@ -1578,6 +1606,45 @@ $adminInfoTab = [
 				include('detail_brhos_so.php');
 			}
 			?>
+
+			<?php if (count($savedProducts) > 0) { ?>
+				<?php
+				// prefill รายการสินค้าด้วย JS เหมือนฝั่ง SO (register_suphos.php:1164-1200)
+				// ใช้ brSetRowData() ที่ partial มีอยู่แล้ว จึงไม่ต้องแก้ detail_brhos_so.php / detail_breng_so.php
+				?>
+				<script>
+					document.addEventListener('DOMContentLoaded', function() {
+						var brSavedProducts = <?php echo json_encode($savedProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+						var brMaxRows = (typeof BR_ROW_COUNT !== 'undefined') ? BR_ROW_COUNT : brSavedProducts.length;
+
+						brSavedProducts.forEach(function(product, index) {
+							var rowIndex = index + 1;
+							if (rowIndex > brMaxRows) return;
+
+							brSetRowData(rowIndex, {
+								product_id: product.product_id,
+								product_code: product.product_code,
+								product_codet: product.product_code,
+								product_c: product.product_code,
+								product_name: product.product_name,
+								product_name_label: product.product_name,
+								unit_name: product.unit_name,
+								sale_count: product.sale_count,
+								product_price: product.product_price,
+								sum_amount: product.sum_amount,
+								sale_remarkk: product.sale_remarkk,
+								br_period: product.br_period,
+								warranty: product.warranty,
+								store: product.store,
+								store_remark: product.store_remark,
+								display: ''
+							});
+						});
+
+						if (typeof brCalculateSummary === 'function') brCalculateSummary();
+					});
+				</script>
+			<?php } ?>
 		</div>
 
 		<!-- การ์ดแท็บ: ข้อมูลการจัดส่ง / ค่าจัดส่ง -->
