@@ -41,7 +41,7 @@ $qsave=mysqli_query($conn,$save);
 	 if($_SESSION["department"]=='วิศวกรรม'){
 echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbreng_edit.php?ref_id_br=$ref_id_br';";		 
 	 }else{
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrhos_edit.php?ref_id_br=$ref_id_br';";
+echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrhos.php?ref_id_br=$ref_id_br';";
 	 }
 echo "</script>";
   } else {

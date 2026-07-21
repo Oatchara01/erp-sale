@@ -1063,6 +1063,7 @@ $adminInfoTab = [
 				}
 				brSubmitValue.value = 'submit';
 				HTMLFormElement.prototype.submit.call(brForm);
+				return false;
 			}
 		</script>
 

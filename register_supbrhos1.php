@@ -150,7 +150,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		$approve  = 'พรรณิภา';
 	} else if ($sale_code == 'S17' or $sale_code == 'SM1' or $sale_code == 'S23' or $sale_code == 'S24') {
 
-		$sup_code = 'SM1';
+		$approve_code = 'SM1';
 		$approve  = 'ลักษณาวรรณ';
 	} else if ($sale_code == 'S32' or $sale_code == 'S31' or $sale_code == 'MM1') {
 		$approve_code = 'SS3';
@@ -165,11 +165,34 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$add_by = mysqli_real_escape_string($conn, $_POST["add_by"]);
 
 
-	move_uploaded_file($_FILES['slip1']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip1']['name']));
-	move_uploaded_file($_FILES['slip2']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip2']['name']));
-	move_uploaded_file($_FILES['slip3']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip3']['name']));
-	move_uploaded_file($_FILES['slip4']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip4']['name']));
-	move_uploaded_file($_FILES['slip5']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip5']['name']));
+	// เก็บชื่อไฟล์ที่อัปโหลดสำเร็จไว้ใน $slip1..$slip5 เพื่อบันทึกลงคอลัมน์ slip1..slip5 ของ hos__br
+	// (เดิมมีแต่ move_uploaded_file แต่ไม่เคย set ตัวแปร ทำให้คอลัมน์ slip ว่างเสมอ)
+	$slip1 = $slip2 = $slip3 = $slip4 = $slip5 = '';
+	if (!empty($_FILES['slip1']['name'])) {
+		$slip1 = iconv("UTF-8", "TIS-620", $_FILES['slip1']['name']);
+		move_uploaded_file($_FILES['slip1']['tmp_name'], "upload/" . $slip1);
+	}
+	if (!empty($_FILES['slip2']['name'])) {
+		$slip2 = iconv("UTF-8", "TIS-620", $_FILES['slip2']['name']);
+		move_uploaded_file($_FILES['slip2']['tmp_name'], "upload/" . $slip2);
+	}
+	if (!empty($_FILES['slip3']['name'])) {
+		$slip3 = iconv("UTF-8", "TIS-620", $_FILES['slip3']['name']);
+		move_uploaded_file($_FILES['slip3']['tmp_name'], "upload/" . $slip3);
+	}
+	if (!empty($_FILES['slip4']['name'])) {
+		$slip4 = iconv("UTF-8", "TIS-620", $_FILES['slip4']['name']);
+		move_uploaded_file($_FILES['slip4']['tmp_name'], "upload/" . $slip4);
+	}
+	if (!empty($_FILES['slip5']['name'])) {
+		$slip5 = iconv("UTF-8", "TIS-620", $_FILES['slip5']['name']);
+		move_uploaded_file($_FILES['slip5']['tmp_name'], "upload/" . $slip5);
+	}
+	$slip1 = mysqli_real_escape_string($conn, $slip1);
+	$slip2 = mysqli_real_escape_string($conn, $slip2);
+	$slip3 = mysqli_real_escape_string($conn, $slip3);
+	$slip4 = mysqli_real_escape_string($conn, $slip4);
+	$slip5 = mysqli_real_escape_string($conn, $slip5);
 
 
 	$head_1 = mysqli_real_escape_string($conn, $_POST["head_1"]);
@@ -198,7 +221,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	for ($refAttempt = 0; $refAttempt < $maxRefAttempts; $refAttempt++) {
 		$yearMonth = substr(date("Y") + 543, -2) . date("m");
 		$sql = "SELECT MAX(ref_id_br) AS MAXID FROM hos__br ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		$maxId = substr($rs['MAXID'], -5);
@@ -399,7 +422,7 @@ values
 
 	$strSQL99Br = "insert into tb_transaction (ref_id,car_park,car_road,car_home,slope,bundai,unit_bundai,home_type,install,bundai_big,lip_big,lip_long,lip_weight,want_employee,employee_unit,ferniger_name,room_bigger,room_longer,description,height_ltd,add_date,add_by)
 values('" . $ref_id_br . "','" . $br_car_park . "','" . $br_car_road . "','" . $br_car_home . "','" . $br_slope . "','" . $br_bundai . "','" . $br_unit_bundai . "','" . $br_room_type . "','" . $br_install . "','" . $br_bundai_big . "','" . $br_lip_big . "','" . $br_lip_long . "','" . $br_lip_weight . "','" . $br_want_employee . "','" . $br_employee_unit . "','" . $br_ferniger_name . "','" . $br_room_bigger . "','" . $br_room_longer . "','" . $br_addr_note . "','" . $br_height_ltd . "','$add_date','" . $add_by . "')";
-	$objQuery99Br = mysqli_query($conn, $strSQL99Br) or die(mysqli_error($conn));
+	$objQuery99Br = mysqli_query($conn, $strSQL99Br);
 
 	if (!function_exists('updateTbTransactionColumnIfExists')) {
 		function updateTbTransactionColumnIfExists($conn, $ref_id, $column, $value)
@@ -438,7 +461,7 @@ values('" . $ref_id_br . "','" . $br_car_park . "','" . $br_car_road . "','" . $
 			mysqli_real_escape_string($conn, $brShippingProvince) . "','" .
 			mysqli_real_escape_string($conn, $brShippingAddress) . "')";
 
-		mysqli_query($conn, $strBrShippingInsert) or die(mysqli_error($conn));
+		mysqli_query($conn, $strBrShippingInsert);
 	}
 
 	// ---- ที่อยู่ส่งบิล (tb_delivery_bill) — ชื่อฟิลด์ตรงกับฟอร์ม SO พอดี ----
@@ -457,7 +480,7 @@ values('" . $ref_id_br . "','" . $br_car_park . "','" . $br_car_road . "','" . $
 			mysqli_real_escape_string($conn, $brDeliveryBillProvince) . "','" .
 			mysqli_real_escape_string($conn, $brDeliveryBillAddress) . "')";
 
-		mysqli_query($conn, $strBrDeliveryBillInsert) or die(mysqli_error($conn));
+		mysqli_query($conn, $strBrDeliveryBillInsert);
 	}
 
 	$warranty1 = mysqli_real_escape_string($conn, $_POST["warranty1"]);
@@ -765,7 +788,7 @@ values ('" . $ref_id_br . "','" . $sale_count1 . "','" . $sale_count1 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id1 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -894,7 +917,7 @@ values ('" . $ref_id_br . "','" . $sale_count2 . "','" . $sale_count2 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id2 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1024,7 +1047,7 @@ values ('" . $ref_id_br . "','" . $sale_count3 . "','" . $sale_count3 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id3 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1154,7 +1177,7 @@ values ('" . $ref_id_br . "','" . $sale_count4 . "','" . $sale_count4 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id4 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1284,7 +1307,7 @@ values ('" . $ref_id_br . "','" . $sale_count5 . "','" . $sale_count5 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id5 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1414,7 +1437,7 @@ values ('" . $ref_id_br . "','" . $sale_count6 . "','" . $sale_count6 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id6 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1544,7 +1567,7 @@ values ('" . $ref_id_br . "','" . $sale_count7 . "','" . $sale_count7 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id7 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1673,7 +1696,7 @@ values ('" . $ref_id_br . "','" . $sale_count8 . "','" . $sale_count8 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id8 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$qry = mysqli_query($conn, $sql);
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1951,7 +1974,7 @@ values($registerDataValues)";
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		header('Location: register_supbrhos_edit.php?ref_id_br=' . rawurlencode($ref_id_br) . '&saved=1');
+		header('Location: register_supbrhos.php?ref_id_br=' . rawurlencode($ref_id_br) . '&saved=1');
 		exit();
 	} else {
 		mysqli_rollback($conn);

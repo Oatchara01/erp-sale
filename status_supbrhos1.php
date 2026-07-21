@@ -214,7 +214,7 @@ include "dbconnect_sale.php";
 					<td>
 						<?php if ($objResult["send_admin"] == '0') {	?>
 
-							<a href="register_supbrhos_edit.php?ref_id_br=<?php echo $objResult["ref_id_br"]; ?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"]; ?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+							<a href="register_supbrhos.php?ref_id_br=<?php echo $objResult["ref_id_br"]; ?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"]; ?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 						<?php } ?>
 
 					</td>

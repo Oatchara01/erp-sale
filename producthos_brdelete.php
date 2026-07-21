@@ -24,7 +24,7 @@ if($objQuery)
   } else if ($code == "Sup_Sale"){
 
   echo "<script language=\"JavaScript\">";
-  echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrhos_edit.php?ref_id_br=$ref_id_br';";
+  echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrhos.php?ref_id_br=$ref_id_br';";
   echo "</script>";
 
 
