@@ -1089,6 +1089,120 @@ $billDeliveryReports = array(
 	array('label' => 'a4nbm', 'file' => 'reportb_ha4nbm.php')
 );
 
+// ---- แผนที่ค่า prefill สำหรับ edit mode ----
+// รวมค่าที่ต้องเติมกลับเข้าฟอร์มไว้ที่เดียว แล้วให้ JS ตัวเดียวเป็นคนเติม (ดูบล็อกท้ายฟอร์ม)
+// เหตุผลที่ไม่เติมด้วย PHP value="" ทีละช่อง: ช่อง sale_code ถูก render ซ้ำ 7 ชุดตามทีมขาย
+// และบล็อกสำรวจหน้างานเป็น radio ล้วน การไล่แก้ทีละจุด (~60 จุด) เสี่ยงพลาดสูงกว่ามาก
+// วิธีนี้ยังใช้ pattern เดียวกับ prefill รายการสินค้าและฝั่ง SO (register_suphos.php)
+$brPrefill = array();
+
+if ($savedBr !== null) {
+	$brPrefill = array(
+		'type_breng' => $savedBr['type_breng'],
+		'sale_code' => $savedBr['sale_code'],
+		'date_br' => $savedBr['date_br'],
+		'customer' => $savedBr['customer'],
+		'customer_id' => $savedBr['customer_id'],
+		'h_customer' => $savedBr['customer'],
+		'h_bill_id' => $savedBr['customer_id'],
+		'bill_id' => $savedBr['customer_id'],
+		'address' => $savedBr['address'],
+		'sale_comment' => $savedBr['sale_comment'],
+		'sn_ckk' => $savedBr['sn_ckk'],
+		'sn' => $savedBr['sn'],
+		'cm_no' => $savedBr['cm_no'],
+		'que_ckk' => $savedBr['que_ckk'],
+		'objective' => $savedBr['objective'],
+		'objective_des1' => $savedBr['objective_des1'],
+		'objective_des2' => $savedBr['objective_des2'],
+		'objective_des4' => $savedBr['objective_des4'],
+		'objective_des5' => $savedBr['objective_des5'],
+		'returns' => $savedBr['returns'],
+		'returns_date' => $savedBr['returns_date'],
+		'return_date_bet' => $savedBr['return_date_bet'],
+		'returns_time' => $savedBr['returns_time'],
+		'returns_name' => $savedBr['returns_name'],
+		'returns_address' => $savedBr['returns_address'],
+		'returns_contact' => $savedBr['returns_contact'],
+		'add_by' => $savedBr['add_by'],
+		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
+		'address_name' => $savedBr['delivery_name'],
+		'address_send' => $savedBr['delivery_address'],
+		'customer_name' => $savedBr['delivery_contact'],
+		'customer_tel' => $savedBr['delivery_tel'],
+		'delivery_type' => $savedBr['delivery_type'],
+		'start_date' => $savedBr['delivery_date'],
+		'between_date' => $savedBr['date_send_key'],
+		'start_time' => $savedStartTime,
+		'end_time' => $savedEndTime,
+	);
+
+	if ($savedOtherBill !== null) {
+		$brPrefill['head_1'] = $savedOtherBill['head_1'];
+		for ($brRefIndex = 1; $brRefIndex <= 11; $brRefIndex++) {
+			$brPrefill['ref_' . $brRefIndex] = $savedOtherBill['ref_' . $brRefIndex];
+		}
+		$brPrefill['ref_des'] = $savedOtherBill['ref_des'];
+		$brPrefill['ref_11des'] = $savedOtherBill['ref_11des'];
+	}
+
+	if ($savedComment !== null) {
+		$brPrefill['comment_cs'] = $savedComment['comment_cs'];
+		$brPrefill['comment_en'] = $savedComment['comment_en'];
+		$brPrefill['comment_st'] = $savedComment['comment_st'];
+		$brPrefill['comment_ad'] = $savedComment['comment_ad'];
+		$brPrefill['technician_required'] = $savedComment['technician_required'];
+	}
+
+	if ($savedRegister !== null) {
+		$brPrefill['province_name'] = $savedRegister['province_name'];
+		$brPrefill['address_1'] = $savedRegister['address_1'];
+		$brPrefill['employee_name'] = $savedRegister['employee_name'];
+		$brPrefill['employee_tel'] = $savedRegister['employee_tel'];
+		$brPrefill['department_show'] = $savedRegister['department_show'];
+		$brPrefill['department_name'] = $savedRegister['department'];
+		$brPrefill['dept'] = $savedRegister['dept'];
+		$brPrefill['dep'] = $savedRegister['dep'];
+		$brPrefill['status'] = $savedRegister['status'];
+		$brPrefill['status_comment'] = $savedRegister['status_comment'];
+		$brPrefill['customer_contact'] = $savedRegister['customer_contact'];
+		$brPrefill['on_time'] = $savedRegister['on_time'];
+		$brPrefill['want_bus'] = $savedRegister['want_bus'];
+		$brPrefill['transport_company'] = $savedRegister['transport_company'];
+		$brPrefill['location_link'] = $savedRegister['location_link'];
+		$brPrefill['product_sn'] = $savedRegister['product_sn'];
+		$brPrefill['unit_cash'] = $savedRegister['cash'];
+		$brPrefill['unit_check'] = $savedRegister['unit_check'];
+		$brPrefill['unit_credit'] = $savedRegister['unit_credit'];
+		$brPrefill['unit_bill'] = $savedRegister['unit_bill'];
+		$brPrefill['unit_tran'] = $savedRegister['unit_tran'];
+		$brPrefill['shipping_id'] = $savedRegister['shipping_id'] ?? '';
+	}
+
+	foreach ($savedSurvey as $brSurveyField => $brSurveyValue) {
+		$brPrefill[$brSurveyField] = $brSurveyValue;
+	}
+
+	// ที่อยู่เพิ่มเติมสูงสุด 9 แถว (ชุดเดียวกับที่ register_supbrhos1.php วนบันทึก)
+	foreach ($savedShippingRows as $brShippingIdx => $brShippingRow) {
+		$brShippingNo = $brShippingIdx + 1;
+		if ($brShippingNo > 9) {
+			break;
+		}
+		$brPrefill['extra_contact_name_' . $brShippingNo] = $brShippingRow['contact_name'];
+		$brPrefill['extra_contact_tel_' . $brShippingNo] = $brShippingRow['telephone'];
+		$brPrefill['extra_contact_province_' . $brShippingNo] = $brShippingRow['province'];
+		$brPrefill['extra_shipping_address_' . $brShippingNo] = $brShippingRow['address'];
+	}
+
+	if ($savedDeliveryBillRow !== null) {
+		$brPrefill['bill_extra_contact_name_2'] = $savedDeliveryBillRow['customer_nameb'];
+		$brPrefill['bill_extra_contact_tel_2'] = $savedDeliveryBillRow['customer_telb'];
+		$brPrefill['bill_extra_contact_province_2'] = $savedDeliveryBillRow['province'];
+		$brPrefill['bill_extra_shipping_address_2'] = $savedDeliveryBillRow['address_nameb'];
+	}
+}
+
 // ข้อมูล Admin tab (partials/admin_info_tab.php) — reuse ของ Admin ที่มีอยู่แล้ว
 // Layout อ้างอิงจาก register_suphos.php บรรทัด ~1750 (Admin tab เดียวกัน)
 // ค่าที่ผูกเป็น inverse ของ $optionalHosBrFieldMap ใน register_supbrhos1.php
@@ -2434,8 +2548,8 @@ $adminInfoTab = [
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>
 		<script>
-			const savedCommentSoForDept = null;
-			const savedCommentSoItemsForDept = [];
+			const savedCommentSoForDept = <?php echo ($savedComment !== null) ? json_encode($savedComment, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'null'; ?>;
+			const savedCommentSoItemsForDept = <?php echo json_encode($savedCommentItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 		</script>
 		<script src="js/doc-tabs-dept-comment.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-dept-comment.js'); ?>"></script>
 		<script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
@@ -2448,6 +2562,57 @@ $adminInfoTab = [
 			<button type="button" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
 		</div>
 	</div>
+
+	<?php if (count($brPrefill) > 0) { ?>
+		<?php
+		// เติมค่ากลับเข้าฟอร์มใน edit mode — ตัวเดียวจบทั้งฟอร์ม
+		// รองรับทั้ง text/hidden/textarea, select (รวม sale_code ที่ render ซ้ำ 7 ชุด),
+		// radio และ checkbox โดยเลือกวิธี set ตามชนิดของ element
+		?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var brPrefill = <?php echo json_encode($brPrefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+				var brForm = document.forms['frmMain'];
+				if (!brForm) return;
+
+				Object.keys(brPrefill).forEach(function(fieldName) {
+					var value = brPrefill[fieldName];
+					if (value === null || value === undefined) return;
+					value = String(value);
+
+					var elements = brForm.querySelectorAll('[name="' + fieldName + '"]');
+					if (!elements.length) return;
+
+					elements.forEach(function(el) {
+						if (el.type === 'radio') {
+							// ติ๊กเฉพาะตัวที่ value ตรง ไม่ไปล้างตัวอื่นในกลุ่ม
+							if (el.value === value) el.checked = true;
+						} else if (el.type === 'checkbox') {
+							el.checked = (value === '1' || value === el.value);
+						} else if (el.tagName === 'SELECT') {
+							el.value = value;
+							// ถ้า option ยังไม่มี (เช่น sale_code ของทีมอื่น) ให้เพิ่มเข้าไปกันค่าหาย
+							if (el.selectedIndex === -1 && value !== '') {
+								var opt = document.createElement('option');
+								opt.value = value;
+								opt.textContent = value;
+								opt.selected = true;
+								el.appendChild(opt);
+							}
+						} else {
+							el.value = value;
+						}
+					});
+				});
+
+				// ให้ UI ที่ผูกกับค่าเหล่านี้อัปเดตตาม (ปุ่ม/ช่องที่ซ่อน-แสดงตาม objective ฯลฯ)
+				['objective', 'type_breng', 'returns', 'delivery_type'].forEach(function(name) {
+					var el = document.getElementById(name);
+					if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+				});
+			});
+		</script>
+	<?php } ?>
 </form>
 <!-- <div id="cr_bar"> <?php include "foot.php"; ?></div> -->
 
