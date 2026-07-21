@@ -7,7 +7,9 @@
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrhos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrhos.css'); ?>">
+<link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script type="text/javascript" src="js/customer-popup.js"></script>
+<script type="text/javascript" src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 
 <script language="JavaScript">
 	var HttPRequest = false;
@@ -66,6 +68,23 @@
 						var vipIcon = document.getElementById('display_vip_icon');
 						if (vipIcon) {
 							vipIcon.style.display = (vipCkk === "1") ? "" : "none";
+						}
+
+						// เติมที่อยู่จัดส่งของลูกค้าอัตโนมัติจากข้อมูล delivery_* (mirror register_suphos.php)
+						if (typeof applyShippingSelection === 'function') {
+							var defaultShipping = {
+								customer_name: myArr[0] || '',
+								customer_tel: myArr[17] || myArr[5] || '',
+								shipping_name: myArr[18] || myArr[12] || myArr[0] || '',
+								shipping_province: myArr[15] || '',
+								shipping_full_address: myArr[19] || myArr[13] || '',
+								// ส่วนประกอบดิบ (del_address / del_ampher / del_postcode) สำหรับบันทึกแยกคอลัมน์
+								shipping_address: myArr[13] || '',
+								shipping_ampher: myArr[14] || '',
+								shipping_postcode: myArr[16] || ''
+							};
+							window.originalShippingData = defaultShipping;
+							applyShippingSelection(defaultShipping);
 						}
 
 						var billIdVal2 = document.getElementById(bill_id).value;
@@ -167,6 +186,385 @@
 
 		doCallAjax1('bill_id', 'customer', 'address');
 	};
+
+	// ===== ที่อยู่จัดส่ง: ค้นหา / เลือก / เพิ่มลงฐานลูกค้า =====
+	var shippingAddressPopupSelected = null;
+	var shippingAddressPopupTimer = null;
+	var shippingAddressPopupData = [];
+	var shippingAddressPopupKeyword = '';
+	var shippingAddressPopupNextLastId = null;
+	var shippingAddressPopupHasMore = false;
+	var shippingAddressPopupLoading = false;
+	var shippingAddressPopupPageSize = 20;
+	var shippingAddressPopupCustomerId = '';
+
+	// รวม logic หา customer_id ปัจจุบันจากฟิลด์ที่มีอยู่ในฟอร์ม (supbrhos ไม่มี customerPopupSelected global เหมือน suphos)
+	function getCurrentShippingPopupCustomerId() {
+		var customerIdInput = document.getElementById('customer_id');
+		var billId = document.getElementById('bill_id');
+		var hiddenBillId = document.getElementById('h_bill_id');
+		var displayBillId = document.getElementById('display_bill_id');
+		return String(
+			(customerIdInput && customerIdInput.value) ||
+			(billId && billId.value) ||
+			(hiddenBillId && hiddenBillId.value) ||
+			(displayBillId && displayBillId.textContent) ||
+			''
+		).trim();
+	}
+
+	// บังคับให้มี customer ก่อนจึงจะสร้าง shipping address ใหม่ได้ เพราะ shipping ผูกกับ customer โดยตรง
+	function openShippingAddressCreatePage(customerId) {
+		var resolvedCustomerId = String(customerId || getCurrentShippingPopupCustomerId() || '').trim();
+		if (!resolvedCustomerId) {
+			alert('กรุณาเลือกลูกค้าก่อนเพิ่มที่อยู่จัดส่ง');
+			return;
+		}
+		var url = 'shipping_info_add.php';
+		url += '?customer_id=' + encodeURIComponent(resolvedCustomerId);
+		window.open(url, '_blank');
+	}
+
+	// เปิดหน้าจัดการที่อยู่จัดส่งเดิม โดยต้องมี customer ปัจจุบันก่อนเสมอ
+	function openShippingAddressManagePage(shippingId) {
+		var customerId = getCurrentShippingPopupCustomerId();
+		if (!customerId) {
+			alert('กรุณาเลือกลูกค้าก่อนจัดการที่อยู่จัดส่ง');
+			return;
+		}
+		var url = 'shipping_info_add.php?customer_id=' + encodeURIComponent(customerId);
+		if (shippingId) {
+			url += '&shipping_id=' + encodeURIComponent(shippingId);
+		}
+		window.open(url, '_blank');
+	}
+
+	function toggleSaveToCustomerDb(btn) {
+		var customerId = getCurrentShippingPopupCustomerId();
+		if (!customerId) {
+			alert('เลือกลูกค้าก่อน');
+			return;
+		}
+		var hiddenInput = document.getElementById('save_to_customer_db');
+		if (!hiddenInput) return;
+
+		if (hiddenInput.value === '1') {
+			hiddenInput.value = '0';
+			btn.style.backgroundColor = '#FFFFFF';
+			btn.style.color = '#612989';
+			btn.style.borderColor = '#EBEBEB';
+			btn.innerHTML = '<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า';
+		} else {
+			hiddenInput.value = '1';
+			btn.style.backgroundColor = '#612989';
+			btn.style.color = '#FFFFFF';
+			btn.style.borderColor = '#612989';
+			btn.innerHTML = '<i class="fas fa-check"></i> เพิ่มลงฐานลูกค้า (เลือกแล้ว)';
+		}
+	}
+
+	// เปิด modal ที่อยู่จัดส่ง: เก็บ snapshot ค่าจัดส่งเดิมครั้งแรก, reset state, query ข้อมูล shipping address ของ customer ปัจจุบัน
+	function openShippingAddressPopup() {
+		var customerId = getCurrentShippingPopupCustomerId();
+		if (!customerId) {
+			alert('กรุณาเลือกลูกค้าก่อนค้นหาที่อยู่จัดส่ง');
+			return;
+		}
+
+		var modal = document.getElementById('shippingAddressPopupModal');
+		var search = document.getElementById('shippingAddressPopupSearch');
+		var tbody = document.getElementById('shippingAddressPopupRows');
+		if (!modal || !tbody) return;
+
+		if (!window.originalShippingData) {
+			var contactName = document.querySelector('input[name="customer_name"]');
+			var contactTel = document.querySelector('input[name="customer_tel"]');
+			var contactProvince = document.querySelector('select[name="province_name"]');
+			var shippingAddress = document.querySelector('input[name="address_name"]');
+			var installLocation = document.querySelector('input[name="address_send"]');
+
+			window.originalShippingData = {
+				customer_name: contactName ? contactName.value : '',
+				customer_tel: contactTel ? contactTel.value : '',
+				shipping_name: contactName ? contactName.value : '',
+				shipping_province: contactProvince ? contactProvince.value : '',
+				shipping_full_address: shippingAddress ? shippingAddress.value : '',
+				install_location: installLocation ? installLocation.value : ''
+			};
+		}
+
+		shippingAddressPopupCustomerId = customerId;
+		shippingAddressPopupSelected = null;
+		shippingAddressPopupData = [];
+		shippingAddressPopupNextLastId = null;
+		shippingAddressPopupHasMore = false;
+		shippingAddressPopupKeyword = search ? (search.value || '') : '';
+		toggleShippingAddressPopupLoadMore(false, false);
+		modal.style.display = 'flex';
+		modal.setAttribute('aria-hidden', 'false');
+
+		loadShippingAddressPopupRows(shippingAddressPopupKeyword, false);
+		setTimeout(function() {
+			if (search) {
+				search.focus();
+				search.select();
+			}
+		}, 50);
+	}
+
+	// ปิด modal ที่อยู่จัดส่งโดยไม่แตะค่าบนฟอร์มหลัก
+	function closeShippingAddressPopup() {
+		var modal = document.getElementById('shippingAddressPopupModal');
+		if (!modal) return;
+
+		modal.style.display = 'none';
+		modal.setAttribute('aria-hidden', 'true');
+	}
+
+	// Escape HTML ก่อน render string จากฐานข้อมูลลง innerHTML เพื่อลดความเสี่ยง XSS ฝั่ง client
+	function escapeShippingPopupHtml(value) {
+		return String(value || '').replace(/[&<>"']/g, function(char) {
+			return {
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#039;'
+			} [char];
+		});
+	}
+
+	// ควบคุมปุ่ม "โหลดเพิ่ม" ของ popup ที่อยู่จัดส่ง
+	function toggleShippingAddressPopupLoadMore(visible, loading) {
+		var wrap = document.getElementById('shippingAddressPopupPagination');
+		var button = document.getElementById('shippingAddressPopupLoadMore');
+		if (!wrap || !button) return;
+
+		wrap.style.display = visible ? 'flex' : 'none';
+		button.disabled = !!loading;
+		button.textContent = loading ? 'กำลังโหลด...' : 'โหลดเพิ่ม';
+	}
+
+	// Render ตารางที่อยู่จัดส่งและจำแถวที่เลือกไว้ผ่าน selection key ของแต่ละ row
+	function renderShippingAddressPopupRows(addresses, emptyMessage) {
+		var tbody = document.getElementById('shippingAddressPopupRows');
+		if (!tbody) return;
+
+		addresses = addresses || shippingAddressPopupData || [];
+		if (!addresses.length) {
+			var message = emptyMessage || 'ไม่พบข้อมูลที่อยู่จัดส่ง';
+			tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">' + escapeShippingPopupHtml(message) + '</td></tr>';
+			shippingAddressPopupSelected = null;
+			toggleShippingAddressPopupLoadMore(false, false);
+			return;
+		}
+
+		var selectedKey = shippingAddressPopupSelected ? String(shippingAddressPopupSelected.__selectionKey || shippingAddressPopupSelected.row_id) : '';
+		var rowsHtml = [];
+
+		rowsHtml = rowsHtml.concat(addresses.map(function(address, index) {
+			address.__selectionKey = address.row_id ? ('row-' + address.row_id) : ('customer-' + (address.customer_id || '0') + '-' + index);
+			var customerCode = address.customer_code || '-';
+			var customerName = address.customer_name || '-';
+			var phone = address.shipping_tel || address.customer_tel || '-';
+			var shippingName = address.shipping_name || customerName;
+			var fullAddress = address.shipping_full_address || address.shipping_address || '-';
+			var rowClass = selectedKey === address.__selectionKey ? 'selected' : '';
+			var isChecked = selectedKey === address.__selectionKey ? 'checked' : '';
+
+			return '<tr class="' + rowClass + '" data-index="' + index + '" onclick="selectShippingAddressPopupRow(' + index + ')">' +
+				'<td class="shipping-popup-select-cell" style="text-align: center;">' +
+				'<label class="shipping-custom-radio" onclick="event.stopPropagation();">' +
+				'<input type="radio" class="shipping-popup-radio-input" name="shipping_popup_choice" ' + isChecked + ' onclick="selectShippingAddressPopupRow(' + index + ')">' +
+				'<span class="checkmark"></span>' +
+				'</label>' +
+				'</td>' +
+				'<td>' + escapeShippingPopupHtml(customerCode) + '</td>' +
+				'<td>' + escapeShippingPopupHtml(customerName) + '</td>' +
+				'<td>' + escapeShippingPopupHtml(phone) + '</td>' +
+				'<td>' + escapeShippingPopupHtml(shippingName) + '</td>' +
+				'<td>' + escapeShippingPopupHtml(fullAddress) + '</td>' +
+				'<td><button type="button" class="customer-popup-name" onclick="event.stopPropagation(); openShippingAddressManagePage(\'' + (address.row_id || '') + '\');"><img src="img/icons/edit.png?v=20260610" alt="แก้ไข" style="width:18px;height:18px;object-fit:contain;"></button></td>' +
+				'</tr>';
+		}));
+
+		tbody.innerHTML = rowsHtml.join('');
+		shippingAddressPopupData = addresses;
+		if (!shippingAddressPopupSelected && addresses.length > 0) {
+			selectShippingAddressPopupRow(0);
+		}
+
+		toggleShippingAddressPopupLoadMore(shippingAddressPopupHasMore, false);
+	}
+
+	function loadShippingAddressPopupRows(keyword, append) {
+		var tbody = document.getElementById('shippingAddressPopupRows');
+		if (shippingAddressPopupLoading) return;
+		shippingAddressPopupLoading = true;
+
+		if (!append && tbody) {
+			tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">กำลังค้นหา...</td></tr>';
+		}
+
+		if (!append) {
+			shippingAddressPopupSelected = null;
+			shippingAddressPopupData = [];
+			shippingAddressPopupNextLastId = null;
+			shippingAddressPopupHasMore = false;
+			shippingAddressPopupKeyword = keyword || '';
+		}
+
+		toggleShippingAddressPopupLoadMore(append || shippingAddressPopupHasMore, append);
+
+		var requestUrl = 'ajax_shipping_address_popup_search.php?customer_id=' + encodeURIComponent(shippingAddressPopupCustomerId) +
+			'&q=' + encodeURIComponent(shippingAddressPopupKeyword || '') +
+			'&limit=' + encodeURIComponent(shippingAddressPopupPageSize);
+
+		if (append && shippingAddressPopupNextLastId) {
+			requestUrl += '&last_id=' + encodeURIComponent(shippingAddressPopupNextLastId);
+		}
+
+		fetch(requestUrl, {
+				credentials: 'same-origin',
+				cache: 'no-store'
+			})
+			.then(function(response) {
+				return response.json();
+			})
+			.then(function(data) {
+				if (!data || !data.success) {
+					shippingAddressPopupData = [];
+					shippingAddressPopupHasMore = false;
+					shippingAddressPopupNextLastId = null;
+					// แสดงสาเหตุจริงจาก backend แทนข้อความ "ไม่พบข้อมูล" ที่ทำให้แยก error ไม่ออก
+					renderShippingAddressPopupRows([], (data && data.message) ? data.message : 'ไม่สามารถโหลดข้อมูลที่อยู่จัดส่งได้');
+					return;
+				}
+
+				var newAddresses = data.addresses || [];
+				shippingAddressPopupData = append ? shippingAddressPopupData.concat(newAddresses) : newAddresses;
+				shippingAddressPopupHasMore = !!(data.pagination && data.pagination.has_more);
+				shippingAddressPopupNextLastId = data.pagination ? data.pagination.next_last_id : null;
+				renderShippingAddressPopupRows(shippingAddressPopupData);
+			})
+			.catch(function() {
+				shippingAddressPopupHasMore = false;
+				shippingAddressPopupNextLastId = null;
+				if (tbody) {
+					tbody.innerHTML = '<tr><td colspan="7" class="customer-popup-empty">ไม่สามารถค้นหาข้อมูลได้</td></tr>';
+				}
+				toggleShippingAddressPopupLoadMore(false, false);
+			})
+			.finally(function() {
+				shippingAddressPopupLoading = false;
+				if (shippingAddressPopupHasMore) {
+					toggleShippingAddressPopupLoadMore(true, false);
+				}
+			});
+	}
+
+	function loadMoreShippingAddressPopupRows() {
+		if (!shippingAddressPopupHasMore || !shippingAddressPopupNextLastId) return;
+		loadShippingAddressPopupRows(shippingAddressPopupKeyword, true);
+	}
+
+	function selectShippingAddressPopupRow(index) {
+		var rows = document.querySelectorAll('#shippingAddressPopupRows tr');
+		var address = (shippingAddressPopupData || [])[index];
+		if (!address) return;
+
+		rows.forEach(function(row) {
+			row.classList.remove('selected');
+		});
+		if (rows[index]) rows[index].classList.add('selected');
+		var radios = document.querySelectorAll('input[name="shipping_popup_choice"]');
+		radios.forEach(function(radio, radioIndex) {
+			radio.checked = radioIndex === index;
+		});
+		shippingAddressPopupSelected = address;
+	}
+
+	function confirmShippingAddressPopupSelection() {
+		if (!shippingAddressPopupSelected) {
+			alert('กรุณาเลือกที่อยู่จัดส่งก่อน');
+			return;
+		}
+
+		applyShippingSelection(shippingAddressPopupSelected);
+		closeShippingAddressPopup();
+	}
+
+	function setShippingFieldValueBySelector(selector, value) {
+		var element = document.querySelector(selector);
+		if (element) {
+			element.value = value || '';
+		}
+	}
+
+	// ล้างส่วนประกอบที่อยู่ดิบ ใช้เมื่อผู้ใช้พิมพ์/ล้าง #address_name เอง
+	// เพื่อไม่ให้ backend บันทึกส่วนประกอบเก่าที่ไม่ตรงกับที่อยู่ที่แสดงอยู่
+	function clearShippingAddressParts() {
+		setShippingFieldValueBySelector('input[name="shipping_address_raw"]', '');
+		setShippingFieldValueBySelector('input[name="shipping_ampher"]', '');
+		setShippingFieldValueBySelector('input[name="shipping_postcode"]', '');
+	}
+
+	// เก็บส่วนประกอบที่อยู่ดิบไว้ใน hidden เพื่อให้ INSERT แยกคอลัมน์ได้ถูกตาม schema
+	function setShippingAddressParts(data) {
+		setShippingFieldValueBySelector('input[name="shipping_address_raw"]', data.shipping_address || '');
+		setShippingFieldValueBySelector('input[name="shipping_ampher"]', data.shipping_ampher || '');
+		setShippingFieldValueBySelector('input[name="shipping_postcode"]', data.shipping_postcode || '');
+	}
+
+	// เติมค่าลงฟิลด์จริงของฟอร์ม (supbrhos ใช้ชื่อ legacy เป็น input ตรงๆ ไม่มีชั้น contact_* แบบ suphos)
+	function applyShippingSelection(data) {
+		data = data || {};
+		if (data.is_all) {
+			if (window.originalShippingData) {
+				setShippingFieldValueBySelector('input[name="customer_name"]', window.originalShippingData.shipping_name || window.originalShippingData.customer_name || '');
+				setShippingFieldValueBySelector('input[name="customer_tel"]', window.originalShippingData.shipping_tel || window.originalShippingData.customer_tel || '');
+				setShippingFieldValueBySelector('select[name="province_name"]', window.originalShippingData.shipping_province || '');
+				setShippingFieldValueBySelector('input[name="address_name"]', window.originalShippingData.shipping_full_address || '');
+				setShippingFieldValueBySelector('input[name="address_send"]', window.originalShippingData.install_location || window.originalShippingData.shipping_full_address || '');
+				setShippingAddressParts(window.originalShippingData);
+			}
+			setShippingFieldValueBySelector('input[name="shipping_id"]', '');
+			return;
+		}
+
+		var fullAddress = String(data.shipping_full_address || '').trim();
+
+		setShippingFieldValueBySelector('input[name="customer_name"]', data.shipping_name || data.customer_name || '');
+		setShippingFieldValueBySelector('input[name="customer_tel"]', data.shipping_tel || data.customer_tel || '');
+		setShippingFieldValueBySelector('select[name="province_name"]', data.shipping_province || '');
+		setShippingFieldValueBySelector('input[name="address_name"]', fullAddress);
+		setShippingFieldValueBySelector('input[name="address_send"]', data.install_location || '');
+		if (data.location_link) {
+			setShippingFieldValueBySelector('input[name="location_link"]', data.location_link);
+		}
+		setShippingAddressParts(data);
+		setShippingFieldValueBySelector('input[name="shipping_id"]', data.row_id || '');
+	}
+
+	// ผูก debounce ให้ช่องค้นหาใน modal ที่อยู่จัดส่ง (markup ของ modal อยู่ท้ายไฟล์ จึงต้องรอ DOMContentLoaded)
+	document.addEventListener('DOMContentLoaded', function() {
+		var shippingAddressSearch = document.getElementById('shippingAddressPopupSearch');
+		if (shippingAddressSearch) {
+			shippingAddressSearch.addEventListener('input', function() {
+				clearTimeout(shippingAddressPopupTimer);
+				shippingAddressPopupTimer = setTimeout(function() {
+					shippingAddressPopupSelected = null;
+					loadShippingAddressPopupRows(shippingAddressSearch.value, false);
+				}, 250);
+			});
+		}
+
+		// ผู้ใช้พิมพ์แก้ที่อยู่เอง -> ส่วนประกอบดิบที่เก็บไว้ไม่ตรงกับที่แสดงแล้ว ต้องล้างทิ้ง
+		var addressNameInput = document.getElementById('address_name');
+		if (addressNameInput) {
+			addressNameInput.addEventListener('input', clearShippingAddressParts);
+		}
+	});
 </script>
 
 
@@ -213,7 +611,7 @@
 	// need_des/des_label มาจาก tb_objective (data attribute บน <option>) แทนการ hardcode
 	function brSyncObjectiveDes() {
 		var objectiveEl = document.getElementById('objective');
-		var selectedOption = objectiveEl.options[objectiveEl.selectedIndex];
+		var selectedOption = (objectiveEl && objectiveEl.selectedIndex >= 0) ? objectiveEl.options[objectiveEl.selectedIndex] : null;
 		var shared = document.getElementById('objective_des_shared');
 		var group = document.getElementById('objective_des_group');
 		var label = document.getElementById('objective_des_label');
@@ -229,7 +627,7 @@
 			if (!showText) {
 				shared.value = '';
 			} else {
-				var desLabel = selectedOption.dataset.label || 'ข้อความ';
+				var desLabel = selectedOption ? (selectedOption.dataset.label || 'ข้อความ') : 'ข้อความ';
 				if (desLabel === 'ข้อความ') {
 					shared.placeholder = 'ใส่รายละเอียดเพิ่มเติม (ถ้ามี)';
 					if (label) label.innerHTML = 'ข้อความ';
@@ -240,8 +638,30 @@
 			}
 		}
 
+		// แสดงผล "จำนวนวันที่ยืม" และ "วันที่คืน" เฉพาะเมื่อเลือก "สำหรับลูกค้าทดลองใช้" (objective_id === '2' หรือข้อความมีคำว่า 'ทดลองใช้')
+		var borrowDaysGroup = document.getElementById('br_borrow_days_group');
+		if (borrowDaysGroup) {
+			var val = objectiveEl ? objectiveEl.value : '';
+			var text = selectedOption ? (selectedOption.text || '') : '';
+			var isTrial = (val === '2' || text.indexOf('ทดลองใช้') !== -1);
+
+			if (isTrial) {
+				borrowDaysGroup.style.display = '';
+			} else {
+				borrowDaysGroup.style.display = 'none';
+				var borrowDaysInput = document.getElementById('br_borrow_days');
+				var returnDateDisplay = document.getElementById('br_return_date_display');
+				if (borrowDaysInput) borrowDaysInput.value = '';
+				if (returnDateDisplay) returnDateDisplay.value = '';
+			}
+		}
+
 		brWriteObjectiveDesHidden();
 	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		brSyncObjectiveDes();
+	});
 
 	function brWriteObjectiveDesHidden() {
 		var valEl = document.getElementById('objective');
@@ -275,6 +695,27 @@
 		element.classList.add('active');
 	}
 
+	// โฟกัสฟิลด์ที่ validate ไม่ผ่าน โดยสลับไปแท็บที่ฟิลด์นั้นอยู่ก่อน
+	// จำเป็นเพราะฟิลด์กลุ่ม returns_* อยู่ในแท็บ #br_addr_return ที่ display:none ตั้งแต่โหลดหน้า
+	// ถ้าเรียก .focus() ตรง ๆ บน element ที่ถูกซ่อน เบราว์เซอร์จะไม่ทำอะไรเลย ผู้ใช้จึงหาช่องกรอกไม่เจอ
+	function brFocusField(field) {
+		if (!field) return;
+
+		// เรียกผ่านปุ่มแท็บเพื่อให้สถานะ active ของปุ่มถูกอัปเดตด้วย ไม่ใช่แค่ display
+		var pane = field.closest ? field.closest('.so-addr-tab-content') : null;
+		if (pane && pane.id) {
+			var btn = document.querySelector('.so-tab-btn[onclick*="' + pane.id + '"]');
+			if (btn) brOpenAddrTab(pane.id, btn);
+		}
+
+		if (typeof field.scrollIntoView === 'function') {
+			field.scrollIntoView({
+				block: 'center'
+			});
+		}
+		field.focus();
+	}
+
 	function brOpen3Tab(tabId, element) {
 		var contents = document.getElementsByClassName('so-3tab-content');
 		for (var i = 0; i < contents.length; i++) contents[i].style.display = 'none';
@@ -299,19 +740,32 @@
 		el.classList.add('active');
 	}
 
-	function brUpdateBorrowDays() {
+	// คำนวณ "วันที่คืน" จาก วันที่เริ่มยืม + จำนวนวันที่ยืม (เช่น 2026-07-21 + 7 -> 2026-07-28)
+	// ทิศทางนี้กลับด้านจากเดิมที่คำนวณจำนวนวันจากวันที่คืน เพราะจำนวนวันคือค่าที่ผู้ใช้กรอก
+	function brUpdateReturnDate() {
 		var startEl = document.getElementById('date_br');
-		var endEl = document.getElementById('returns_date');
-		var out = document.getElementById('br_borrow_days_display');
-		if (!startEl || !endEl || !out) return;
-		if (!startEl.value || !endEl.value) {
+		var daysEl = document.getElementById('br_borrow_days');
+		var out = document.getElementById('br_return_date_display');
+		if (!startEl || !daysEl || !out) return;
+		if (!startEl.value || daysEl.value === '') {
 			out.value = '';
 			return;
 		}
-		var start = new Date(startEl.value);
-		var end = new Date(endEl.value);
-		var diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
-		out.value = (diffDays >= 0) ? diffDays : '';
+		var days = parseInt(daysEl.value, 10);
+		if (isNaN(days) || days < 0) {
+			out.value = '';
+			return;
+		}
+		// ต่อ 'T00:00:00' เพื่อให้ parse เป็นเวลาท้องถิ่น ไม่ใช่ UTC (กันวันเพี้ยนไป 1 วัน)
+		var d = new Date(startEl.value + 'T00:00:00');
+		if (isNaN(d.getTime())) {
+			out.value = '';
+			return;
+		}
+		d.setDate(d.getDate() + days);
+		out.value = d.getFullYear() + '-' +
+			String(d.getMonth() + 1).padStart(2, '0') + '-' +
+			String(d.getDate()).padStart(2, '0');
 	}
 
 	function brOpenPreview() {
@@ -326,6 +780,20 @@
 		}
 
 		var reportUrl = 'report_loanhosptl1.php';
+
+		// เลขที่อ้างอิงตอนพรีวิวเป็นค่าคำนวณล่วงหน้าฝั่งหน้าจอเท่านั้น เลขจริงจะถูกกำหนดตอนกดบันทึก
+		// (backend มี retry กันชนกัน) จึงอาจไม่ตรงกับที่เห็นในพรีวิวหากมีเอกสารอื่นถูกบันทึกแทรกก่อน
+		if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+			Swal.fire({
+				toast: true,
+				position: 'top-end',
+				icon: 'info',
+				title: 'เลขที่อ้างอิงในพรีวิวเป็นค่าประมาณการ อาจไม่ตรงกับเลขที่บันทึกจริง',
+				showConfirmButton: false,
+				timer: 3500,
+				timerProgressBar: true
+			});
+		}
 
 		if (typeof brUpdateRowTotal === 'function') {
 			var brPreviewRowCount = (typeof BR_ROW_COUNT !== 'undefined') ? BR_ROW_COUNT : 0;
@@ -457,9 +925,6 @@ $adminInfoTab = [
 			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'fas fa-search'],
 		],
 		[
-			['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => '', 'icon' => 'fas fa-search'],
-		],
-		[
 			['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
 			['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
 		],
@@ -476,8 +941,13 @@ $adminInfoTab = [
 				<h1 class="so-title">Borrow Order</h1>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
-					<span class="so-ref-value"><?php echo $so;
-												echo $nextId; ?></span>
+					<?php
+					// เลขนี้เป็นค่าคำนวณล่วงหน้าเท่านั้น ไม่ใช่เลขที่จะถูกบันทึกจริงเสมอไป
+					// backend คำนวณเลขจริงใหม่ตอนบันทึก (พร้อม retry กันชนกัน) จึงอาจไม่ตรงกับค่านี้
+					// ถ้ามีอีกคนบันทึกเอกสารแทรกก่อนหน้านี้ทันเวลา
+					?>
+					<span class="so-ref-value">จะออกเลขที่เมื่อกดบันทึก (ประมาณการ: <?php echo $so;
+																						echo $nextId; ?>)</span>
 				</div>
 			</div>
 			<div class="so-header-right">
@@ -486,8 +956,12 @@ $adminInfoTab = [
 		</div>
 
 		<script language="javascript">
+			var brSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
+				if (brSubmitting) return false;
+
 				brWriteObjectiveDesHidden();
 
 				var objVal = document.getElementById('objective') ? document.getElementById('objective').value : '';
@@ -495,84 +969,100 @@ $adminInfoTab = [
 
 				if (objVal === '4' && objDesShared === '') {
 					alert('กรุณาระบุเลขที่ใบงานบริการ');
-					document.getElementById('objective_des_shared').focus();
+					brFocusField(document.getElementById('objective_des_shared'));
 					return false;
 				}
 				if (objVal === '5' && objDesShared === '') {
 					alert('กรุณาระบุรายละเอียดอื่น ๆ');
-					document.getElementById('objective_des_shared').focus();
+					brFocusField(document.getElementById('objective_des_shared'));
 					return false;
 				}
 
 				if (document.frmMain.start_time.value == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
-					document.frmMain.start_time.focus();
+					brFocusField(document.frmMain.start_time);
 					return false;
 				}
 
 				if (document.frmMain.customer_name.value == "") {
 					alert('กรุณาใส่ชื่อลูกค้า');
-					document.frmMain.customer_name.focus();
+					brFocusField(document.frmMain.customer_name);
 					return false;
 				}
 
 				if (document.frmMain.customer_tel.value == "") {
 					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					document.frmMain.customer_tel.focus();
+					brFocusField(document.frmMain.customer_tel);
 					return false;
 				}
 				if (document.frmMain.address_name.value == "") {
 					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					document.frmMain.address_name.focus();
+					brFocusField(document.frmMain.address_name);
 					return false;
-				}
-
-				// address_1 ถูกถอดออกจาก UI แล้ว (เหลือเป็น hidden) แต่ register_supbrhos1.php
-				// ยังอ่านค่านี้ลงคอลัมน์ tb_register_data.address_1 แบบไม่มี isset guard
-				// จึง mirror ค่าจาก address_name ซึ่งมีความหมายซ้อนกัน เพื่อไม่ให้คอลัมน์ว่างถาวร
-				if (document.frmMain.address_1) {
-					document.frmMain.address_1.value = document.frmMain.address_name.value;
 				}
 
 				if (document.frmMain.address_send.value == "") {
 					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					document.frmMain.address_send.focus();
+					brFocusField(document.frmMain.address_send);
 					return false;
 				}
 				if (document.frmMain.returns_date.value == "") {
 					alert('กรุณาใส่วันที่รับคืนสินค้า');
-					document.frmMain.returns_date.focus();
+					brFocusField(document.frmMain.returns_date);
 					return false;
 				}
 				if (document.frmMain.returns_time.value == "") {
 					alert('กรุณาใส่เวลารับคืนสินค้า');
-					document.frmMain.returns_time.focus();
+					brFocusField(document.frmMain.returns_time);
 					return false;
 				}
 				if (document.frmMain.returns_name.value == "") {
 					alert('กรุณาใส่ชื่อผู้ติดต่อในการรับคืนสินค้า');
-					document.frmMain.returns_name.focus();
+					brFocusField(document.frmMain.returns_name);
 					return false;
 				}
 				if (document.frmMain.returns_contact.value == "") {
 					alert('กรุณาใส่เบอร์โทรศัพท์ติดต่อในการรับคืนสินค้า');
-					document.frmMain.returns_contact.focus();
+					brFocusField(document.frmMain.returns_contact);
 					return false;
 				}
 				if (document.frmMain.returns_address.value == "") {
 					alert('กรุณาใส่รายละเอียดสถานที่รับคืนสินค้า');
-					document.frmMain.returns_address.focus();
+					brFocusField(document.frmMain.returns_address);
 					return false;
 				}
 
 				if (document.frmMain.province_name.value == "") {
 					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					document.frmMain.province_name.focus();
+					brFocusField(document.frmMain.province_name);
 					return false;
 				}
 
-				document.frmMain.submit();
+				// ผ่าน validation ครบแล้ว กำลังจะ submit จริง -> disable ปุ่มกันกดซ้ำ
+				// ไม่ต้อง re-enable เพราะหน้าจะ navigate ออกไปอยู่แล้วเมื่อสำเร็จ
+				// (ทุกจุด return false ด้านบนเกิดก่อนบรรทัดนี้ จึงยัง enabled ตามปกติเมื่อ validation ไม่ผ่าน)
+				brSubmitting = true;
+				var brSubmitBtn = document.querySelector('.btn-so-submit');
+				if (brSubmitBtn) {
+					brSubmitBtn.disabled = true;
+					brSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				}
+
+				// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
+				// จึงเรียกผ่าน prototype โดยตรง และเพราะ .submit() ไม่ส่งค่าปุ่มมาด้วย
+				// ต้องสร้าง hidden name="submit" เอง ไม่งั้น backend จะมองว่าไม่ได้กดบันทึก
+				// (pattern เดียวกับ register_suphos.php)
+				var brForm = document.forms['frmMain'];
+				var brSubmitValue = brForm.querySelector('input[type="hidden"][name="submit"]');
+				if (!brSubmitValue) {
+					brSubmitValue = document.createElement('input');
+					brSubmitValue.type = 'hidden';
+					brSubmitValue.name = 'submit';
+					brForm.appendChild(brSubmitValue);
+				}
+				brSubmitValue.value = 'submit';
+				HTMLFormElement.prototype.submit.call(brForm);
 			}
 		</script>
 
@@ -731,37 +1221,11 @@ $adminInfoTab = [
 
 				<div class="so-grid-3">
 					<div class="so-field-group">
-						<label class="so-label">จำนวนวันที่ยืม</label>
-						<input type="text" id="br_borrow_days_display" class="so-input" readonly placeholder="ใส่เฉพาะตัวเลข">
-					</div>
-					<div class="so-field-group">
 						<label class="so-label" for="date_br">วันที่เริ่มยืม <span style="color:red;">*</span></label>
 						<div class="calendar-wrapper">
-							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" required onchange="brUpdateBorrowDays();">
+							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" required onchange="brUpdateReturnDate();">
 						</div>
 					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="returns_date">วันที่คืน</label>
-						<div class="calendar-wrapper">
-							<input type="date" name="returns_date" id="returns_date" class="so-input" onchange="brUpdateBorrowDays();">
-						</div>
-					</div>
-				</div>
-
-				<div class="so-grid-3">
-					<!-- <div class="so-field-group">
-						<label class="so-label" for="sn">ต้องการ SN</label>
-						<div class="so-input-with-checkbox">
-							<label class="so-checkbox-label">
-								<input type="checkbox" name="sn_ckk" value="1">
-							</label>
-							<input name="sn" id="sn" class="so-input">
-						</div>
-					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="cm_no">เลขที่ CM</label>
-						<input type="text" name="cm_no" id="cm_no" class="so-input">
-					</div> -->
 					<div class="so-field-group">
 						<label class="so-label">&nbsp;</label>
 						<div>
@@ -853,7 +1317,7 @@ $adminInfoTab = [
 								<div class="cidc-row">
 									<div class="cidc-label">เครดิตเทอม</div>
 									<div class="cidc-value">
-										<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled>
+										<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled onclick="if (typeof window.openCreditTermPopup === 'function') window.openCreditTermPopup();">
 											<span id="display_credit_thb" class="credit-term-trigger-text"></span>
 											<img src="img/icons/edit.png?v=20260610" class="credit-term-trigger-icon" alt="แก้ไข">
 										</button>
@@ -909,6 +1373,24 @@ $adminInfoTab = [
 				<div class="so-field-group" id="objective_des_group" style="display: none;">
 					<label class="so-label" for="objective_des_shared" id="objective_des_label">ข้อความ</label>
 					<input type="text" id="objective_des_shared" class="so-input" placeholder="ใส่รายละเอียดเพิ่มเติม" oninput="brWriteObjectiveDesHidden();">
+				</div>
+			</div>
+
+			<div class="so-grid-2" id="br_borrow_days_group" style="margin-top: 16px; display: none;">
+				<div class="so-field-group">
+					<label class="so-label" for="br_borrow_days">จำนวนวันที่ยืม</label>
+					<input type="number" min="0" id="br_borrow_days" class="so-input" oninput="brUpdateReturnDate();" placeholder="ใส่เฉพาะตัวเลข">
+				</div>
+				<?php
+				// "วันที่คืน" เป็นฟิลด์คำนวณจาก วันที่เริ่มยืม + จำนวนวันที่ยืม เพื่อแสดงผลเท่านั้น
+				// จงใจไม่ใส่ name เพื่อไม่ให้ถูก submit และไม่ถูกบันทึกลงฐานข้อมูล
+				// (ฟิลด์ที่บันทึกจริงคือ "วันที่รับคืน" ในแท็บ "ที่อยู่การคืน" ซึ่งใช้ name="returns_date")
+				?>
+				<div class="so-field-group">
+					<label class="so-label" for="br_return_date_display">วันที่คืน</label>
+					<div class="calendar-wrapper">
+						<input type="date" id="br_return_date_display" class="so-input" readonly>
+					</div>
 				</div>
 			</div>
 
@@ -998,10 +1480,11 @@ $adminInfoTab = [
 				</div>
 
 				<div class="so-address-actions" style="display: flex; gap: 16px; margin-bottom: 24px;">
-					<button type="button" class="so-address-action-btn so-address-action-btn-primary" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+					<button type="button" class="so-address-action-btn so-address-action-btn-primary" onclick="openShippingAddressPopup()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 						<i class="fas fa-search"></i> ค้นหาที่อยู่
 					</button>
-					<button type="button" class="so-address-action-btn so-address-action-btn-secondary" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+					<input type="hidden" name="save_to_customer_db" id="save_to_customer_db" value="0">
+					<button type="button" class="so-address-action-btn so-address-action-btn-secondary" onclick="toggleSaveToCustomerDb(this)" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 						<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า
 					</button>
 				</div>
@@ -1042,8 +1525,16 @@ $adminInfoTab = [
 					<label class="so-label" for="address_name">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
 						<input class="so-input" type="text" name="address_name" id="address_name">
-						<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
+						<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value=''; clearShippingAddressParts();" aria-label="ล้างค่า"></button>
 					</div>
+					<?php
+					// #address_name แสดงที่อยู่แบบรวมก้อน (address+ampher+province+postcode) เพื่อให้อ่านง่าย
+					// แต่ตอนบันทึกลง tb_customer_shipping_address ต้องแยกคอลัมน์ จึงเก็บส่วนประกอบดิบไว้ที่นี่
+					// ถ้าผู้ใช้พิมพ์แก้ที่อยู่เอง ค่าเหล่านี้จะถูกล้าง (clearShippingAddressParts) เพราะไม่ตรงกับที่แสดงแล้ว
+					?>
+					<input type="hidden" name="shipping_address_raw" id="shipping_address_raw">
+					<input type="hidden" name="shipping_ampher" id="shipping_ampher">
+					<input type="hidden" name="shipping_postcode" id="shipping_postcode">
 				</div>
 
 				<div class="so-grid-2" style="margin-top: 16px;">
@@ -1062,6 +1553,7 @@ $adminInfoTab = [
 						</div>
 					</div>
 				</div>
+				<input type="hidden" name="shipping_id" id="shipping_id">
 			</div>
 
 			<div id="br_addr_detail" class="so-addr-tab-content" style="display:none;">
@@ -1079,7 +1571,6 @@ $adminInfoTab = [
 				<input type="hidden" name="department_name" value="Sale">
 				<input type="hidden" name="employee_name" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 				<input type="hidden" name="employee_tel" value="">
-				<input type="hidden" name="address_1" id="address_1" value="">
 				<input type="hidden" name="product_sn" value="">
 				<input type="hidden" name="unit_cash" value="">
 				<input type="hidden" name="unit_check" value="">
@@ -1779,6 +2270,114 @@ $adminInfoTab = [
 		<div class="customer-popup-actions">
 			<button type="button" class="customer-popup-confirm" onclick="confirmCustomerPopupSelection()">ตกลง</button>
 			<button type="button" class="customer-popup-cancel" onclick="closeCustomerPopup()">ยกเลิก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Modal ที่อยู่จัดส่ง: ใช้เลือก shipping address ของลูกค้าที่ถูกเลือกอยู่ก่อนหน้า -->
+<div id="shippingAddressPopupModal" class="customer-popup-modal shipping-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box shipping-popup-box" role="dialog" aria-modal="true" aria-labelledby="shippingAddressPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeShippingAddressPopup()" aria-label="Close">&times;</button>
+
+		<div class="clear-loan-header">
+			<h2 id="shippingAddressPopupTitle">ที่อยู่จัดส่ง</h2>
+			<div class="customer-popup-toolbar shipping-popup-toolbar" style="margin-top: 18px;">
+				<div class="customer-popup-search-wrap">
+					<label for="shippingAddressPopupSearch">ค้นหาที่อยู่จัดส่ง</label>
+					<div class="customer-popup-search">
+						<i class="fas fa-search"></i>
+						<input type="text" id="shippingAddressPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
+					</div>
+				</div>
+				<button type="button" class="customer-popup-add" onclick="openShippingAddressCreatePage(getCurrentShippingPopupCustomerId())">
+					<i class="fas fa-stream"></i> เพิ่มที่อยู่จัดส่ง
+				</button>
+			</div>
+		</div>
+
+		<div class="customer-popup-table-wrap">
+			<table class="customer-popup-table shipping-popup-table">
+				<thead>
+					<tr>
+						<th scope="col" aria-label="เลือก"></th>
+						<th scope="col">รหัสลูกค้า</th>
+						<th scope="col">ชื่อลูกค้า</th>
+						<th scope="col">เบอร์โทร</th>
+						<th scope="col">ชื่อผู้รับสินค้า</th>
+						<th scope="col">ที่อยู่จัดส่ง</th>
+						<th scope="col" aria-label="การดำเนินการ"></th>
+					</tr>
+				</thead>
+				<tbody id="shippingAddressPopupRows">
+					<tr>
+						<td colspan="7" class="customer-popup-empty">เลือกลูกค้าก่อนค้นหาที่อยู่จัดส่ง</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="customer-popup-pagination" id="shippingAddressPopupPagination" style="display:none;">
+			<button type="button" class="customer-popup-loadmore" id="shippingAddressPopupLoadMore" onclick="loadMoreShippingAddressPopupRows()">โหลดเพิ่ม</button>
+		</div>
+
+		<div class="customer-popup-actions">
+			<button type="button" class="customer-popup-confirm" onclick="confirmShippingAddressPopupSelection()">ตกลง</button>
+			<button type="button" class="customer-popup-cancel" onclick="closeShippingAddressPopup()">ย้อนกลับ</button>
+		</div>
+	</div>
+</div>
+
+<!-- Credit Term Modal -->
+<div id="creditTermPopupModal" class="customer-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
+
+		<div class="clear-loan-header">
+			<h2 id="creditTermPopupTitle">เครดิตเทอม</h2>
+		</div>
+
+		<div class="credit-term-popup-content">
+			<div class="credit-term-summary">
+				<div class="credit-term-summary-item">
+					<p class="credit-term-summary-label">เครดิต (วัน)</p>
+					<p class="credit-term-summary-value" id="creditTermSummaryDay">-</p>
+				</div>
+				<div class="credit-term-summary-item">
+					<p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p>
+					<p class="credit-term-summary-value" id="creditTermSummaryAmount">0.00</p>
+				</div>
+				<div class="credit-term-summary-item">
+					<p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p>
+					<p class="credit-term-summary-value" id="creditTermSummaryOutstanding">0.00</p>
+				</div>
+				<div class="credit-term-summary-item is-highlight">
+					<p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p>
+					<p class="credit-term-summary-value" id="creditTermSummaryRemaining">0.00</p>
+				</div>
+			</div>
+
+			<div class="credit-term-table-panel">
+				<div class="credit-term-table-wrap">
+					<table class="credit-term-table">
+						<thead>
+							<tr>
+								<th scope="col" aria-label="เลือก"></th>
+								<th scope="col">เลขที่ใบสั่งขาย</th>
+								<th scope="col">รายการสินค้า</th>
+								<th scope="col">ยอดที่ต้องชำระ</th>
+								<th scope="col">ยอดชำระแล้ว</th>
+								<th scope="col">ยอดหนี้คงค้าง</th>
+							</tr>
+						</thead>
+						<tbody id="creditTermTableBody">
+							<tr class="credit-term-empty-row">
+								<td><span class="credit-term-caret" aria-hidden="true"></span></td>
+								<td colspan="5">เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>

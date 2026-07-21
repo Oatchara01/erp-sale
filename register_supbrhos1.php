@@ -1,3 +1,9 @@
+<?php
+// เปิด output buffering ตั้งแต่ก่อน include head.php (ซึ่งส่ง HTML ออกทันที)
+// เพื่อให้เรียก header('Location: ...') ได้จริงตอนบันทึกสำเร็จ (true POST-Redirect-GET)
+// กัน "Confirm Form Resubmission" เมื่อผู้ใช้กด reload ค้างอยู่ที่หน้า response ของ POST
+ob_start();
+?>
 <?php include("head.php"); ?>
 
 
@@ -6,10 +12,67 @@ include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
-if ($_POST["submit"] = "submit") {
+// เดิมเขียน $_POST["submit"] = "submit" (assignment) ทำให้เงื่อนไขเป็นจริงเสมอ
+// เปิดไฟล์นี้ตรง ๆ ก็รันโค้ดบันทึกได้ จึงเปลี่ยนเป็นการเปรียบเทียบจริง
+if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
+
+	// PHP 8.1+ ตั้ง mysqli.report_mode = ERROR|STRICT เป็นค่า default ทำให้ query ที่ล้มเหลว "โยน exception"
+	// ไม่ใช่คืน false ดังนั้น or die() และ if (!$result) ที่มีอยู่เดิมทั้งไฟล์จึงไม่เคยทำงาน
+	// ผลคือ query พังแล้วได้หน้า fatal error เปล่า ๆ แทนข้อความที่ผู้ใช้เข้าใจได้
+	// ครอบ try/catch ไว้เพื่อดักทุก query ในไฟล์ (รวมจุดที่ไม่ได้ตรวจผลอีก ~84 จุด) แล้วรายงานสาเหตุจริงตอนท้าย
+	$saveOk = true;
+	$saveFailures = array();
+
+	// Backend validation กันกรณีปิด JS หรือยิง POST ตรงเข้ามาโดยไม่ผ่านฟอร์ม (เดิมพึ่ง JS validation ใน fncSubmit() ฝั่งเดียว)
+	// mirror รายการฟิลด์บังคับเดียวกับ fncSubmit() ใน register_supbrhos.php — ไฟล์นี้ไม่มีแนวคิด Draft จึงไม่ต้องมีเงื่อนไขข้าม
+	$brRequiredFieldLabels = array(
+		'start_time' => 'กรุณาใส่เวลาส่ง',
+		'customer_name' => 'กรุณาใส่ชื่อลูกค้า',
+		'customer_tel' => 'กรุณาใส่เบอร์โทรลูกค้า',
+		'address_name' => 'กรุณาใส่ที่อยู่ในการส่งสินค้า',
+		'address_send' => 'กรุณาใส่สถานที่ติดตั้งเครื่อง',
+		'returns_date' => 'กรุณาใส่วันที่รับคืนสินค้า',
+		'returns_time' => 'กรุณาใส่เวลารับคืนสินค้า',
+		'returns_name' => 'กรุณาใส่ชื่อผู้ติดต่อในการรับคืนสินค้า',
+		'returns_contact' => 'กรุณาใส่เบอร์โทรศัพท์ติดต่อในการรับคืนสินค้า',
+		'returns_address' => 'กรุณาใส่รายละเอียดสถานที่รับคืนสินค้า',
+		'province_name' => 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง',
+	);
+
+	$brValidationErrors = array();
+	foreach ($brRequiredFieldLabels as $brRequiredField => $brRequiredMessage) {
+		if (trim((string)($_POST[$brRequiredField] ?? '')) === '') {
+			$brValidationErrors[] = $brRequiredMessage;
+		}
+	}
+
+	$brObjectiveValue = trim((string)($_POST['objective'] ?? ''));
+	if ($brObjectiveValue === '4' && trim((string)($_POST['objective_des4'] ?? '')) === '') {
+		$brValidationErrors[] = 'กรุณาระบุเลขที่ใบงานบริการ';
+	}
+	if ($brObjectiveValue === '5' && trim((string)($_POST['objective_des5'] ?? '')) === '') {
+		$brValidationErrors[] = 'กรุณาระบุรายละเอียดอื่น ๆ';
+	}
+
+	if (!empty($brValidationErrors)) {
+		if (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		$brValidationText = implode("\\n", array_map(function ($msg) {
+			return str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $msg);
+		}, $brValidationErrors));
+		echo "<script>alert('กรุณากรอกข้อมูลให้ครบถ้วน\\n\\n$brValidationText');history.back();</script>";
+		exit();
+	}
+
+	// ครอบทุกตารางที่บันทึกในเอกสารนี้ด้วย transaction เดียว เพื่อไม่ให้ข้อมูลค้างครึ่งเมื่อมีตัวใดตัวหนึ่งพัง
+	// ทำได้เพราะทุกตารางที่ query ในไฟล์นี้เป็น InnoDB แล้ว (hos__br เพิ่งแปลงจาก MyISAM มาเป็น InnoDB)
+	mysqli_begin_transaction($conn);
+
+	try {
 
 	// map ช่วงเวลา (time_range) -> start_time/end_time (mirror ของ register_suphos1.php)
-	$timeRange = $_POST["time_range"] ?? "";
+	$timeRange = mysqli_real_escape_string($conn, $_POST["time_range"] ?? "");
 	$timeRangeMap = array(
 		"morning" => array("08:00", "12:00"),
 		"afternoon" => array("13:00", "17:00"),
@@ -20,40 +83,43 @@ if ($_POST["submit"] = "submit") {
 		$_POST["end_time"] = $timeRangeMap[$timeRange][1];
 	}
 
-	$company = $_POST["company"];
-	$date_br = $_POST["date_br"];
-	$customer = $_POST["customer"];
-	$customer_id = $_POST["customer_id"];
-	$address = $_POST["address"];
-	$sale_comment = $_POST["sale_comment"];
-	$sn_ckk = $_POST["sn_ckk"];
-	$sn = $_POST["sn"];
-	$cm_no = $_POST["cm_no"];
-	$objective = $_POST["objective"];
-	$objective_des1 = $_POST["objective_des1"];
-	$objective_des2 = $_POST["objective_des2"];
-	$objective_des4 = $_POST["objective_des4"];
-	$objective_des5 = $_POST["objective_des5"];
+	$company = mysqli_real_escape_string($conn, $_POST["company"]);
+	$date_br = mysqli_real_escape_string($conn, $_POST["date_br"]);
+	$customer = mysqli_real_escape_string($conn, $_POST["customer"]);
+	$customer_id = mysqli_real_escape_string($conn, $_POST["customer_id"]);
+	$address = mysqli_real_escape_string($conn, $_POST["address"]);
+	$sale_comment = mysqli_real_escape_string($conn, $_POST["sale_comment"]);
+	$sn_ckk = mysqli_real_escape_string($conn, $_POST["sn_ckk"]);
+	$sn = mysqli_real_escape_string($conn, $_POST["sn"]);
+	$cm_no = mysqli_real_escape_string($conn, $_POST["cm_no"]);
+	$objective = mysqli_real_escape_string($conn, $_POST["objective"]);
+	$objective_des1 = mysqli_real_escape_string($conn, $_POST["objective_des1"]);
+	$objective_des2 = mysqli_real_escape_string($conn, $_POST["objective_des2"]);
+	$objective_des4 = mysqli_real_escape_string($conn, $_POST["objective_des4"]);
+	$objective_des5 = mysqli_real_escape_string($conn, $_POST["objective_des5"]);
 
-	$return_date_bet = $_POST["return_date_bet"];
-	$returns = $_POST["returns"];
-	$que_ckk = $_POST["que_ckk"];
-	$returns_date = $_POST["returns_date"];
-	$returns_time = $_POST["returns_time"];
-	$returns_name = $_POST["returns_name"];
-	$returns_address = $_POST["returns_address"];
-	$returns_contact = $_POST["returns_contact"];
+	$return_date_bet = mysqli_real_escape_string($conn, $_POST["return_date_bet"]);
+	$returns = mysqli_real_escape_string($conn, $_POST["returns"]);
+	$que_ckk = mysqli_real_escape_string($conn, $_POST["que_ckk"]);
+	// รับค่าจากช่อง "วันที่รับคืน" ในแท็บที่อยู่การคืนเท่านั้น
+	// ส่วนช่อง "วันที่คืน" ที่คำนวณอัตโนมัติไม่มี name จึงไม่ถูกส่งมาและไม่ถูกบันทึก
+	$returns_date = mysqli_real_escape_string($conn, $_POST["returns_date"] ?? "");
+	$returns_time = mysqli_real_escape_string($conn, $_POST["returns_time"]);
+	$returns_name = mysqli_real_escape_string($conn, $_POST["returns_name"]);
+	$returns_address = mysqli_real_escape_string($conn, $_POST["returns_address"]);
+	$returns_contact = mysqli_real_escape_string($conn, $_POST["returns_contact"]);
 	$status_doc = "Request";
-	$delivery_name = $_POST["address_name"];
-	$delivery_type = $_POST["delivery_type"];
-	$delivery_date = $_POST["start_date"];
-	$start_time = $_POST["start_time"];
-	$end_time = $_POST["end_time"] ?? "";
+	$delivery_name = mysqli_real_escape_string($conn, $_POST["address_name"]);
+	$delivery_type = mysqli_real_escape_string($conn, $_POST["delivery_type"]);
+	$delivery_date = mysqli_real_escape_string($conn, $_POST["start_date"]);
+	$start_time = mysqli_real_escape_string($conn, $_POST["start_time"]);
+	$end_time = mysqli_real_escape_string($conn, $_POST["end_time"] ?? "");
 	$delivery_time = "$start_time $end_time";
-	$delivery_address = $_POST["address_send"];
-	$delivery_contact = $_POST["customer_name"];
-	$delivery_tel = $_POST["customer_tel"];
-	$type_breng = $_POST["type_breng"] ?? "1";
+	$delivery_address = mysqli_real_escape_string($conn, $_POST["address_send"]);
+	$delivery_contact = mysqli_real_escape_string($conn, $_POST["customer_name"]);
+	$delivery_tel = mysqli_real_escape_string($conn, $_POST["customer_tel"]);
+	$date_send_key = mysqli_real_escape_string($conn, $_POST["between_date"] ?? "");
+	$type_breng = mysqli_real_escape_string($conn, $_POST["type_breng"] ?? "1");
 	if ($type_breng == '2') {
 		$iv_no = "BRES";
 	} else {
@@ -72,7 +138,7 @@ if ($_POST["submit"] = "submit") {
 		$adm_ckk = '0';
 	}
 
-	$sale_code = $_POST["sale_code"];
+	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
 	$name =  $_SESSION['name'];
 	$em_id =  $_SESSION['emid'];
 	if ($sale_code == 'S11' or $sale_code == 'S12' or $sale_code == 'S13' or $sale_code == 'S14') {
@@ -96,7 +162,7 @@ if ($_POST["submit"] = "submit") {
 
 	$add_date = date('Y-m-d H:i:s');
 	$surname =	$_SESSION['surname'];
-	$add_by = $_POST["add_by"];
+	$add_by = mysqli_real_escape_string($conn, $_POST["add_by"]);
 
 
 	move_uploaded_file($_FILES['slip1']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip1']['name']));
@@ -106,55 +172,123 @@ if ($_POST["submit"] = "submit") {
 	move_uploaded_file($_FILES['slip5']['tmp_name'], "upload/" . iconv("UTF-8", "TIS-620", $_FILES['slip5']['name']));
 
 
-	$yearMonth = substr(date("Y") + 543, -2) . date("m");
-	$sql = "SELECT MAX(ref_id_br) AS MAXID FROM hos__br ";
-	$qry = mysqli_query($conn, $sql) or die(mysqli_error());
-	$rs = mysqli_fetch_assoc($qry);
+	$head_1 = mysqli_real_escape_string($conn, $_POST["head_1"]);
+	$ref_1 = mysqli_real_escape_string($conn, $_POST["ref_1"]);
+	$ref_2 = mysqli_real_escape_string($conn, $_POST["ref_2"]);
+	$ref_3 = mysqli_real_escape_string($conn, $_POST["ref_3"]);
+	$ref_4 = mysqli_real_escape_string($conn, $_POST["ref_4"]);
+	$ref_5 = mysqli_real_escape_string($conn, $_POST["ref_5"]);
+	$ref_6 = mysqli_real_escape_string($conn, $_POST["ref_6"]);
+	$ref_7 = mysqli_real_escape_string($conn, $_POST["ref_7"]);
+	$ref_8 = mysqli_real_escape_string($conn, $_POST["ref_8"]);
+	$ref_9 = mysqli_real_escape_string($conn, $_POST["ref_9"]);
+	$ref_10 = mysqli_real_escape_string($conn, $_POST["ref_10"]);
+	$ref_11 = mysqli_real_escape_string($conn, $_POST["ref_11"]);
+	$ref_des = mysqli_real_escape_string($conn, $_POST["ref_des"]);
+	$ref_11des = mysqli_real_escape_string($conn, $_POST["ref_11des"] ?? '');
 
-	$maxId = substr($rs['MAXID'], -5);
-	$maxId3 = substr($rs['MAXID'], -9);
 
-	$maxId1 = substr($maxId3, 0, -5);
-
+	// ออกเลขเอกสารด้วย SELECT MAX()+1 แล้วลอง INSERT ทันที ถ้าเลขชนกัน (errno 1062 จาก uniq_ref_id_br)
+	// ให้คำนวณเลขใหม่แล้วลองใหม่ แทนที่จะคำนวณครั้งเดียวแล้วเชื่อว่าไม่มีใครแทรก
+	// (เดิมไม่มี unique index และไม่ retry จึงเคยเกิดเลขซ้ำจริงเมื่อสองคน submit พร้อมกัน)
+	$maxRefAttempts = 5;
+	$refGenerated = false;
 	$so = "BR";
 
-	if ($maxId1 == $yearMonth) {
-		$maxId1 = ($maxId + 1);
-		$maxId2 = substr("00000" . $maxId1, -5);
-		$nextId = $yearMonth . $maxId2;
-	} else {
-		$maxId1 = "00001";
-		$nextId = $yearMonth . $maxId1;
+	for ($refAttempt = 0; $refAttempt < $maxRefAttempts; $refAttempt++) {
+		$yearMonth = substr(date("Y") + 543, -2) . date("m");
+		$sql = "SELECT MAX(ref_id_br) AS MAXID FROM hos__br ";
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+		$rs = mysqli_fetch_assoc($qry);
+
+		$maxId = substr($rs['MAXID'], -5);
+		$maxId3 = substr($rs['MAXID'], -9);
+		$maxId1 = substr($maxId3, 0, -5);
+
+		if ($maxId1 == $yearMonth) {
+			$maxId1 = ($maxId + 1);
+			$maxId2 = substr("00000" . $maxId1, -5);
+			$nextId = $yearMonth . $maxId2;
+		} else {
+			$maxId1 = "00001";
+			$nextId = $yearMonth . $maxId1;
+		}
+
+		$ref_id_br = "$so$nextId";
+
+		$save = "insert into hos__br
+(company,ref_id_br,date_br,customer,customer_id,address,sale_comment,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,approve_date,approve,approve_code,send_sup,return_date_bet,slip1,slip2,slip3,slip4,slip5,iv_no,approve_time,que_ckk,cm_no,adm_ckk,type_breng)
+values
+('" . $company . "','" . $ref_id_br . "','" . $date_br . "','" . $customer . "','" . $customer_id . "','" . $address . "','" . $sale_comment . "','" . $sn_ckk . "','" . $sn . "','" . $objective . "','" . $objective_des1 . "','" . $objective_des2 . "','" . $objective_des4 . "','" . $objective_des5 . "','" . $returns . "','" . $returns_date . "','" . $returns_time . "','" . $returns_name . "','" . $returns_address . "','" . $returns_contact . "','" . $status_doc . "','" . $delivery_name . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $date_send_key . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $add_date . "','" . $add_by . "','" . $approve_date . "','" . $approve . "','" . $approve_code . "','1','" . $return_date_bet . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $iv_no . "','" . $approve_time . "','" . $que_ckk . "','" . $cm_no . "','" . $adm_ckk . "','" . $type_breng . "')";
+
+		try {
+			$qsave = mysqli_query($conn, $save);
+			$refGenerated = true;
+			break;
+		} catch (mysqli_sql_exception $e) {
+			if ($e->getCode() == 1062) {
+				continue; // เลขชนกัน ลองรอบถัดไปด้วยเลขใหม่
+			}
+			throw $e; // error อื่นให้ throw ต่อไปที่ catch ใหญ่ตามเดิม
+		}
 	}
 
+	if (!$refGenerated) {
+		$saveOk = false;
+		$saveFailures[] = 'hos__br: ไม่สามารถออกเลขเอกสารได้ (เลขชนกันเกิน ' . $maxRefAttempts . ' ครั้ง)';
+	}
 
-	$so = "BR";
-	$ref_id_br = "$so$nextId";
+	// pattern เดียวกับ updateHosSoColumnIfExists ใน register_suphos1.php — UPDATE คอลัมน์ hos__br ที่มีอยู่จริงเท่านั้น
+	function updateHosBrColumnIfExists($conn, $ref_id_br, $column, $value)
+	{
+		if ($value === null || $value === '') {
+			return;
+		}
 
+		$safeColumn = mysqli_real_escape_string($conn, $column);
+		$columnCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__br LIKE '" . $safeColumn . "'");
+		if (!$columnCheck || mysqli_num_rows($columnCheck) == 0) {
+			return;
+		}
 
-	$head_1 = $_POST["head_1"];
-	$ref_1 = $_POST["ref_1"];
-	$ref_2 = $_POST["ref_2"];
-	$ref_3 = $_POST["ref_3"];
-	$ref_4 = $_POST["ref_4"];
-	$ref_5 = $_POST["ref_5"];
-	$ref_6 = $_POST["ref_6"];
-	$ref_7 = $_POST["ref_7"];
-	$ref_8 = $_POST["ref_8"];
-	$ref_9 = $_POST["ref_9"];
-	$ref_10 = $_POST["ref_10"];
-	$ref_11 = $_POST["ref_11"];
-	$ref_des = $_POST["ref_des"];
-	$ref_11des = $_POST["ref_11des"] ?? '';
+		$safeValue = mysqli_real_escape_string($conn, $value);
+		$safeRefId = mysqli_real_escape_string($conn, $ref_id_br);
+		mysqli_query($conn, "UPDATE hos__br SET " . $safeColumn . " = '" . $safeValue . "' WHERE ref_id_br = '" . $safeRefId . "'");
+	}
 
+	function normalizeOptionalBrDateValue($value)
+	{
+		$value = trim($value);
+		if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $matches)) {
+			$year = (int)$matches[3];
+			if ($year > 2400) {
+				$year -= 543;
+			}
+			return sprintf('%04d-%02d-%02d', $year, (int)$matches[2], (int)$matches[1]);
+		}
+		return $value;
+	}
 
-	$save = "insert into hos__br
-(company,ref_id_br,date_br,customer,customer_id,address,sale_comment,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,approve_date,approve,approve_code,send_sup,return_date_bet,slip1,slip2,slip3,slip4,slip5,iv_no,approve_time,que_ckk,cm_no,adm_ckk)
-values
-('" . $company . "','" . $ref_id_br . "','" . $date_br . "','" . $customer . "','" . $customer_id . "','" . $address . "','" . $sale_comment . "','" . $sn_ckk . "','" . $sn . "','" . $objective . "','" . $objective_des1 . "','" . $objective_des2 . "','" . $objective_des4 . "','" . $objective_des5 . "','" . $returns . "','" . $returns_date . "','" . $returns_time . "','" . $returns_name . "','" . $returns_address . "','" . $returns_contact . "','" . $status_doc . "','" . $delivery_name . "','" . $delivery_type . "','" . $delivery_date . "','" . $delivery_time . "','" . $delivery_address . "','" . $delivery_contact . "','" . $delivery_tel . "','" . $date_send_key . "','" . $sale_date . "','" . $sale . "','" . $sale_code . "','" . $add_date . "','" . $add_by . "','" . $approve_date . "','" . $approve . "','" . $approve_code . "','1','" . $return_date_bet . "','" . $slip1 . "','" . $slip2 . "','" . $slip3 . "','" . $slip4 . "','" . $slip5 . "','" . $iv_no . "','" . $approve_time . "','" . $que_ckk . "','" . $cm_no . "','" . $adm_ckk . "')";
+	$optionalHosBrFieldMap = array(
+		'admin_doc_date' => 'iv_date',
+		'admin_work_no' => 'job_no',
+		'admin_cancel_reason' => 'remark_cancel',
+		'shipping_date' => 'date_ker',
+		'shipping_ref1' => 'order_refer_code',
+		'shipping_ref2' => 'order_refer_code1',
+		'shipping_cost' => 'ker_bath',
+		'send_cs' => 'send_cs',
+	);
 
-
-	$qsave = mysqli_query($conn, $save);
+	foreach ($optionalHosBrFieldMap as $postField => $columnName) {
+		if (isset($_POST[$postField])) {
+			$optionalValue = mysqli_real_escape_string($conn, $_POST[$postField]);
+			if ($postField === 'admin_doc_date') {
+				$optionalValue = normalizeOptionalBrDateValue($optionalValue);
+			}
+			updateHosBrColumnIfExists($conn, $ref_id_br, $columnName, $optionalValue);
+		}
+	}
 
 
 	$save56 = "insert into tb_other_bill
@@ -162,188 +296,351 @@ values
 values
 ('" . $ref_id_br . "','" . $head_1 . "','" . $ref_1 . "','" . $ref_2 . "','" . $ref_3 . "','" . $ref_4 . "','" . $ref_5 . "','" . $ref_6 . "','" . $ref_7 . "','" . $ref_8 . "','" . $ref_9 . "','" . $ref_10 . "','" . $ref_11 . "','" . $ref_des . "')";
 	$qsave56 = mysqli_query($conn, $save56);
+	if (!$qsave56) {
+		$saveOk = false;
+		$saveFailures[] = 'tb_comment_so: ' . mysqli_error($conn);
+	}
 
-	$warranty1 = $_POST["warranty1"];
-	$warranty2 = $_POST["warranty2"];
-	$warranty3 = $_POST["warranty3"];
-	$warranty4 = $_POST["warranty4"];
-	$warranty5 = $_POST["warranty5"];
-	$warranty6 = $_POST["warranty6"];
-	$warranty7 = $_POST["warranty7"];
-	$warranty8 = $_POST["warranty8"];
-	$warranty9 = $_POST["warranty9"];
-	$warranty10 = $_POST["warranty10"];
-	$warranty11 = $_POST["warranty11"];
-	$warranty12 = $_POST["warranty12"];
-	$warranty13 = $_POST["warranty13"];
-	$warranty14 = $_POST["warranty14"];
-	$warranty15 = $_POST["warranty15"];
-	$warranty16 = $_POST["warranty16"];
-	$warranty17 = $_POST["warranty17"];
-	$warranty18 = $_POST["warranty18"];
-	$warranty19 = $_POST["warranty19"];
-	$warranty20 = $_POST["warranty20"];
-	$warranty21 = $_POST["warranty21"];
-	$warranty22 = $_POST["warranty22"];
-	$warranty23 = $_POST["warranty23"];
-	$warranty24 = $_POST["warranty24"];
-	$warranty25 = $_POST["warranty25"];
-	$warranty26 = $_POST["warranty26"];
-	$warranty27 = $_POST["warranty27"];
-	$warranty28 = $_POST["warranty28"];
-	$warranty29 = $_POST["warranty29"];
-	$warranty30 = $_POST["warranty30"];
+	// ---- ข้อความแจ้งแผนก (tb_comment_so + tb_comment_so_item) — reuse จาก register_suphos1.php ----
+	function getBrDeptCommentItemsFromPost()
+	{
+		$itemsJson = $_POST["dept_comment_items"] ?? "[]";
+		$decodedItems = json_decode($itemsJson, true);
+		if (!is_array($decodedItems)) {
+			return array();
+		}
+
+		$items = array();
+		$allowedDepartments = array(1, 2, 3, 4);
+		foreach ($decodedItems as $index => $item) {
+			$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
+			$message = isset($item["message"]) ? trim($item["message"]) : "";
+			if (!in_array($departmentId, $allowedDepartments, true) || $message === "") {
+				continue;
+			}
+
+			$items[] = array(
+				"department_id" => $departmentId,
+				"message" => $message,
+				"sort_order" => isset($item["sort_order"]) ? (int)$item["sort_order"] : ($index + 1)
+			);
+		}
+
+		return $items;
+	}
+
+	function saveBrDeptCommentItems($conn, $commentSoId, $refId, $items)
+	{
+		$commentSoId = (int)$commentSoId;
+		$refIdEscaped = mysqli_real_escape_string($conn, $refId);
+		mysqli_query($conn, "DELETE FROM tb_comment_so_item WHERE comment_so_id = " . $commentSoId . " OR ref_id = '" . $refIdEscaped . "'");
+
+		foreach ($items as $item) {
+			$departmentId = (int)$item["department_id"];
+			$message = mysqli_real_escape_string($conn, $item["message"]);
+			$sortOrder = (int)$item["sort_order"];
+			$sql = "INSERT INTO tb_comment_so_item (comment_so_id, ref_id, department_id, message, sort_order) VALUES (" . $commentSoId . ", '" . $refIdEscaped . "', " . $departmentId . ", '" . $message . "', " . $sortOrder . ")";
+			mysqli_query($conn, $sql);
+		}
+	}
+
+	$comment_cs = mysqli_real_escape_string($conn, $_POST["comment_cs"] ?? "");
+	$comment_en = mysqli_real_escape_string($conn, $_POST["comment_en"] ?? "");
+	$comment_st = mysqli_real_escape_string($conn, $_POST["comment_st"] ?? "");
+	$comment_ad = mysqli_real_escape_string($conn, $_POST["comment_ad"] ?? "");
+	$technician_required = ($_POST["technician_required"] ?? "0") === "1" ? "1" : "0";
+
+	$save57 = "insert into tb_comment_so (ref_id,comment_cs,comment_en,comment_st,comment_ad,technician_required) values ('" . $ref_id_br . "','" . $comment_cs . "','" . $comment_en . "','" . $comment_st . "','" . $comment_ad . "','" . $technician_required . "')";
+	$qsave57 = mysqli_query($conn, $save57);
+	if ($qsave57) {
+		saveBrDeptCommentItems($conn, mysqli_insert_id($conn), $ref_id_br, getBrDeptCommentItemsFromPost());
+	} else {
+		$saveOk = false;
+		$saveFailures[] = 'tb_comment_so (comment): ' . mysqli_error($conn);
+	}
+
+	// ---- รายละเอียดที่อยู่ (tb_transaction) — ชื่อฟิลด์ friendly ของฟอร์ม BR ต้องแปลงเป็นคอลัมน์จริงเอง ----
+	$br_park_front = mysqli_real_escape_string($conn, $_POST["park_front"] ?? "");
+	$br_car_home = ($br_park_front === '1') ? '1' : '0';
+	$br_car_road = ($br_park_front === '0') ? '1' : '0';
+	$br_car_park = mysqli_real_escape_string($conn, $_POST["park_location"] ?? "");
+	$br_height_ltd = ($_POST["is_high_roof"] ?? "") === '1' ? '1' : '0';
+
+	$br_entrance_type = mysqli_real_escape_string($conn, $_POST["entrance_type"] ?? "");
+	$br_slope = ($br_entrance_type === '1') ? '1' : '0';
+	$br_bundai = ($br_entrance_type === '2') ? '1' : '0';
+	$br_unit_bundai = mysqli_real_escape_string($conn, $_POST["stair_count"] ?? "");
+	$br_install = mysqli_real_escape_string($conn, $_POST["install_floor"] ?? "");
+
+	$br_room_type = mysqli_real_escape_string($conn, $_POST["room_type"] ?? "");
+	$br_room_bigger = mysqli_real_escape_string($conn, $_POST["door_width"] ?? "");
+	$br_room_longer = mysqli_real_escape_string($conn, $_POST["door_height"] ?? "");
+
+	$br_stair_width = trim((string)($_POST["stair_width"] ?? ""));
+	$br_stair_height = trim((string)($_POST["stair_height"] ?? ""));
+	$br_bundai_big = ($br_stair_width !== '' || $br_stair_height !== '') ? ($br_stair_width . ' x ' . $br_stair_height) : '';
+
+	$br_elev_door_width = trim((string)($_POST["elev_door_width"] ?? ""));
+	$br_elev_door_height = trim((string)($_POST["elev_door_height"] ?? ""));
+	$br_lip_big = ($br_elev_door_width !== '' || $br_elev_door_height !== '') ? ($br_elev_door_width . ' x ' . $br_elev_door_height) : '';
+
+	$br_elev_width = trim((string)($_POST["elev_width"] ?? ""));
+	$br_elev_height = trim((string)($_POST["elev_height"] ?? ""));
+	$br_elev_depth = trim((string)($_POST["elev_depth"] ?? ""));
+	$br_lip_long = ($br_elev_width !== '' || $br_elev_height !== '' || $br_elev_depth !== '') ? ($br_elev_width . ' x ' . $br_elev_height . ' x ' . $br_elev_depth) : '';
+
+	$br_lip_weight = mysqli_real_escape_string($conn, $_POST["elev_capacity"] ?? "");
+
+	$br_move_furn = mysqli_real_escape_string($conn, $_POST["move_furn"] ?? "0");
+	$br_want_employee = ($br_move_furn === '1') ? '1' : '0';
+	$br_employee_unit = mysqli_real_escape_string($conn, $_POST["move_furn_count"] ?? "");
+	$br_ferniger_name = mysqli_real_escape_string($conn, $_POST["move_furn_detail"] ?? "");
+	$br_addr_note = mysqli_real_escape_string($conn, $_POST["addr_note"] ?? "");
+
+	$strSQL99Br = "insert into tb_transaction (ref_id,car_park,car_road,car_home,slope,bundai,unit_bundai,home_type,install,bundai_big,lip_big,lip_long,lip_weight,want_employee,employee_unit,ferniger_name,room_bigger,room_longer,description,height_ltd,add_date,add_by)
+values('" . $ref_id_br . "','" . $br_car_park . "','" . $br_car_road . "','" . $br_car_home . "','" . $br_slope . "','" . $br_bundai . "','" . $br_unit_bundai . "','" . $br_room_type . "','" . $br_install . "','" . $br_bundai_big . "','" . $br_lip_big . "','" . $br_lip_long . "','" . $br_lip_weight . "','" . $br_want_employee . "','" . $br_employee_unit . "','" . $br_ferniger_name . "','" . $br_room_bigger . "','" . $br_room_longer . "','" . $br_addr_note . "','" . $br_height_ltd . "','$add_date','" . $add_by . "')";
+	$objQuery99Br = mysqli_query($conn, $strSQL99Br) or die(mysqli_error($conn));
+
+	if (!function_exists('updateTbTransactionColumnIfExists')) {
+		function updateTbTransactionColumnIfExists($conn, $ref_id, $column, $value)
+		{
+			$safeColumn = mysqli_real_escape_string($conn, $column);
+			$columnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_transaction LIKE '" . $safeColumn . "'");
+			if (!$columnCheck || mysqli_num_rows($columnCheck) == 0) {
+				return;
+			}
+
+			$safeValue = mysqli_real_escape_string($conn, $value);
+			$safeRefId = mysqli_real_escape_string($conn, $ref_id);
+			mysqli_query($conn, "UPDATE tb_transaction SET " . $safeColumn . " = '" . $safeValue . "' WHERE ref_id = '" . $safeRefId . "'");
+		}
+	}
+
+	updateTbTransactionColumnIfExists($conn, $ref_id_br, 'install_room', $br_room_type);
+
+	// ---- ที่อยู่เพิ่มเติม (tb_shipping_address) — ชื่อฟิลด์ extra_contact_*_{i} ของฟอร์ม BR, สูงสุด 9 แถว ----
+	mysqli_query($conn, "DELETE FROM tb_shipping_address WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id_br) . "'");
+
+	for ($brShippingIndex = 1; $brShippingIndex <= 9; $brShippingIndex++) {
+		$brShippingContactName = trim((string)($_POST['extra_contact_name_' . $brShippingIndex] ?? ''));
+		$brShippingTelephone = trim((string)($_POST['extra_contact_tel_' . $brShippingIndex] ?? ''));
+		$brShippingProvince = trim((string)($_POST['extra_contact_province_' . $brShippingIndex] ?? ''));
+		$brShippingAddress = trim((string)($_POST['extra_shipping_address_' . $brShippingIndex] ?? ''));
+
+		if ($brShippingContactName === '' && $brShippingTelephone === '' && $brShippingProvince === '' && $brShippingAddress === '') {
+			continue;
+		}
+
+		$strBrShippingInsert = "INSERT INTO tb_shipping_address (ref_id, contact_name, telephone, province, address) VALUES ('" .
+			mysqli_real_escape_string($conn, $ref_id_br) . "','" .
+			mysqli_real_escape_string($conn, $brShippingContactName) . "','" .
+			mysqli_real_escape_string($conn, $brShippingTelephone) . "','" .
+			mysqli_real_escape_string($conn, $brShippingProvince) . "','" .
+			mysqli_real_escape_string($conn, $brShippingAddress) . "')";
+
+		mysqli_query($conn, $strBrShippingInsert) or die(mysqli_error($conn));
+	}
+
+	// ---- ที่อยู่ส่งบิล (tb_delivery_bill) — ชื่อฟิลด์ตรงกับฟอร์ม SO พอดี ----
+	$brDeliveryBillContactName = trim((string)($_POST['bill_extra_contact_name_2'] ?? ''));
+	$brDeliveryBillTelephone = trim((string)($_POST['bill_extra_contact_tel_2'] ?? ''));
+	$brDeliveryBillProvince = trim((string)($_POST['bill_extra_contact_province_2'] ?? ''));
+	$brDeliveryBillAddress = trim((string)($_POST['bill_extra_shipping_address_2'] ?? ''));
+
+	mysqli_query($conn, "DELETE FROM tb_delivery_bill WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id_br) . "'");
+
+	if ($brDeliveryBillContactName !== '' || $brDeliveryBillTelephone !== '' || $brDeliveryBillProvince !== '' || $brDeliveryBillAddress !== '') {
+		$strBrDeliveryBillInsert = "INSERT INTO tb_delivery_bill (ref_id, customer_nameb, customer_telb, province, address_nameb) VALUES ('" .
+			mysqli_real_escape_string($conn, $ref_id_br) . "','" .
+			mysqli_real_escape_string($conn, $brDeliveryBillContactName) . "','" .
+			mysqli_real_escape_string($conn, $brDeliveryBillTelephone) . "','" .
+			mysqli_real_escape_string($conn, $brDeliveryBillProvince) . "','" .
+			mysqli_real_escape_string($conn, $brDeliveryBillAddress) . "')";
+
+		mysqli_query($conn, $strBrDeliveryBillInsert) or die(mysqli_error($conn));
+	}
+
+	$warranty1 = mysqli_real_escape_string($conn, $_POST["warranty1"]);
+	$warranty2 = mysqli_real_escape_string($conn, $_POST["warranty2"]);
+	$warranty3 = mysqli_real_escape_string($conn, $_POST["warranty3"]);
+	$warranty4 = mysqli_real_escape_string($conn, $_POST["warranty4"]);
+	$warranty5 = mysqli_real_escape_string($conn, $_POST["warranty5"]);
+	$warranty6 = mysqli_real_escape_string($conn, $_POST["warranty6"]);
+	$warranty7 = mysqli_real_escape_string($conn, $_POST["warranty7"]);
+	$warranty8 = mysqli_real_escape_string($conn, $_POST["warranty8"]);
+	$warranty9 = mysqli_real_escape_string($conn, $_POST["warranty9"]);
+	$warranty10 = mysqli_real_escape_string($conn, $_POST["warranty10"]);
+	$warranty11 = mysqli_real_escape_string($conn, $_POST["warranty11"]);
+	$warranty12 = mysqli_real_escape_string($conn, $_POST["warranty12"]);
+	$warranty13 = mysqli_real_escape_string($conn, $_POST["warranty13"]);
+	$warranty14 = mysqli_real_escape_string($conn, $_POST["warranty14"]);
+	$warranty15 = mysqli_real_escape_string($conn, $_POST["warranty15"]);
+	$warranty16 = mysqli_real_escape_string($conn, $_POST["warranty16"]);
+	$warranty17 = mysqli_real_escape_string($conn, $_POST["warranty17"]);
+	$warranty18 = mysqli_real_escape_string($conn, $_POST["warranty18"]);
+	$warranty19 = mysqli_real_escape_string($conn, $_POST["warranty19"]);
+	$warranty20 = mysqli_real_escape_string($conn, $_POST["warranty20"]);
+	$warranty21 = mysqli_real_escape_string($conn, $_POST["warranty21"]);
+	$warranty22 = mysqli_real_escape_string($conn, $_POST["warranty22"]);
+	$warranty23 = mysqli_real_escape_string($conn, $_POST["warranty23"]);
+	$warranty24 = mysqli_real_escape_string($conn, $_POST["warranty24"]);
+	$warranty25 = mysqli_real_escape_string($conn, $_POST["warranty25"]);
+	$warranty26 = mysqli_real_escape_string($conn, $_POST["warranty26"]);
+	$warranty27 = mysqli_real_escape_string($conn, $_POST["warranty27"]);
+	$warranty28 = mysqli_real_escape_string($conn, $_POST["warranty28"]);
+	$warranty29 = mysqli_real_escape_string($conn, $_POST["warranty29"]);
+	$warranty30 = mysqli_real_escape_string($conn, $_POST["warranty30"]);
 
 
-	$product_name1 = $_POST["product_name1"];
-	$unit_name1 = $_POST["unit_name1"];
-	$product_id1 = $_POST["product_id1"];
-	$sale_count1 = $_POST["sale_count1"];
-	$product_price1 = $_POST["product_price1"];
-	$sale_remarkk1 = $_POST["sale_remarkk1"];
-	$sum_amountt = $_POST["sum_amount1"];
+	$product_name1 = mysqli_real_escape_string($conn, $_POST["product_name1"]);
+	$unit_name1 = mysqli_real_escape_string($conn, $_POST["unit_name1"]);
+	$product_id1 = mysqli_real_escape_string($conn, $_POST["product_id1"]);
+	$sale_count1 = mysqli_real_escape_string($conn, $_POST["sale_count1"]);
+	$product_price1 = mysqli_real_escape_string($conn, $_POST["product_price1"]);
+	$sale_remarkk1 = mysqli_real_escape_string($conn, $_POST["sale_remarkk1"]);
+	$sum_amountt = mysqli_real_escape_string($conn, $_POST["sum_amount1"]);
 	$sum_amount1 = str_replace(',', '', $sum_amountt);
-	$br_period1 = $_POST["br_period1"];
+	$br_period1 = mysqli_real_escape_string($conn, $_POST["br_period1"]);
 
 	if ($_POST["product_code1"] != '') {
-		$product_code1 = $_POST["product_code1"];
+		$product_code1 = mysqli_real_escape_string($conn, $_POST["product_code1"]);
 	} else if ($_POST["product_codet1"] != '') {
-		$product_code1 = $_POST["product_codet1"];
+		$product_code1 = mysqli_real_escape_string($conn, $_POST["product_codet1"]);
 	} else {
-		$product_code1 = $_POST["product_c1"];
+		$product_code1 = mysqli_real_escape_string($conn, $_POST["product_c1"]);
 	}
 
 
-	$product_name2 = $_POST["product_name2"];
-	$unit_name2 = $_POST["unit_name2"];
-	$product_id2 = $_POST["product_id2"];
-	$sale_count2 = $_POST["sale_count2"];
-	$product_price2 = $_POST["product_price2"];
-	$sale_remarkk2 = $_POST["sale_remarkk2"];
-	$sum_amountt2 = $_POST["sum_amount2"];
+	$product_name2 = mysqli_real_escape_string($conn, $_POST["product_name2"]);
+	$unit_name2 = mysqli_real_escape_string($conn, $_POST["unit_name2"]);
+	$product_id2 = mysqli_real_escape_string($conn, $_POST["product_id2"]);
+	$sale_count2 = mysqli_real_escape_string($conn, $_POST["sale_count2"]);
+	$product_price2 = mysqli_real_escape_string($conn, $_POST["product_price2"]);
+	$sale_remarkk2 = mysqli_real_escape_string($conn, $_POST["sale_remarkk2"]);
+	$sum_amountt2 = mysqli_real_escape_string($conn, $_POST["sum_amount2"]);
 	$sum_amount2 = str_replace(',', '', $sum_amountt2);
-	$br_period2 = $_POST["br_period2"];
+	$br_period2 = mysqli_real_escape_string($conn, $_POST["br_period2"]);
 
 	if ($_POST["product_code2"] != '') {
-		$product_code2 = $_POST["product_code2"];
+		$product_code2 = mysqli_real_escape_string($conn, $_POST["product_code2"]);
 	} else if ($_POST["product_codet2"] != '') {
-		$product_code2 = $_POST["product_codet2"];
+		$product_code2 = mysqli_real_escape_string($conn, $_POST["product_codet2"]);
 	} else {
-		$product_code2 = $_POST["product_c2"];
+		$product_code2 = mysqli_real_escape_string($conn, $_POST["product_c2"]);
 	}
 
 
-	$product_name3 = $_POST["product_name3"];
-	$unit_name3 = $_POST["unit_name3"];
-	$product_id3 = $_POST["product_id3"];
-	$sale_count3 = $_POST["sale_count3"];
-	$product_price3 = $_POST["product_price3"];
-	$sale_remarkk3 = $_POST["sale_remarkk3"];
-	$sum_amountt3 = $_POST["sum_amount3"];
+	$product_name3 = mysqli_real_escape_string($conn, $_POST["product_name3"]);
+	$unit_name3 = mysqli_real_escape_string($conn, $_POST["unit_name3"]);
+	$product_id3 = mysqli_real_escape_string($conn, $_POST["product_id3"]);
+	$sale_count3 = mysqli_real_escape_string($conn, $_POST["sale_count3"]);
+	$product_price3 = mysqli_real_escape_string($conn, $_POST["product_price3"]);
+	$sale_remarkk3 = mysqli_real_escape_string($conn, $_POST["sale_remarkk3"]);
+	$sum_amountt3 = mysqli_real_escape_string($conn, $_POST["sum_amount3"]);
 	$sum_amount3 = str_replace(',', '', $sum_amountt3);
-	$br_period3 = $_POST["br_period3"];
+	$br_period3 = mysqli_real_escape_string($conn, $_POST["br_period3"]);
 
 	if ($_POST["product_code3"] != '') {
-		$product_code3 = $_POST["product_code3"];
+		$product_code3 = mysqli_real_escape_string($conn, $_POST["product_code3"]);
 	} else if ($_POST["product_codet3"] != '') {
-		$product_code3 = $_POST["product_codet3"];
+		$product_code3 = mysqli_real_escape_string($conn, $_POST["product_codet3"]);
 	} else {
-		$product_code3 = $_POST["product_c3"];
+		$product_code3 = mysqli_real_escape_string($conn, $_POST["product_c3"]);
 	}
 
-	$product_name4 = $_POST["product_name4"];
-	$unit_name4 = $_POST["unit_name4"];
-	$product_id4 = $_POST["product_id4"];
-	$sale_count4 = $_POST["sale_count4"];
-	$product_price4 = $_POST["product_price4"];
-	$sale_remarkk4 = $_POST["sale_remarkk4"];
-	$sum_amountt4 = $_POST["sum_amount4"];
+	$product_name4 = mysqli_real_escape_string($conn, $_POST["product_name4"]);
+	$unit_name4 = mysqli_real_escape_string($conn, $_POST["unit_name4"]);
+	$product_id4 = mysqli_real_escape_string($conn, $_POST["product_id4"]);
+	$sale_count4 = mysqli_real_escape_string($conn, $_POST["sale_count4"]);
+	$product_price4 = mysqli_real_escape_string($conn, $_POST["product_price4"]);
+	$sale_remarkk4 = mysqli_real_escape_string($conn, $_POST["sale_remarkk4"]);
+	$sum_amountt4 = mysqli_real_escape_string($conn, $_POST["sum_amount4"]);
 	$sum_amount4 = str_replace(',', '', $sum_amountt4);
-	$br_period4 = $_POST["br_period4"];
+	$br_period4 = mysqli_real_escape_string($conn, $_POST["br_period4"]);
 
 	if ($_POST["product_code4"] != '') {
-		$product_code4 = $_POST["product_code4"];
+		$product_code4 = mysqli_real_escape_string($conn, $_POST["product_code4"]);
 	} else if ($_POST["product_codet4"] != '') {
-		$product_code4 = $_POST["product_codet4"];
+		$product_code4 = mysqli_real_escape_string($conn, $_POST["product_codet4"]);
 	} else {
-		$product_code4 = $_POST["product_c4"];
+		$product_code4 = mysqli_real_escape_string($conn, $_POST["product_c4"]);
 	}
 
 
 
-	$product_name5 = $_POST["product_name5"];
-	$unit_name5 = $_POST["unit_name5"];
-	$product_id5 = $_POST["product_id5"];
-	$sale_count5 = $_POST["sale_count5"];
-	$product_price5 = $_POST["product_price5"];
-	$sale_remarkk5 = $_POST["sale_remarkk5"];
-	$sum_amountt5 = $_POST["sum_amount5"];
+	$product_name5 = mysqli_real_escape_string($conn, $_POST["product_name5"]);
+	$unit_name5 = mysqli_real_escape_string($conn, $_POST["unit_name5"]);
+	$product_id5 = mysqli_real_escape_string($conn, $_POST["product_id5"]);
+	$sale_count5 = mysqli_real_escape_string($conn, $_POST["sale_count5"]);
+	$product_price5 = mysqli_real_escape_string($conn, $_POST["product_price5"]);
+	$sale_remarkk5 = mysqli_real_escape_string($conn, $_POST["sale_remarkk5"]);
+	$sum_amountt5 = mysqli_real_escape_string($conn, $_POST["sum_amount5"]);
 	$sum_amount5 = str_replace(',', '', $sum_amountt5);
-	$br_period5 = $_POST["br_period5"];
+	$br_period5 = mysqli_real_escape_string($conn, $_POST["br_period5"]);
 
 	if ($_POST["product_code5"] != '') {
-		$product_code5 = $_POST["product_code5"];
+		$product_code5 = mysqli_real_escape_string($conn, $_POST["product_code5"]);
 	} else if ($_POST["product_codet5"] != '') {
-		$product_code5 = $_POST["product_codet5"];
+		$product_code5 = mysqli_real_escape_string($conn, $_POST["product_codet5"]);
 	} else {
-		$product_code5 = $_POST["product_c5"];
+		$product_code5 = mysqli_real_escape_string($conn, $_POST["product_c5"]);
 	}
 
-	$product_name6 = $_POST["product_name6"];
-	$unit_name6 = $_POST["unit_name6"];
-	$product_id6 = $_POST["product_id6"];
-	$sale_count6 = $_POST["sale_count6"];
-	$product_price6 = $_POST["product_price6"];
-	$sale_remarkk6 = $_POST["sale_remarkk6"];
-	$sum_amountt6 = $_POST["sum_amount6"];
+	$product_name6 = mysqli_real_escape_string($conn, $_POST["product_name6"]);
+	$unit_name6 = mysqli_real_escape_string($conn, $_POST["unit_name6"]);
+	$product_id6 = mysqli_real_escape_string($conn, $_POST["product_id6"]);
+	$sale_count6 = mysqli_real_escape_string($conn, $_POST["sale_count6"]);
+	$product_price6 = mysqli_real_escape_string($conn, $_POST["product_price6"]);
+	$sale_remarkk6 = mysqli_real_escape_string($conn, $_POST["sale_remarkk6"]);
+	$sum_amountt6 = mysqli_real_escape_string($conn, $_POST["sum_amount6"]);
 	$sum_amount6 = str_replace(',', '', $sum_amountt6);
-	$br_period6 = $_POST["br_period6"];
+	$br_period6 = mysqli_real_escape_string($conn, $_POST["br_period6"]);
 
 	if ($_POST["product_code6"] != '') {
-		$product_code6 = $_POST["product_code6"];
+		$product_code6 = mysqli_real_escape_string($conn, $_POST["product_code6"]);
 	} else if ($_POST["product_codet6"] != '') {
-		$product_code6 = $_POST["product_codet6"];
+		$product_code6 = mysqli_real_escape_string($conn, $_POST["product_codet6"]);
 	} else {
-		$product_code6 = $_POST["product_c6"];
+		$product_code6 = mysqli_real_escape_string($conn, $_POST["product_c6"]);
 	}
 
 
-	$product_name7 = $_POST["product_name7"];
-	$unit_name7 = $_POST["unit_name7"];
-	$product_id7 = $_POST["product_id7"];
-	$sale_count7 = $_POST["sale_count7"];
-	$product_price7 = $_POST["product_price7"];
-	$sale_remarkk7 = $_POST["sale_remarkk7"];
-	$sum_amountt7 = $_POST["sum_amount7"];
+	$product_name7 = mysqli_real_escape_string($conn, $_POST["product_name7"]);
+	$unit_name7 = mysqli_real_escape_string($conn, $_POST["unit_name7"]);
+	$product_id7 = mysqli_real_escape_string($conn, $_POST["product_id7"]);
+	$sale_count7 = mysqli_real_escape_string($conn, $_POST["sale_count7"]);
+	$product_price7 = mysqli_real_escape_string($conn, $_POST["product_price7"]);
+	$sale_remarkk7 = mysqli_real_escape_string($conn, $_POST["sale_remarkk7"]);
+	$sum_amountt7 = mysqli_real_escape_string($conn, $_POST["sum_amount7"]);
 	$sum_amount7 = str_replace(',', '', $sum_amountt7);
-	$br_period7 = $_POST["br_period7"];
+	$br_period7 = mysqli_real_escape_string($conn, $_POST["br_period7"]);
 
 	if ($_POST["product_code7"] != '') {
-		$product_code7 = $_POST["product_code7"];
+		$product_code7 = mysqli_real_escape_string($conn, $_POST["product_code7"]);
 	} else if ($_POST["product_codet7"] != '') {
-		$product_code7 = $_POST["product_codet7"];
+		$product_code7 = mysqli_real_escape_string($conn, $_POST["product_codet7"]);
 	} else {
-		$product_code7 = $_POST["product_c7"];
+		$product_code7 = mysqli_real_escape_string($conn, $_POST["product_c7"]);
 	}
 
 
 
-	$product_name8 = $_POST["product_name8"];
-	$unit_name8 = $_POST["unit_name8"];
-	$product_id8 = $_POST["product_id8"];
-	$sale_count8 = $_POST["sale_count8"];
-	$product_price8 = $_POST["product_price8"];
-	$sale_remarkk8 = $_POST["sale_remarkk8"];
-	$sum_amountt8 = $_POST["sum_amount8"];
+	$product_name8 = mysqli_real_escape_string($conn, $_POST["product_name8"]);
+	$unit_name8 = mysqli_real_escape_string($conn, $_POST["unit_name8"]);
+	$product_id8 = mysqli_real_escape_string($conn, $_POST["product_id8"]);
+	$sale_count8 = mysqli_real_escape_string($conn, $_POST["sale_count8"]);
+	$product_price8 = mysqli_real_escape_string($conn, $_POST["product_price8"]);
+	$sale_remarkk8 = mysqli_real_escape_string($conn, $_POST["sale_remarkk8"]);
+	$sum_amountt8 = mysqli_real_escape_string($conn, $_POST["sum_amount8"]);
 	$sum_amount8 = str_replace(',', '', $sum_amountt8);
-	$br_period8 = $_POST["br_period8"];
+	$br_period8 = mysqli_real_escape_string($conn, $_POST["br_period8"]);
 
 	if ($_POST["product_code8"] != '') {
-		$product_code8 = $_POST["product_code8"];
+		$product_code8 = mysqli_real_escape_string($conn, $_POST["product_code8"]);
 	} else if ($_POST["product_codet8"] != '') {
-		$product_code8 = $_POST["product_codet8"];
+		$product_code8 = mysqli_real_escape_string($conn, $_POST["product_codet8"]);
 	} else {
-		$product_code8 = $_POST["product_c8"];
+		$product_code8 = mysqli_real_escape_string($conn, $_POST["product_c8"]);
 	}
 
 
@@ -468,7 +765,7 @@ values ('" . $ref_id_br . "','" . $sale_count1 . "','" . $sale_count1 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id1 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -597,7 +894,7 @@ values ('" . $ref_id_br . "','" . $sale_count2 . "','" . $sale_count2 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id2 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -727,7 +1024,7 @@ values ('" . $ref_id_br . "','" . $sale_count3 . "','" . $sale_count3 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id3 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -857,7 +1154,7 @@ values ('" . $ref_id_br . "','" . $sale_count4 . "','" . $sale_count4 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id4 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -987,7 +1284,7 @@ values ('" . $ref_id_br . "','" . $sale_count5 . "','" . $sale_count5 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id5 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1117,7 +1414,7 @@ values ('" . $ref_id_br . "','" . $sale_count6 . "','" . $sale_count6 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id6 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1247,7 +1544,7 @@ values ('" . $ref_id_br . "','" . $sale_count7 . "','" . $sale_count7 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id7 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1376,7 +1673,7 @@ values ('" . $ref_id_br . "','" . $sale_count8 . "','" . $sale_count8 . "','" . 
 		}
 
 		$sql = "SELECT demo_ckk   FROM tb_product where product_ID ='" . $product_id8 . "' ";
-		$qry = mysqli_query($conn, $sql) or die(mysqli_error());
+		$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 		$rs = mysqli_fetch_assoc($qry);
 
 		if ($rs["demo_ckk"] == '1') {
@@ -1388,91 +1685,91 @@ values ('" . $ref_id_br . "','" . $sale_count8 . "','" . $sale_count8 . "','" . 
 
 
 
-	$start_date = $_POST["start_date"];
+	$start_date = mysqli_real_escape_string($conn, $_POST["start_date"]);
 
-	$between_date = $_POST["between_date"];
-	$start_time = $_POST["start_time"];
-	$end_time = $_POST["end_time"] ?? "";
-	$status = $_POST["status"];
+	$between_date = mysqli_real_escape_string($conn, $_POST["between_date"]);
+	$start_time = mysqli_real_escape_string($conn, $_POST["start_time"]);
+	$end_time = mysqli_real_escape_string($conn, $_POST["end_time"] ?? "");
+	$status = mysqli_real_escape_string($conn, $_POST["status"]);
 
 	if ($_POST["start_date"] != '') {
-		$start_date = $_POST["start_date"];
+		$start_date = mysqli_real_escape_string($conn, $_POST["start_date"]);
 	} else {
 		$start_date = '0000-00-00';
 	}
 
 	if ($_POST['fix_datetime'] != '') {
-		$fix_date = $_POST['fix_datetime'];
+		$fix_date = mysqli_real_escape_string($conn, $_POST['fix_datetime']);
 	} else {
 		$fix_date = '0';
 	}
 
 	if ($_POST['no_money'] != '') {
-		$no_price = $_POST['no_money'];
+		$no_price = mysqli_real_escape_string($conn, $_POST['no_money']);
 	} else {
 		$no_price = '0';
 	}
 	if ($_POST['call_customer'] != '') {
-		$call_customer = $_POST['call_customer'];
+		$call_customer = mysqli_real_escape_string($conn, $_POST['call_customer']);
 	} else {
 		$call_customer = '0';
 	}
 	if ($_POST['credit_card'] != '') {
-		$credit = $_POST['credit_card'];
+		$credit = mysqli_real_escape_string($conn, $_POST['credit_card']);
 	} else {
 		$credit = '0';
 	}
 	if ($_POST['call_back'] != '') {
-		$call_employee = $_POST['call_back'];
+		$call_employee = mysqli_real_escape_string($conn, $_POST['call_back']);
 	} else {
 		$call_employee = '0';
 	}
 
 	if ($_POST['cash'] != '') {
-		$chash = $_POST['cash'];
+		$chash = mysqli_real_escape_string($conn, $_POST['cash']);
 	} else {
 		$chash = '0';
 	}
 	if ($_POST['check_paper'] != '') {
-		$check_peper = $_POST['check_paper'];
+		$check_peper = mysqli_real_escape_string($conn, $_POST['check_paper']);
 	} else {
 		$check_peper = '0';
 	}
 	if ($_POST['check_paper'] != '') {
-		$check_peper = $_POST['check_paper'];
+		$check_peper = mysqli_real_escape_string($conn, $_POST['check_paper']);
 	} else {
 		$check_peper = '0';
 	}
 	if ($_POST['bill'] != '') {
-		$bill = $_POST['bill'];
+		$bill = mysqli_real_escape_string($conn, $_POST['bill']);
 	} else {
 		$bill = '0';
 	}
 	if ($_POST['want_bus'] != '') {
-		$want_bus = $_POST['want_bus'];
+		$want_bus = mysqli_real_escape_string($conn, $_POST['want_bus']);
 	} else {
 		$want_bus = '0';
 	}
 	if ($_POST['tran'] != '') {
-		$tran = $_POST["tran"];
+		$tran = mysqli_real_escape_string($conn, $_POST["tran"]);
 	} else {
 		$tran = '0';
 	}
 	if ($_POST['more'] != '') {
-		$check_detail = $_POST["more"];
+		$check_detail = mysqli_real_escape_string($conn, $_POST["more"]);
 	} else {
 		$check_detail = '0';
 	}
 
 	if ($_POST['dep'] != '') {
-		$dep = $_POST["dep"];
+		$dep = mysqli_real_escape_string($conn, $_POST["dep"]);
 	} else {
 		$dep = '0';
 	}
 
 
-	$department = $_POST["department_name"];
-	$type_customer = $_POST["customer_typename"];
+	$department = mysqli_real_escape_string($conn, $_POST["department_name"]);
+	$type_customer = mysqli_real_escape_string($conn, $_POST["customer_typename"]);
 
 	if ($company == '1') {
 		$type_company = 'ออลล์เวล ไลฟ์ บจก.';
@@ -1480,43 +1777,155 @@ values ('" . $ref_id_br . "','" . $sale_count8 . "','" . $sale_count8 . "','" . 
 		$type_company = 'โนเบิล เมด บจก.';
 	}
 
-	$customer_name = $_POST["customer_name"];
-	$customer_tel = $_POST["customer_tel"];
-	$address_name = $_POST["address_name"];
-	$address_send = $_POST["address_send"];
-	$customer_contact = $_POST["customer_contact"];
+	$customer_name = mysqli_real_escape_string($conn, $_POST["customer_name"]);
+	$customer_tel = mysqli_real_escape_string($conn, $_POST["customer_tel"]);
+	$address_name = mysqli_real_escape_string($conn, $_POST["address_name"]);
+	$address_send = mysqli_real_escape_string($conn, $_POST["address_send"]);
+	$customer_contact = mysqli_real_escape_string($conn, $_POST["customer_contact"]);
 
-	$on_time = $_POST["on_time"];
-	$amphur_name = $_POST["amphur_name"];
-	$province_name = $_POST["province_name"];
+	$on_time = mysqli_real_escape_string($conn, $_POST["on_time"]);
+	$amphur_name = mysqli_real_escape_string($conn, $_POST["amphur_name"]);
+	$province_name = mysqli_real_escape_string($conn, $_POST["province_name"]);
+	$transport_company = mysqli_real_escape_string($conn, $_POST["transport_company"] ?? "");
+	$location_link = mysqli_real_escape_string($conn, $_POST["location_link"] ?? "");
+
+	// บันทึกที่อยู่ใหม่เข้าฐานข้อมูลของลูกค้ากรณีที่ปุ่ม "เพิ่มลงฐานลูกค้า" ถูกเลือกไว้ (mirror register_suphos1.php)
+	$save_to_customer_db = isset($_POST['save_to_customer_db']) && $_POST['save_to_customer_db'] === '1';
+	if ($save_to_customer_db && !empty($customer_id)) {
+		$esc_customer_id = $customer_id;
+		$esc_shipping_name = mysqli_real_escape_string($conn, $_POST['customer_name'] ?? '');
+		$esc_shipping_tel = mysqli_real_escape_string($conn, $_POST['customer_tel'] ?? '');
+		$esc_shipping_province = mysqli_real_escape_string($conn, $_POST['province_name'] ?? '');
+		$esc_install_location = mysqli_real_escape_string($conn, $_POST['address_send'] ?? '');
+		$esc_location_link = $location_link;
+
+		// #address_name เก็บที่อยู่แบบรวมก้อน (address+ampher+province+postcode) ถ้าเอาไปใส่ shipping_address ตรง ๆ
+		// พร้อมเซ็ต shipping_province ด้วย จะเกิดจังหวัดซ้ำและสะสมเพิ่มทุกรอบที่บันทึกซ้ำ
+		// จึงใช้ส่วนประกอบดิบจาก hidden field แทนเมื่อมี (กรณีเลือกจาก popup / auto-fill จากลูกค้า)
+		// ถ้าไม่มี (ผู้ใช้พิมพ์ที่อยู่เอง) ค่อย fallback ไปใช้ address_name ทั้งก้อนโดยไม่เซ็ต ampher/postcode
+		$rawAddress = trim($_POST['shipping_address_raw'] ?? '');
+		$hasRawAddress = ($rawAddress !== '');
+		$esc_shipping_address = mysqli_real_escape_string($conn, $hasRawAddress ? $rawAddress : ($_POST['address_name'] ?? ''));
+		$esc_shipping_ampher = $hasRawAddress ? mysqli_real_escape_string($conn, $_POST['shipping_ampher'] ?? '') : '';
+		$esc_shipping_postcode = $hasRawAddress ? mysqli_real_escape_string($conn, $_POST['shipping_postcode'] ?? '') : '';
+		$now = date('Y-m-d H:i:s');
+
+		// ตรวจสอบคอลัมน์ที่มีอยู่จริงในตาราง tb_customer_shipping_address ป้องกันกรณีคอลัมน์ไม่มีใน schema
+		$col_check = mysqli_query($conn, "SHOW COLUMNS FROM tb_customer_shipping_address");
+		$existing_cols = array();
+		if ($col_check) {
+			while ($col_row = mysqli_fetch_assoc($col_check)) {
+				$existing_cols[] = strtolower($col_row['Field']);
+			}
+		}
+
+		// กันสร้างที่อยู่ซ้ำเมื่อกดบันทึกหลายครั้งด้วยข้อมูลชุดเดิม (ตารางไม่มี unique constraint)
+		$sql_dup_check = "SELECT id FROM tb_customer_shipping_address
+			WHERE customer_id = '$esc_customer_id'
+				AND shipping_name = '$esc_shipping_name'
+				AND shipping_address = '$esc_shipping_address'
+				AND shipping_tel = '$esc_shipping_tel'
+			LIMIT 1";
+		$dup_result = mysqli_query($conn, $sql_dup_check);
+		$dup_row = $dup_result ? mysqli_fetch_assoc($dup_result) : null;
+
+		if ($dup_row) {
+			$_POST["shipping_id"] = $dup_row['id'];
+		} else {
+			// shipping_index เป็นลำดับที่อยู่ของลูกค้าแต่ละราย (คอลัมน์ NOT NULL DEFAULT 1)
+			// ถ้าไม่เซ็ตเองทุกแถวจะได้ 1 หมด ทำให้ลำดับใช้งานไม่ได้
+			$next_index = 1;
+			$idx_result = mysqli_query($conn, "SELECT COALESCE(MAX(shipping_index), 0) + 1 AS next_index
+				FROM tb_customer_shipping_address WHERE customer_id = '$esc_customer_id'");
+			if ($idx_result && ($idx_row = mysqli_fetch_assoc($idx_result))) {
+				$next_index = (int)$idx_row['next_index'];
+			}
+
+			$insert_fields = array(
+				'customer_id' => "'$esc_customer_id'",
+				'shipping_index' => "'$next_index'",
+				'shipping_preface_name' => "''",
+				'shipping_name' => "'$esc_shipping_name'",
+				'shipping_address' => "'$esc_shipping_address'",
+				'shipping_ampher' => "'$esc_shipping_ampher'",
+				'shipping_province' => "'$esc_shipping_province'",
+				'shipping_postcode' => "'$esc_shipping_postcode'",
+				'shipping_tel' => "'$esc_shipping_tel'",
+				'created_at' => "'$now'",
+				'updated_at' => "'$now'"
+			);
+
+			if (in_array('install_location', $existing_cols)) {
+				$insert_fields['install_location'] = "'$esc_install_location'";
+			}
+			if (in_array('location_link', $existing_cols)) {
+				$insert_fields['location_link'] = "'$esc_location_link'";
+			}
+
+			$insert_cols_str = implode(', ', array_keys($insert_fields));
+			$insert_vals_str = implode(', ', array_values($insert_fields));
+
+			$sql_insert_ship = "INSERT INTO tb_customer_shipping_address ($insert_cols_str) VALUES ($insert_vals_str)";
+			if (mysqli_query($conn, $sql_insert_ship)) {
+				$_POST["shipping_id"] = mysqli_insert_id($conn);
+			}
+		}
+	}
+	// shipping_id เป็น reference ไปยัง record ในตารางที่อยู่จัดส่ง ปัจจุบัน tb_register_data ยังไม่มีคอลัมน์นี้จริง
+	// (ดู conditional check ก่อน INSERT tb_register_data ด้านล่าง) จึงเตรียมค่าไว้ล่วงหน้าตาม pattern เดียวกับ register_suphos1.php
+	$shipping_id = isset($_POST["shipping_id"]) && $_POST["shipping_id"] !== '' ? $_POST["shipping_id"] : 0;
 
 	$product_name = "ส่ง $product_name1 $sale_remarkk1  $sale_count1 $unit_name1 $product_name2 $sale_remarkk2 $sale_count2 $unit_name2 $product_name3 $sale_remarkk3 $sale_count3 $unit_name3 $product_name4 $sale_remarkk4 $sale_count4 $unit_name4  $product_name5 $sale_remarkk5 $sale_count5 $unit_name5  $product_name6 $sale_remarkk6 $sale_count6 $unit_name6 $product_name7 $sale_remarkk7 $sale_count7 $unit_name7 $product_name8 $sale_remarkk8 $sale_count8 $unit_name8 $product_name9 $sale_remarkk9 $sale_count9 $unit_name9 $product_name10 $sale_remarkk10 $sale_count10 $unit_name10 $address_name";
 
-	$product_sn = $_POST["product_sn"];
-	$unit_credit = $_POST["unit_credit"];
-	$price = $_POST["unit_cash"];
-	$employee_name = $_POST["employee_name"];
-	$employee_tel = $_POST["employee_tel"];
-	$add_by = $_POST["add_by"];
-	$description = $_POST["sale_comment"];
-	$havemap = $_POST['have_map'];
-	$unit_check = $_POST["unit_check"];
-	$unit_bill = $_POST["unit_bill"];
-	$unit_tran = $_POST["unit_tran"];
-	$department_show = $_POST["department_show"];
+	$product_sn = mysqli_real_escape_string($conn, $_POST["product_sn"]);
+	$unit_credit = mysqli_real_escape_string($conn, $_POST["unit_credit"]);
+	$price = mysqli_real_escape_string($conn, $_POST["unit_cash"]);
+	$employee_name = mysqli_real_escape_string($conn, $_POST["employee_name"]);
+	$employee_tel = mysqli_real_escape_string($conn, $_POST["employee_tel"]);
+	$add_by = mysqli_real_escape_string($conn, $_POST["add_by"]);
+	$description = mysqli_real_escape_string($conn, $_POST["sale_comment"]);
+	$havemap = mysqli_real_escape_string($conn, $_POST['have_map']);
+	$unit_check = mysqli_real_escape_string($conn, $_POST["unit_check"]);
+	$unit_bill = mysqli_real_escape_string($conn, $_POST["unit_bill"]);
+	$unit_tran = mysqli_real_escape_string($conn, $_POST["unit_tran"]);
+	$department_show = mysqli_real_escape_string($conn, $_POST["department_show"]);
 	$unit_check1 = str_replace(',', '', $unit_check);
 	$unit_bill1 = str_replace(',', '', $unit_bill);
-	$dept = $_POST["dept"];
-	$status_comment = $_POST["status_comment"];
-	$address_1 = $_POST["address_1"];
+	$dept = mysqli_real_escape_string($conn, $_POST["dept"]);
+	$status_comment = mysqli_real_escape_string($conn, $_POST["status_comment"]);
+	// เดิม UI มีช่อง address_1 แยกต่างหาก แต่ถูกถอดออกไปแล้ว (ฟอร์มปัจจุบันมีแค่ address_name)
+	// ก่อนหน้านี้ต้องพึ่ง JS mirror ค่าใส่ hidden field ก่อน submit ทุกครั้ง ย้ายมา fallback ที่ backend แทน
+	// เพื่อไม่ให้ผูกกับ JS ต้องรันถูกต้อง และกัน undefined array key ถ้าไม่มีการส่ง address_1 มาเลย
+	$address_1Raw = trim((string)($_POST["address_1"] ?? ''));
+	if ($address_1Raw === '') {
+		$address_1 = $address_name; // ใช้ค่าที่ escape ไว้แล้วจาก address_name ตรง ๆ
+	} else {
+		$address_1 = mysqli_real_escape_string($conn, $address_1Raw);
+	}
 
-	$strSQL66 =  "insert into tb_register_data (ref_id,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,dep,dept,department_show,customer_contact,status_comment,on_time,address_1,add_code,province_name) 
+	$registerDataColumns = "ref_id,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,dep,dept,department_show,customer_contact,status_comment,on_time,address_1,add_code,province_name,transport_company,location_link";
+	$registerDataValues = "'" . $ref_id_br . "','" . $start_date . "','" . $between_date . "','" . $start_time . "','" . $end_time . "','" . $status . "','" . $fix_date . "','" . $no_price . "','" . $call_customer . "','" . $credit . "','" . $call_employee . "','" . $chash . "','" . $check_peper . "','" . $bill . "','" . $department . "','" . $type_customer . "','" . $type_company . "','" . $customer_name . "','" . $customer_tel . "','" . $address_name . "','" . $address_send . "','" . $want_bus . "','" . $product_name . "','" . $product_sn . "','" . $unit_credit . "','" . $price . "','" . $employee_name . "','" . $employee_tel . "','" . $add_by . "','" . $description . "','" . $havemap . "','$add_date','" . $unit_bill . "','" . $unit_check . "','" . $unit_tran . "','" . $tran . "','" . $check_detail . "','" . $dep . "','" . $dept . "','" . $department_show . "','" . $customer_contact . "','" . $status_comment . "','" . $on_time . "','" . $address_1 . "','" . $em_id . "','" . $province_name . "','" . $transport_company . "','" . $location_link . "'";
 
-values('" . $ref_id_br . "','" . $start_date . "','" . $between_date . "','" . $start_time . "','" . $end_time . "','" . $status . "','" . $fix_date . "','" . $no_price . "','" . $call_customer . "','" . $credit . "','" . $call_employee . "','" . $chash . "','" . $check_peper . "','" . $bill . "','" . $department . "','" . $type_customer . "','" . $type_company . "','" . $customer_name . "','" . $customer_tel . "','" . $address_name . "','" . $address_send . "','" . $want_bus . "','" . $product_name . "','" . $product_sn . "','" . $unit_credit . "','" . $price . "','" . $employee_name . "','" . $employee_tel . "','" . $add_by . "','" . $description . "','" . $havemap . "','$add_date','" . $unit_bill . "','" . $unit_check . "','" . $unit_tran . "','" . $tran . "','" . $check_detail . "','" . $dep . "','" . $dept . "','" . $department_show . "','" . $customer_contact . "','" . $status_comment . "','" . $on_time . "','" . $address_1 . "','" . $em_id . "','" . $province_name . "')";
+	// เพิ่ม shipping_id แบบมีเงื่อนไข เผื่อ schema เพิ่มคอลัมน์นี้ในอนาคต (mirror register_suphos1.php)
+	$shippingColumnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_register_data LIKE 'shipping_id'");
+	if ($shippingColumnCheck && mysqli_num_rows($shippingColumnCheck) > 0) {
+		$registerDataColumns .= ",shipping_id";
+		$registerDataValues .= ",'" . $shipping_id . "'";
+	}
+
+	$strSQL66 = "insert into tb_register_data ($registerDataColumns)
+
+values($registerDataValues)";
 
 	//echo $strSQL66;
 
-	$objQuery66 = mysqli_query($conn, $strSQL66) or die(mysqli_error());
+	// เดิมใช้ or die() ซึ่งจบ request ทันทีด้วยข้อความ error ดิบ ๆ บนหน้าเปล่า
+	// เปลี่ยนมาเก็บสถานะแทน เพื่อให้ผู้ใช้เห็นข้อความที่เข้าใจได้ตอนท้าย (ข้อมูลค้างครึ่งเหมือนเดิมจนกว่าจะทำ transaction)
+	$objQuery66 = mysqli_query($conn, $strSQL66);
+	if (!$objQuery66) {
+		$saveOk = false;
+		$saveFailures[] = 'tb_register_data: ' . mysqli_error($conn);
+	}
 
 
 
@@ -1528,11 +1937,33 @@ values('" . $ref_id_br . "','" . $start_date . "','" . $between_date . "','" . $
 
 
 
-	if ($qsave) {
-		echo "<script language=\"JavaScript\">";
-		echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrhos_edit.php?ref_id_br=$ref_id_br';";
-		echo "</script>";
+	} catch (mysqli_sql_exception $e) {
+		$saveOk = false;
+		$saveFailures[] = $e->getMessage();
+	}
+
+	if ($saveOk) {
+		mysqli_commit($conn);
+
+		// true PRG: ล้าง buffer (ที่มี HTML จาก head.php ค้างอยู่) แล้วส่ง redirect จริงระดับ HTTP
+		// แทน JS-redirect เดิม เพื่อไม่ให้ browser ถือว่าหน้านี้เป็น "response ของ POST" ที่ reload แล้วเสี่ยงถามซ้ำ
+		// ข้อความ "บันทึกสำเร็จ" ย้ายไปแสดงที่ปลายทาง (register_supbrhos_edit.php) ผ่าน query param saved=1
+		if (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		header('Location: register_supbrhos_edit.php?ref_id_br=' . rawurlencode($ref_id_br) . '&saved=1');
+		exit();
 	} else {
-		echo "Cannot";
+		mysqli_rollback($conn);
+
+		// แสดงสาเหตุจริงแทนคำว่า "Cannot" ลอย ๆ เพื่อให้ตามปัญหาได้
+		// exception อาจเกิดก่อนที่ $ref_id_br จะถูกสร้าง จึงต้อง guard ไว้
+		$failureRefId = isset($ref_id_br) ? $ref_id_br : '-';
+		$failureText = implode("\\n", array_map(function ($msg) {
+			return str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $msg);
+		}, $saveFailures));
+		echo "<script language=\"JavaScript\">";
+		echo "alert('บันทึกข้อมูลไม่สำเร็จ (เอกสาร $failureRefId)\\n\\n$failureText');";
+		echo "</script>";
 	}
 }

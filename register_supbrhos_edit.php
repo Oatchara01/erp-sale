@@ -2,6 +2,10 @@
 <?php include "dateselect.php"; ?>
 <?php include('dbconnect_sale.php'); ?>
 
+<?php if (($_GET['saved'] ?? '') === '1'): ?>
+<script>alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');</script>
+<?php endif; ?>
+
 <script language="JavaScript">
 
 var HttPRequest = false;

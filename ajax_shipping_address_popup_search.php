@@ -2,6 +2,8 @@
 include('dbconnect.php');
 
 header('Content-Type: application/json; charset=utf-8');
+// กัน browser cache ผลลัพธ์เก่า เพราะ URL ซ้ำเดิมทุกครั้งที่ค้นหาด้วยเงื่อนไขเดียวกัน
+header('Cache-Control: no-store');
 
 function responseJson($payload, $statusCode = 200)
 {
@@ -46,10 +48,11 @@ $sql = "
         s.shipping_ampher,
         s.shipping_province,
         s.shipping_postcode,
-        s.install_location
+        s.install_location,
+        s.location_link
     FROM tb_customer_shipping_address s
     JOIN tb_customer c ON s.customer_id = c.customer_id
-    WHERE c.close_ckk='0'
+    WHERE c.close_ckk IS NOT TRUE
         AND c.customer_id = ?";
 
 $types = 'i';
