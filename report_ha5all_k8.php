@@ -18,12 +18,21 @@ $strSQL = "SELECT * FROM tb_delivery_print  WHERE ref_id = '".$ref_id."' ";
 $objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
 $objResult = mysqli_fetch_array($objQuery);
 
-$strSQL1 = "SELECT type_doc FROM hos__so  WHERE ref_id = '".$ref_id."' ";
+$ttt = substr($ref_id,0,2);
+
+if($ttt=='BR'){
+	$strSQL1 = "SELECT company AS type_doc FROM hos__br  WHERE ref_id_br = '".$ref_id."' ";
+}else{
+	$strSQL1 = "SELECT type_doc FROM hos__so  WHERE ref_id = '".$ref_id."' ";
+}
 $objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error());
 $objResult1 = mysqli_fetch_array($objQuery1);
 
-
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
+if($ttt=='BR'){
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id."' ";
+}else{
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
+}
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
 
