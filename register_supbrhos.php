@@ -90,7 +90,9 @@
 						}
 
 						// เติมที่อยู่จัดส่งของลูกค้าอัตโนมัติจากข้อมูล delivery_* (mirror register_suphos.php)
-						if (typeof applyShippingSelection === 'function') {
+						if (window.isInitialBrEditLoad) {
+							window.isInitialBrEditLoad = false;
+						} else if (typeof applyShippingSelection === 'function') {
 							var defaultShipping = {
 								customer_name: myArr[0] || '',
 								customer_tel: myArr[17] || myArr[5] || '',
@@ -628,6 +630,24 @@
 	// วัตถุประสงค์: select เดียว + ช่อง "ข้อความ" เดียว แทน radio 6 ปุ่ม + 4 ช่องแยก
 	// ค่า POST เดิม (objective, objective_des1/2/4/5) ยังคงเหมือนเดิมทุกประการ
 	// need_des/des_label มาจาก tb_objective (data attribute บน <option>) แทนการ hardcode
+	function brRestoreObjectiveDesShared() {
+		var valEl = document.getElementById('objective');
+		var val = valEl ? valEl.value : '';
+		if (!val) return;
+		var hiddenEl = document.getElementById('objective_des' + val);
+		var sharedEl = document.getElementById('objective_des_shared');
+		var borrowDaysEl = document.getElementById('br_borrow_days');
+
+		if (hiddenEl && hiddenEl.value) {
+			if (val === '2' && borrowDaysEl && !borrowDaysEl.value) {
+				borrowDaysEl.value = hiddenEl.value;
+			}
+			if (sharedEl && !sharedEl.value && val !== '2') {
+				sharedEl.value = hiddenEl.value;
+			}
+		}
+	}
+
 	function brSyncObjectiveDes() {
 		var objectiveEl = document.getElementById('objective');
 		var selectedOption = (objectiveEl && objectiveEl.selectedIndex >= 0) ? objectiveEl.options[objectiveEl.selectedIndex] : null;
@@ -635,6 +655,8 @@
 		var group = document.getElementById('objective_des_group');
 		var label = document.getElementById('objective_des_label');
 		var showText = !!(selectedOption && selectedOption.dataset.needDes === '1');
+
+		brRestoreObjectiveDesShared();
 
 		if (group) {
 			group.style.display = showText ? '' : 'none';
@@ -666,6 +688,9 @@
 
 			if (isTrial) {
 				borrowDaysGroup.style.display = '';
+				if (typeof brUpdateReturnDate === 'function') {
+					brUpdateReturnDate();
+				}
 			} else {
 				borrowDaysGroup.style.display = 'none';
 				var borrowDaysInput = document.getElementById('br_borrow_days');
@@ -687,10 +712,17 @@
 		var val = valEl ? valEl.value : '';
 		var sharedEl = document.getElementById('objective_des_shared');
 		var shared = sharedEl ? sharedEl.value : '';
+		var borrowDaysEl = document.getElementById('br_borrow_days');
+		var borrowDays = borrowDaysEl ? borrowDaysEl.value : '';
+
 		['1', '2', '4', '5'].forEach(function(v) {
 			var hiddenEl = document.getElementById('objective_des' + v);
 			if (hiddenEl) {
-				hiddenEl.value = (v === val) ? shared : '';
+				if (v === val) {
+					hiddenEl.value = (v === '2') ? (borrowDays || shared) : shared;
+				} else {
+					hiddenEl.value = '';
+				}
 			}
 		});
 	}
@@ -785,6 +817,10 @@
 		out.value = d.getFullYear() + '-' +
 			String(d.getMonth() + 1).padStart(2, '0') + '-' +
 			String(d.getDate()).padStart(2, '0');
+
+		if (typeof brWriteObjectiveDesHidden === 'function') {
+			brWriteObjectiveDesHidden();
+		}
 	}
 
 	function brOpenPreview() {
@@ -798,7 +834,9 @@
 			return;
 		}
 
-		var reportUrl = 'report_loanhosptl1.php';
+		var companySelect = document.getElementById('company_select');
+		var companyVal = companySelect ? companySelect.value : '1';
+		var reportUrl = (companyVal === '2') ? 'report_loanhosnbm1.php' : 'report_loanhosptl1.php';
 
 		// เลขที่อ้างอิงตอนพรีวิวเป็นค่าคำนวณล่วงหน้าฝั่งหน้าจอเท่านั้น เลขจริงจะถูกกำหนดตอนกดบันทึก
 		// (backend มี retry กันชนกัน) จึงอาจไม่ตรงกับที่เห็นในพรีวิวหากมีเอกสารอื่นถูกบันทึกแทรกก่อน
@@ -853,12 +891,60 @@
 	}
 
 	function brSaveDraft() {
-		Swal.fire({
-			icon: 'info',
-			title: 'Save Draft',
-			text: 'ฟังก์ชัน Save Draft ยังไม่พร้อมใช้งานในขณะนี้',
-			confirmButtonColor: '#612989'
-		});
+		brWriteObjectiveDesHidden();
+		if (typeof syncDeptComments === 'function') {
+			syncDeptComments();
+		}
+		if (typeof syncReturnTimeRangeFromTime === 'function') {
+			syncReturnTimeRangeFromTime();
+		}
+
+		var form = document.forms['frmMain'];
+		if (!form) {
+			return;
+		}
+
+		var btn = form.querySelector('[name="save_draft"]');
+		var defaultHtml = btn ? btn.innerHTML : '';
+		var formData = new FormData(form);
+		formData.set('is_draft', '1');
+
+		if (btn) {
+			btn.disabled = true;
+			btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+		}
+
+		fetch('register_supbrhos_draft1.php', {
+				method: 'POST',
+				body: formData
+			})
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(data) {
+				if (data && data.success) {
+					return Swal.fire({
+						title: 'Save Draft success',
+						text: 'Ref ID: ' + data.ref_id,
+						icon: 'success',
+						confirmButtonColor: '#612989'
+					}).then(function() {
+						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					});
+				}
+
+				var message = data && data.message ? data.message : 'Unable to save draft';
+				return Swal.fire('Error', message, 'error');
+			})
+			.catch(function() {
+				return Swal.fire('Error', 'Unable to save draft', 'error');
+			})
+			.finally(function() {
+				if (btn) {
+					btn.disabled = false;
+					btn.innerHTML = defaultHtml;
+				}
+			});
 	}
 </script>
 
@@ -985,11 +1071,27 @@ if ($savedRefIdBr !== "") {
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
 $savedSurvey = array(
-	'park_front' => '', 'park_location' => '', 'is_high_roof' => '', 'entrance_type' => '',
-	'stair_count' => '', 'install_floor' => '', 'room_type' => '', 'door_width' => '', 'door_height' => '',
-	'stair_width' => '', 'stair_height' => '', 'elev_door_width' => '', 'elev_door_height' => '',
-	'elev_width' => '', 'elev_height' => '', 'elev_depth' => '', 'elev_capacity' => '',
-	'move_furn' => '', 'move_furn_count' => '', 'move_furn_detail' => '', 'addr_note' => '',
+	'park_front' => '',
+	'park_location' => '',
+	'is_high_roof' => '',
+	'entrance_type' => '',
+	'stair_count' => '',
+	'install_floor' => '',
+	'room_type' => '',
+	'door_width' => '',
+	'door_height' => '',
+	'stair_width' => '',
+	'stair_height' => '',
+	'elev_door_width' => '',
+	'elev_door_height' => '',
+	'elev_width' => '',
+	'elev_height' => '',
+	'elev_depth' => '',
+	'elev_capacity' => '',
+	'move_furn' => '',
+	'move_furn_count' => '',
+	'move_furn_detail' => '',
+	'addr_note' => '',
 );
 
 if ($savedTransaction !== null) {
@@ -1028,10 +1130,23 @@ if ($savedTransaction !== null) {
 // start_time/end_time ถูกบันทึกรวมกันเป็น "start end" ในคอลัมน์ delivery_time จึงต้อง split กลับ
 $savedStartTime = '';
 $savedEndTime = '';
+$savedTimeRange = '';
 if ($savedBr !== null && trim((string)$savedBr['delivery_time']) !== '') {
 	$savedDeliveryTimeParts = preg_split('/\s+/', trim((string)$savedBr['delivery_time']));
 	$savedStartTime = $savedDeliveryTimeParts[0] ?? '';
 	$savedEndTime = $savedDeliveryTimeParts[1] ?? '';
+
+	$normStart = substr(trim((string)$savedStartTime), 0, 5);
+	$normEnd = substr(trim((string)$savedEndTime), 0, 5);
+	if ($normStart === '08:00' && $normEnd === '12:00') {
+		$savedTimeRange = 'morning';
+	} else if ($normStart === '13:00' && $normEnd === '17:00') {
+		$savedTimeRange = 'afternoon';
+	} else if ($normStart === '08:00' && $normEnd === '17:00') {
+		$savedTimeRange = 'allday';
+	} else if ($normStart !== '' || $normEnd !== '') {
+		$savedTimeRange = 'specific';
+	}
 }
 
 // ตัวแปรรองรับแท็บ 'ที่อยู่เพิ่มเติม' ที่ port มาจาก register_suphos.php
@@ -1098,6 +1213,7 @@ $brPrefill = array();
 
 if ($savedBr !== null) {
 	$brPrefill = array(
+		'company' => $savedBr['company'],
 		'type_breng' => $savedBr['type_breng'],
 		'sale_code' => $savedBr['sale_code'],
 		'date_br' => $savedBr['date_br'],
@@ -1135,6 +1251,8 @@ if ($savedBr !== null) {
 		'between_date' => $savedBr['date_send_key'],
 		'start_time' => $savedStartTime,
 		'end_time' => $savedEndTime,
+		'time_range' => $savedTimeRange,
+		'send_cs' => $savedBr['send_cs'] ?? '',
 	);
 
 	if ($savedOtherBill !== null) {
@@ -1144,6 +1262,7 @@ if ($savedBr !== null) {
 		}
 		$brPrefill['ref_des'] = $savedOtherBill['ref_des'];
 		$brPrefill['ref_11des'] = $savedOtherBill['ref_11des'];
+		$brPrefill['ref_12'] = $savedOtherBill['ref_12'] ?? '';
 	}
 
 	if ($savedComment !== null) {
@@ -1155,6 +1274,7 @@ if ($savedBr !== null) {
 	}
 
 	if ($savedRegister !== null) {
+		$brPrefill['call_customer'] = $savedRegister['call_customer'];
 		$brPrefill['province_name'] = $savedRegister['province_name'];
 		$brPrefill['address_1'] = $savedRegister['address_1'];
 		$brPrefill['employee_name'] = $savedRegister['employee_name'];
@@ -1244,8 +1364,8 @@ $adminInfoTab = [
 						// backend คำนวณเลขจริงใหม่ตอนบันทึก (พร้อม retry กันชนกัน) จึงอาจไม่ตรงกับค่านี้
 						// ถ้ามีอีกคนบันทึกเอกสารแทรกก่อนหน้านี้ทันเวลา
 					?>
-						<span class="so-ref-value">จะออกเลขที่เมื่อกดบันทึก (ประมาณการ: <?php echo $so;
-																							echo $nextId; ?>)</span>
+						<span class="so-ref-value"><?php echo $so;
+													echo $nextId; ?></span>
 					<?php } ?>
 				</div>
 			</div>
@@ -1338,6 +1458,19 @@ $adminInfoTab = [
 					return false;
 				}
 
+				var brHasProduct = false;
+				for (var pi = 1; pi <= 10; pi++) {
+					var pidEl = document.getElementById('product_id' + pi);
+					if (pidEl && pidEl.value !== '') {
+						brHasProduct = true;
+						break;
+					}
+				}
+				if (!brHasProduct) {
+					alert('กรุณาเลือกสินค้าอย่างน้อย 1 รายการ');
+					return false;
+				}
+
 				// ผ่าน validation ครบแล้ว กำลังจะ submit จริง -> disable ปุ่มกันกดซ้ำ
 				// ไม่ต้อง re-enable เพราะหน้าจะ navigate ออกไปอยู่แล้วเมื่อสำเร็จ
 				// (ทุกจุด return false ด้านบนเกิดก่อนบรรทัดนี้ จึงยัง enabled ตามปกติเมื่อ validation ไม่ผ่าน)
@@ -1366,7 +1499,6 @@ $adminInfoTab = [
 			}
 		</script>
 
-		<input type="radio" name="company" value="1" checked='checked' required style="display:none;">
 		<?php
 		// edit mode ต้องส่งเลขเอกสารจริงไปให้ register_supbrhos_edit1.php ใช้เป็น key ของ UPDATE
 		// create mode ส่งเลขประมาณการไปตามเดิม (backend คำนวณเลขจริงใหม่อยู่แล้ว)
@@ -1389,8 +1521,9 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label">บริษัท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
-							<select class="so-select" disabled>
-								<option value="1" selected>AWL</option>
+							<select class="so-select" name="company" id="company_select">
+								<option value="1" <?php echo ($savedBr !== null && ($savedBr['company'] ?? '') == '1') ? 'selected' : ''; ?>>AWL</option>
+								<option value="2" <?php echo ($savedBr !== null && ($savedBr['company'] ?? '') == '2') ? 'selected' : ''; ?>>NBM</option>
 							</select>
 						</div>
 					</div>
@@ -1797,14 +1930,91 @@ $adminInfoTab = [
 				['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
 			],
 			'cost_fields' => [
-				['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
-				['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
-				['type' => 'text', 'name' => 'shipping_ref2', 'label' => 'รหัสอ้างอิง 2'],
-				['type' => 'text', 'name' => 'shipping_cost', 'label' => 'ค่าจัดส่ง', 'value' => '0.00'],
+				['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง', 'value' => so_saved_h($savedBr['date_ker'] ?? '')],
+				['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1', 'value' => so_saved_h($savedBr['order_refer_code'] ?? '')],
+				['type' => 'text', 'name' => 'shipping_ref2', 'label' => 'รหัสอ้างอิง 2', 'value' => so_saved_h($savedBr['order_refer_code1'] ?? '')],
+				['type' => 'text', 'name' => 'shipping_cost', 'label' => 'ค่าจัดส่ง', 'value' => so_saved_h((($savedBr['ker_bath'] ?? '') !== '') ? $savedBr['ker_bath'] : '0.00')],
 			],
 		];
 		include __DIR__ . '/partials/delivery_info_tab.php';
 		?>
+		<input type="hidden" name="end_time" id="end_time" value="<?php echo so_saved_h($savedEndTime ?? ''); ?>">
+		<script>
+			function syncDeliveryTimeRange() {
+				var timeRange = document.getElementById('time_range');
+				var startTime = document.querySelector('input[name="start_time"]');
+				var endTime = document.getElementById('end_time') || document.querySelector('input[name="end_time"]');
+				if (!timeRange || !startTime) return;
+
+				var timeRangeMap = {
+					morning: ['08:00', '12:00'],
+					afternoon: ['13:00', '17:00'],
+					allday: ['08:00', '17:00']
+				};
+
+				var val = timeRange.value;
+				if (timeRangeMap[val]) {
+					startTime.value = timeRangeMap[val][0];
+					if (endTime) endTime.value = timeRangeMap[val][1];
+				} else if (val === 'specific') {
+					var normStart = (startTime.value || '').trim().substring(0, 5);
+					var normEnd = endTime ? (endTime.value || '').trim().substring(0, 5) : '';
+					if ((normStart === '08:00' && (normEnd === '12:00' || normEnd === '17:00')) ||
+						(normStart === '13:00' && normEnd === '17:00')) {
+						startTime.value = '';
+						if (endTime) endTime.value = '';
+					}
+					startTime.focus();
+				} else if (val === '') {
+					startTime.value = '';
+					if (endTime) endTime.value = '';
+				}
+			}
+
+			function syncDeliveryTimeRangeFromInputs() {
+				var timeRange = document.getElementById('time_range');
+				var startTime = document.querySelector('input[name="start_time"]');
+				var endTime = document.getElementById('end_time') || document.querySelector('input[name="end_time"]');
+				if (!timeRange || !startTime) return;
+
+				var startVal = (startTime.value || '').trim().substring(0, 5);
+				var endVal = endTime ? (endTime.value || '').trim().substring(0, 5) : '';
+				var currentRange = timeRange.value;
+
+				if (!startVal && !endVal) {
+					timeRange.value = '';
+					return;
+				}
+
+				if (startVal === '08:00' && endVal === '12:00') {
+					timeRange.value = 'morning';
+				} else if (startVal === '13:00' && endVal === '17:00') {
+					timeRange.value = 'afternoon';
+				} else if (startVal === '08:00' && endVal === '17:00') {
+					timeRange.value = 'allday';
+				} else if (startVal === '08:00' && !endVal) {
+					if (currentRange !== 'allday' && currentRange !== 'morning') {
+						timeRange.value = 'morning';
+					}
+				} else if (startVal === '13:00' && !endVal) {
+					timeRange.value = 'afternoon';
+				} else {
+					timeRange.value = 'specific';
+				}
+			}
+
+			$(document).ready(function() {
+				var timeRange = document.getElementById('time_range');
+				var startTime = document.querySelector('input[name="start_time"]');
+				if (timeRange) {
+					$(timeRange).on('change', syncDeliveryTimeRange);
+				}
+				if (startTime) {
+					$(startTime).on('input change', syncDeliveryTimeRangeFromInputs);
+				}
+				syncDeliveryTimeRangeFromInputs();
+			});
+		</script>
 
 		<!-- การ์ดแท็บ: ที่อยู่ / รายละเอียดที่อยู่ / ที่อยู่เพิ่มเติม / ที่อยู่การคืน -->
 		<div class="so-tabs-container" style="margin-top: 24px;">
@@ -2497,6 +2707,28 @@ $adminInfoTab = [
 				</div>
 
 				<script>
+					function syncReturnTimeRangeFromTime() {
+						const timeVal = ($('#returns_time').val() || '').trim();
+						const rangeSelect = $('#return_time_range');
+						const currentRange = rangeSelect.val();
+
+						if (!timeVal) {
+							rangeSelect.val('');
+							return;
+						}
+
+						const normalizedTime = timeVal.substring(0, 5);
+						if (normalizedTime === '08:00') {
+							if (currentRange !== 'allday' && currentRange !== 'morning') {
+								rangeSelect.val('morning');
+							}
+						} else if (normalizedTime === '13:00') {
+							rangeSelect.val('afternoon');
+						} else {
+							rangeSelect.val('specific');
+						}
+					}
+
 					$(document).ready(function() {
 						$('#return_time_range').on('change', function() {
 							const val = $(this).val();
@@ -2507,10 +2739,22 @@ $adminInfoTab = [
 								timeInput.val('13:00');
 							} else if (val === 'allday') {
 								timeInput.val('08:00');
+							} else if (val === 'specific') {
+								const currentVal = (timeInput.val() || '').trim().substring(0, 5);
+								if (currentVal === '08:00' || currentVal === '13:00') {
+									timeInput.val('');
+								}
+								timeInput.focus();
 							} else {
 								timeInput.val('');
 							}
 						});
+
+						$('#returns_time').on('input change', function() {
+							syncReturnTimeRangeFromTime();
+						});
+
+						syncReturnTimeRangeFromTime();
 					});
 				</script>
 			</div>
@@ -2554,12 +2798,18 @@ $adminInfoTab = [
 		<script src="js/doc-tabs-dept-comment.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-dept-comment.js'); ?>"></script>
 		<script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 
+		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip1'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip2'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip3'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip4'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip5'] ?? '') : ''; ?>">
+
 	</div>
 
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
 			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-			<button type="button" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
+			<button type="button" name="save_draft" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
 		</div>
 	</div>
 
@@ -2606,10 +2856,25 @@ $adminInfoTab = [
 				});
 
 				// ให้ UI ที่ผูกกับค่าเหล่านี้อัปเดตตาม (ปุ่ม/ช่องที่ซ่อน-แสดงตาม objective ฯลฯ)
-				['objective', 'type_breng', 'returns', 'delivery_type'].forEach(function(name) {
+				['objective', 'type_breng', 'returns', 'delivery_type', 'returns_time', 'time_range', 'start_time'].forEach(function(name) {
 					var el = document.getElementById(name);
-					if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+					if (el) el.dispatchEvent(new Event('change', {
+						bubbles: true
+					}));
 				});
+
+				var highRoofEl = document.querySelector('input[name="is_high_roof"]');
+				if (highRoofEl) {
+					highRoofEl.dispatchEvent(new Event('change', {
+						bubbles: true
+					}));
+				}
+
+				window.isInitialBrEditLoad = true;
+				var cidElem = document.getElementById('customer_id');
+				if (cidElem && cidElem.value) {
+					doCallAjax1('customer_id', 'customer', '');
+				}
 			});
 		</script>
 	<?php } ?>
