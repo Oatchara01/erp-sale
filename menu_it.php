@@ -160,7 +160,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 						<div class="sidebar-subgroup">
 							<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">Hospital</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 							<div class="sidebar-submenu">
-								<a href="status_supbrhos1.php">ใบยืม (BR)</a>
+								<a href="status_supbrhos.php">ใบยืม (BR)</a>
 								<a href="report_brkangbysup.php">ตรวจเช็คใบยืมค้างเคลียร์ (stock)</a>
 								<a href="status_brsuparea.php">รายการตรวจเช็คใบยืม (ทั้งหมด)</a>
 								<a href="status_adminbrhos.php">สถานะ (BR)</a>

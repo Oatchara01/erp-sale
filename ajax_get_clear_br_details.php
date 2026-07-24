@@ -48,24 +48,32 @@ if (!$resBr || mysqli_num_rows($resBr) === 0) {
 }
 
 $br = mysqli_fetch_assoc($resBr);
+$ivNoEsc = mysqli_real_escape_string($conn, $br['iv_no']);
+
+// Fetch iv_no strictly from hos__so
+$soIvNoList = array();
+$sqlSoIv = "SELECT DISTINCT s.iv_no 
+            FROM hos__so s 
+            LEFT JOIN hos__subso ss ON s.ref_id = ss.ref_idd 
+            WHERE (s.ref_ren = '{$safe_ref}' OR (ss.clear_ivno = '{$ivNoEsc}' AND ss.clear_ivno != '')) 
+              AND s.status_doc = 'Approve' 
+              AND s.iv_no IS NOT NULL AND s.iv_no != ''";
+$resSoIv = mysqli_query($conn, $sqlSoIv);
+if ($resSoIv) {
+	while ($rowSo = mysqli_fetch_assoc($resSoIv)) {
+		if (!empty($rowSo['iv_no'])) {
+			$soIvNoList[] = $rowSo['iv_no'];
+		}
+	}
+}
+$soIvNoText = !empty($soIvNoList) ? implode(', ', array_unique($soIvNoList)) : '-';
 
 // Build clear documents list text
 $clearDocs = array();
 if (!empty($br['clear_book_no'])) $clearDocs[] = 'SO: ' . $br['clear_book_no'];
 if (!empty($br['clear_brn_no'])) $clearDocs[] = 'BRN: ' . $br['clear_brn_no'];
 if (!empty($br['clear_brnp_no'])) $clearDocs[] = 'BRNP: ' . $br['clear_brnp_no'];
-
-if (empty($clearDocs)) {
-	$qDocs = mysqli_query($conn, "SELECT DISTINCT s.iv_no, ss.clear_ivno FROM hos__subso ss JOIN hos__so s ON ss.ref_idd = s.ref_id WHERE s.ref_ren = '{$safe_ref}' AND s.status_doc = 'Approve'");
-	if ($qDocs) {
-		while ($rDoc = mysqli_fetch_assoc($qDocs)) {
-			$docNo = !empty($rDoc['iv_no']) ? $rDoc['iv_no'] : $rDoc['clear_ivno'];
-			if (!empty($docNo)) {
-				$clearDocs[] = $docNo;
-			}
-		}
-	}
-}
+if (!empty($soIvNoList)) $clearDocs = array_merge($clearDocs, $soIvNoList);
 
 $clearDocsText = !empty($clearDocs) ? implode(', ', array_unique($clearDocs)) : '-';
 
@@ -93,17 +101,24 @@ if ($resItems) {
 		if (isset($row['clear_ckk']) && $row['clear_ckk'] == '1') {
 			$clearedQty = $borrowQty;
 		} else if ($productId !== '') {
-			// Query cleared count from subso/subspr/subreceive/subsmp if partially cleared
+			// Query cleared count from subso/subspr/subreceive/subsmp, scoped to this BR's iv_no
 			$prodIdEsc = mysqli_real_escape_string($conn, $productId);
-			
-			$q1 = mysqli_query($conn, "SELECT SUM(count) AS cnt FROM hos__subso WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND status_so = 'Approve'");
+
+			$q1 = mysqli_query($conn, "SELECT SUM(count) AS cnt FROM hos__subso WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND clear_ivno = '{$ivNoEsc}' AND status_so = 'Approve'");
 			if ($q1 && $r1 = mysqli_fetch_assoc($q1)) $clearedQty += (int)$r1['cnt'];
 
-			$q2 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subspr WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND status_spr = 'Approve'");
+			$q2 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subspr WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND clear_ivno = '{$ivNoEsc}' AND status_spr = 'Approve'");
 			if ($q2 && $r2 = mysqli_fetch_assoc($q2)) $clearedQty += (int)$r2['cnt'];
 
-			$q3 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subsmp WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND status_smp = 'Approve'");
+			$q3 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subsmp WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND br_no = '{$ivNoEsc}' AND status_smp = 'Approve'");
 			if ($q3 && $r3 = mysqli_fetch_assoc($q3)) $clearedQty += (int)$r3['cnt'];
+
+			$q41 = mysqli_query($conn, "SELECT ref_id FROM hos__receive WHERE iv_no = '{$ivNoEsc}'");
+			if ($q41 && $r41 = mysqli_fetch_assoc($q41)) {
+				$receiveRefEsc = mysqli_real_escape_string($conn, $r41['ref_id']);
+				$q4 = mysqli_query($conn, "SELECT SUM(count) AS cnt FROM hos__subreceive WHERE ref_idd = '{$receiveRefEsc}' AND product_id = '{$prodIdEsc}'");
+				if ($q4 && $r4 = mysqli_fetch_assoc($q4)) $clearedQty += (int)$r4['cnt'];
+			}
 		}
 
 		if ($clearedQty > $borrowQty) $clearedQty = $borrowQty;
@@ -130,7 +145,7 @@ echo json_encode(array(
 	'success' => true,
 	'data' => array(
 		'ref_id_br' => $br['ref_id_br'],
-		'iv_no' => !empty($br['iv_no']) ? $br['iv_no'] : '-',
+		'iv_no' => $soIvNoText,
 		'date_br' => formatDateThaiLocal($br['date_br']),
 		'iv_date' => formatDateThaiLocal($br['iv_date']),
 		'customer' => $br['customer'],

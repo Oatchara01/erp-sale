@@ -135,6 +135,8 @@ include "dbconnect_sale.php";
 		var content = document.getElementById('clearBrContent');
 		if (!modal) return;
 
+		window.__cbrRefId = refIdBr;
+
 		modal.style.display = 'flex';
 		loading.style.display = 'block';
 		content.style.display = 'none';
@@ -159,15 +161,33 @@ include "dbconnect_sale.php";
 				var tbody = document.getElementById('cbrItemsTableBody');
 				tbody.innerHTML = '';
 				if (!d.items || d.items.length === 0) {
-					tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#8E8B94;">ไม่พบรายการสินค้า</td></tr>';
+					tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#8E8B94;">ไม่พบรายการสินค้า</td></tr>';
 				} else {
-					d.items.forEach(function(item) {
+					d.items.forEach(function(item, idx) {
+						var subRowId = 'cbr-sub-' + idx;
+						var productId = item.product_id || '';
+
 						var tr = document.createElement('tr');
-						tr.innerHTML = '<td style="vertical-align:middle;"><div style="font-weight:500; color:#3B3B3B;">' + escapeHtmlLocal(item.product_name) + '</div>' + (item.product_code ? '<div style="font-size:12px; color:#8E8B94;">' + escapeHtmlLocal(item.product_code) + '</div>' : '') + '</td>' +
+						tr.className = 'so-row cbr-item-row';
+						tr.setAttribute('role', 'button');
+						tr.setAttribute('tabindex', '0');
+						tr.setAttribute('aria-expanded', 'false');
+						tr.onclick = function() {
+							toggleCbrItemRow(subRowId, productId, tr);
+						};
+						tr.innerHTML = '<td style="vertical-align:middle;"><span style="display:inline-flex; align-items:center; gap:8px;"><img src="img/icons/arrow_down.png" class="caret-icon" alt="" style="width:12px; height:12px; flex-shrink:0;"><span><span style="font-weight:500; color:#3B3B3B;">' + escapeHtmlLocal(item.product_name) + '</span>' + (item.product_code ? '<div style="font-size:12px; color:#8E8B94;">' + escapeHtmlLocal(item.product_code) + '</div>' : '') + '</span></span></td>' +
 							'<td style="text-align:center; vertical-align:middle; font-weight:600;">' + item.borrow_qty + '</td>' +
-							'<td style="text-align:center; vertical-align:middle; color:#FF830F; font-weight:600;">' + item.remaining_qty + '</td>' +
-							'<td style="text-align:center; vertical-align:middle; font-weight:500; color:#3B3B3B;">' + (item.sn ? escapeHtmlLocal(item.sn) : '-') + '</td>';
+							'<td style="text-align:center; vertical-align:middle; color:#FF830F; font-weight:600;">' + item.remaining_qty + '</td>';
+							// '<td style="text-align:center; vertical-align:middle; font-weight:500; color:#3B3B3B;">' + (item.sn ? escapeHtmlLocal(item.sn) : '-') + '</td>';
 						tbody.appendChild(tr);
+
+						var subTr = document.createElement('tr');
+						subTr.className = 'expanded-row cbr-sub-row';
+						subTr.id = subRowId;
+						subTr.style.display = 'none';
+						subTr.setAttribute('data-loaded', '0');
+						subTr.innerHTML = '<td colspan="3"><div class="expanded-container"><div class="expanded-products-card" id="' + subRowId + '-body"></div></div></td>';
+						tbody.appendChild(subTr);
 					});
 				}
 
@@ -195,6 +215,98 @@ include "dbconnect_sale.php";
 			.replace(/>/g, "&gt;")
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#039;");
+	}
+
+	function formatMoneyLocal(value) {
+		var n = parseFloat(value);
+		if (isNaN(n)) n = 0;
+		return n.toLocaleString('en-US', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+	}
+
+	function renderCbrDocsTable(docs) {
+		var head = '<table class="sub-table" style="min-width:820px;"><thead><tr>' +
+			'<th style="width:13%;">วันที่ออกเอกสาร</th>' +
+			'<th style="width:15%;">เลขที่เอกสาร</th>' +
+			'<th style="width:20%;">ชื่อลูกค้า</th>' +
+			'<th style="width:11%; text-align:center;">จำนวนเคลียร์</th>' +
+			'<th style="width:12%; text-align:right;">ราคา/หน่วย</th>' +
+			'<th style="width:13%; text-align:right;">ยอดรวม/สินค้า</th>' +
+			'<th style="width:16%;">หมายเลข SN</th>' +
+			'</tr></thead><tbody>';
+
+		if (!docs || docs.length === 0) {
+			return head + '<tr><td colspan="7" style="text-align:center; color:#8E8B94; padding:16px;">ไม่พบเอกสารที่เคลียร์</td></tr></tbody></table>';
+		}
+
+		var body = '';
+		docs.forEach(function(doc) {
+			body += '<tr>' +
+				'<td>' + escapeHtmlLocal(doc.doc_date) + '</td>' +
+				'<td style="color:#612989; font-weight:500;">' + escapeHtmlLocal(doc.doc_no) + '</td>' +
+				'<td>' + escapeHtmlLocal(doc.customer) + '</td>' +
+				'<td style="text-align:center; font-weight:600;">' + doc.cleared_qty + '</td>' +
+				'<td style="text-align:right;">' + formatMoneyLocal(doc.price) + '</td>' +
+				'<td style="text-align:right;">' + formatMoneyLocal(doc.amount) + '</td>' +
+				'<td>' + escapeHtmlLocal(doc.sn) + '</td>' +
+				'</tr>';
+		});
+		return head + body + '</tbody></table>';
+	}
+
+	function toggleCbrItemRow(subRowId, productId, triggerEl) {
+		var subRow = document.getElementById(subRowId);
+		if (!subRow) return;
+		var isVisible = subRow.style.display !== 'none';
+
+		// ปิดแถวย่อยอื่น ๆ + รีเซ็ต caret ของแถวสินค้าอื่น
+		document.querySelectorAll('.cbr-sub-row').forEach(function(r) {
+			if (r.id !== subRowId) r.style.display = 'none';
+		});
+		document.querySelectorAll('.cbr-item-row').forEach(function(r) {
+			if (r !== triggerEl) {
+				r.classList.remove('is-expanded');
+				r.setAttribute('aria-expanded', 'false');
+			}
+		});
+
+		if (isVisible) {
+			subRow.style.display = 'none';
+			triggerEl.classList.remove('is-expanded');
+			triggerEl.setAttribute('aria-expanded', 'false');
+			return;
+		}
+
+		subRow.style.display = 'table-row';
+		triggerEl.classList.add('is-expanded');
+		triggerEl.setAttribute('aria-expanded', 'true');
+
+		if (subRow.getAttribute('data-loaded') === '1') return;
+
+		var body = document.getElementById(subRowId + '-body');
+		if (body) {
+			body.innerHTML = '<div style="text-align:center; padding:16px; color:#8E8B94;"><i class="fas fa-spinner fa-spin" style="color:#612989;"></i> กำลังโหลดเอกสารที่เคลียร์...</div>';
+		}
+
+		fetch('ajax_get_clear_br_item_docs.php?ref_id_br=' + encodeURIComponent(window.__cbrRefId || '') + '&product_id=' + encodeURIComponent(productId))
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(res) {
+				if (!body) return;
+				if (!res.success) {
+					body.innerHTML = '<div style="text-align:center; padding:16px; color:#CF1322;">' + escapeHtmlLocal(res.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล') + '</div>';
+					return;
+				}
+				body.innerHTML = renderCbrDocsTable(res.data.items);
+				subRow.setAttribute('data-loaded', '1');
+			})
+			.catch(function(err) {
+				console.error(err);
+				if (body) body.innerHTML = '<div style="text-align:center; padding:16px; color:#CF1322;">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์</div>';
+			});
 	}
 
 	document.addEventListener('keydown', function(event) {
@@ -254,21 +366,7 @@ include "dbconnect_sale.php";
 			date_default_timezone_set("Asia/Bangkok");
 			$emid = isset($_SESSION['code']) ? $_SESSION['code'] : '';
 
-			if ($emid == 'SS1') {
-				$sddd = " sale_code IN ('S15','S16','S21','S22','S14')";
-			} else if ($emid == 'SS2') {
-				$sddd = " sale_code IN ('S11','S12','S17','S24','S13')";
-			} else if ($emid == 'SS3') {
-				$sddd = " sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-			} else if ($emid == 'SS5') {
-				$sddd = " sale_code IN ('S31','S32')";
-			} else if ($emid == 'SUP_EN') {
-				$sddd = " sale_code LIKE '%EN%'";
-			} else if ($emid == 'SUP_MK') {
-				$sddd = " sale_code IN ('MK','SOL91','SOL92','SOL93','SOL94')";
-			} else {
-				$sddd = "1";
-			}
+			$sddd = "1";
 
 			$Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '';
 			$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : '';
@@ -546,13 +644,10 @@ include "dbconnect_sale.php";
 								if ($objResult["status_doc"] == 'Approve' || $objResult["status_doc"] == 'อนุมัติแล้ว') {
 									$status_class = 'approve';
 									$status_text = 'อนุมัติแล้ว';
-								} else if ($objResult["status_doc"] == 'Draft') {
-									$status_class = 'draft';
-									$status_text = 'Draft';
 								} else if ($objResult["status_doc"] == 'Rejected' || $objResult["status_doc"] == 'ไม่อนุมัติ') {
 									$status_class = 'rejected';
 									$status_text = 'ไม่อนุมัติ';
-								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า') {
+								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า' || $objResult["status_doc"] == 'Draft') {
 									$status_class = 'pending-mgr';
 									$status_text = 'รอหัวหน้า';
 								} else if ($objResult["status_doc"] == 'ส่งกลับ') {
@@ -790,7 +885,7 @@ include "dbconnect_sale.php";
 											<th style="width:280px; font-size:14px; font-weight:600; padding:14px 16px; color:#1C1B1F; border-bottom:1px solid #EDE9F0;">รายการสินค้า</th>
 											<th style="font-size:14px; font-weight:600; text-align:center; width:100px; padding:14px 16px; color:#1C1B1F; border-bottom:1px solid #EDE9F0;">จำนวนยืม</th>
 											<th style="font-size:14px; font-weight:600; text-align:center; width:110px; padding:14px 16px; color:#FF830F; border-bottom:1px solid #EDE9F0;">จำนวนคงค้าง</th>
-											<th style="font-size:14px; font-weight:600; text-align:center; width:140px; padding:14px 16px; color:#1C1B1F; border-bottom:1px solid #EDE9F0;">หมายเลข SN</th>
+											<!-- <th style="font-size:14px; font-weight:600; text-align:center; width:140px; padding:14px 16px; color:#1C1B1F; border-bottom:1px solid #EDE9F0;">หมายเลข SN</th> -->
 										</tr>
 									</thead>
 									<tbody id="cbrItemsTableBody">

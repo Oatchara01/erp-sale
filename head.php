@@ -67,7 +67,7 @@ function showUser2(str) {
                 document.getElementById("txtHint3").innerHTML = this.responseText;
             }
         };
-        xmlhttp.open("GET","getuser2.php?q="+str2"&u="+str3,true);
+        xmlhttp.open("GET","getuser2.php?q="+str2+"&u="+str3,true);
         xmlhttp.send();
     }
 }

@@ -191,7 +191,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 					<a href="main_suphos_br.php">ใบยืม (BR)</a>
 					<a href="register_suphos.php">ใบสั่งขาย (SO)</a>
 					<a href="main_suphos_change.php">ใบแลกเปลี่ยน</a>
-					<a href="status_supbrhos1.php">Status ใบยืม (BR)</a>
+					<a href="status_supbrhos.php">Status ใบยืม (BR)</a>
 					<a href="status_suphos1.php">Status ใบสั่งขาย (SO)</a>
 					<a href="status_supchange1.php">Status ใบแลกเปลี่ยน</a>
 				</div>
@@ -845,7 +845,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 						<a href="register_suphos.php">ใบสั่งขาย (SO)</a>
 						<a href="main_suphos_change.php">ใบแลกเปลี่ยน</a>
 						<a href="main_sup_brsc.php">ใบยืมฝากขาย</a>
-						<a href="status_supbrhos1.php">Status ใบยืม (BR)</a>
+						<a href="status_supbrhos.php">Status ใบยืม (BR)</a>
 						<a href="status_adminhos.php">Status ใบสั่งขาย (SO)</a>
 						<a href="status_supchange1.php">Status ใบแลกเปลี่ยน</a>
 						<a href="status_supbrsc1.php">Status ใบฝากขาย</a>
