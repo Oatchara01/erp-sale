@@ -19,14 +19,18 @@ $objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
 $objResult = mysqli_fetch_array($objQuery);
 
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
+$ttt = substr($ref_id,0,2);
+
+if($ttt=='BR'){
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id."' ";
+}else{
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
+}
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
 
 $summary_1=$objResult15['amount_1'];
 $summary= number_format( $summary_1,2)."";
-
-$ttt = substr($ref_id,0,2);
 
 if($ttt=='SM'){
 

@@ -111,12 +111,6 @@ body {
 	opacity: 0.9;
 }
 
-.so-section-title-container {
-	margin: 0 0 24px 0;
-	border-bottom: 1px solid var(--so-border);
-	padding-bottom: 12px;
-}
-
 .so-section-title {
 	font-size: 20px;
 	font-weight: 500;

@@ -1,141 +1,146 @@
 <?php
-	function br_product_row_hos($i)
-	{
-	?>
-		<tr class="so-product-row" id="br_row<?php echo $i; ?>"
-			style="display:none;"
-			ondragstart="brHandleDragStart(event, <?php echo $i; ?>)"
-			ondragover="brHandleDragOver(event)"
-			ondragenter="brHandleDragEnter(event)"
-			ondragleave="brHandleDragLeave(event)"
-			ondrop="brHandleDrop(event, <?php echo $i; ?>)"
-			ondragend="brHandleDragEnd(event)">
-			<td class="br-row-handle-cell">
-				<div class="br-row-handle-wrap">
-					<i class="fas fa-grip-vertical br-drag-handle"
-						onmousedown="document.getElementById('br_row<?php echo $i; ?>').setAttribute('draggable', true)"
-						onmouseup="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"
-						onmouseleave="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"></i>
+function br_product_row_hos($i)
+{
+?>
+	<tr class="so-product-row" id="br_row<?php echo $i; ?>"
+		style="display:none;"
+		ondragstart="brHandleDragStart(event, <?php echo $i; ?>)"
+		ondragover="brHandleDragOver(event)"
+		ondragenter="brHandleDragEnter(event)"
+		ondragleave="brHandleDragLeave(event)"
+		ondrop="brHandleDrop(event, <?php echo $i; ?>)"
+		ondragend="brHandleDragEnd(event)">
+		<td class="br-row-handle-cell">
+			<div class="br-row-handle-wrap">
+				<i class="fas fa-grip-vertical br-drag-handle"
+					onmousedown="document.getElementById('br_row<?php echo $i; ?>').setAttribute('draggable', true)"
+					onmouseup="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"
+					onmouseleave="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"></i>
+				<label class="so-row-checkbox-wrap">
+					<input type="checkbox" class="so-row-checkbox" id="br_ck<?php echo $i; ?>" onchange="brToggleRowHighlight(this, <?php echo $i; ?>);">
+					<span class="so-row-checkbox-dot" aria-hidden="true"></span>
+				</label>
+			</div>
+			<input type='hidden' name="product_codet<?php echo $i; ?>" id="product_codet<?php echo $i; ?>" value="">
+			<input type='hidden' name="product_c<?php echo $i; ?>" id="product_c<?php echo $i; ?>" value="">
+			<input type='hidden' name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
+			<input type='hidden' name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
+			<input type='hidden' name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>">
+			<input type='hidden' name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
+			<input type='hidden' name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
+			<input type='hidden' name="store<?php echo $i; ?>" id="store<?php echo $i; ?>">
+			<input type='hidden' name="store_remark<?php echo $i; ?>" id="store_remark<?php echo $i; ?>">
+			<input type='hidden' name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
+		</td>
+		<td><input type='text' name="product_code<?php echo $i; ?>" id="product_code<?php echo $i; ?>" class="so-input" readonly /></td>
+		<td><span class="so-product-name-label" id="product_name_label<?php echo $i; ?>"></span></td>
+		<td><input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="brUpdateRowTotal(<?php echo $i; ?>); brCalculateSummary();" /></td>
+		<td><input type='text' name="product_price<?php echo $i; ?>" id="product_price<?php echo $i; ?>" class="so-input" style="text-align:right" oninput="brUpdateRowTotal(<?php echo $i; ?>); brCalculateSummary();" /></td>
+		<td><input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" readonly /></td>
+		<td><input type='text' name="br_period<?php echo $i; ?>" id="br_period<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="brCalculateSummary();" /></td>
+		<td class="so-product-remove-cell">
+			<i class="far fa-edit br-action-icon" title="แก้ไขข้อมูลเพิ่มเติม" role="button" tabindex="0" aria-label="แก้ไขข้อมูลเพิ่มเติม" onclick="brOpenEditModal(<?php echo $i; ?>);"></i>
+			<i class="far fa-trash-alt br-action-icon" title="ลบ" role="button" tabindex="0" aria-label="ลบรายการนี้" onclick="brClearRow(<?php echo $i; ?>);"></i>
+		</td>
+	</tr>
+<?php
+}
+?>
+
+<div class="so-product-summary-bar" id="br_summary_bar">
+	<div class="so-product-summary-col">
+		<span class="so-product-summary-label">จำนวนรวม(ชิ้น)</span>
+		<span class="so-product-summary-value" id="br_summary_qty">0</span>
+	</div>
+	<div class="so-product-summary-col">
+		<span class="so-product-summary-label">ยอดรวม</span>
+		<span class="so-product-summary-value" id="br_summary_amount">0.00</span>
+	</div>
+	<div class="so-product-summary-col">
+		<span class="so-product-summary-label">ยอดรวมสุทธิ</span>
+		<span class="so-product-summary-value" id="br_summary_net">0.00</span>
+	</div>
+</div>
+
+<div class="br-product-header-row">
+	<div class="br-global-search-block">
+		<label class="br-global-search-label" for="br_global_search">ค้นหารายการสินค้า</label>
+		<div class="br-product-search-wrap br-global-search-wrap">
+			<div class="br-global-search-bar">
+				<i class="fas fa-search"></i>
+				<input type="text" id="br_global_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off" oninput="brGlobalSearchInput();">
+			</div>
+			<div class="br-product-search-dropdown" id="br_global_search_dd"></div>
+		</div>
+	</div>
+	<button type="button" class="br-delete-selected-btn" id="br_delete_selected_btn" onclick="brDeleteSelectedRows();">
+		<i class="far fa-trash-alt"></i> ลบรายการที่เลือก
+	</button>
+</div>
+
+<div class="so-product-table-wrap" id="br_product_table_wrap">
+	<table class="so-product-table" id="br_product_table">
+		<thead>
+			<tr>
+				<th style="width:70px;text-align:center;">
 					<label class="so-row-checkbox-wrap">
-						<input type="checkbox" class="so-row-checkbox" id="br_ck<?php echo $i; ?>" onchange="brToggleRowHighlight(this, <?php echo $i; ?>);">
+						<input type="checkbox" id="br_select_all" class="so-row-checkbox" onclick="brToggleSelectAll(this);">
 						<span class="so-row-checkbox-dot" aria-hidden="true"></span>
 					</label>
-				</div>
-				<input type='hidden' name="product_codet<?php echo $i; ?>" id="product_codet<?php echo $i; ?>" value="">
-				<input type='hidden' name="product_c<?php echo $i; ?>" id="product_c<?php echo $i; ?>" value="">
-				<input type='hidden' name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
-				<input type='hidden' name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
-				<input type='hidden' name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>">
-				<input type='hidden' name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
-				<input type='hidden' name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
-				<input type='hidden' name="store<?php echo $i; ?>" id="store<?php echo $i; ?>">
-				<input type='hidden' name="store_remark<?php echo $i; ?>" id="store_remark<?php echo $i; ?>">
-				<input type='hidden' name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
-			</td>
-			<td><input type='text' name="product_code<?php echo $i; ?>" id="product_code<?php echo $i; ?>" class="so-input" readonly /></td>
-			<td><span class="so-product-name-label" id="product_name_label<?php echo $i; ?>"></span></td>
-			<td><input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="brUpdateRowTotal(<?php echo $i; ?>); brCalculateSummary();" /></td>
-			<td><input type='text' name="product_price<?php echo $i; ?>" id="product_price<?php echo $i; ?>" class="so-input" style="text-align:right" oninput="brUpdateRowTotal(<?php echo $i; ?>); brCalculateSummary();" /></td>
-			<td><input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" readonly /></td>
-			<td><input type='text' name="br_period<?php echo $i; ?>" id="br_period<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="brCalculateSummary();" /></td>
-			<td class="so-product-remove-cell">
-				<i class="far fa-edit br-action-icon" title="แก้ไขข้อมูลเพิ่มเติม" role="button" tabindex="0" aria-label="แก้ไขข้อมูลเพิ่มเติม" onclick="brOpenEditModal(<?php echo $i; ?>);"></i>
-				<i class="far fa-trash-alt br-action-icon" title="ลบ" role="button" tabindex="0" aria-label="ลบรายการนี้" onclick="brClearRow(<?php echo $i; ?>);"></i>
-			</td>
-		</tr>
-	<?php
-	}
-	?>
+				</th>
+				<th>รหัสสินค้า</th>
+				<th>รายการสินค้า</th>
+				<th style="text-align:center;">จำนวน</th>
+				<th style="text-align:center;">ราคา/หน่วย</th>
+				<th style="text-align:center;">ยอดรวม</th>
+				<th style="text-align:center;">จำนวนวันที่ยืม</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php
+			// จำนวนแถวต้องรองรับเอกสารที่ BOM แตกองค์ประกอบเกิน 8 รายการ (1 สินค้าชุดแตกได้ถึง 10 องค์ประกอบ/ช่อง)
+			// ถ้า render แค่ 8 แถวตายตัว edit mode จะโหลดข้อมูลมาไม่ครบ แล้ว save ทับ (DELETE+INSERT) ทำให้แถวส่วนเกินหายถาวร
+			$brRowCount = max(8, isset($savedProducts) ? count($savedProducts) : 0);
+			for ($i = 1; $i <= $brRowCount; $i++) br_product_row_hos($i);
+			?>
+		</tbody>
+	</table>
+</div>
 
-	<div class="so-product-summary-bar" id="br_summary_bar">
-		<div class="so-product-summary-col">
-			<span class="so-product-summary-label">จำนวนรวม(ชิ้น)</span>
-			<span class="so-product-summary-value" id="br_summary_qty">0</span>
+<!-- ป๊อปอัปข้อมูลรายการสินค้าเพิ่มเติม (หมายเหตุสินค้า และ ชื่อที่แสดงในใบส่งสินค้า) สไตล์สีม่วงเม็ดยา -->
+<div id="brEditModal" class="customer-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box br-edit-popup-box" role="dialog" aria-modal="true" aria-labelledby="brEditModalTitle">
+		<button type="button" class="customer-popup-close" onclick="brCloseEditModal();" aria-label="Close">&times;</button>
+		<div class="customer-popup-header">
+			<h2 id="brEditModalTitle">ข้อมูลรายการสินค้าเพิ่มเติม</h2>
 		</div>
-		<div class="so-product-summary-col">
-			<span class="so-product-summary-label">ยอดรวม</span>
-			<span class="so-product-summary-value" id="br_summary_amount">0.00</span>
-		</div>
-		<div class="so-product-summary-col">
-			<span class="so-product-summary-label">ยอดรวมสุทธิ</span>
-			<span class="so-product-summary-value" id="br_summary_net">0.00</span>
-		</div>
-	</div>
-
-	<div class="br-product-header-row">
-		<div class="br-global-search-block">
-			<label class="br-global-search-label" for="br_global_search">ค้นหารายการสินค้า</label>
-			<div class="br-product-search-wrap br-global-search-wrap">
-				<div class="br-global-search-bar">
-					<i class="fas fa-search"></i>
-					<input type="text" id="br_global_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off" oninput="brGlobalSearchInput();">
-				</div>
-				<div class="br-product-search-dropdown" id="br_global_search_dd"></div>
-			</div>
-		</div>
-		<button type="button" class="br-delete-selected-btn" id="br_delete_selected_btn" onclick="brDeleteSelectedRows();">
-			<i class="far fa-trash-alt"></i> ลบรายการที่เลือก
-		</button>
-	</div>
-
-	<div class="so-product-table-wrap" id="br_product_table_wrap">
-		<table class="so-product-table" id="br_product_table">
-			<thead>
-				<tr>
-					<th style="width:70px;text-align:center;">
-						<label class="so-row-checkbox-wrap">
-							<input type="checkbox" id="br_select_all" class="so-row-checkbox" onclick="brToggleSelectAll(this);">
-							<span class="so-row-checkbox-dot" aria-hidden="true"></span>
-						</label>
-					</th>
-					<th>รหัสสินค้า</th>
-					<th>รายการสินค้า</th>
-					<th style="text-align:center;">จำนวน</th>
-					<th style="text-align:center;">ราคา/หน่วย</th>
-					<th style="text-align:center;">ยอดรวม</th>
-					<th style="text-align:center;">จำนวนวันที่ยืม</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php for ($i = 1; $i <= 8; $i++) br_product_row_hos($i); ?>
-			</tbody>
-		</table>
-	</div>
-
-	<!-- ป๊อปอัปข้อมูลรายการสินค้าเพิ่มเติม (หมายเหตุสินค้า และ ชื่อที่แสดงในใบส่งสินค้า) สไตล์สีม่วงเม็ดยา -->
-	<div id="brEditModal" class="customer-popup-modal" aria-hidden="true">
-		<div class="customer-popup-box br-edit-popup-box" role="dialog" aria-modal="true" aria-labelledby="brEditModalTitle">
-			<button type="button" class="customer-popup-close" onclick="brCloseEditModal();" aria-label="Close">&times;</button>
-			<div class="customer-popup-header">
-				<h2 id="brEditModalTitle">ข้อมูลรายการสินค้าเพิ่มเติม</h2>
-			</div>
-			<div class="br-edit-popup-body">
-				<input type="hidden" id="br_edit_row_index">
-				<div class="so-field-group" style="margin-bottom:0;">
-					<label class="so-label" for="br_m_remark" style="color:#612989; font-weight: 500; font-size: 13px;">หมายเหตุสินค้า</label>
-					<div class="so-input-wrapper">
-						<input type="text" id="br_m_remark" class="so-input" placeholder="กรอกข้อมูล">
-						<button type="button" class="fas fa-times so-clear-icon" onclick="clearFieldValue('br_m_remark');" aria-label="ล้างข้อมูล"></button>
-					</div>
-				</div>
-				<div class="so-field-group" style="margin-bottom:0;">
-					<label class="so-label" for="br_m_display_name" style="color:#612989; font-weight: 500; font-size: 13px;">ชื่อที่แสดงในใบส่งสินค้า</label>
-					<div class="so-input-wrapper">
-						<input type="text" id="br_m_display_name" class="so-input" placeholder="กรอกข้อมูล">
-						<button type="button" class="fas fa-times so-clear-icon" onclick="clearFieldValue('br_m_display_name');" aria-label="ล้างข้อมูล"></button>
-					</div>
+		<div class="br-edit-popup-body">
+			<input type="hidden" id="br_edit_row_index">
+			<div class="so-field-group" style="margin-bottom:0;">
+				<label class="so-label" for="br_m_remark" style="color:#612989; font-weight: 500; font-size: 13px;">หมายเหตุสินค้า</label>
+				<div class="so-input-wrapper">
+					<input type="text" id="br_m_remark" class="so-input" placeholder="กรอกข้อมูล">
+					<button type="button" class="fas fa-times so-clear-icon" onclick="clearFieldValue('br_m_remark');" aria-label="ล้างข้อมูล"></button>
 				</div>
 			</div>
-			<div class="customer-popup-actions" style="border-top: none;">
-				<button type="button" class="customer-popup-confirm" onclick="brSaveEditModal();" style="background: #612989; color: #FFF; border: none; padding: 0 34px; min-width: 152px; height: 42px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Prompt'; box-shadow: 0 6px 16px rgba(97, 41, 137, 0.22); margin-right: 12px;">อัพเดท</button>
-				<button type="button" class="customer-popup-cancel" onclick="brCloseEditModal();" style="background: #FFF; color: #612989; border: 1px solid #EFEBEF; padding: 0 34px; min-width: 152px; height: 42px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Prompt'; box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);">ยกเลิก</button>
-			</div>
+			<!-- <div class="so-field-group" style="margin-bottom:0;">
+				<label class="so-label" for="br_m_display_name" style="color:#612989; font-weight: 500; font-size: 13px;">ชื่อที่แสดงในใบส่งสินค้า</label>
+				<div class="so-input-wrapper">
+					<input type="text" id="br_m_display_name" class="so-input" placeholder="กรอกข้อมูล">
+					<button type="button" class="fas fa-times so-clear-icon" onclick="clearFieldValue('br_m_display_name');" aria-label="ล้างข้อมูล"></button>
+				</div>
+			</div> -->
+		</div>
+		<div class="customer-popup-actions" style="border-top: none;">
+			<button type="button" class="customer-popup-confirm" onclick="brSaveEditModal();" style="background: #612989; color: #FFF; border: none; padding: 0 34px; min-width: 152px; height: 42px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Prompt'; box-shadow: 0 6px 16px rgba(97, 41, 137, 0.22); margin-right: 12px;">อัพเดท</button>
+			<button type="button" class="customer-popup-cancel" onclick="brCloseEditModal();" style="background: #FFF; color: #612989; border: 1px solid #EFEBEF; padding: 0 34px; min-width: 152px; height: 42px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; font-family: 'Prompt'; box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);">ยกเลิก</button>
 		</div>
 	</div>
+</div>
 
 <script type="text/javascript">
-	var BR_ROW_COUNT = 8;
+	var BR_ROW_COUNT = <?php echo (int)$brRowCount; ?>; // เท่ากับจำนวนแถว <tr> ที่ render จริง (>= 8 เมื่อเอกสารมีองค์ประกอบ BOM เกิน 8 รายการ)
 	var brSearchDept = <?php echo ($_SESSION['department'] ?? '') === 'วิศวกรรม' ? "'eng'" : "'sale'"; ?>;
 	var brGlobalSearchTimer = null;
 	var brDragSourceIndex = null;
@@ -372,8 +377,11 @@
 	function brOpenEditModal(rowIndex) {
 		document.getElementById('br_edit_row_index').value = rowIndex;
 		document.getElementById('br_m_remark').value = document.getElementById('sale_remarkk' + rowIndex).value;
-		document.getElementById('br_m_display_name').value = document.getElementById('display_name' + rowIndex).value || '';
-		
+		var displayNameEl = document.getElementById('br_m_display_name');
+		if (displayNameEl) {
+			displayNameEl.value = document.getElementById('display_name' + rowIndex).value || '';
+		}
+
 		var modal = document.getElementById('brEditModal');
 		modal.style.display = 'flex';
 		modal.setAttribute('aria-hidden', 'false');
@@ -389,7 +397,10 @@
 		var rowIndex = document.getElementById('br_edit_row_index').value;
 		if (!rowIndex) return;
 		document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('br_m_remark').value;
-		document.getElementById('display_name' + rowIndex).value = document.getElementById('br_m_display_name').value;
+		var displayNameEl = document.getElementById('br_m_display_name');
+		if (displayNameEl && document.getElementById('display_name' + rowIndex)) {
+			document.getElementById('display_name' + rowIndex).value = displayNameEl.value;
+		}
 		brCloseEditModal();
 	}
 
@@ -484,7 +495,7 @@
 							input.value = '';
 							var rowIndex = brFindFirstEmptyRow();
 							if (rowIndex === -1) {
-								alert('เพิ่มสินค้าไม่ได้ ตารางเต็ม (8 รายการ)');
+								alert('เพิ่มสินค้าไม่ได้ ตารางเต็ม (' + BR_ROW_COUNT + ' รายการ)');
 								return;
 							}
 							brFetchProduct(rowIndex, p.product_code);

@@ -222,6 +222,7 @@ body.has-sidebar.sidebar-collapsed {
 	border: 1px solid #EDE9F0;
 	background: #FFFFFF;
 	-webkit-overflow-scrolling: touch;
+	padding-bottom: 12px;
 }
 
 .so-table {
@@ -434,6 +435,92 @@ body.has-sidebar.sidebar-collapsed {
 }
 
 /* Modals */
+.so-modal {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	z-index: 99999;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	box-sizing: border-box;
+}
+
+.so-modal-backdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(2px);
+	z-index: 1;
+}
+
+.so-modal-content {
+	position: relative;
+	z-index: 2;
+	background: #FFFFFF;
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+	padding: 24px;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-sizing: border-box;
+}
+
+.so-modal-close {
+	min-width: 44px;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	font-size: 46px;
+	cursor: pointer;
+	color: #8E8B94;
+	line-height: 1;
+}
+
+/* รายละเอียดเคลียร์ยืม modal */
+.cbr-modal-content {
+	max-width: 1300px;
+	width: 92%;
+	padding: clamp(16px, 4vw, 28px);
+}
+
+.cbr-summary-grid {
+	background: #FFFFFF;
+	padding: 12px 4px 20px 4px;
+	margin-bottom: 24px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 20px 32px;
+}
+
+.cbr-table-wrapper {
+	border: 1px solid #EDE9F0;
+	border-radius: 12px;
+	padding-bottom: 0;
+}
+
+.cbr-table {
+	margin: 0;
+	min-width: 480px;
+	/* override .so-table's 1120px — this table has only 3 columns */
+}
+
+@media (max-width: 600px) {
+	.cbr-summary-grid {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
 .so-modal-header {
 	border-bottom: none;
 	padding-bottom: 0;
@@ -594,6 +681,12 @@ body.has-sidebar.sidebar-collapsed {
 	display: block;
 }
 
+.so-dropdown-menu.drop-up {
+	top: auto !important;
+	bottom: 100% !important;
+	margin-bottom: 6px !important;
+}
+
 .so-dropdown-item {
 	color: #3B3B3B;
 	padding: 10px 16px;
@@ -634,6 +727,14 @@ body.has-sidebar.sidebar-collapsed {
 }
 
 @media (max-width: 768px) {
+	/* Sidebar overlays on mobile, so cancel the desktop body offset.
+	   Must be !important to beat the !important base rule above. */
+	body.has-sidebar,
+	body.has-sidebar.sidebar-collapsed {
+		margin-left: 0 !important;
+		width: 100% !important;
+	}
+
 	.status-so-page {
 		padding: 16px 10px;
 	}

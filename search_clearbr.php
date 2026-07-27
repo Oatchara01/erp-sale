@@ -11,19 +11,19 @@
 <div class="w3-container w3-third">
 
 เลขที่ใบยืม :
-<input name="iv_no" type="text" id="iv_no" class="w3-input" value="<?php echo $_GET["iv_no"];?>"></div>
+<input name="iv_no" type="text" id="iv_no" class="w3-input" value="<?php echo $_GET["iv_no"] ?? '';?>"></div>
 	
 <div class="w3-container w3-third">
   รหัสสินค้า
-<input type='text' name = "product_codet" value="<?php echo $_GET["product_codet"];?>" id = "product_codet" class="w3-input" placeholder="ค้นหา รหัสสินค้า..." /> 
+<input type='text' name = "product_codet" value="<?php echo $_GET["product_codet"] ?? '';?>" id = "product_codet" class="w3-input" placeholder="ค้นหา รหัสสินค้า..." /> 
 
 </div>
 
 <div class="w3-container w3-third">
 
 ชื่อสินค้า
-<input type='text' name = "product_code"  value="<?php echo $_GET["product_code"];?>" id = "product_code" class="w3-input" placeholder="ค้นหา ชื่อสินค้า..." /> 
-<input type='hidden' name = "h_product_code" value="<?php echo $_GET["h_product_code"];?>" id = "h_product_code"  class="w3-input" readonly>
+<input type='text' name = "product_code"  value="<?php echo $_GET["product_code"] ?? '';?>" id = "product_code" class="w3-input" placeholder="ค้นหา ชื่อสินค้า..." /> 
+<input type='hidden' name = "h_product_code" value="<?php echo $_GET["h_product_code"] ?? '';?>" id = "h_product_code"  class="w3-input" readonly>
 
 </div>	
 	

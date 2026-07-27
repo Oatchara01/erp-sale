@@ -66,6 +66,16 @@
 		ele.onKeyPress = vchar;
 	}
 
+	var BR_ROW_COUNT = 10;
+	var brRowFields = ['product_codet', 'product_c', 'product_id', 'unit_name', 'product_name', 'product_code', 'sale_count', 'product_price', 'sum_amount', 'sale_remarkk'];
+
+	function brSetRowData(i, data) {
+		brRowFields.forEach(function(f) {
+			var el = document.getElementById(f + i);
+			if (el && data[f] !== undefined) el.value = data[f];
+		});
+	}
+
 	var brProductSearchDept = <?php echo ($_SESSION['department'] ?? '') === 'วิศวกรรม' ? "'eng'" : "'sale'"; ?>;
 	var brProductSearchTimer = null;
 
