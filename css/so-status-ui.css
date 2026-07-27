@@ -498,7 +498,7 @@ body.has-sidebar.sidebar-collapsed {
 	padding: 12px 4px 20px 4px;
 	margin-bottom: 24px;
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	gap: 20px 32px;
 }
 
@@ -510,6 +510,8 @@ body.has-sidebar.sidebar-collapsed {
 
 .cbr-table {
 	margin: 0;
+	min-width: 480px;
+	/* override .so-table's 1120px — this table has only 3 columns */
 }
 
 @media (max-width: 600px) {
@@ -725,6 +727,14 @@ body.has-sidebar.sidebar-collapsed {
 }
 
 @media (max-width: 768px) {
+	/* Sidebar overlays on mobile, so cancel the desktop body offset.
+	   Must be !important to beat the !important base rule above. */
+	body.has-sidebar,
+	body.has-sidebar.sidebar-collapsed {
+		margin-left: 0 !important;
+		width: 100% !important;
+	}
+
 	.status-so-page {
 		padding: 16px 10px;
 	}
