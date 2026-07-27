@@ -581,13 +581,13 @@ include "dbconnect_sale.php";
 						}
 
 						if ($type_br != "") {
-							$strSQL .= ' AND type_br = "' . mysqli_real_escape_string($conn, $type_br) . '"';
+							$strSQL .= ' AND type_breng = "' . mysqli_real_escape_string($conn, $type_br) . '"';
 						}
 
 						if ($status_br == "open") {
-							$strSQL .= ' AND (status_br = "open" OR send_admin = "0")';
+							$strSQL .= ' AND (close_br = "0" OR close_br IS NULL OR close_br = "")';
 						} else if ($status_br == "closed") {
-							$strSQL .= ' AND (status_br = "closed" OR send_admin = "1")';
+							$strSQL .= ' AND close_br = "1"';
 						}
 
 						if ($no_iv == "1") {

@@ -196,8 +196,8 @@ include "dbconnect.php";
             $strSQL1 = "SELECT sol_name,unit_name FROM  tb_product  WHERE product_ID = '" . $objResult2["product_id"] . "' ";
             $objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
             $objResult1 = mysqli_fetch_array($objQuery1);
-            if ($objResult["status_doc"] != 'Rejected' or $objResult["status_doc"] != 'ยกเลิก') {
-                if ($Num_Rows > 0) {
+            if ($Num_Rows > 0 && !empty($objResult)) {
+                if ($objResult["status_doc"] != 'Rejected' or $objResult["status_doc"] != 'ยกเลิก') {
 
         ?>
 
@@ -207,8 +207,8 @@ include "dbconnect.php";
                         <td width="10%" align="center" class="style30"><?php echo Datethai($objResult['iv_date']); ?></td>
                         <td width="10%" align="center" class="style30"><?php echo $objResult['iv_no']; ?></td>
                         <td width="20%" align="left" class="style30"><?php echo $objResult['bill_name']; ?></td>
-                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'];  ?></td>
-                        <td width="10%" align="right" class="style30"><?php echo number_format($objResult2['count'], 0); ?> <?php echo $objResult1['unit_name']; ?></td>
+                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'] ?? '';  ?></td>
+                        <td width="10%" align="right" class="style30"><?php echo number_format((float)($objResult2['count'] ?? 0), 0); ?> <?php echo $objResult1['unit_name'] ?? ''; ?></td>
                         <td width="10%" align="left" class="style30"><?php echo $objResult2['sn']; ?></td>
                         <td width="5%" align="center" class="style30"><?php echo $objResult['sale_code']; ?></td>
                     </tr>
@@ -256,8 +256,8 @@ include "dbconnect.php";
                     <td width="10%" align="center" class="style30"><?php echo Datethai($objResult['doc_release_date']); ?></td>
                     <td width="10%" align="center" class="style30"><?php echo $objResult['doc_no']; ?></td>
                     <td width="20%" align="left" class="style30"><?php echo $objResult['billing_name']; ?></td>
-                    <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'];  ?></td>
-                    <td width="10%" align="right" class="style30"><?php echo number_format($objResult2['sale_count'], 0); ?> <?php echo $objResult1['unit_name']; ?></td>
+                    <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'] ?? '';  ?></td>
+                    <td width="10%" align="right" class="style30"><?php echo number_format((float)($objResult2['sale_count'] ?? 0), 0); ?> <?php echo $objResult1['unit_name'] ?? ''; ?></td>
                     <td width="10%" align="left" class="style30"><?php echo $objResult2['sn_number']; ?></td>
                     <td width="5%" align="center" class="style30"><?php echo $objResult['employee_name']; ?></td>
                 </tr>
@@ -293,8 +293,8 @@ include "dbconnect.php";
             $strSQL1 = "SELECT sol_name,unit_name FROM  tb_product  WHERE product_ID = '" . $objResult2["product_id"] . "' ";
             $objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
             $objResult1 = mysqli_fetch_array($objQuery1);
-            if ($objResult["status_sup"] != 'Rejected' or $objResult["status_sup"] != 'ยกเลิก') {
-                if ($Num_Rows > 0) {
+            if ($Num_Rows > 0 && !empty($objResult)) {
+                if ($objResult["status_sup"] != 'Rejected' or $objResult["status_sup"] != 'ยกเลิก') {
 
         ?>
 
@@ -304,8 +304,8 @@ include "dbconnect.php";
                         <td width="10%" align="center" class="style30"><?php echo Datethai($objResult['smp_date']); ?></td>
                         <td width="10%" align="center" class="style30"><?php echo $objResult['smp_no']; ?></td>
                         <td width="20%" align="left" class="style30"><?php echo $objResult['customer_name']; ?></td>
-                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'];  ?></td>
-                        <td width="10%" align="right" class="style30"><?php echo number_format($objResult2['sale_count'], 0); ?> <?php echo $objResult1['unit_name']; ?></td>
+                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'] ?? '';  ?></td>
+                        <td width="10%" align="right" class="style30"><?php echo number_format((float)($objResult2['sale_count'] ?? 0), 0); ?> <?php echo $objResult1['unit_name'] ?? ''; ?></td>
                         <td width="10%" align="left" class="style30"><?php echo $objResult2['sn']; ?></td>
                         <td width="5%" align="center" class="style30"><?php echo $objResult['sale_code']; ?></td>
                     </tr>
@@ -341,8 +341,8 @@ include "dbconnect.php";
             $strSQL1 = "SELECT sol_name,unit_name FROM  tb_product  WHERE product_ID = '" . $objResult2["product_id"] . "' ";
             $objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
             $objResult1 = mysqli_fetch_array($objQuery1);
-            if ($objResult["status_doc"] != 'Rejected' or $objResult["status_doc"] != 'ยกเลิก') {
-                if ($Num_Rows > 0) {
+            if ($Num_Rows > 0 && !empty($objResult)) {
+                if ($objResult["status_doc"] != 'Rejected' or $objResult["status_doc"] != 'ยกเลิก') {
 
         ?>
 
@@ -352,8 +352,8 @@ include "dbconnect.php";
                         <td width="10%" align="center" class="style30"><?php echo Datethai($objResult['spr_date']); ?></td>
                         <td width="10%" align="center" class="style30"><?php echo $objResult['spr_no']; ?></td>
                         <td width="20%" align="left" class="style30"><?php echo $objResult['customer']; ?></td>
-                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'];  ?></td>
-                        <td width="10%" align="right" class="style30"><?php echo number_format($objResult2['sale_count'], 0); ?> <?php echo $objResult1['unit_name']; ?></td>
+                        <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'] ?? '';  ?></td>
+                        <td width="10%" align="right" class="style30"><?php echo number_format((float)($objResult2['sale_count'] ?? 0), 0); ?> <?php echo $objResult1['unit_name'] ?? ''; ?></td>
                         <td width="10%" align="left" class="style30"><?php echo $objResult2['sn']; ?></td>
                         <td width="5%" align="center" class="style30"><?php echo $objResult['sale_code']; ?></td>
                     </tr>
@@ -396,8 +396,8 @@ include "dbconnect.php";
                                                                 } ?></td>
                 <td width="10%" align="center" class="style30"><?php echo "รับคืนสินค้า"; ?></td>
                 <td width="20%" align="left" class="style30"><?php echo $objResult2['customer_name']; ?></td>
-                <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'];  ?></td>
-                <td width="10%" align="right" class="style30"><?php echo number_format($objResult2['count'], 0); ?> <?php echo $objResult1['unit_name']; ?></td>
+                <td width="25%" align="left" class="style30"><?php echo $objResult1['sol_name'] ?? '';  ?></td>
+                <td width="10%" align="right" class="style30"><?php echo number_format((float)($objResult2['count'] ?? 0), 0); ?> <?php echo $objResult1['unit_name'] ?? ''; ?></td>
                 <td width="10%" align="left" class="style30"><?php echo $objResult2['sn']; ?></td>
                 <td width="5%" align="center" class="style30"><?php echo $objResult2['sale_code']; ?></td>
             </tr>

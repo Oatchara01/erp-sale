@@ -101,7 +101,7 @@ if ($resItems) {
 		if (isset($row['clear_ckk']) && $row['clear_ckk'] == '1') {
 			$clearedQty = $borrowQty;
 		} else if ($productId !== '') {
-			// Query cleared count from subso/subspr/subreceive/subsmp, scoped to this BR's iv_no
+			// Query cleared count from subso/so__submain/subspr/subreceive/subsmp, scoped to this BR's iv_no
 			$prodIdEsc = mysqli_real_escape_string($conn, $productId);
 
 			$q1 = mysqli_query($conn, "SELECT SUM(count) AS cnt FROM hos__subso WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND clear_ivno = '{$ivNoEsc}' AND status_so = 'Approve'");
@@ -109,6 +109,14 @@ if ($resItems) {
 
 			$q2 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subspr WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND clear_ivno = '{$ivNoEsc}' AND status_spr = 'Approve'");
 			if ($q2 && $r2 = mysqli_fetch_assoc($q2)) $clearedQty += (int)$r2['cnt'];
+
+			$q_so2 = mysqli_query($conn, "SELECT SUM(sub.sale_count) AS cnt
+				FROM so__submain sub
+				INNER JOIN so__main head ON head.ref_id = sub.ref_idd
+				WHERE sub.clear_br = '1' AND sub.status_sol = 'Approve'
+				  AND sub.product_id = '{$prodIdEsc}' AND sub.clear_ivno = '{$ivNoEsc}'
+				  AND head.approve_complete = 'Approve' AND head.cancel_ckk = '0'");
+			if ($q_so2 && $r_so2 = mysqli_fetch_assoc($q_so2)) $clearedQty += (int)$r_so2['cnt'];
 
 			$q3 = mysqli_query($conn, "SELECT SUM(sale_count) AS cnt FROM hos__subsmp WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND br_no = '{$ivNoEsc}' AND status_smp = 'Approve'");
 			if ($q3 && $r3 = mysqli_fetch_assoc($q3)) $clearedQty += (int)$r3['cnt'];
