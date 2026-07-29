@@ -714,7 +714,7 @@ $count2 = (($rs2['sale_count']+$rssc2['sale_count']) - ($count3+$count4+$count5+
 
 if($count2=='0'){
 
-$save6="Update  hos__subbr set  clear_ckk = '1'    where ref_idd = '".$rs1['ref_id_br']."' and product_id = '".$product_id_new."'";
+$save6="Update  hos__subbr set  clear_ckk = '1'    where ref_idd_br = '".$rs1['ref_id_br']."' and product_id = '".$product_id_new."'";
 $qsave6=mysqli_query($conn,$save6);
 
 }

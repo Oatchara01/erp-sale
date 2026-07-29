@@ -50,7 +50,10 @@ $typeName = $objResult1 ? $objResult1["type_name"] : "";
 		$typeName, // index 22: ประเภทลูกค้า
 		$objResult["credit_ckk"], // index 23: วิธีชำระเงิน
 		$objResult["credit_thb"], // index 24: วงเงินเครดิต
-		$objResult["vip_ckk"] // index 25: สถานะ VIP
+		$objResult["vip_ckk"], // index 25: สถานะ VIP
+		$objResult["customer_code"], // index 26: รหัสลูกค้า AWL
+		$objResult["customer_coden"], // index 27: รหัสลูกค้า NBM
+		$objResult["status_cus"] // index 28: สถานะลูกค้า (0=Gold, 1=Platinum, 2=Diamond)
 	);
 
 	echo implode('|', $data);

@@ -1,4 +1,4 @@
-﻿<?php header("Content-Type: text/html; charset=utf-8");
+<?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -395,7 +395,10 @@ include("head.php"); ?>
 						customer_type_name: myArr[22] || '',
 						credit_ckk: myArr[23] || '',
 						credit_thb: myArr[24] || '',
-						vip_ckk: myArr[25] || ''
+						vip_ckk: myArr[25] || '',
+						customer_code: myArr[26] || '',
+						customer_coden: myArr[27] || '',
+						status_cus: myArr[28] || ''
 					};
 
 					var isCustomerMode = (mode === 'customer' || mode === undefined);
@@ -432,7 +435,19 @@ include("head.php"); ?>
 						setElementValue('display_bill_tel', customerData.bill_tel);
 
 						setElementValue(mode_name, customerData.mode_name);
-						setElementValue('display_mode_name', customerData.mode_name);
+
+						// Format status_cus: 0 -> Gold Customer, 1 -> Platinum Customer, 2 -> Diamond Customer, else -> '-'
+						var statusCusName = '-';
+						var statusCusVal = String(customerData.status_cus || '').trim();
+						if (statusCusVal === '0') {
+							statusCusName = 'Gold Customer';
+						} else if (statusCusVal === '1') {
+							statusCusName = 'Platinum Customer';
+						} else if (statusCusVal === '2') {
+							statusCusName = 'Diamond Customer';
+						}
+						setElementValue('display_mode_name', statusCusName);
+
 						setElementValue(customer_typename, customerData.customer_type_name);
 						setElementValue('display_customer_typename', customerData.customer_type_name);
 						setElementValue('display_credit_thb', customerData.credit_thb);
@@ -447,13 +462,25 @@ include("head.php"); ?>
 							}
 						}
 
-						// เก็บ bill_id ที่ค้นหาได้ไว้ใน hidden
+						// เก็บ bill_id ที่ค้นหาได้ไว้ใน hidden และแสดงรหัสลูกค้า (customer_code / customer_coden)
 						var sourceBillIdElem = document.getElementById(bill_id);
 						var billIdToSet = sourceBillIdElem ? sourceBillIdElem.value : bill_id;
 						var hBillIdElem = document.getElementById('h_bill_id');
 						if (hBillIdElem) hBillIdElem.value = billIdToSet;
+
+						var typeDocSel = document.getElementById('type_doc_select');
+						var typeDocVal = typeDocSel ? typeDocSel.value : '';
+						var customerCodeDisplay = '';
+						if (typeDocVal === '4') {
+							customerCodeDisplay = customerData.customer_coden || customerData.customer_code || billIdToSet;
+						} else if (typeDocVal === '3') {
+							customerCodeDisplay = customerData.customer_code || customerData.customer_coden || billIdToSet;
+						} else {
+							customerCodeDisplay = customerData.customer_code || customerData.customer_coden || billIdToSet;
+						}
+
 						var displayBillId = document.getElementById('display_bill_id');
-						if (displayBillId) displayBillId.textContent = billIdToSet;
+						if (displayBillId) displayBillId.textContent = customerCodeDisplay;
 					}
 
 					if (isCustomerMode) {
@@ -547,6 +574,7 @@ include("head.php"); ?>
 	function loadTypeBankOptions(callback) {
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'typebank_options.php', true);
+
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState !== 4) {
 				return;
@@ -581,9 +609,26 @@ include("head.php"); ?>
 	}
 
 	// โหลด options ช่องทางชำระเงิน
-	function loadBankOptions(creditOnly, callback) {
+	function loadBankOptions(creditOnly, typeBank, callback) {
+		if (typeof typeBank === 'function') {
+			callback = typeBank;
+			typeBank = undefined;
+		}
+
+		if (typeBank === undefined || typeBank === null || typeBank === '') {
+			var pmSelect = document.getElementById('payment_method');
+			if (pmSelect) {
+				typeBank = pmSelect.value || '';
+			}
+		}
+
+		var url = 'bank_options_awl.php?credit_only=' + (creditOnly ? '1' : '0');
+		if (typeBank && typeBank !== '0') {
+			url += '&type_bank=' + encodeURIComponent(typeBank);
+		}
+
 		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'bank_options_awl.php?credit_only=' + (creditOnly ? '1' : '0'), true);
+		xhr.open('GET', url, true);
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState === 4) {
 				if (xhr.status === 200) {
@@ -614,8 +659,25 @@ include("head.php"); ?>
 	// กรณีผู้ใช้แก้ไขค่า payment เองภายหลัง
 	document.addEventListener('DOMContentLoaded', function() {
 		// เริ่มต้นโหลดในโหมดเงินสด/เครดิตตามค่าเริ่มต้น
-		loadTypeBankOptions();
+		loadTypeBankOptions(function() {
+			var pmSelect = document.getElementById('payment_method');
+			if (pmSelect && pmSelect.value !== '0' && pmSelect.value !== '') {
+				loadBankOptions(true, pmSelect.value);
+			}
+		});
 		switchPaymentMode('credit');
+
+		var pmSelectElem = document.getElementById('payment_method');
+		if (pmSelectElem) {
+			pmSelectElem.addEventListener('change', function() {
+				var selectedTypeBank = this.value;
+				loadBankOptions(true, selectedTypeBank, function() {
+					var sel = document.getElementById('payment');
+					var cashSel = document.getElementById('payment_cash_select');
+					if (cashSel) cashSel.value = sel.value;
+				});
+			});
+		}
 
 		document.getElementById('credit_thb').addEventListener('input', function() {
 			updateCreditDisplay();
@@ -1574,7 +1636,7 @@ include("head.php"); ?>
 							<div class="so-field-group">
 								<label class="so-label" for="type_doc_select">บริษัท<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<select class="so-select" name="type_doc" id="type_doc_select" onchange="var r=document.querySelector('input[name=type_doc]'); if(r)r.value=this.value;">
+									<select class="so-select" name="type_doc" id="type_doc_select" onchange="handleCompanyChange(this);">
 										<option value="3">AWL</option>
 										<option value="4">NBM</option>
 									</select>
@@ -5207,7 +5269,7 @@ include("head.php"); ?>
 				setClearLoanRowField('jong_no', rowIndex, '');
 			} else {
 				setClearLoanRowField('clear_br', rowIndex, '');
-				setClearLoanRowField('clear_ivno', rowIndex, '');
+				setClearLoanRowField('clear_ivno', rowIndex, documentNo);
 				setClearLoanRowField('jong_ckk', rowIndex, '1');
 				setClearLoanRowField('jong_no', rowIndex, documentNo);
 			}

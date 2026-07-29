@@ -988,7 +988,7 @@
                     </div>
                 </div>
                 <div class="so-modal-field">
-                    <label>เลขที่ของ/ใบยืม</label>
+                    <label id="modal_clear_ivno_label">เลขที่ของ/ใบยืม</label>
                     <div class="so-modal-input-wrap">
                         <input type="text" id="m_clear_ivno" placeholder="กรอกข้อมูล" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_clear_ivno" aria-label="ล้างข้อมูล">&times;</button>
@@ -1372,6 +1372,15 @@
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
             document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
             document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
+
+            // สลับ label ตามประเภทเอกสารต้นทางของแถว (ใบจอง = jong, ใบยืม/ปกติ = ยืม)
+            var isReserveRow = document.getElementById('jong_ckk' + rowIndex).value === '1'
+                            && document.getElementById('clear_br' + rowIndex).value !== '1';
+            var clearIvnoLabel = document.getElementById('modal_clear_ivno_label');
+            if (clearIvnoLabel) {
+                clearIvnoLabel.textContent = isReserveRow ? 'เลขที่ของ/ใบจอง' : 'เลขที่ของ/ใบยืม';
+            }
+
             document.getElementById('m_display_name').value = document.getElementById('display_name' + rowIndex).value;
 
             syncModalClearButtons();
@@ -1558,9 +1567,63 @@
             };
 
             if (this.value.length < 1 && this.isNotClick) return;
-            return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value);
+            return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + getSelectedTypeCompany();
         }, {
             select_first: 0
+        });
+
+        // ปุ่ม autocomplete เดิม (js/autocomplete.js) ฟังแค่ event keydown/keypress เท่านั้น
+        // การวางข้อความ (คลิกขวา > วาง หรือบางเบราว์เซอร์กับ Ctrl+V) ไม่ทำให้เกิด keypress
+        // จึงไม่มีการค้นหาเกิดขึ้นเลย ต้องดักจับ event "paste" แล้วสั่งค้นหาซ้ำเอง
+        (function() {
+            var searchInput = document.getElementById('global_product_search');
+            var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
+            searchInput.addEventListener('paste', function() {
+                setTimeout(function() {
+                    acInstance.isModified = 1;
+                    acInstance.isNotClick = 1;
+                    acInstance.isON = 1; // request() ยิง AJAX ก็ต่อเมื่อ isON=1 เท่านั้น (ปกติถูกตั้งค่าตอน keydown)
+                    acInstance.request();
+                }, 0);
+            });
+        })();
+
+        // อ่านบริษัทที่เลือกจาก dropdown (type_doc: 3=AWL, 4=NBM) เพื่อส่งไป filter สินค้าตอนค้นหา
+        // default AWL ถ้าไม่มี dropdown (กรณีหน้าอื่นที่ include ไฟล์นี้โดยไม่มีตัวเลือกบริษัท)
+        function getSelectedTypeCompany() {
+            var td = document.getElementById('type_doc_select');
+            return (td && td.value === '4') ? 'NBM' : 'AWL';
+        }
+
+        // เปลี่ยนบริษัท -> ล้างรายการสินค้าที่เลือกไว้ทั้งหมด (เตือนก่อน) กันสินค้า AWL/NBM ปนกันในใบเดียว
+        function handleCompanyChange(sel) {
+            var hasItems = false;
+            for (var i = 1; i <= 30; i++) {
+                var c = document.getElementById('product_codet' + i);
+                if (c && c.value.trim() !== '') { hasItems = true; break; }
+            }
+            if (hasItems) {
+                if (!confirm('การเปลี่ยนบริษัทจะล้างรายการสินค้าที่เลือกไว้ทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
+                    sel.value = sel.getAttribute('data-prev'); // ยกเลิก -> คืนค่าบริษัทเดิม
+                    return;
+                }
+                for (var j = 1; j <= 30; j++) {
+                    if (typeof executeClearRow === 'function') executeClearRow(j);
+                }
+            }
+            // sync hidden input[name=type_doc] (พฤติกรรมเดิมของ onchange ที่ถูกแทนที่)
+            var r = document.querySelector('input[name=type_doc]');
+            if (r) r.value = sel.value;
+            sel.setAttribute('data-prev', sel.value);
+        }
+
+        // เก็บค่าบริษัทก่อนหน้าไว้ เพื่อ revert เมื่อผู้ใช้กดยกเลิกใน confirm
+        document.addEventListener('DOMContentLoaded', function() {
+            var td = document.getElementById('type_doc_select');
+            if (td) {
+                td.setAttribute('data-prev', td.value);
+                td.addEventListener('focus', function() { this.setAttribute('data-prev', this.value); });
+            }
         });
 
         // Run initial calc
@@ -1597,7 +1660,7 @@
                         this.setValue("");
                     if (this.value.length < 1 && this.isNotClick)
                         return;
-                    return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value);
+                    return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + getSelectedTypeCompany();
                 });
             }
             // Autocomplete for product_codet removed since it's now display-only

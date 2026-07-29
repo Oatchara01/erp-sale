@@ -5,15 +5,18 @@ ob_start();
 require_once 'dbconnect_acc.php'; // ไฟล์เชื่อมต่อ DB ที่ประกาศ $code = mysqli_connect(...)
 
 $creditOnly = isset($_GET['credit_only']) ? trim($_GET['credit_only']) : '';
-$sdd = $_SESSION["code"];
-
+$typeBank = isset($_GET['type_bank']) ? trim($_GET['type_bank']) : '';
+$sdd = $_SESSION["code"] ?? '';
 
 $sql = "
   SELECT id, pay_in
   FROM tb_bank
   WHERE close_ckk='0' AND company!='4'
+";
 
-";  
+if ($typeBank !== '' && $typeBank !== '0') {
+    $sql .= " AND type_bank = '" . mysqli_real_escape_string($code, $typeBank) . "'";
+}
 
 //" . ($creditOnly == '0' ? " AND credit_ckk='1' " : " AND credit_ckk='0' ") . "  ORDER BY number
 
