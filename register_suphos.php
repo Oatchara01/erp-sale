@@ -903,14 +903,8 @@ include("head.php"); ?>
 	$savedDeliveryPrint = null;
 	$savedDeliveryBill = null;
 	$savedShippingAddresses = array();
-	$savedFormSession = null;
 
 	if ($savedRefId !== "") {
-		if (isset($_SESSION['register_suphos_saved_form'][$savedRefId])) {
-			$savedFormSession = $_SESSION['register_suphos_saved_form'][$savedRefId];
-			unset($_SESSION['register_suphos_saved_form'][$savedRefId]);
-		}
-
 		$savedSoQuery = mysqli_query($conn, "SELECT * FROM hos__so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
 		if ($savedSoQuery) {
 			$savedSo = mysqli_fetch_assoc($savedSoQuery);
@@ -1000,10 +994,6 @@ include("head.php"); ?>
 				'remark_hc' => (string)($savedProduct["master_remark_hc"] ?? "")
 			);
 		}
-	}
-
-	if (!empty($savedFormSession['products']) && is_array($savedFormSession['products'])) {
-		$savedProductsForForm = $savedFormSession['products'];
 	}
 
 	$savedExtraAddressRows = array();
@@ -3139,8 +3129,8 @@ include("head.php"); ?>
 		</div>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px;">
-				<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);">
-					<i class="far fa-save"></i> บันทึกข้อมูล
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
+					<i class="far fa-paper-plane"></i> Submit
 				</button>
 				<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
 					<i class="far fa-save"></i> Save Draft

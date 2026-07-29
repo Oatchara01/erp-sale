@@ -1218,20 +1218,17 @@
         function executeClearRow(rowIndex) {
             var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
             var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
-            var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIndex);
-            var hasPendingDelete = deletedSubsoEl && deletedSubsoEl.value !== '';
 
             if (currentSubsoId !== '') {
                 document.getElementById('deleted_subso_db_id' + rowIndex).value = currentSubsoId;
                 document.getElementById('deleted_product_code' + rowIndex).value = currentProductCode;
-                document.getElementById('row_deleted' + rowIndex).value = '1';
-            } else if (!hasPendingDelete) {
-                document.getElementById('deleted_subso_db_id' + rowIndex).value = '';
-                document.getElementById('deleted_product_code' + rowIndex).value = '';
-                document.getElementById('row_deleted' + rowIndex).value = '0';
             }
             // ถ้า currentSubsoId ว่างแต่มี deleted_subso_db_id ค้างอยู่แล้ว (เพิ่มสินค้าใหม่ทับแถวที่เพิ่งลบ แล้วกดลบซ้ำ)
             // ให้คงคำสั่งลบของเดิมไว้ ไม่ล้างทิ้ง มิฉะนั้นของเดิมจะไม่ถูกลบออกจาก DB
+
+            // ตั้ง row_deleted = '1' เสมอเมื่อแถวถูกล้าง แม้ยังไม่รู้ subso_db_id (เช่น id หายไปจากฟอร์ม)
+            // เพื่อไม่ให้ฝั่ง server เข้าใจผิดว่าแถวนี้เป็นแถวว่างเปล่าที่ไม่เคยมีข้อมูล
+            document.getElementById('row_deleted' + rowIndex).value = '1';
 
             document.getElementById('subso_db_id' + rowIndex).value = '';
             document.getElementById('h_product_codet' + rowIndex).value = '';

@@ -4156,42 +4156,6 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 
 			mysqli_query($conn, $strDeliveryBillInsert) or die(mysqli_error($conn));
 		}
-
-		$savedProductsSnapshot = array();
-		for ($i = 1; $i <= 30; $i++) {
-			$productIdValue = trim((string)$_POST['product_id' . $i]);
-			$productCodeValue = trim((string)$_POST['product_codet' . $i]);
-			$productNameValue = trim((string)$_POST['product_name' . $i]);
-
-			if ($productIdValue === '' && $productCodeValue === '' && $productNameValue === '') {
-				continue;
-			}
-
-			$savedProductsSnapshot[] = array(
-				'product_id' => $productIdValue,
-				'product_code' => $productCodeValue,
-				'product_name' => $productNameValue,
-				'unit_name' => trim((string)$_POST['unit_name' . $i]),
-				'sale_count' => trim((string)$_POST['sale_count' . $i]),
-				'product_price' => trim((string)$_POST['product_price' . $i]),
-				'discount_unit' => trim((string)$_POST['discount_unit' . $i]),
-				'sum_amount' => trim((string)$_POST['sum_amount' . $i]),
-				'warranty' => trim((string)$_POST['warranty' . $i]),
-				'cal' => trim((string)$_POST['cal' . $i]),
-				'pm' => trim((string)$_POST['pm' . $i]),
-				'pm_year' => trim((string)$_POST['pm_year' . $i]),
-				'sale_remarkk' => trim((string)$_POST['sale_remarkk' . $i]),
-				'clear_br' => trim((string)$_POST['clear_br' . $i]),
-				'clear_ivno' => trim((string)$_POST['clear_ivno' . $i]),
-				'jong_ckk' => trim((string)$_POST['jong_ckk' . $i]),
-				'jong_no' => trim((string)$_POST['jong_no' . $i]),
-				'display_name' => trim((string)$_POST['display_name' . $i])
-			);
-		}
-
-		$_SESSION['register_suphos_saved_form'][$ref_id] = array(
-			'products' => $savedProductsSnapshot
-		);
 	} catch (mysqli_sql_exception $e) {
 		$saveOk = false;
 		$saveFailures[] = $e->getMessage();
