@@ -1328,9 +1328,9 @@ $objQuery102 = mysqli_query($conn,$strSQL102);
 	}	
 	
 if($product_idb10!=''){
-		
+
 $strSQL102 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br)
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
 values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
 
 $objQuery102 = mysqli_query($conn,$strSQL102);

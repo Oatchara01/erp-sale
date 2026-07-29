@@ -236,11 +236,10 @@
                         }
                         if (!isNaN(rowIdx) && typeof updateRowTotal === 'function') {
                             var rowDeletedEl = document.getElementById('row_deleted' + rowIdx);
-                            var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIdx);
-                            var deletedProductCodeEl = document.getElementById('deleted_product_code' + rowIdx);
                             if (rowDeletedEl) rowDeletedEl.value = '0';
-                            if (deletedSubsoEl) deletedSubsoEl.value = '';
-                            if (deletedProductCodeEl) deletedProductCodeEl.value = '';
+                            // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
+                            // เพราะแถวนี้อาจถูก reuse หลังลบสินค้าเดิมแล้วเลือกสินค้าใหม่ทันที
+                            // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
                             // Format the price and discount fields
                             var priceEl = document.getElementById(product_price);
                             var discEl = document.getElementById(discount_unit);
@@ -1219,16 +1218,20 @@
         function executeClearRow(rowIndex) {
             var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
             var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
+            var deletedSubsoEl = document.getElementById('deleted_subso_db_id' + rowIndex);
+            var hasPendingDelete = deletedSubsoEl && deletedSubsoEl.value !== '';
 
             if (currentSubsoId !== '') {
                 document.getElementById('deleted_subso_db_id' + rowIndex).value = currentSubsoId;
                 document.getElementById('deleted_product_code' + rowIndex).value = currentProductCode;
                 document.getElementById('row_deleted' + rowIndex).value = '1';
-            } else {
+            } else if (!hasPendingDelete) {
                 document.getElementById('deleted_subso_db_id' + rowIndex).value = '';
                 document.getElementById('deleted_product_code' + rowIndex).value = '';
                 document.getElementById('row_deleted' + rowIndex).value = '0';
             }
+            // ถ้า currentSubsoId ว่างแต่มี deleted_subso_db_id ค้างอยู่แล้ว (เพิ่มสินค้าใหม่ทับแถวที่เพิ่งลบ แล้วกดลบซ้ำ)
+            // ให้คงคำสั่งลบของเดิมไว้ ไม่ล้างทิ้ง มิฉะนั้นของเดิมจะไม่ถูกลบออกจาก DB
 
             document.getElementById('subso_db_id' + rowIndex).value = '';
             document.getElementById('h_product_codet' + rowIndex).value = '';
@@ -1246,6 +1249,19 @@
             document.getElementById('product_id' + rowIndex).value = '';
             document.getElementById('product_sn' + rowIndex).value = '';
             document.getElementById('remark_hc' + rowIndex).value = '';
+
+            // ล้างข้อมูลจาก modal (ประกัน/PM/หมายเหตุ/เลขที่ยืม-จอง) กันไม่ให้ค่าของสินค้าเดิมติดไปกับสินค้าใหม่ที่จะถูกเลือกเข้าแถวนี้ต่อ
+            document.getElementById('warranty' + rowIndex).value = '';
+            document.getElementById('cal' + rowIndex).value = '';
+            document.getElementById('pm_year' + rowIndex).value = '';
+            document.getElementById('pm' + rowIndex).value = '';
+            document.getElementById('sale_remarkk' + rowIndex).value = '';
+            document.getElementById('clear_ivno' + rowIndex).value = '';
+            document.getElementById('jong_no' + rowIndex).value = '';
+            document.getElementById('display_name' + rowIndex).value = '';
+            document.getElementById('clear_br' + rowIndex).value = '1';
+            document.getElementById('jong_ckk' + rowIndex).value = '1';
+
             document.getElementById('product_row_' + rowIndex).style.display = 'none';
 
             var cb = document.querySelector('#product_row_' + rowIndex + ' .so-row-checkbox');
@@ -1528,8 +1544,6 @@
                 if (emptyRowIndex !== -1) {
                     let codeInput = document.getElementById('product_codet' + emptyRowIndex);
                     let hiddenCodeInput = document.getElementById('h_product_codet' + emptyRowIndex);
-                    let deletedSubsoInput = document.getElementById('deleted_subso_db_id' + emptyRowIndex);
-                    let deletedProductCodeInput = document.getElementById('deleted_product_code' + emptyRowIndex);
                     let rowDeletedInput = document.getElementById('row_deleted' + emptyRowIndex);
                     let subsoDbIdInput = document.getElementById('subso_db_id' + emptyRowIndex);
 
@@ -1537,8 +1551,9 @@
                     if (hiddenCodeInput) hiddenCodeInput.value = id;
                     if (rowDeletedInput) rowDeletedInput.value = '0';
                     if (subsoDbIdInput) subsoDbIdInput.value = '';
-                    if (deletedSubsoInput) deletedSubsoInput.value = '';
-                    if (deletedProductCodeInput) deletedProductCodeInput.value = '';
+                    // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
+                    // เพราะแถวนี้อาจเป็นแถวที่เพิ่งลบสินค้าเดิมไป แล้วเลือกสินค้าใหม่ทันที
+                    // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
 
                     // Trigger the ajax call to populate the row
                     doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);

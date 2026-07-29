@@ -135,6 +135,26 @@ function buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $pro
 	return "Update hos__subso set " . implode(',', $setParts) . " Where id= '$id_new' ";
 }
 
+function applyHosSubsoInsertExtras($conn, $newRowId, $snValue, $pmYearValue, $adminRemarkValue)
+{
+	$newRowId = (int)$newRowId;
+	if ($newRowId <= 0) {
+		return;
+	}
+
+	$setParts = array(
+		"sn = '" . mysqli_real_escape_string($conn, $snValue) . "'"
+	);
+	if (hosSubsoColumnExists($conn, 'pm_year')) {
+		$setParts[] = "pm_year = '" . mysqli_real_escape_string($conn, $pmYearValue) . "'";
+	}
+	if (hosSubsoColumnExists($conn, 'admin_remark')) {
+		$setParts[] = "admin_remark = '" . mysqli_real_escape_string($conn, $adminRemarkValue) . "'";
+	}
+
+	mysqli_query($conn, "UPDATE hos__subso SET " . implode(', ', $setParts) . " WHERE id = " . $newRowId);
+}
+
 if ($_POST["submit"] = "submit") {
 
 applyDeliveryTimeRangeToPost();
@@ -849,6 +869,131 @@ $objQuery = mysqli_query($conn,$strSQL);
 
 
 
+// เพิ่มใหม่: อ่าน field ของแถว 1-5 (เดิมไฟล์นี้อ่านเฉพาะแถว 6-30 ทำให้เพิ่มสินค้าในแถว 1-5 ไม่ถูกบันทึก)
+$clear_br1 = $_POST["clear_br1"] ?? '';
+$clear_br2 = $_POST["clear_br2"] ?? '';
+$clear_br3 = $_POST["clear_br3"] ?? '';
+$clear_br4 = $_POST["clear_br4"] ?? '';
+$clear_br5 = $_POST["clear_br5"] ?? '';
+
+$clear_ivno1 = $_POST["clear_ivno1"] ?? '';
+$clear_ivno2 = $_POST["clear_ivno2"] ?? '';
+$clear_ivno3 = $_POST["clear_ivno3"] ?? '';
+$clear_ivno4 = $_POST["clear_ivno4"] ?? '';
+$clear_ivno5 = $_POST["clear_ivno5"] ?? '';
+
+$jong_no1 = $_POST["jong_no1"] ?? '';
+$jong_no2 = $_POST["jong_no2"] ?? '';
+$jong_no3 = $_POST["jong_no3"] ?? '';
+$jong_no4 = $_POST["jong_no4"] ?? '';
+$jong_no5 = $_POST["jong_no5"] ?? '';
+
+$jong_ckk1 = $_POST["jong_ckk1"] ?? '';
+$jong_ckk2 = $_POST["jong_ckk2"] ?? '';
+$jong_ckk3 = $_POST["jong_ckk3"] ?? '';
+$jong_ckk4 = $_POST["jong_ckk4"] ?? '';
+$jong_ckk5 = $_POST["jong_ckk5"] ?? '';
+
+$product_name1 = $_POST["product_name1"] ?? '';
+$unit_name1 = $_POST["unit_name1"] ?? '';
+$product_id1 = $_POST["product_id1"] ?? '';
+$sale_count1 = $_POST["sale_count1"] ?? '';
+$product_price1 = $_POST["product_price1"] ?? '';
+$sale_remarkk1 = $_POST["sale_remarkk1"] ?? '';
+$sum_amountt1 = $_POST["sum_amount1"] ?? '';
+$sum_amount1 = str_replace(',','', $sum_amountt1);
+$discount_unit1 = $_POST["discount_unit1"] ?? '';
+$warranty1 = $_POST["warranty1"] ?? '';
+$cal1 = $_POST["cal1"] ?? '';
+$pm1 = $_POST["pm1"] ?? '';
+if(($_POST["product_code1"] ?? '')!=''){
+$product_code1 = $_POST["product_code1"];
+}else if(($_POST["product_codet1"] ?? '')!=''){
+$product_code1 = $_POST["product_codet1"];
+}else{
+$product_code1 = $_POST["product_c1"] ?? '';
+}
+
+$product_name2 = $_POST["product_name2"] ?? '';
+$unit_name2 = $_POST["unit_name2"] ?? '';
+$product_id2 = $_POST["product_id2"] ?? '';
+$sale_count2 = $_POST["sale_count2"] ?? '';
+$product_price2 = $_POST["product_price2"] ?? '';
+$sale_remarkk2 = $_POST["sale_remarkk2"] ?? '';
+$sum_amountt2 = $_POST["sum_amount2"] ?? '';
+$sum_amount2 = str_replace(',','', $sum_amountt2);
+$discount_unit2 = $_POST["discount_unit2"] ?? '';
+$warranty2 = $_POST["warranty2"] ?? '';
+$cal2 = $_POST["cal2"] ?? '';
+$pm2 = $_POST["pm2"] ?? '';
+if(($_POST["product_code2"] ?? '')!=''){
+$product_code2 = $_POST["product_code2"];
+}else if(($_POST["product_codet2"] ?? '')!=''){
+$product_code2 = $_POST["product_codet2"];
+}else{
+$product_code2 = $_POST["product_c2"] ?? '';
+}
+
+$product_name3 = $_POST["product_name3"] ?? '';
+$unit_name3 = $_POST["unit_name3"] ?? '';
+$product_id3 = $_POST["product_id3"] ?? '';
+$sale_count3 = $_POST["sale_count3"] ?? '';
+$product_price3 = $_POST["product_price3"] ?? '';
+$sale_remarkk3 = $_POST["sale_remarkk3"] ?? '';
+$sum_amountt3 = $_POST["sum_amount3"] ?? '';
+$sum_amount3 = str_replace(',','', $sum_amountt3);
+$discount_unit3 = $_POST["discount_unit3"] ?? '';
+$warranty3 = $_POST["warranty3"] ?? '';
+$cal3 = $_POST["cal3"] ?? '';
+$pm3 = $_POST["pm3"] ?? '';
+if(($_POST["product_code3"] ?? '')!=''){
+$product_code3 = $_POST["product_code3"];
+}else if(($_POST["product_codet3"] ?? '')!=''){
+$product_code3 = $_POST["product_codet3"];
+}else{
+$product_code3 = $_POST["product_c3"] ?? '';
+}
+
+$product_name4 = $_POST["product_name4"] ?? '';
+$unit_name4 = $_POST["unit_name4"] ?? '';
+$product_id4 = $_POST["product_id4"] ?? '';
+$sale_count4 = $_POST["sale_count4"] ?? '';
+$product_price4 = $_POST["product_price4"] ?? '';
+$sale_remarkk4 = $_POST["sale_remarkk4"] ?? '';
+$sum_amountt4 = $_POST["sum_amount4"] ?? '';
+$sum_amount4 = str_replace(',','', $sum_amountt4);
+$discount_unit4 = $_POST["discount_unit4"] ?? '';
+$warranty4 = $_POST["warranty4"] ?? '';
+$cal4 = $_POST["cal4"] ?? '';
+$pm4 = $_POST["pm4"] ?? '';
+if(($_POST["product_code4"] ?? '')!=''){
+$product_code4 = $_POST["product_code4"];
+}else if(($_POST["product_codet4"] ?? '')!=''){
+$product_code4 = $_POST["product_codet4"];
+}else{
+$product_code4 = $_POST["product_c4"] ?? '';
+}
+
+$product_name5 = $_POST["product_name5"] ?? '';
+$unit_name5 = $_POST["unit_name5"] ?? '';
+$product_id5 = $_POST["product_id5"] ?? '';
+$sale_count5 = $_POST["sale_count5"] ?? '';
+$product_price5 = $_POST["product_price5"] ?? '';
+$sale_remarkk5 = $_POST["sale_remarkk5"] ?? '';
+$sum_amountt5 = $_POST["sum_amount5"] ?? '';
+$sum_amount5 = str_replace(',','', $sum_amountt5);
+$discount_unit5 = $_POST["discount_unit5"] ?? '';
+$warranty5 = $_POST["warranty5"] ?? '';
+$cal5 = $_POST["cal5"] ?? '';
+$pm5 = $_POST["pm5"] ?? '';
+if(($_POST["product_code5"] ?? '')!=''){
+$product_code5 = $_POST["product_code5"];
+}else if(($_POST["product_codet5"] ?? '')!=''){
+$product_code5 = $_POST["product_codet5"];
+}else{
+$product_code5 = $_POST["product_c5"] ?? '';
+}
+
 $clear_br6 = $_POST["clear_br6"];
 $clear_br7 = $_POST["clear_br7"];
 $clear_br8 = $_POST["clear_br8"];
@@ -1295,8 +1440,524 @@ $pm30 = $_POST["pm30"];
 
 
 
-if($product_id6 !=''  ){
-	
+// เพิ่มใหม่: บันทึกแถว 1-5 (guard ด้วย subso_db_id กันไม่ให้แถวเดิมที่ผ่าน UPDATE ไปแล้วถูก insert ซ้ำ)
+if($product_id1 != '' && ($_POST["subso_db_id1"] ?? '') === ''){
+
+$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code1."' ";
+$objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
+$Num_Rows31 = mysqli_num_rows($objQuery31);
+$objResult31 = mysqli_fetch_array($objQuery31);
+
+$product_idb1 =$objResult31["product_id1"];
+$product_idb2 =$objResult31["product_id2"];
+$product_idb3 =$objResult31["product_id3"];
+$product_idb4 =$objResult31["product_id4"];
+$product_idb5 =$objResult31["product_id5"];
+$product_idb6 =$objResult31["product_id6"];
+$product_idb7 =$objResult31["product_id7"];
+$product_idb8 =$objResult31["product_id8"];
+$product_idb9 =$objResult31["product_id9"];
+$product_idb10 =$objResult31["product_id10"];
+
+$unit1 =$sale_count1*$objResult31["unit1"];
+$unit2 =$sale_count1*$objResult31["unit2"];
+$unit3 =$sale_count1*$objResult31["unit3"];
+$unit4 =$sale_count1*$objResult31["unit4"];
+$unit5 =$sale_count1*$objResult31["unit5"];
+$unit6 =$sale_count1*$objResult31["unit6"];
+$unit7 =$sale_count1*$objResult31["unit7"];
+$unit8 =$sale_count1*$objResult31["unit8"];
+$unit9 =$sale_count1*$objResult31["unit9"];
+$unit10 =$sale_count1*$objResult31["unit10"];
+
+if($Num_Rows31 > 0){
+
+	if($product_idb1!=''){
+$strSQL104 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,code_bom,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit1."','".$unit1."','".$product_price1."','".$product_price1."','".$sum_amount1."','".$sale_remarkk1."','".$discount_unit1."','".$warranty1."','".$cal1."','".$pm1."','".$product_idb1."','".$product_idb1."','".$product_code1."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery104 = mysqli_query($conn,$strSQL104);
+	}
+	if($product_idb2!=''){
+$strSQL100 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit2."','".$unit2."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb2."','".$product_idb2."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery100 = mysqli_query($conn,$strSQL100);
+	}
+	if($product_idb3!=''){
+$strSQL101 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit3."','".$unit3."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb3."','".$product_idb3."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery101 = mysqli_query($conn,$strSQL101);
+	}
+	if($product_idb4!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit4."','".$unit4."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb4."','".$product_idb4."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb5!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit5."','".$unit5."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb5."','".$product_idb5."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb6!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit6."','".$unit6."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb6."','".$product_idb6."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb7!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit7."','".$unit7."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb7."','".$product_idb7."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb8!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit8."','".$unit8."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb8."','".$product_idb8."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb9!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit9."','".$unit9."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb9."','".$product_idb9."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb10!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk1."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+}else{
+$strSQL1 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$sale_count1."','".$sale_count1."','".$product_price1."','".$product_price1."','".$sum_amount1."','".$sale_remarkk1."','".$discount_unit1."','".$warranty1."','".$cal1."','".$pm1."','".$product_id1."','".$product_id1."','".$have_order."','".$clear_br1."','".$clear_ivno1."','".$jong_no1."','".$jong_ckk1."')";
+	$objQuery1 = mysqli_query($conn,$strSQL1);
+	if ($objQuery1) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn1"] ?? ($_POST["sn1"] ?? ''), $_POST["pm_year1"] ?? '', $_POST["display_name1"] ?? '');
+	}
+}
+}
+
+
+if($product_id2 != '' && ($_POST["subso_db_id2"] ?? '') === ''){
+
+$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code2."' ";
+$objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
+$Num_Rows31 = mysqli_num_rows($objQuery31);
+$objResult31 = mysqli_fetch_array($objQuery31);
+
+$product_idb1 =$objResult31["product_id1"];
+$product_idb2 =$objResult31["product_id2"];
+$product_idb3 =$objResult31["product_id3"];
+$product_idb4 =$objResult31["product_id4"];
+$product_idb5 =$objResult31["product_id5"];
+$product_idb6 =$objResult31["product_id6"];
+$product_idb7 =$objResult31["product_id7"];
+$product_idb8 =$objResult31["product_id8"];
+$product_idb9 =$objResult31["product_id9"];
+$product_idb10 =$objResult31["product_id10"];
+
+$unit1 =$sale_count2*$objResult31["unit1"];
+$unit2 =$sale_count2*$objResult31["unit2"];
+$unit3 =$sale_count2*$objResult31["unit3"];
+$unit4 =$sale_count2*$objResult31["unit4"];
+$unit5 =$sale_count2*$objResult31["unit5"];
+$unit6 =$sale_count2*$objResult31["unit6"];
+$unit7 =$sale_count2*$objResult31["unit7"];
+$unit8 =$sale_count2*$objResult31["unit8"];
+$unit9 =$sale_count2*$objResult31["unit9"];
+$unit10 =$sale_count2*$objResult31["unit10"];
+
+if($Num_Rows31 > 0){
+
+	if($product_idb1!=''){
+$strSQL104 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,code_bom,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit1."','".$unit1."','".$product_price2."','".$product_price2."','".$sum_amount2."','".$sale_remarkk2."','".$discount_unit2."','".$warranty2."','".$cal2."','".$pm2."','".$product_idb1."','".$product_idb1."','".$product_code2."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery104 = mysqli_query($conn,$strSQL104);
+	}
+	if($product_idb2!=''){
+$strSQL100 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit2."','".$unit2."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb2."','".$product_idb2."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery100 = mysqli_query($conn,$strSQL100);
+	}
+	if($product_idb3!=''){
+$strSQL101 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit3."','".$unit3."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb3."','".$product_idb3."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery101 = mysqli_query($conn,$strSQL101);
+	}
+	if($product_idb4!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit4."','".$unit4."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb4."','".$product_idb4."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb5!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit5."','".$unit5."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb5."','".$product_idb5."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb6!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit6."','".$unit6."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb6."','".$product_idb6."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb7!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit7."','".$unit7."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb7."','".$product_idb7."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb8!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit8."','".$unit8."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb8."','".$product_idb8."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb9!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit9."','".$unit9."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb9."','".$product_idb9."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb10!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk2."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+}else{
+$strSQL2 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$sale_count2."','".$sale_count2."','".$product_price2."','".$product_price2."','".$sum_amount2."','".$sale_remarkk2."','".$discount_unit2."','".$warranty2."','".$cal2."','".$pm2."','".$product_id2."','".$product_id2."','".$have_order."','".$clear_br2."','".$clear_ivno2."','".$jong_no2."','".$jong_ckk2."')";
+	$objQuery2 = mysqli_query($conn,$strSQL2);
+	if ($objQuery2) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn2"] ?? ($_POST["sn2"] ?? ''), $_POST["pm_year2"] ?? '', $_POST["display_name2"] ?? '');
+	}
+}
+}
+
+
+if($product_id3 != '' && ($_POST["subso_db_id3"] ?? '') === ''){
+
+$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code3."' ";
+$objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
+$Num_Rows31 = mysqli_num_rows($objQuery31);
+$objResult31 = mysqli_fetch_array($objQuery31);
+
+$product_idb1 =$objResult31["product_id1"];
+$product_idb2 =$objResult31["product_id2"];
+$product_idb3 =$objResult31["product_id3"];
+$product_idb4 =$objResult31["product_id4"];
+$product_idb5 =$objResult31["product_id5"];
+$product_idb6 =$objResult31["product_id6"];
+$product_idb7 =$objResult31["product_id7"];
+$product_idb8 =$objResult31["product_id8"];
+$product_idb9 =$objResult31["product_id9"];
+$product_idb10 =$objResult31["product_id10"];
+
+$unit1 =$sale_count3*$objResult31["unit1"];
+$unit2 =$sale_count3*$objResult31["unit2"];
+$unit3 =$sale_count3*$objResult31["unit3"];
+$unit4 =$sale_count3*$objResult31["unit4"];
+$unit5 =$sale_count3*$objResult31["unit5"];
+$unit6 =$sale_count3*$objResult31["unit6"];
+$unit7 =$sale_count3*$objResult31["unit7"];
+$unit8 =$sale_count3*$objResult31["unit8"];
+$unit9 =$sale_count3*$objResult31["unit9"];
+$unit10 =$sale_count3*$objResult31["unit10"];
+
+if($Num_Rows31 > 0){
+
+	if($product_idb1!=''){
+$strSQL104 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,code_bom,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit1."','".$unit1."','".$product_price3."','".$product_price3."','".$sum_amount3."','".$sale_remarkk3."','".$discount_unit3."','".$warranty3."','".$cal3."','".$pm3."','".$product_idb1."','".$product_idb1."','".$product_code3."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery104 = mysqli_query($conn,$strSQL104);
+	}
+	if($product_idb2!=''){
+$strSQL100 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit2."','".$unit2."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb2."','".$product_idb2."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery100 = mysqli_query($conn,$strSQL100);
+	}
+	if($product_idb3!=''){
+$strSQL101 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit3."','".$unit3."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb3."','".$product_idb3."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery101 = mysqli_query($conn,$strSQL101);
+	}
+	if($product_idb4!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit4."','".$unit4."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb4."','".$product_idb4."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb5!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit5."','".$unit5."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb5."','".$product_idb5."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb6!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit6."','".$unit6."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb6."','".$product_idb6."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb7!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit7."','".$unit7."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb7."','".$product_idb7."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb8!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit8."','".$unit8."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb8."','".$product_idb8."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb9!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit9."','".$unit9."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb9."','".$product_idb9."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb10!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk3."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+}else{
+$strSQL3 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$sale_count3."','".$sale_count3."','".$product_price3."','".$product_price3."','".$sum_amount3."','".$sale_remarkk3."','".$discount_unit3."','".$warranty3."','".$cal3."','".$pm3."','".$product_id3."','".$product_id3."','".$have_order."','".$clear_br3."','".$clear_ivno3."','".$jong_no3."','".$jong_ckk3."')";
+	$objQuery3 = mysqli_query($conn,$strSQL3);
+	if ($objQuery3) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn3"] ?? ($_POST["sn3"] ?? ''), $_POST["pm_year3"] ?? '', $_POST["display_name3"] ?? '');
+	}
+}
+}
+
+
+if($product_id4 != '' && ($_POST["subso_db_id4"] ?? '') === ''){
+
+$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code4."' ";
+$objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
+$Num_Rows31 = mysqli_num_rows($objQuery31);
+$objResult31 = mysqli_fetch_array($objQuery31);
+
+$product_idb1 =$objResult31["product_id1"];
+$product_idb2 =$objResult31["product_id2"];
+$product_idb3 =$objResult31["product_id3"];
+$product_idb4 =$objResult31["product_id4"];
+$product_idb5 =$objResult31["product_id5"];
+$product_idb6 =$objResult31["product_id6"];
+$product_idb7 =$objResult31["product_id7"];
+$product_idb8 =$objResult31["product_id8"];
+$product_idb9 =$objResult31["product_id9"];
+$product_idb10 =$objResult31["product_id10"];
+
+$unit1 =$sale_count4*$objResult31["unit1"];
+$unit2 =$sale_count4*$objResult31["unit2"];
+$unit3 =$sale_count4*$objResult31["unit3"];
+$unit4 =$sale_count4*$objResult31["unit4"];
+$unit5 =$sale_count4*$objResult31["unit5"];
+$unit6 =$sale_count4*$objResult31["unit6"];
+$unit7 =$sale_count4*$objResult31["unit7"];
+$unit8 =$sale_count4*$objResult31["unit8"];
+$unit9 =$sale_count4*$objResult31["unit9"];
+$unit10 =$sale_count4*$objResult31["unit10"];
+
+if($Num_Rows31 > 0){
+
+	if($product_idb1!=''){
+$strSQL104 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,code_bom,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit1."','".$unit1."','".$product_price4."','".$product_price4."','".$sum_amount4."','".$sale_remarkk4."','".$discount_unit4."','".$warranty4."','".$cal4."','".$pm4."','".$product_idb1."','".$product_idb1."','".$product_code4."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery104 = mysqli_query($conn,$strSQL104);
+	}
+	if($product_idb2!=''){
+$strSQL100 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit2."','".$unit2."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb2."','".$product_idb2."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery100 = mysqli_query($conn,$strSQL100);
+	}
+	if($product_idb3!=''){
+$strSQL101 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit3."','".$unit3."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb3."','".$product_idb3."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery101 = mysqli_query($conn,$strSQL101);
+	}
+	if($product_idb4!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit4."','".$unit4."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb4."','".$product_idb4."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb5!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit5."','".$unit5."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb5."','".$product_idb5."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb6!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit6."','".$unit6."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb6."','".$product_idb6."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb7!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit7."','".$unit7."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb7."','".$product_idb7."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb8!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit8."','".$unit8."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb8."','".$product_idb8."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb9!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit9."','".$unit9."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb9."','".$product_idb9."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb10!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk4."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+}else{
+$strSQL4 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$sale_count4."','".$sale_count4."','".$product_price4."','".$product_price4."','".$sum_amount4."','".$sale_remarkk4."','".$discount_unit4."','".$warranty4."','".$cal4."','".$pm4."','".$product_id4."','".$product_id4."','".$have_order."','".$clear_br4."','".$clear_ivno4."','".$jong_no4."','".$jong_ckk4."')";
+	$objQuery4 = mysqli_query($conn,$strSQL4);
+	if ($objQuery4) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn4"] ?? ($_POST["sn4"] ?? ''), $_POST["pm_year4"] ?? '', $_POST["display_name4"] ?? '');
+	}
+}
+}
+
+
+if($product_id5 != '' && ($_POST["subso_db_id5"] ?? '') === ''){
+
+$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code5."' ";
+$objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
+$Num_Rows31 = mysqli_num_rows($objQuery31);
+$objResult31 = mysqli_fetch_array($objQuery31);
+
+$product_idb1 =$objResult31["product_id1"];
+$product_idb2 =$objResult31["product_id2"];
+$product_idb3 =$objResult31["product_id3"];
+$product_idb4 =$objResult31["product_id4"];
+$product_idb5 =$objResult31["product_id5"];
+$product_idb6 =$objResult31["product_id6"];
+$product_idb7 =$objResult31["product_id7"];
+$product_idb8 =$objResult31["product_id8"];
+$product_idb9 =$objResult31["product_id9"];
+$product_idb10 =$objResult31["product_id10"];
+
+$unit1 =$sale_count5*$objResult31["unit1"];
+$unit2 =$sale_count5*$objResult31["unit2"];
+$unit3 =$sale_count5*$objResult31["unit3"];
+$unit4 =$sale_count5*$objResult31["unit4"];
+$unit5 =$sale_count5*$objResult31["unit5"];
+$unit6 =$sale_count5*$objResult31["unit6"];
+$unit7 =$sale_count5*$objResult31["unit7"];
+$unit8 =$sale_count5*$objResult31["unit8"];
+$unit9 =$sale_count5*$objResult31["unit9"];
+$unit10 =$sale_count5*$objResult31["unit10"];
+
+if($Num_Rows31 > 0){
+
+	if($product_idb1!=''){
+$strSQL104 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,code_bom,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit1."','".$unit1."','".$product_price5."','".$product_price5."','".$sum_amount5."','".$sale_remarkk5."','".$discount_unit5."','".$warranty5."','".$cal5."','".$pm5."','".$product_idb1."','".$product_idb1."','".$product_code5."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery104 = mysqli_query($conn,$strSQL104);
+	}
+	if($product_idb2!=''){
+$strSQL100 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit2."','".$unit2."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb2."','".$product_idb2."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery100 = mysqli_query($conn,$strSQL100);
+	}
+	if($product_idb3!=''){
+$strSQL101 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit3."','".$unit3."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb3."','".$product_idb3."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery101 = mysqli_query($conn,$strSQL101);
+	}
+	if($product_idb4!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit4."','".$unit4."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb4."','".$product_idb4."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb5!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit5."','".$unit5."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb5."','".$product_idb5."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb6!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit6."','".$unit6."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb6."','".$product_idb6."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb7!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit7."','".$unit7."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb7."','".$product_idb7."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb8!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit8."','".$unit8."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb8."','".$product_idb8."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb9!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit9."','".$unit9."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb9."','".$product_idb9."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+	if($product_idb10!=''){
+$strSQL102 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,bom_ckk,code_bomsame,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$unit10."','".$unit10."','0.00','0.00','0.00','".$sale_remarkk5."','0.00','0','0','0','".$product_idb10."','".$product_idb10."','1','".$product_code5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+		$objQuery102 = mysqli_query($conn,$strSQL102);
+	}
+}else{
+$strSQL5 = "insert into hos__subso
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
+values ('".$ref_id."','".$sale_count5."','".$sale_count5."','".$product_price5."','".$product_price5."','".$sum_amount5."','".$sale_remarkk5."','".$discount_unit5."','".$warranty5."','".$cal5."','".$pm5."','".$product_id5."','".$product_id5."','".$have_order."','".$clear_br5."','".$clear_ivno5."','".$jong_no5."','".$jong_ckk5."')";
+	$objQuery5 = mysqli_query($conn,$strSQL5);
+	if ($objQuery5) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn5"] ?? ($_POST["sn5"] ?? ''), $_POST["pm_year5"] ?? '', $_POST["display_name5"] ?? '');
+	}
+}
+}
+
+
+if($product_id6 != '' && ($_POST["subso_db_id6"] ?? '') === ''){
+
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code6."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
 $Num_Rows31 = mysqli_num_rows($objQuery31);
@@ -1431,12 +2092,15 @@ $strSQL6 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count6."','".$sale_count6."','".$product_price6."','".$product_price6."','".$sum_amount6."','".$sale_remarkk6."','".$discount_unit6."','".$warranty6."','".$cal6."','".$pm6."','".$product_id6."','".$product_id6."','".$have_order."','".$clear_br6."','".$clear_ivno6."','".$jong_no6."','".$jong_ckk6."')";
 
 $objQuery6 = mysqli_query($conn,$strSQL6);
+if ($objQuery6) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn6"] ?? ($_POST["sn6"] ?? ''), $_POST["pm_year6"] ?? '', $_POST["display_name6"] ?? '');
+}
 	
 }
 }
 
 
-if($product_id7 !=''  ){
+if($product_id7 != '' && ($_POST["subso_db_id7"] ?? '') === ''){
 	
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code7."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -1573,12 +2237,15 @@ $strSQL7 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count7."','".$sale_count7."','".$product_price7."','".$product_price7."','".$sum_amount7."','".$sale_remarkk7."','".$discount_unit7."','".$warranty7."','".$cal7."','".$pm7."','".$product_id7."','".$product_id7."','".$have_order."','".$clear_br7."','".$clear_ivno7."','".$jong_no7."','".$jong_ckk7."')";
 
 $objQuery7 = mysqli_query($conn,$strSQL7);
+if ($objQuery7) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn7"] ?? ($_POST["sn7"] ?? ''), $_POST["pm_year7"] ?? '', $_POST["display_name7"] ?? '');
+}
 
 }
 }
 
 
-if($product_id8 !=''  ){
+if($product_id8 != '' && ($_POST["subso_db_id8"] ?? '') === ''){
 
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code8."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -1716,12 +2383,15 @@ $strSQL8 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count8."','".$sale_count8."','".$product_price8."','".$product_price8."','".$sum_amount8."','".$sale_remarkk8."','".$discount_unit8."','".$warranty8."','".$cal8."','".$pm8."','".$product_id8."','".$product_id8."','".$have_order."','".$clear_br8."','".$clear_ivno8."','".$jong_no8."','".$jong_ckk8."')";
 
 	$objQuery8 = mysqli_query($conn,$strSQL8);
+if ($objQuery8) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn8"] ?? ($_POST["sn8"] ?? ''), $_POST["pm_year8"] ?? '', $_POST["display_name8"] ?? '');
+}
 
 }
 }
 
 
-if($product_id9 !=''  ){
+if($product_id9 != '' && ($_POST["subso_db_id9"] ?? '') === ''){
 	
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code9."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -1859,13 +2529,16 @@ $strSQL9 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count9."','".$sale_count9."','".$product_price9."','".$product_price9."','".$sum_amount9."','".$sale_remarkk9."','".$discount_unit9."','".$warranty9."','".$cal9."','".$pm9."','".$product_id9."','".$product_id9."','".$have_order."','".$clear_br9."','".$clear_ivno9."','".$jong_no9."','".$jong_ckk9."')";
 
 $objQuery9 = mysqli_query($conn,$strSQL9);
+if ($objQuery9) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn9"] ?? ($_POST["sn9"] ?? ''), $_POST["pm_year9"] ?? '', $_POST["display_name9"] ?? '');
+}
 
 
 }
 }
 
 
-if($product_id10 !=''  ){
+if($product_id10 != '' && ($_POST["subso_db_id10"] ?? '') === ''){
 
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code10."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2003,6 +2676,9 @@ $strSQL10 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count10."','".$sale_count10."','".$product_price10."','".$product_price10."','".$sum_amount10."','".$sale_remarkk10."','".$discount_unit10."','".$warranty10."','".$cal10."','".$pm10."','".$product_id10."','".$product_id10."','".$have_order."','".$clear_br10."','".$clear_ivno10."','".$jong_no10."','".$jong_ckk10."')";
 
 $objQuery10 = mysqli_query($conn,$strSQL10);
+if ($objQuery10) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn10"] ?? ($_POST["sn10"] ?? ''), $_POST["pm_year10"] ?? '', $_POST["display_name10"] ?? '');
+}
 
 }
 }
@@ -2010,7 +2686,7 @@ $objQuery10 = mysqli_query($conn,$strSQL10);
 
 ////////////
 
-if($product_id11 !=''  ){
+if($product_id11 != '' && ($_POST["subso_db_id11"] ?? '') === ''){
 	
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code11."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2147,10 +2823,13 @@ $strSQL11 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count11."','".$sale_count11."','".$product_price11."','".$product_price11."','".$sum_amount11."','".$sale_remarkk11."','".$discount_unit11."','".$warranty11."','".$cal11."','".$pm11."','".$product_id11."','".$product_id11."','".$have_order."','".$clear_br11."','".$clear_ivno11."','".$jong_no11."','".$jong_ckk11."')";
 
 $objQuery11 = mysqli_query($conn,$strSQL11);
+if ($objQuery11) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn11"] ?? ($_POST["sn11"] ?? ''), $_POST["pm_year11"] ?? '', $_POST["display_name11"] ?? '');
+}
 }
 }
 
-if($product_id12 !=''  ){
+if($product_id12 != '' && ($_POST["subso_db_id12"] ?? '') === ''){
 	
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code12."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2287,10 +2966,13 @@ $strSQL12 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count12."','".$sale_count12."','".$product_price12."','".$product_price12."','".$sum_amount12."','".$sale_remarkk12."','".$discount_unit12."','".$warranty12."','".$cal12."','".$pm12."','".$product_id12."','".$product_id12."','".$have_order."','".$clear_br12."','".$clear_ivno12."','".$jong_no12."','".$jong_ckk12."')";
 
 $objQuery12 = mysqli_query($conn,$strSQL12);
+if ($objQuery12) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn12"] ?? ($_POST["sn12"] ?? ''), $_POST["pm_year12"] ?? '', $_POST["display_name12"] ?? '');
+}
 }
 }
 
-if($product_id13 !=''  ){
+if($product_id13 != '' && ($_POST["subso_db_id13"] ?? '') === ''){
 
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code13."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2427,10 +3109,13 @@ $strSQL13 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count13."','".$sale_count13."','".$product_price13."','".$product_price13."','".$sum_amount13."','".$sale_remarkk13."','".$discount_unit13."','".$warranty13."','".$cal13."','".$pm13."','".$product_id13."','".$product_id13."','".$have_order."','".$clear_br13."','".$clear_ivno13."','".$jong_no13."','".$jong_ckk13."')";
 
 $objQuery13 = mysqli_query($conn,$strSQL13);
+if ($objQuery13) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn13"] ?? ($_POST["sn13"] ?? ''), $_POST["pm_year13"] ?? '', $_POST["display_name13"] ?? '');
+}
 }
 }
 
-if($product_id14 !=''  ){
+if($product_id14 != '' && ($_POST["subso_db_id14"] ?? '') === ''){
 
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code14."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2567,10 +3252,13 @@ $strSQL14 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk)
 values ('".$ref_id."','".$sale_count14."','".$sale_count14."','".$product_price14."','".$product_price14."','".$sum_amount14."','".$sale_remarkk14."','".$discount_unit14."','".$warranty14."','".$cal14."','".$pm14."','".$product_id14."','".$product_id14."','".$have_order."','".$clear_br14."','".$clear_ivno14."','".$jong_no14."','".$jong_ckk14."')";
 $objQuery14 = mysqli_query($conn,$strSQL14);
+if ($objQuery14) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn14"] ?? ($_POST["sn14"] ?? ''), $_POST["pm_year14"] ?? '', $_POST["display_name14"] ?? '');
+}
 }
 }
 
-if($product_id15 !=''  ){
+if($product_id15 != '' && ($_POST["subso_db_id15"] ?? '') === ''){
 
 $strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '".$product_code15."' ";
 $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
@@ -2709,13 +3397,16 @@ $strSQL15 = "insert into hos__subso
 values ('".$ref_id."','".$sale_count15."','".$sale_count15."','".$product_price15."','".$product_price15."','".$sum_amount15."','".$sale_remarkk15."','".$discount_unit15."','".$warranty15."','".$cal15."','".$pm15."','".$product_id15."','".$product_id15."','".$have_order."','".$clear_br15."','".$clear_ivno15."','".$jong_no15."','".$jong_ckk15."')";
 
 	$objQuery15 = mysqli_query($conn,$strSQL15);
+	if ($objQuery15) {
+		applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn15"] ?? ($_POST["sn15"] ?? ''), $_POST["pm_year15"] ?? '', $_POST["display_name15"] ?? '');
+	}
 }
 }
 
 
 
 
-if($product_id16 !==''  ){
+if($product_id16 !== '' && ($_POST["subso_db_id16"] ?? '') === ''){
 
 $strSQL16 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2724,11 +3415,14 @@ values ('".$ref_id."','".$sale_count16."','".$sale_count16."','".$product_price1
 //exit();
 
 $objQuery16 = mysqli_query($conn,$strSQL16);
+if ($objQuery16) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn16"] ?? ($_POST["sn16"] ?? ''), $_POST["pm_year16"] ?? '', $_POST["display_name16"] ?? '');
+}
 
 }
 
 
-if($product_id17 !==''  ){
+if($product_id17 !== '' && ($_POST["subso_db_id17"] ?? '') === ''){
 
 $strSQL17 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2737,11 +3431,14 @@ values ('".$ref_id."','".$sale_count17."','".$sale_count17."','".$product_price1
 //exit();
 
 $objQuery17 = mysqli_query($conn,$strSQL17);
+if ($objQuery17) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn17"] ?? ($_POST["sn17"] ?? ''), $_POST["pm_year17"] ?? '', $_POST["display_name17"] ?? '');
+}
 
 }
 
 
-if($product_id18 !==''  ){
+if($product_id18 !== '' && ($_POST["subso_db_id18"] ?? '') === ''){
 
 $strSQL18 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2750,11 +3447,14 @@ values ('".$ref_id."','".$sale_count18."','".$sale_count18."','".$product_price1
 //exit();
 
 $objQuery18 = mysqli_query($conn,$strSQL18);
+if ($objQuery18) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn18"] ?? ($_POST["sn18"] ?? ''), $_POST["pm_year18"] ?? '', $_POST["display_name18"] ?? '');
+}
 
 }
 
 
-if($product_id19 !==''  ){
+if($product_id19 !== '' && ($_POST["subso_db_id19"] ?? '') === ''){
 
 $strSQL19 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2763,11 +3463,14 @@ values ('".$ref_id."','".$sale_count19."','".$sale_count19."','".$product_price1
 //exit();
 
 $objQuery19 = mysqli_query($conn,$strSQL19);
+if ($objQuery19) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn19"] ?? ($_POST["sn19"] ?? ''), $_POST["pm_year19"] ?? '', $_POST["display_name19"] ?? '');
+}
 
 }
 
 
-if($product_id20 !==''  ){
+if($product_id20 !== '' && ($_POST["subso_db_id20"] ?? '') === ''){
 
 $strSQL20 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2776,11 +3479,14 @@ values ('".$ref_id."','".$sale_count20."','".$sale_count20."','".$product_price2
 //exit();
 
 $objQuery20 = mysqli_query($conn,$strSQL20);
+if ($objQuery20) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn20"] ?? ($_POST["sn20"] ?? ''), $_POST["pm_year20"] ?? '', $_POST["display_name20"] ?? '');
+}
 
 }
 
 
-if($product_id21 !==''  ){
+if($product_id21 !== '' && ($_POST["subso_db_id21"] ?? '') === ''){
 
 $strSQL21 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2789,11 +3495,14 @@ values ('".$ref_id."','".$sale_count21."','".$sale_count21."','".$product_price2
 //exit();
 
 $objQuery21 = mysqli_query($conn,$strSQL21);
+if ($objQuery21) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn21"] ?? ($_POST["sn21"] ?? ''), $_POST["pm_year21"] ?? '', $_POST["display_name21"] ?? '');
+}
 
 }
 
 
-if($product_id22 !==''  ){
+if($product_id22 !== '' && ($_POST["subso_db_id22"] ?? '') === ''){
 
 $strSQL22 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2802,11 +3511,14 @@ values ('".$ref_id."','".$sale_count22."','".$sale_count22."','".$product_price2
 //exit();
 
 $objQuery22 = mysqli_query($conn,$strSQL22);
+if ($objQuery22) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn22"] ?? ($_POST["sn22"] ?? ''), $_POST["pm_year22"] ?? '', $_POST["display_name22"] ?? '');
+}
 
 }
 
 
-if($product_id23 !==''  ){
+if($product_id23 !== '' && ($_POST["subso_db_id23"] ?? '') === ''){
 
 $strSQL23 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2815,11 +3527,14 @@ values ('".$ref_id."','".$sale_count23."','".$sale_count23."','".$product_price2
 //exit();
 
 $objQuery23 = mysqli_query($conn,$strSQL23);
+if ($objQuery23) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn23"] ?? ($_POST["sn23"] ?? ''), $_POST["pm_year23"] ?? '', $_POST["display_name23"] ?? '');
+}
 
 }
 
 
-if($product_id24 !==''  ){
+if($product_id24 !== '' && ($_POST["subso_db_id24"] ?? '') === ''){
 
 $strSQL24 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2828,11 +3543,14 @@ values ('".$ref_id."','".$sale_count24."','".$sale_count24."','".$product_price2
 //exit();
 
 $objQuery24 = mysqli_query($conn,$strSQL24);
+if ($objQuery24) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn24"] ?? ($_POST["sn24"] ?? ''), $_POST["pm_year24"] ?? '', $_POST["display_name24"] ?? '');
+}
 
 }
 
 
-if($product_id25 !==''  ){
+if($product_id25 !== '' && ($_POST["subso_db_id25"] ?? '') === ''){
 
 $strSQL25 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2841,13 +3559,16 @@ values ('".$ref_id."','".$sale_count25."','".$sale_count25."','".$product_price2
 //exit();
 
 $objQuery25 = mysqli_query($conn,$strSQL25);
+if ($objQuery25) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn25"] ?? ($_POST["sn25"] ?? ''), $_POST["pm_year25"] ?? '', $_POST["display_name25"] ?? '');
+}
 
 }
 
 
 ////////////
 
-if($product_id26 !==''  ){
+if($product_id26 !== '' && ($_POST["subso_db_id26"] ?? '') === ''){
 
 $strSQL26 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2856,10 +3577,13 @@ values ('".$ref_id."','".$sale_count26."','".$sale_count26."','".$product_price2
 //exit();
 
 $objQuery26 = mysqli_query($conn,$strSQL26);
+if ($objQuery26) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn26"] ?? ($_POST["sn26"] ?? ''), $_POST["pm_year26"] ?? '', $_POST["display_name26"] ?? '');
+}
 
 }
 
-if($product_id27 !==''  ){
+if($product_id27 !== '' && ($_POST["subso_db_id27"] ?? '') === ''){
 
 $strSQL27 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2868,10 +3592,13 @@ values ('".$ref_id."','".$sale_count27."','".$sale_count27."','".$product_price2
 //exit();
 
 $objQuery27 = mysqli_query($conn,$strSQL27);
+if ($objQuery27) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn27"] ?? ($_POST["sn27"] ?? ''), $_POST["pm_year27"] ?? '', $_POST["display_name27"] ?? '');
+}
 
 }
 
-if($product_id28 !==''  ){
+if($product_id28 !== '' && ($_POST["subso_db_id28"] ?? '') === ''){
 
 $strSQL28 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2880,10 +3607,13 @@ values ('".$ref_id."','".$sale_count28."','".$sale_count28."','".$product_price2
 //exit();
 
 $objQuery28 = mysqli_query($conn,$strSQL28);
+if ($objQuery28) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn28"] ?? ($_POST["sn28"] ?? ''), $_POST["pm_year28"] ?? '', $_POST["display_name28"] ?? '');
+}
 
 }
 
-if($product_id29 !==''  ){
+if($product_id29 !== '' && ($_POST["subso_db_id29"] ?? '') === ''){
 
 $strSQL29 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2892,10 +3622,13 @@ values ('".$ref_id."','".$sale_count29."','".$sale_count29."','".$product_price2
 //exit();
 
 $objQuery29 = mysqli_query($conn,$strSQL29);
+if ($objQuery29) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn29"] ?? ($_POST["sn29"] ?? ''), $_POST["pm_year29"] ?? '', $_POST["display_name29"] ?? '');
+}
 
 }
 
-if($product_id30 !==''  ){
+if($product_id30 !== '' && ($_POST["subso_db_id30"] ?? '') === ''){
 
 $strSQL30 = "insert into hos__subso
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code)
@@ -2904,6 +3637,9 @@ values ('".$ref_id."','".$sale_count30."','".$sale_count30."','".$product_price3
 //exit();
 
 $objQuery30 = mysqli_query($conn,$strSQL30);
+if ($objQuery30) {
+	applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn30"] ?? ($_POST["sn30"] ?? ''), $_POST["pm_year30"] ?? '', $_POST["display_name30"] ?? '');
+}
 
 }
 

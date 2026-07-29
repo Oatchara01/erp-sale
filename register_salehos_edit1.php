@@ -437,7 +437,7 @@ $objQuery1 = mysqli_query($conn,$strSQL1);
 }
 	
 	
-if($count2 = '0'){
+if($count2 < 0){
 
 echo "<script language=\"JavaScript\">";
 echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='register_salehos_edit.php?ref_id=$ref_id';";
