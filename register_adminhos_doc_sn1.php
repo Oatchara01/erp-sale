@@ -247,14 +247,14 @@ $v_warranty = mysqli_fetch_array($q_warranty);
     <tr  style="font-size: 15px;">
         <td style="border: 1px solid black; vertical-align: top;">Frequency</td>
         <td style="border: 1px solid black; border-left: hidden; padding:8px 0px;">
-            <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if($v_frequency['Frequency'] == '3'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 3 Months 
+            <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if(($v_frequency['Frequency'] ?? '') == '3'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 3 Months 
             <br><br>
-             <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if($v_frequency['Frequency'] == '6'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 6 Months
+             <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if(($v_frequency['Frequency'] ?? '') == '6'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 6 Months
         </td>
         <td style="border: 1px solid black; border-left: hidden; padding:8px 0px;">
-            <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if($v_frequency['Frequency'] == '4'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;';} ?></font> 4 Months 
+            <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if(($v_frequency['Frequency'] ?? '') == '4'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;';} ?></font> 4 Months 
             <br><br>
-             <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if($v_frequency['Frequency'] == '12'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 1 Year
+             <font style="font-size:15px; padding:0px 6px; border: 1px solid #202020;"><?php if(($v_frequency['Frequency'] ?? '') == '12'){ echo '&#10003;'; } else { echo '&nbsp;&nbsp;&nbsp;&nbsp;';} ?></font> 1 Year
         </td>
     </tr>
 </table>
@@ -295,7 +295,7 @@ Visual cheok and rectify
         $v_ck1 = mysqli_fetch_array($q_ck1); 
         ?>
         <tr style="text-align: left;">
-            <td style="width: 85%;"><?php if($v_key['images_main'] != ''){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id3" id="key_id3" value="<?=$numrows_03;?>"></td>
+            <td style="width: 85%;"><?php if(!empty($v_key['images_main'])){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id3" id="key_id3" value="<?=$numrows_03;?>"></td>
             <td style="width: 15%; border: 1px solid black;  text-align: center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?php } ?></td>
         </tr>
         <?php $numrows_03++; } ?>
@@ -314,7 +314,7 @@ Visual cheok and rectify
     </tr>
     <?php
     $numrows_04 = 1;
-    $s_key = "SELECT c2_1.item_id,c2_1.ckk_subtopic,c2_1.subtopic,c2.item_name
+    $s_key = "SELECT c2_1.item_id,c2_1.ckk_subtopic,c2_1.subtopic,c2.item_name,c2.images_main
     FROM document_checking2_1  c2_1
     LEFT JOIN document_checking2 c2
     ON c2_1.item_id = c2.id
@@ -330,7 +330,7 @@ Visual cheok and rectify
     $v_ck1 = mysqli_fetch_array($q_ck1); 
     ?>
     <tr style="text-align: left; " >
-        <td style="width: 70%;"><?php if($v_key['images_main'] != ''){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id4" id="key_id4" value="<?=$numrows_04;?>"></td>
+        <td style="width: 70%;"><?php if(!empty($v_key['images_main'])){?><a style="text-decoration: none;" href="up_img/<?php echo $v_key['images_main'];?>" target="_blank"><?=$v_key['item_name'];?></a><?php } else { echo $v_key['item_name']; }?><input type="hidden" name="key_id4" id="key_id4" value="<?=$numrows_04;?>"></td>
         <td style="width: 15%; border: 1px solid black; text-align:center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['t_list1'] != ''){ echo $v_ck1['t_list1']; }?></td>
         <td style="width: 15%; border: 1px solid black; text-align:center;"><?php if(($v_key['item_id'] == $v_ck1['item_id']) AND $v_ck1['ckk_list1'] == 2){?>&#10003;<?php } ?></td>
     </tr>

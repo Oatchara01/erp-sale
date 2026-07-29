@@ -2906,8 +2906,9 @@ include("head.php"); ?>
 							const productId = getRelatedDocFieldValue('product_id', i);
 							const productCode = getRelatedDocFieldValue('product_codet', i) || getRelatedDocFieldValue('h_product_codet', i);
 							const productName = getRelatedDocFieldValue('display_name', i) || getRelatedDocFieldValue('product_name', i) || productCode;
+							const unitName = getRelatedDocFieldValue('unit_name', i);
 
-							if (!deleted && (productId !== '' || productCode !== '' || productName !== '')) {
+							if (!deleted && unitName === 'เตียง' && (productId !== '' || productCode !== '' || productName !== '')) {
 								rows.push({
 									name: productName,
 									sn: getRelatedDocSn(i),
@@ -2947,7 +2948,7 @@ include("head.php"); ?>
 						}
 
 						for (let i = 1; i <= 30; i++) {
-							['product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_id', 'product_sn', 'row_deleted'].forEach(function(prefix) {
+							['product_codet', 'h_product_codet', 'product_name', 'display_name', 'product_id', 'product_sn', 'unit_name', 'row_deleted'].forEach(function(prefix) {
 								const element = document.getElementById(prefix + i);
 								if (element) {
 									element.addEventListener('input', renderRelatedDocuments);

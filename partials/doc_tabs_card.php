@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Reusable "เอกสารเพิ่มเติม / ข้อความแจ้งแผนก / แนบไฟล์ / เอกสารที่เกี่ยวข้อง" tabs
  * card, shared by register_suphos.php and register_supbrhos.php.
@@ -72,9 +73,9 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 				$pChecked = !empty($pill['checked']);
 				$pSpan = $pill['span'] ?? null;
 				$pStyle = $pSpan ? ' style="grid-column: span ' . (int)$pSpan . ';"' : '';
-				?>
-				<label class="so-doc-pill"<?php echo $pStyle; ?>>
-					<input type="checkbox" name="<?php echo $pName; ?>" value="1"<?php echo $pChecked ? ' checked' : ''; ?>>
+			?>
+				<label class="so-doc-pill" <?php echo $pStyle; ?>>
+					<input type="checkbox" name="<?php echo $pName; ?>" value="1" <?php echo $pChecked ? ' checked' : ''; ?>>
 					<span><?php echo $pLabel; ?></span>
 				</label>
 			<?php } ?>
@@ -85,18 +86,18 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 				$ofCbName = so_saved_h($docExtraOtherField['checkbox_name'] ?? 'ref_10');
 				$ofCbId = so_saved_h($docExtraOtherField['checkbox_id'] ?? ($ofCbName . '_hidden'));
 				$ofCbChecked = !empty($docExtraOtherField['checkbox_checked']);
-				?>
+			?>
 				<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
 					<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
 					<input type="text" name="<?php echo $ofTextName; ?>" class="so-input" value="<?php echo $ofTextValue; ?>" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('<?php echo $ofCbId; ?>').checked = (this.value.trim() !== '');">
-					<input type="checkbox" name="<?php echo $ofCbName; ?>" id="<?php echo $ofCbId; ?>" value="1" style="display:none;"<?php echo $ofCbChecked ? ' checked' : ''; ?>>
+					<input type="checkbox" name="<?php echo $ofCbName; ?>" id="<?php echo $ofCbId; ?>" value="1" style="display:none;" <?php echo $ofCbChecked ? ' checked' : ''; ?>>
 				</div>
 			<?php }
 			foreach ($docExtraHiddenCompat as $hidden) {
 				$hName = so_saved_h($hidden['name'] ?? '');
 				$hChecked = !empty($hidden['checked']);
-				?>
-				<input type="checkbox" name="<?php echo $hName; ?>" value="1" style="display:none;"<?php echo $hChecked ? ' checked' : ''; ?>>
+			?>
+				<input type="checkbox" name="<?php echo $hName; ?>" value="1" style="display:none;" <?php echo $hChecked ? ' checked' : ''; ?>>
 			<?php } ?>
 		</div>
 
@@ -110,9 +111,9 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 					$prTextName = so_saved_h($pair['text_name'] ?? '');
 					$prTextId = so_saved_h($pair['text_id'] ?? $prTextName);
 					$prTextValue = $pair['text_value'] ?? '';
-					?>
+				?>
 					<div class="so-input-with-checkbox">
-						<label class="so-checkbox-label"><input type="checkbox" name="<?php echo $prCbName; ?>" id="<?php echo $prCbId; ?>" value="1"<?php echo $prCbChecked ? ' checked' : ''; ?>> <?php echo $prCbLabel; ?></label>
+						<label class="so-checkbox-label"><input type="checkbox" name="<?php echo $prCbName; ?>" id="<?php echo $prCbId; ?>" value="1" <?php echo $prCbChecked ? ' checked' : ''; ?>> <?php echo $prCbLabel; ?></label>
 						<input name="<?php echo $prTextName; ?>" id="<?php echo $prTextId; ?>" class="so-input" value="<?php echo $prTextValue; ?>">
 					</div>
 				<?php } ?>
@@ -124,7 +125,7 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 	<div id="tab_dept_comment" class="so-3tab-content" style="display:none;">
 		<?php if (!empty($deptComment['enabled'])) {
 			$dcTechChecked = !empty($deptComment['technician_required_checked']);
-			?>
+		?>
 			<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">ข้อความแจ้งแผนกที่เกี่ยวข้อง</h3>
 			<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
 
