@@ -784,13 +784,15 @@ values
 			$objQuery = mysqli_query($conn, $strSQL) or die(mysqli_error());
 			$objResult = mysqli_fetch_array($objQuery);
 
-			$remark_jong = "เปิดใบสั่งขายเลขที่อ้างอิง $ref_id";
+			if (!empty($objResult["ref_id"])) {
+				$remark_jong = "เปิดใบสั่งขายเลขที่อ้างอิง $ref_id";
 
-			$save2 = "UPDATE  hos__jongproduct SET close_jong='1',remark='" . $remark_jong . "'  where ref_id = '" . $objResult["ref_id"] . "'";
-			$qsave2 = mysqli_query($conn, $save2);
+				$save2 = "UPDATE  hos__jongproduct SET close_jong='1',remark='" . $remark_jong . "'  where ref_id = '" . $objResult["ref_id"] . "'";
+				$qsave2 = mysqli_query($conn, $save2);
 
-			$save3 = "UPDATE hos__subjongpro SET close_ckk='1'  where ref_idd = '" . $objResult["ref_id"] . "'";
-			$qsave3 = mysqli_query($conn, $save3);
+				$save3 = "UPDATE hos__subjongpro SET close_ckk='1'  where ref_idd = '" . $objResult["ref_id"] . "'";
+				$qsave3 = mysqli_query($conn, $save3);
+			}
 		}
 
 
@@ -805,7 +807,7 @@ $qsave=mysqli_query($conn,$save);
 			$qry1 = mysqli_query($conn, $sql1) or die(mysqli_error());
 			$rs1 = mysqli_fetch_assoc($qry1);
 
-			if ($rs1["ref_id"] != "") {
+			if (!empty($rs1["ref_id"])) {
 
 				$save = "Update  hos__po set  open_so='1',open_sodate='" . $add_date . "',ref_so = '" . $ref_id . "',name_open='" . $add_by . "'    where  ref_id = '" . $rs1["ref_id"] . "'";
 				$qsave = mysqli_query($conn, $save);
@@ -1389,32 +1391,31 @@ $qsave=mysqli_query($conn,$save);
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code1 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count1 * $objResult31["unit1"];
-			$unit2 = $sale_count1 * $objResult31["unit2"];
-			$unit3 = $sale_count1 * $objResult31["unit3"];
-			$unit4 = $sale_count1 * $objResult31["unit4"];
-			$unit5 = $sale_count1 * $objResult31["unit5"];
-			$unit6 = $sale_count1 * $objResult31["unit6"];
-			$unit7 = $sale_count1 * $objResult31["unit7"];
-			$unit8 = $sale_count1 * $objResult31["unit8"];
-			$unit9 = $sale_count1 * $objResult31["unit9"];
-			$unit10 = $sale_count1 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -1524,32 +1525,31 @@ values ('" . $ref_id . "','" . $sale_count1 . "','" . $sale_count1 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code2 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count2 * $objResult31["unit1"];
-			$unit2 = $sale_count2 * $objResult31["unit2"];
-			$unit3 = $sale_count2 * $objResult31["unit3"];
-			$unit4 = $sale_count2 * $objResult31["unit4"];
-			$unit5 = $sale_count2 * $objResult31["unit5"];
-			$unit6 = $sale_count2 * $objResult31["unit6"];
-			$unit7 = $sale_count2 * $objResult31["unit7"];
-			$unit8 = $sale_count2 * $objResult31["unit8"];
-			$unit9 = $sale_count2 * $objResult31["unit9"];
-			$unit10 = $sale_count2 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -1661,32 +1661,31 @@ values ('" . $ref_id . "','" . $sale_count2 . "','" . $sale_count2 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code3 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count3 * $objResult31["unit1"];
-			$unit2 = $sale_count3 * $objResult31["unit2"];
-			$unit3 = $sale_count3 * $objResult31["unit3"];
-			$unit4 = $sale_count3 * $objResult31["unit4"];
-			$unit5 = $sale_count3 * $objResult31["unit5"];
-			$unit6 = $sale_count3 * $objResult31["unit6"];
-			$unit7 = $sale_count3 * $objResult31["unit7"];
-			$unit8 = $sale_count3 * $objResult31["unit8"];
-			$unit9 = $sale_count3 * $objResult31["unit9"];
-			$unit10 = $sale_count3 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -1792,32 +1791,31 @@ values ('" . $ref_id . "','" . $sale_count3 . "','" . $sale_count3 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code4 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count4 * $objResult31["unit1"];
-			$unit2 = $sale_count4 * $objResult31["unit2"];
-			$unit3 = $sale_count4 * $objResult31["unit3"];
-			$unit4 = $sale_count4 * $objResult31["unit4"];
-			$unit5 = $sale_count4 * $objResult31["unit5"];
-			$unit6 = $sale_count4 * $objResult31["unit6"];
-			$unit7 = $sale_count4 * $objResult31["unit7"];
-			$unit8 = $sale_count4 * $objResult31["unit8"];
-			$unit9 = $sale_count4 * $objResult31["unit9"];
-			$unit10 = $sale_count4 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -1922,32 +1920,31 @@ values ('" . $ref_id . "','" . $sale_count4 . "','" . $sale_count4 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code5 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count5 * $objResult31["unit1"];
-			$unit2 = $sale_count5 * $objResult31["unit2"];
-			$unit3 = $sale_count5 * $objResult31["unit3"];
-			$unit4 = $sale_count5 * $objResult31["unit4"];
-			$unit5 = $sale_count5 * $objResult31["unit5"];
-			$unit6 = $sale_count5 * $objResult31["unit6"];
-			$unit7 = $sale_count5 * $objResult31["unit7"];
-			$unit8 = $sale_count5 * $objResult31["unit8"];
-			$unit9 = $sale_count5 * $objResult31["unit9"];
-			$unit10 = $sale_count5 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2053,32 +2050,31 @@ values ('" . $ref_id . "','" . $sale_count5 . "','" . $sale_count5 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code6 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count6 * $objResult31["unit1"];
-			$unit2 = $sale_count6 * $objResult31["unit2"];
-			$unit3 = $sale_count6 * $objResult31["unit3"];
-			$unit4 = $sale_count6 * $objResult31["unit4"];
-			$unit5 = $sale_count6 * $objResult31["unit5"];
-			$unit6 = $sale_count6 * $objResult31["unit6"];
-			$unit7 = $sale_count6 * $objResult31["unit7"];
-			$unit8 = $sale_count6 * $objResult31["unit8"];
-			$unit9 = $sale_count6 * $objResult31["unit9"];
-			$unit10 = $sale_count6 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2183,32 +2179,31 @@ values ('" . $ref_id . "','" . $sale_count6 . "','" . $sale_count6 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code7 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count7 * $objResult31["unit1"];
-			$unit2 = $sale_count7 * $objResult31["unit2"];
-			$unit3 = $sale_count7 * $objResult31["unit3"];
-			$unit4 = $sale_count7 * $objResult31["unit4"];
-			$unit5 = $sale_count7 * $objResult31["unit5"];
-			$unit6 = $sale_count7 * $objResult31["unit6"];
-			$unit7 = $sale_count7 * $objResult31["unit7"];
-			$unit8 = $sale_count7 * $objResult31["unit8"];
-			$unit9 = $sale_count7 * $objResult31["unit9"];
-			$unit10 = $sale_count7 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2313,32 +2308,31 @@ values ('" . $ref_id . "','" . $sale_count7 . "','" . $sale_count7 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code8 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count8 * $objResult31["unit1"];
-			$unit2 = $sale_count8 * $objResult31["unit2"];
-			$unit3 = $sale_count8 * $objResult31["unit3"];
-			$unit4 = $sale_count8 * $objResult31["unit4"];
-			$unit5 = $sale_count8 * $objResult31["unit5"];
-			$unit6 = $sale_count8 * $objResult31["unit6"];
-			$unit7 = $sale_count8 * $objResult31["unit7"];
-			$unit8 = $sale_count8 * $objResult31["unit8"];
-			$unit9 = $sale_count8 * $objResult31["unit9"];
-			$unit10 = $sale_count8 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2444,32 +2438,31 @@ values ('" . $ref_id . "','" . $sale_count8 . "','" . $sale_count8 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code9 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count9 * $objResult31["unit1"];
-			$unit2 = $sale_count9 * $objResult31["unit2"];
-			$unit3 = $sale_count9 * $objResult31["unit3"];
-			$unit4 = $sale_count9 * $objResult31["unit4"];
-			$unit5 = $sale_count9 * $objResult31["unit5"];
-			$unit6 = $sale_count9 * $objResult31["unit6"];
-			$unit7 = $sale_count9 * $objResult31["unit7"];
-			$unit8 = $sale_count9 * $objResult31["unit8"];
-			$unit9 = $sale_count9 * $objResult31["unit9"];
-			$unit10 = $sale_count9 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2575,32 +2568,31 @@ values ('" . $ref_id . "','" . $sale_count9 . "','" . $sale_count9 . "','" . $pr
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code10 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count10 * $objResult31["unit1"];
-			$unit2 = $sale_count10 * $objResult31["unit2"];
-			$unit3 = $sale_count10 * $objResult31["unit3"];
-			$unit4 = $sale_count10 * $objResult31["unit4"];
-			$unit5 = $sale_count10 * $objResult31["unit5"];
-			$unit6 = $sale_count10 * $objResult31["unit6"];
-			$unit7 = $sale_count10 * $objResult31["unit7"];
-			$unit8 = $sale_count10 * $objResult31["unit8"];
-			$unit9 = $sale_count10 * $objResult31["unit9"];
-			$unit10 = $sale_count10 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2708,32 +2700,31 @@ values ('" . $ref_id . "','" . $sale_count10 . "','" . $sale_count10 . "','" . $
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code11 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count11 * $objResult31["unit1"];
-			$unit2 = $sale_count11 * $objResult31["unit2"];
-			$unit3 = $sale_count11 * $objResult31["unit3"];
-			$unit4 = $sale_count11 * $objResult31["unit4"];
-			$unit5 = $sale_count11 * $objResult31["unit5"];
-			$unit6 = $sale_count11 * $objResult31["unit6"];
-			$unit7 = $sale_count11 * $objResult31["unit7"];
-			$unit8 = $sale_count11 * $objResult31["unit8"];
-			$unit9 = $sale_count11 * $objResult31["unit9"];
-			$unit10 = $sale_count11 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2837,32 +2828,31 @@ values ('" . $ref_id . "','" . $sale_count11 . "','" . $sale_count11 . "','" . $
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code12 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count12 * $objResult31["unit1"];
-			$unit2 = $sale_count12 * $objResult31["unit2"];
-			$unit3 = $sale_count12 * $objResult31["unit3"];
-			$unit4 = $sale_count12 * $objResult31["unit4"];
-			$unit5 = $sale_count12 * $objResult31["unit5"];
-			$unit6 = $sale_count12 * $objResult31["unit6"];
-			$unit7 = $sale_count12 * $objResult31["unit7"];
-			$unit8 = $sale_count12 * $objResult31["unit8"];
-			$unit9 = $sale_count12 * $objResult31["unit9"];
-			$unit10 = $sale_count12 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -2966,32 +2956,31 @@ values ('" . $ref_id . "','" . $sale_count12 . "','" . $sale_count12 . "','" . $
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code13 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count13 * $objResult31["unit1"];
-			$unit2 = $sale_count13 * $objResult31["unit2"];
-			$unit3 = $sale_count13 * $objResult31["unit3"];
-			$unit4 = $sale_count13 * $objResult31["unit4"];
-			$unit5 = $sale_count13 * $objResult31["unit5"];
-			$unit6 = $sale_count13 * $objResult31["unit6"];
-			$unit7 = $sale_count13 * $objResult31["unit7"];
-			$unit8 = $sale_count13 * $objResult31["unit8"];
-			$unit9 = $sale_count13 * $objResult31["unit9"];
-			$unit10 = $sale_count13 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -3095,32 +3084,31 @@ values ('" . $ref_id . "','" . $sale_count13 . "','" . $sale_count13 . "','" . $
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code14 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count14 * $objResult31["unit1"];
-			$unit2 = $sale_count14 * $objResult31["unit2"];
-			$unit3 = $sale_count14 * $objResult31["unit3"];
-			$unit4 = $sale_count14 * $objResult31["unit4"];
-			$unit5 = $sale_count14 * $objResult31["unit5"];
-			$unit6 = $sale_count14 * $objResult31["unit6"];
-			$unit7 = $sale_count14 * $objResult31["unit7"];
-			$unit8 = $sale_count14 * $objResult31["unit8"];
-			$unit9 = $sale_count14 * $objResult31["unit9"];
-			$unit10 = $sale_count14 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
@@ -3224,32 +3212,31 @@ values ('" . $ref_id . "','" . $sale_count14 . "','" . $sale_count14 . "','" . $
 			$strSQL31 = "SELECT * FROM tb_product_bomhos WHERE bom_code = '" . $product_code15 . "' ";
 			$objQuery31 = mysqli_query($conn, $strSQL31) or die("Error Query [" . $strSQL31 . "]");
 			$Num_Rows31 = mysqli_num_rows($objQuery31);
-			$objResult31 = mysqli_fetch_array($objQuery31);
-
-			$product_idb1 = $objResult31["product_id1"];
-			$product_idb2 = $objResult31["product_id2"];
-			$product_idb3 = $objResult31["product_id3"];
-			$product_idb4 = $objResult31["product_id4"];
-			$product_idb5 = $objResult31["product_id5"];
-			$product_idb6 = $objResult31["product_id6"];
-			$product_idb7 = $objResult31["product_id7"];
-			$product_idb8 = $objResult31["product_id8"];
-			$product_idb9 = $objResult31["product_id9"];
-			$product_idb10 = $objResult31["product_id10"];
-
-
-			$unit1 = $sale_count15 * $objResult31["unit1"];
-			$unit2 = $sale_count15 * $objResult31["unit2"];
-			$unit3 = $sale_count15 * $objResult31["unit3"];
-			$unit4 = $sale_count15 * $objResult31["unit4"];
-			$unit5 = $sale_count15 * $objResult31["unit5"];
-			$unit6 = $sale_count15 * $objResult31["unit6"];
-			$unit7 = $sale_count15 * $objResult31["unit7"];
-			$unit8 = $sale_count15 * $objResult31["unit8"];
-			$unit9 = $sale_count15 * $objResult31["unit9"];
-			$unit10 = $sale_count15 * $objResult31["unit10"];
-
 			if ($Num_Rows31 > 0) {
+
+				$objResult31 = mysqli_fetch_array($objQuery31);
+
+				$product_idb1 = $objResult31["product_id1"] ?? '';
+				$product_idb2 = $objResult31["product_id2"] ?? '';
+				$product_idb3 = $objResult31["product_id3"] ?? '';
+				$product_idb4 = $objResult31["product_id4"] ?? '';
+				$product_idb5 = $objResult31["product_id5"] ?? '';
+				$product_idb6 = $objResult31["product_id6"] ?? '';
+				$product_idb7 = $objResult31["product_id7"] ?? '';
+				$product_idb8 = $objResult31["product_id8"] ?? '';
+				$product_idb9 = $objResult31["product_id9"] ?? '';
+				$product_idb10 = $objResult31["product_id10"] ?? '';
+
+				$unit1 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+				$unit2 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+				$unit3 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+				$unit4 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+				$unit5 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+				$unit6 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+				$unit7 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+				$unit8 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+				$unit9 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+				$unit10 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 				if ($product_idb1 != '') {
 
