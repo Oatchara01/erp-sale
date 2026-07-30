@@ -973,7 +973,7 @@ include("head.php"); ?>
 			$savedProductsForForm[] = array(
 				'product_id' => (string)($savedProduct["product_id"] ?? ""),
 				'product_code' => (string)($savedProduct["master_access_code"] ?? ""),
-				'product_name' => (string)($savedProduct["master_product_name"] ?? $savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? $savedProduct["product_code"] ?? ""),
+				'product_name' => (string)($savedProduct["master_product_name"] ?? $savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? $savedProduct["master_access_code"] ?? ""),
 				'product_sn' => (string)($savedProduct["sn"] ?? ""),
 				'unit_name' => (string)($savedProduct["master_unit_name"] ?? ""),
 				'sale_count' => (string)($savedProduct["count"] ?? ""),
@@ -1195,7 +1195,7 @@ include("head.php"); ?>
 								<?php foreach ($savedProducts as $savedProduct) { ?>
 									<tr>
 										<td style="padding: 10px; border-bottom: 1px solid #F0EEF2;">
-											<div style="font-weight: 500; color: #2d2533;"><?php echo so_saved_display($savedProduct["product_name"] ?? ($savedProduct["product_code"] ?? "")); ?></div>
+											<div style="font-weight: 500; color: #2d2533;"><?php echo so_saved_display($savedProduct["master_product_name"] ?? $savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? $savedProduct["master_access_code"] ?? ""); ?></div>
 											<?php if (!empty($savedProduct["sale_remark"])) { ?>
 												<div style="font-size: 12px; color: #7a7280;"><?php echo so_saved_h($savedProduct["sale_remark"]); ?></div>
 											<?php } ?>
