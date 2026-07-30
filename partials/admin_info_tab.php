@@ -10,7 +10,7 @@
  *     'rows'   => [
  *         [
  *             ['type' => 'text', 'name' => 'admin_doc_no', 'label' => '...', 'value' => $v, 'placeholder' => 'No.'],
- *             ['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+ *             ['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
  *             ['type' => 'text', 'name' => 'admin_work_no', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-search'],
  *             ['type' => 'text', 'name' => 'admin_edit_reason', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
  *             ['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => '...', 'value' => $v],
@@ -165,7 +165,7 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 				?>
 					<div class="admin-ui-field<?php echo $fieldSpanClass; ?>">
 						<?php if ($fieldType === 'button') { ?>
-							<button type="button" class="admin-ui-btn">
+							<button type="button" class="admin-ui-btn"<?php echo isset($adminTabField['id']) ? ' id="' . so_saved_h($adminTabField['id']) . '"' : ''; ?><?php echo isset($adminTabField['onclick']) ? ' onclick="' . so_saved_h($adminTabField['onclick']) . '"' : ''; ?>>
 								<img src="<?php echo so_saved_h($adminTabField['icon'] ?? ''); ?>" alt="icon" style="width: 16px; height: 16px;"> <?php echo so_saved_h($adminTabField['label'] ?? ''); ?>
 							</button>
 						<?php } else {

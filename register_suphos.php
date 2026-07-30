@@ -1646,6 +1646,10 @@ include("head.php"); ?>
 										<option value="1">ใบสั่งขาย</option>
 										<option value="2">ใบสั่งขาย E-Tax</option>
 										<option value="3">ใบฝากขาย (IC)</option>
+										<?php if (($_SESSION['type_login'] ?? '') === 'Admin') { ?>
+											<!-- IE เปิดให้เฉพาะ Admin — ajax_run_doc_no.php ตรวจสิทธิ์ซ้ำฝั่ง server ด้วย -->
+											<option value="4">ใบกำกับอิเล็กทรอนิกส์</option>
+										<?php } ?>
 									</select>
 								</div>
 							</div>
@@ -1806,7 +1810,7 @@ include("head.php"); ?>
 					'rows'   => [
 						[
 							['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
-							['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+							['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
 							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'fas fa-search'],
 							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'fas fa-search'],
 						],
@@ -4734,6 +4738,69 @@ include("head.php"); ?>
 				}
 			});
 		});
+
+		// ปุ่ม "Run เอกสาร" ในแท็บ Admin — ขอเลขที่เอกสารจาก ajax_run_doc_no.php
+		// เลขคำนวณฝั่ง server ทั้งหมด (prefix มาจากประเภท, "/" มาจากบริษัท NBM) หน้านี้แค่ส่งค่าที่เลือกไป
+		function runDocumentNo() {
+			var companySelect = document.getElementById('type_doc_select');
+			var docTypeSelect = document.getElementById('doc_type_select');
+			var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+			var docDateInput = document.querySelector('input[name="admin_doc_date"]');
+			var runButton = document.getElementById('btn_run_doc_no');
+
+			if (!companySelect || !docTypeSelect || !docNoInput) {
+				return;
+			}
+
+			if (docNoInput.value.trim() !== '') {
+				// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
+				if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+					return;
+				}
+			}
+
+			var payload = new URLSearchParams();
+			payload.append('company', companySelect.value);
+			payload.append('doc_type', docTypeSelect.value);
+			payload.append('doc_date', docDateInput ? docDateInput.value : '');
+
+			if (runButton) {
+				runButton.disabled = true;
+			}
+
+			fetch('ajax_run_doc_no.php', {
+					method: 'POST',
+					credentials: 'same-origin',
+					cache: 'no-store',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+					},
+					body: payload.toString()
+				})
+				.then(function(response) {
+					return response.json().then(function(data) {
+						return {
+							ok: response.ok,
+							data: data
+						};
+					});
+				})
+				.then(function(result) {
+					if (!result.ok || !result.data || !result.data.success) {
+						alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+						return;
+					}
+					docNoInput.value = result.data.doc_no;
+				})
+				.catch(function() {
+					alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+				})
+				.then(function() {
+					if (runButton) {
+						runButton.disabled = false;
+					}
+				});
+		}
 
 		function switchSoTab(evt, tabId) {
 			evt.preventDefault();
