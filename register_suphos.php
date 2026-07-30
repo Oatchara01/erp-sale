@@ -1811,7 +1811,7 @@ include("head.php"); ?>
 						[
 							['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 							['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
-							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'fas fa-search'],
+							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
 							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'fas fa-search'],
 						],
 						[
@@ -4798,6 +4798,77 @@ include("head.php"); ?>
 				.then(function() {
 					if (runButton) {
 						runButton.disabled = false;
+					}
+				});
+		}
+
+		// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
+		// เลขคำนวณฝั่ง server ทั้งหมด (ปี พ.ศ. + เดือน + running 4 หลัก) หน้านี้แค่ส่ง ref_id กับวันที่ไป
+		function runJobNo() {
+			var jobNoInput = document.querySelector('input[name="admin_work_no"]');
+			var refIdInput = document.querySelector('input[name="ref_id"]');
+			// วันที่จัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
+			var deliveryDateInput = document.querySelector('input[name="start_date"]');
+			var runIcon = document.getElementById('btn_run_job_no');
+
+			if (!jobNoInput) {
+				return;
+			}
+
+			// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
+			if (runIcon && runIcon.dataset.loading === '1') {
+				return;
+			}
+
+			if (jobNoInput.value.trim() !== '') {
+				// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
+				if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+					return;
+				}
+			}
+
+			var payload = new URLSearchParams();
+			payload.append('ref_id', refIdInput ? refIdInput.value : '');
+			payload.append('job_date', deliveryDateInput ? deliveryDateInput.value : '');
+
+			if (runIcon) {
+				runIcon.dataset.loading = '1';
+				runIcon.style.pointerEvents = 'none';
+				runIcon.style.opacity = '0.4';
+			}
+
+			fetch('ajax_run_job_no.php', {
+					method: 'POST',
+					credentials: 'same-origin',
+					cache: 'no-store',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+					},
+					body: payload.toString()
+				})
+				.then(function(response) {
+					return response.json().then(function(data) {
+						return {
+							ok: response.ok,
+							data: data
+						};
+					});
+				})
+				.then(function(result) {
+					if (!result.ok || !result.data || !result.data.success) {
+						alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
+						return;
+					}
+					jobNoInput.value = result.data.job_no;
+				})
+				.catch(function() {
+					alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
+				})
+				.then(function() {
+					if (runIcon) {
+						runIcon.dataset.loading = '0';
+						runIcon.style.pointerEvents = '';
+						runIcon.style.opacity = '';
 					}
 				});
 		}

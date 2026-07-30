@@ -1335,7 +1335,7 @@ $adminInfoTab = [
 			['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
 			['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
 			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
-			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'fas fa-search'],
+			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
 		],
 		[
 			['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
@@ -1376,6 +1376,78 @@ $adminInfoTab = [
 
 		<script language="javascript">
 			var brSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+
+			// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
+			// endpoint นี้เขียนแค่ tb_register_data (ไม่ผูกกับ hos__so/hos__br) จึงใช้ร่วมกับหน้า Borrow ได้เลย
+			// โดยส่งค่า ref_id_br ของหน้านี้ไปในคีย์ ref_id — ตรงกับ logic ใน register_suphos.php ทุกจุด ต่างแค่ selector ref_id_br
+			function runJobNoBr() {
+				var jobNoInput = document.querySelector('input[name="admin_work_no"]');
+				var refIdInput = document.querySelector('input[name="ref_id_br"]');
+				// วันที่จัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
+				var deliveryDateInput = document.querySelector('input[name="start_date"]');
+				var runIcon = document.getElementById('btn_run_job_no_br');
+
+				if (!jobNoInput) {
+					return;
+				}
+
+				// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
+				if (runIcon && runIcon.dataset.loading === '1') {
+					return;
+				}
+
+				if (jobNoInput.value.trim() !== '') {
+					// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
+					if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+						return;
+					}
+				}
+
+				var payload = new URLSearchParams();
+				payload.append('ref_id', refIdInput ? refIdInput.value : '');
+				payload.append('job_date', deliveryDateInput ? deliveryDateInput.value : '');
+
+				if (runIcon) {
+					runIcon.dataset.loading = '1';
+					runIcon.style.pointerEvents = 'none';
+					runIcon.style.opacity = '0.4';
+				}
+
+				fetch('ajax_run_job_no.php', {
+						method: 'POST',
+						credentials: 'same-origin',
+						cache: 'no-store',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+						},
+						body: payload.toString()
+					})
+					.then(function(response) {
+						return response.json().then(function(data) {
+							return {
+								ok: response.ok,
+								data: data
+							};
+						});
+					})
+					.then(function(result) {
+						if (!result.ok || !result.data || !result.data.success) {
+							alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
+							return;
+						}
+						jobNoInput.value = result.data.job_no;
+					})
+					.catch(function() {
+						alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
+					})
+					.then(function() {
+						if (runIcon) {
+							runIcon.dataset.loading = '0';
+							runIcon.style.pointerEvents = '';
+							runIcon.style.opacity = '';
+						}
+					});
+			}
 
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{

@@ -12,6 +12,8 @@
  *             ['type' => 'text', 'name' => 'admin_doc_no', 'label' => '...', 'value' => $v, 'placeholder' => 'No.'],
  *             ['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
  *             ['type' => 'text', 'name' => 'admin_work_no', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-search'],
+ *             // icon_onclick/icon_id ทำให้ icon เองคลิกได้ (แทนการมีปุ่มแยกข้างๆ) — ไม่ตั้งสองคีย์นี้ = icon ตกแต่งอย่างเดียวเหมือนเดิม
+ *             ['type' => 'text', 'name' => 'admin_work_no2', 'label' => '...', 'value' => $v, 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
  *             ['type' => 'text', 'name' => 'admin_edit_reason', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
  *             ['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => '...', 'value' => $v],
  *         ],
@@ -183,17 +185,31 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 								$fieldIcon = ''; // ไม่แสดงไอคอน custom หากเป็น native date picker เพราะมีไอคอนปฏิทินของบราวเซอร์อยู่แล้ว
 							}
 							$fieldClearable = $adminTabField['clearable'] ?? false;
+							$fieldIconOnclick = $adminTabField['icon_onclick'] ?? '';
+							$fieldIconId = $adminTabField['icon_id'] ?? '';
 							$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
 						?>
 							<label class="admin-ui-label"><?php echo so_saved_h($adminTabField['label'] ?? ''); ?></label>
 							<div class="admin-ui-input-wrapper">
 								<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($adminTabField['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($adminTabField['placeholder']) ? ' placeholder="' . so_saved_h($adminTabField['placeholder']) . '"' : ''; ?><?php echo $htmlInputType === 'date' ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?>>
 								<?php if ($fieldIcon !== '') {
-									if ($fieldClearable) { ?>
-										<i class="<?php echo so_saved_h($fieldIcon); ?> admin-ui-icon-clickable" onclick="this.previousElementSibling.value=''"></i>
+									$isImgIcon = (strpos($fieldIcon, '/') !== false || strpos($fieldIcon, '.') !== false);
+									// icon_onclick มี priority เหนือ clearable — ในทางปฏิบัติจะไม่มี field ไหนตั้งทั้งคู่พร้อมกัน
+									$iconClickable = ($fieldIconOnclick !== '') || $fieldClearable;
+									$iconClass = $iconClickable ? 'admin-ui-icon-clickable' : 'admin-ui-icon';
+									if ($fieldIconOnclick !== '') {
+										$iconOnclickAttr = ' onclick="' . so_saved_h($fieldIconOnclick) . '"';
+									} elseif ($fieldClearable) {
+										$iconOnclickAttr = ' onclick="this.previousElementSibling.value=\'\'"';
+									} else {
+										$iconOnclickAttr = '';
+									}
+									$iconIdAttr = $fieldIconId !== '' ? ' id="' . so_saved_h($fieldIconId) . '"' : '';
+									if ($isImgIcon) { ?>
+										<img src="<?php echo so_saved_h($fieldIcon); ?>" alt="icon" class="<?php echo $iconClass; ?>" style="width: 18px; height: 18px; object-fit: contain;"<?php echo $iconIdAttr . $iconOnclickAttr; ?>>
 									<?php } else { ?>
-										<i class="<?php echo so_saved_h($fieldIcon); ?> admin-ui-icon"></i>
-								<?php }
+										<i class="<?php echo so_saved_h($fieldIcon); ?> <?php echo $iconClass; ?>"<?php echo $iconIdAttr . $iconOnclickAttr; ?>></i>
+									<?php }
 								} ?>
 							</div>
 						<?php } ?>
@@ -204,4 +220,4 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 	</div>
 </div>
 <?php
-unset($adminTabId, $adminTabTitle, $adminTabRows, $adminTabRow, $adminTabField, $fieldType, $fieldSpanClass, $fieldValue, $fieldIcon, $fieldClearable, $hasIconClass);
+unset($adminTabId, $adminTabTitle, $adminTabRows, $adminTabRow, $adminTabField, $fieldType, $fieldSpanClass, $fieldValue, $fieldIcon, $fieldClearable, $fieldIconOnclick, $fieldIconId, $hasIconClass, $isImgIcon, $iconClickable, $iconClass, $iconOnclickAttr, $iconIdAttr);
