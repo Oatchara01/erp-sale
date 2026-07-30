@@ -334,6 +334,18 @@
             }
         }
 
+        @media (max-width: 480px) {
+            .so-product-summary-col {
+                flex: 1 1 100%;
+                border-bottom: 1px solid #E5DFEC;
+                padding-bottom: 10px;
+            }
+            .so-product-summary-col:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+        }
+
         .so-summary-label {
             font-size: 16px;
             color: #8E8B94;
@@ -359,9 +371,10 @@
             border-radius: 8px;
             padding: 0 16px;
             margin-bottom: 16px;
-            width: 680px;
+            width: 100%;
+            max-width: 680px;
             height: 42px;
-            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .so-product-search-bar input {
@@ -384,6 +397,7 @@
 
         .so-product-table {
             width: 100%;
+            min-width: 850px;
             border-collapse: collapse;
         }
 
@@ -832,15 +846,15 @@
         </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
-        <div style="flex: 1;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px;">
+        <div style="flex: 1; min-width: 260px;">
             <div class="so-summary-label" style="color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</div>
             <div class="so-product-search-bar" style="margin-bottom: 0;">
                 <i class="fas fa-search" style="color: #333;"></i>
                 <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
             </div>
         </div>
-        <div style="margin-left: 16px;">
+        <div style="align-self: flex-end;">
             <button type="button" class="so-btn-danger" id="btn_delete_selected" onclick="deleteSelectedRows()" style="display: none; height: 42px; padding: 0 16px; border-radius: 8px; border: none; background-color: #dc3545; color: white; cursor: pointer; align-items: center; gap: 8px; font-family: 'Kanit', sans-serif;">
                 <i class="far fa-trash-alt"></i> ลบรายการที่เลือก
             </button>

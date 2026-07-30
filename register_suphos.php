@@ -2072,7 +2072,7 @@ include("head.php"); ?>
 					<div class="so-field-group" style="margin-bottom: 24px;">
 						<label class="so-label" for="payment_des">รายละเอียดการชำระเงิน</label>
 						<div class="so-input-wrapper">
-							<input type="text" name="payment_des" id="payment_des" class="so-input" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="width: 1032px; max-width: 100%; padding-right: 32px;">
+							<input type="text" name="payment_des" id="payment_des" class="so-input" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="width: 100%; padding-right: 32px;">
 							<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('payment_des').value=''"></i>
 						</div>
 					</div>
@@ -2669,16 +2669,16 @@ include("head.php"); ?>
 							</div>
 							<div class="so-field-group" style="min-width: 0;">
 								<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
-								<div style="display: flex; gap: 16px;">
-									<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-									<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+									<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
+									<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
 								</div>
 							</div>
 							<div class="so-field-group" style="min-width: 0;">
 								<label class="so-label" style="color: #612989;">ขนาดบันได</label>
-								<div style="display: flex; gap: 16px;">
-									<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-									<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+									<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
+									<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
 								</div>
 							</div>
 						</div>
@@ -2686,17 +2686,17 @@ include("head.php"); ?>
 						<div class="so-grid-3" style="margin-top: 16px;">
 							<div class="so-field-group" style="min-width: 0;">
 								<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
-								<div style="display: flex; gap: 16px;">
-									<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-									<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+								<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+									<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
+									<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 120px; min-width: 0;" />
 								</div>
 							</div>
 							<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
 								<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
-								<div style="display: flex; gap: 16px;">
-									<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-									<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-									<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+								<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+									<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 90px; min-width: 0;" />
+									<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 90px; min-width: 0;" />
+									<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1 1 90px; min-width: 0;" />
 								</div>
 							</div>
 							<div class="so-field-group" style="min-width: 0;">
