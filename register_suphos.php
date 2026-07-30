@@ -960,7 +960,7 @@ include("head.php"); ?>
 			}
 		}
 
-		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name, tb_product.remark_hc AS master_remark_hc FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1'");
+		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name, tb_product.remark_hc AS master_remark_hc FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1' ORDER BY hos__subso.sort_order, hos__subso.id");
 		if ($savedProductQuery) {
 			while ($savedProduct = mysqli_fetch_assoc($savedProductQuery)) {
 				$savedProducts[] = $savedProduct;

@@ -201,7 +201,7 @@ $qry26 = mysqli_query($conn,$sql26) or die(mysqli_error());
 $rs26 = mysqli_fetch_assoc($qry26);
 	
 
-$strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
+$strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ORDER BY hos__subso.sort_order, hos__subso.id";
 $objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
 $Num_Rows1 = mysqli_num_rows($objQuery1);
 
