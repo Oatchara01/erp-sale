@@ -2523,16 +2523,16 @@ if($job_no!=''){
 	
 $strSQLn =  "Update tb_register_data set start_date = '".$start_date."',between_date ='".$between_date."',start_time ='".$start_time."',end_time ='".$end_time."',status ='".$status."',fix_date ='".$fix_date."',no_price ='".$no_price."',call_customer ='".$call_customer."',credit ='".$credit."',call_employee ='".$call_employee."',cash ='".$chash."',check_peper ='".$check_peper."',bill = '".$bill."',department ='".$department."',type_customer ='".$type_customer."',type_company = '".$type_company."',customer_name ='".$customer_name."',customer_tel ='".$customer_tel."',address_name ='".$add_to."',address_send ='".$sum_address."',want_bus ='".$want_bus."',product_name ='".$product_name."',product_sn ='".$product_sn."',unit_credit ='".$unit_credit."',price ='".$price."',employee_name ='".$employee_name."',employee_tel ='".$employee_tel."',add_by ='".$add_by."',description ='".$description."',unit_bill ='".$unit_bill."',unit_check ='".$unit_check."',unit_tran ='".$unit_tran."',tran ='".$tran."',check_detail ='".$check_detail."',dep ='".$dep."',dept ='".$dept."',department_show ='".$department_show."',customer_contact = '".$customer_contact."' ,status_comment = '".$status_comment."',on_time = '".$on_time."',mk_research='".$mk_research."',province_name='".$province_name."'  where running = '".$job_no."'";
 
-$objQueryn = mysqli_query($com1,$strSQLn) or die(mysqli_error());	
+$objQueryn = mysqli_query($conn,$strSQLn) or die(mysqli_error($conn));
 	
 	
 $strSQL33 =  "Update tb_transaction set runway='".$runway."',road='".$road."',soy='".$soy."',soy_long='".$soy_long."',soy_big='".$soy_big."',car_load='".$car_load."',car_park='".$car_park."',car_road='".$car_road."',no_car_road='".$no_car_road."',car_home='".$car_home."',door_long='".$door_long."',slope='".$slope."',bundai='".$bundai."',unit_bundai='".$unit_bundai."',door_big='".$door_big."',door_longer='".$door_longer."',type_door='".$type_door."',home_type='".$home_type."',install='".$install."',bundai_install='".$bundai_install."',bundai_big='".$bundai_big."',lip='".$lip."',lip_big='".$lip_big."',lip_long='".$lip_long."',lip_weight='".$lip_weight."',want_employee='".$want_employee."',employee_unit='".$employee_unit."',ferniger_name='".$ferniger_name."',ferniger_address='".$ferniger_address."',want_ex='".$want_ex."',want_credit='".$want_credit."',want_prem='".$want_prem."',add_date='$add_date',add_by='".$add_by."',room_bigger='".$room_bigger."',room_longer='".$room_longer."',bundai_hug='".$bundai_hug."',bank='".$bank."',description='".$description_ja."',type_bundai='".$type_bundai."',head_bad='".$head_bad."',height_ltd='".$height_ltd."',up='".$up."',no_up='".$no_up."'   where running = '".$job_no."' ";
 
-$objQuery33 = mysqli_query($com1,$strSQL33) or die(mysqli_error());	
-	
-	
-}	
-}	
+$objQuery33 = mysqli_query($conn,$strSQL33) or die(mysqli_error($conn));
+
+
+}
+}
 	
 	
 /*$strSQL22 = "SELECT job_no FROM hos__so WHERE ref_id = '".$ref_id."' ";
@@ -2557,40 +2557,48 @@ $qsave21=mysqli_query($conn,$save21);
 if( $send_cs =='1' and $job_no ==''){
 		
 $yearMonth = substr(date("Y")+543, -2).date("m");
-$sql = "SELECT MAX(running) AS MAXID FROM tb_register_data";
-$qry = mysqli_query($com1,$sql) or die(mysqli_error());
+
+// ตัวนับ running อยู่ในฐาน allwell_sol_test ($conn) ไม่ใช่ invoice_receipt ($com1)
+// invoice_receipt.tb_register_data เป็นคนละตารางที่ไม่มีคอลัมน์ running เลย
+// ของเดิมยิงผ่าน $com1 จึงตายที่ or die() ทุกครั้ง และไม่เคยออกเลขลงงานได้สำเร็จ
+
+// กันสองคนกดพร้อมกันด้วย named lock (ตัวนับเดียวกับ ajax_run_job_no.php ต้องใช้ lock ชื่อเดียวกัน)
+$lockName = 'jobrun_'.$yearMonth;
+$lockQry = mysqli_query($conn,"SELECT GET_LOCK('".mysqli_real_escape_string($conn,$lockName)."', 5) AS got_lock");
+$lockRow = $lockQry ? mysqli_fetch_assoc($lockQry) : null;
+if((int)($lockRow['got_lock'] ?? 0) !== 1){
+	die("ระบบกำลังออกเลขที่ลงงานให้ผู้ใช้รายอื่น กรุณาลองใหม่อีกครั้ง");
+}
+
+// นับเฉพาะเลข 8 หลักของเดือนนี้ แล้ว CAST ท้าย 4 หลักเป็นตัวเลข
+// ของเดิมใช้ MAX(running) ทั้งตารางแบบ string ซึ่งเพี้ยนถ้ามีค่าขยะความยาวอื่นปน
+// ต้องตรงกับ ajax_run_job_no.php เป๊ะ ไม่งั้นสองหน้าจอจะออกเลขซ้ำกัน
+$sql = "SELECT MAX(CAST(SUBSTRING(running, 5, 4) AS UNSIGNED)) AS MAXID FROM tb_register_data
+        WHERE running REGEXP '^[0-9]{8}$' AND LEFT(running, 4) = '".mysqli_real_escape_string($conn,$yearMonth)."'";
+$qry = mysqli_query($conn,$sql) or die(mysqli_error($conn));
 $rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId1 = substr($rs['MAXID'],0,-4);
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -4);
-$nextId = $yearMonth.$maxId2;
-}
-else 
-{
-$maxId1 = "0001"; 
-$nextId = $yearMonth.$maxId1;
-}
-	
+$nextId = $yearMonth.substr("0000".((int)$rs['MAXID'] + 1), -4);
 
 
 
-$strSQL89 =  "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,address_bus,customer_contact,on_time,add_code,mk_research,sale_code,bus_inter,ref_id,iv_date) 
 
-values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$add_to."','".$sum_address."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill."','".$unit_check."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$province_name."','".$customer_contact."','".$on_time."','".$add_code."','".$mk_research."','".$sale_code."','".$bus_inter."','".$ref_id."','".$iv_date."')";
+// ตัดคอลัมน์ address_bus, sale_code, iv_date ออก เพราะไม่มีอยู่ใน tb_register_data ของฐานใดเลย
+// (ของเดิมใส่ไว้จึงพังซ้ำอีกชั้นแม้จะแก้ connection แล้ว — schema drift)
+$strSQL89 =  "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,customer_contact,on_time,add_code,mk_research,bus_inter,ref_id)
 
-$objQuery89 = mysqli_query($com1,$strSQL89) or die(mysqli_error());
+values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$add_to."','".$sum_address."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill."','".$unit_check."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$customer_contact."','".$on_time."','".$add_code."','".$mk_research."','".$bus_inter."','".$ref_id."')";
+
+$objQuery89 = mysqli_query($conn,$strSQL89) or die(mysqli_error($conn));
 
 $strSQL90 =  "insert into tb_transaction (running,runway,road,soy,soy_long,soy_big,car_load,car_park,car_road,no_car_road,car_home,door_long,slope,bundai,unit_bundai,door_big,door_longer,type_door,home_type,install,bundai_install,bundai_big,lip,lip_big,lip_long,lip_weight,want_employee,employee_unit,ferniger_name,ferniger_address,want_ex,want_credit,want_prem,add_date,add_by,room_bigger,room_longer,bundai_hug,bank,description,type_bundai,head_bad,height_ltd,up,no_up) 
 
 values('".$nextId."','".$runway."','".$road."','".$soy."','".$soy_long."','".$soy_big."','".$car_load."','".$car_park."','".$car_road."','".$no_car_road."','".$car_home."','".$door_long."','".$slope."','".$bundai."','".$unit_bundai."','".$door_big."','".$door_longer."','".$type_door."','".$home_type."','".$install."','".$bundai_install."','".$bundai_big."','".$lip."','".$lip_big."','".$lip_long."','".$lip_weight."','".$want_employee."','".$employee_unit."','".$ferniger_name."','".$ferniger_address."','".$want_ex."','".$want_credit."','".$want_prem."','$add_date','".$add_by."','".$room_bigger."','".$room_longer."','".$bundai_hug."','".$bank."','".$description_ja."','".$type_bundai."','".$head_bad."','".$height_ltd."','".$up."','".$no_up."')";
-$objQuery90 = mysqli_query($com1,$strSQL90) or die(mysqli_error());	
-	
+$objQuery90 = mysqli_query($conn,$strSQL90) or die(mysqli_error($conn));
+
 $strSQL26="Update  hos__so set job_no ='".$nextId."',send_cs ='2'  where ref_id='".$ref_id."'";
 $objQuery26 = mysqli_query($conn,$strSQL26);
+
+mysqli_query($conn,"SELECT RELEASE_LOCK('".mysqli_real_escape_string($conn,$lockName)."')");
 	
 	}
 	$doc_noo = substr($iv_no,0,3);
