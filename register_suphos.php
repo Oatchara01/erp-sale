@@ -1817,11 +1817,11 @@ include("head.php"); ?>
 									['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
 								],
 							],
-							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? ($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
 						],
 						[
-							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
+							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => ($savedSo !== null) ? 'openCreditNotePopup();' : "alert('กรุณาบันทึกใบสั่งขายก่อน จึงจะสามารถสร้างใบลดหนี้ได้');", 'icon_id' => 'btn_open_credit_note'],
 							['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 							[
 								'type'   => 'sub_grid',
@@ -1832,7 +1832,7 @@ include("head.php"); ?>
 							],
 						],
 						[
-							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? ($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
 						[
@@ -4884,6 +4884,32 @@ include("head.php"); ?>
 				});
 		}
 
+		// ไอคอนในช่อง 'เลขที่ SR ลดหนี้' (แท็บ Admin) — เปิดหน้าสร้างใบลดหนี้แบบแท็บใหม่ พร้อมส่ง ref_id ของ SO นี้ไปอ้างอิง
+		// ผูก callback กลับผ่าน window.opener ตาม pattern เดียวกับ handleBillingInfoCreated (billing_info_add.php)
+		// เปิดด้วย target '_blank' โดยไม่ใส่ window features เพื่อให้ browser เปิดเป็นแท็บใหม่แทนหน้าต่าง popup
+		function openCreditNotePopup() {
+			var refIdInput = document.querySelector('input[name="ref_id"]');
+			var refId = refIdInput ? refIdInput.value.trim() : '';
+
+			if (refId === '') {
+				alert('กรุณาบันทึกใบสั่งขายก่อน จึงจะสามารถสร้างใบลดหนี้ได้');
+				return;
+			}
+
+			window.open(
+				'register_credinot.php?ref_id=' + encodeURIComponent(refId) + '&opener=suphos',
+				'_blank'
+			);
+		}
+
+		// เรียกกลับจาก register_credinot1.php ผ่าน window.opener หลังบันทึกใบลดหนี้สำเร็จ
+		function handleCreditNoteCreated(srNo) {
+			var srInput = document.querySelector('input[name="admin_sr_no"]');
+			if (srInput) {
+				srInput.value = srNo;
+			}
+		}
+
 		function switchSoTab(evt, tabId) {
 			evt.preventDefault();
 			var i, tabcontent, tablinks;
@@ -6103,22 +6129,26 @@ include("head.php"); ?>
 					var raw = String(value || '').trim();
 					var matches;
 					var year;
-					if (raw === '') {
+					if (raw === '' || raw === '0000-00-00' || raw === '0000-00-00 00:00:00') {
 						return '';
 					}
 					matches = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s.*)?$/);
 					if (matches) {
-						return matches[3] + '/' + matches[2] + '/' + String(parseInt(matches[1], 10) + 543);
+						year = parseInt(matches[1], 10);
+						if (year > 2400) {
+							year -= 543;
+						}
+						return String(year).padStart(4, '0') + '-' + matches[2] + '-' + matches[3];
 					}
 					matches = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
 					if (matches) {
 						year = parseInt(matches[3], 10);
-						if (year < 2400) {
-							year += 543;
+						if (year > 2400) {
+							year -= 543;
 						}
-						return String(parseInt(matches[1], 10)).padStart(2, '0') + '/' +
-							String(parseInt(matches[2], 10)).padStart(2, '0') + '/' +
-							String(year);
+						return String(year).padStart(4, '0') + '-' +
+							String(parseInt(matches[2], 10)).padStart(2, '0') + '-' +
+							String(parseInt(matches[1], 10)).padStart(2, '0');
 					}
 					return raw;
 				}

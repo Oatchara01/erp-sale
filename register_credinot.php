@@ -44,13 +44,16 @@
 <?php
 
 $ref_id =$_GET["ref_id"];
+$opener = isset($_GET['opener']) ? $_GET['opener'] : '';
 
-$sql = "SELECT *   FROM hos__so where ref_id = '".$ref_id."'";
+$escRefId = mysqli_real_escape_string($conn, $ref_id);
+
+$sql = "SELECT *   FROM hos__so where ref_id = '".$escRefId."'";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
 
 
-$strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
+$strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '".$escRefId."' ";
 //echo $strSQL;
 //exit();
 $objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
@@ -138,6 +141,7 @@ $today = $year . '-' . $month . '-' . $day;
 	
 	<input type="hidden" name="sale_code" id="sale_code" value ="<?php echo $rs["sale_code"];?>" class="button4" style="width:12%;"  >
 <input type="hidden" name="ref_id" id="ref_id" value ="<?php echo $rs["ref_id"];?>" class="button4" style="width:12%;"  >
+<input type="hidden" name="opener" value="<?php echo htmlspecialchars($opener); ?>">
 </p>
 
 ชื่อลูกค้า :&nbsp;&nbsp;

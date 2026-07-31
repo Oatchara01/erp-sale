@@ -451,6 +451,13 @@ include "dbconnect_sale.php";
 												</a>
 											<?php } ?>
 
+											<!-- สร้างใบลดหนี้ -->
+											<?php if ($objResult['send_admin'] == '1') { ?>
+												<a href="register_credinot.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการสร้างใบสั่งลดหนี้ใช่หรือไม่')" class="so-dropdown-item">
+													<i class="fas fa-file-invoice" style="width:16px;"></i> สร้างใบลดหนี้
+												</a>
+											<?php } ?>
+
 											<!-- ใบส่งสินค้า -->
 											<?php if ($objResult['send_admin'] == '1') { ?>
 												<a href="register_receivepro_so.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการสร้างใบรับสินค้าใช่หรือไม่')" class="so-dropdown-item">

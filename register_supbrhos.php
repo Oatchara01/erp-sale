@@ -1334,7 +1334,7 @@ $adminInfoTab = [
 		[
 			['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
 			['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
-			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
+			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
 			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
 		],
 		[

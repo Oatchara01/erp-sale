@@ -44,9 +44,10 @@ $send_admin = '0';
 $account_no =  $_POST["account_no"];
 $account_name =  $_POST["account_name"];
 $bank_name =  $_POST["bank_name"];
-$type_return = $_POST["type_return"];	
-$ref_id = $_POST["ref_id"];	
-	
+$type_return = $_POST["type_return"];
+$ref_id = $_POST["ref_id"];
+$opener = isset($_POST["opener"]) ? $_POST["opener"] : '';
+
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql1 = "SELECT MAX(ref_credit) AS MAXID FROM tb_credit_note";
 $qry1 = mysqli_query($conn,$sql1) or die(mysqli_error());
@@ -84,7 +85,13 @@ values
 
 $qsave=mysqli_query($conn,$save);
 
-
+if ($qsave && $ref_id !== '') {
+	$refPrefix = substr($ref_id, 0, 2);
+	$srUpdateTable = ($refPrefix === 'SO') ? 'hos__so' : 'so__main';
+	$escRefId = mysqli_real_escape_string($conn, $ref_id);
+	$escRefCredit = mysqli_real_escape_string($conn, $ref_credit);
+	mysqli_query($conn, "UPDATE $srUpdateTable SET sr_no = '$escRefCredit' WHERE ref_id = '$escRefId'");
+}
 
 foreach($id as $key =>$value)
 	{
@@ -113,9 +120,21 @@ $objQuery = mysqli_query($conn,$strSQL);
 
 	
  if($qsave){
-   echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_credinot_edit.php?ref_credit=$ref_credit';";
-echo "</script>";
+	if ($opener === 'suphos') {
+		echo "<script language=\"JavaScript\">";
+		echo "if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') {";
+		echo "  window.opener.handleCreditNoteCreated(" . json_encode($ref_credit) . ");";
+		echo "  window.close();";
+		echo "} else {";
+		echo "  alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');";
+		echo "  window.location='register_credinot_edit.php?ref_credit=$ref_credit';";
+		echo "}";
+		echo "</script>";
+	} else {
+		echo "<script language=\"JavaScript\">";
+		echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_credinot_edit.php?ref_credit=$ref_credit';";
+		echo "</script>";
+	}
   } else {
    echo "Cannot ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีรายการใบสั่งลดหนี้แล้วค่ะ";
   }
