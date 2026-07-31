@@ -2,28 +2,6 @@
 
 /**
  * Reusable "Admin" tab renderer, driven by $adminInfoTab config.
- *
- * Expected shape:
- * $adminInfoTab = [
- *     'tab_id' => 'tab-admin-info',
- *     'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
- *     'rows'   => [
- *         [
- *             ['type' => 'text', 'name' => 'admin_doc_no', 'label' => '...', 'value' => $v, 'placeholder' => 'No.'],
- *             ['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
- *             ['type' => 'text', 'name' => 'admin_work_no', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-search'],
- *             // icon_onclick/icon_id ทำให้ icon เองคลิกได้ (แทนการมีปุ่มแยกข้างๆ) — ไม่ตั้งสองคีย์นี้ = icon ตกแต่งอย่างเดียวเหมือนเดิม
- *             ['type' => 'text', 'name' => 'admin_work_no2', 'label' => '...', 'value' => $v, 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
- *             ['type' => 'text', 'name' => 'admin_edit_reason', 'label' => '...', 'value' => $v, 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
- *             ['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => '...', 'value' => $v],
- *         ],
- *         // ...more rows
- *     ],
- * ];
- * include __DIR__ . '/partials/admin_info_tab.php';
- *
- * Values are expected to already be escaped by the caller (e.g. via so_saved_h()).
- * This partial does not escape 'value' to avoid double-escaping.
  */
 
 if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
@@ -41,8 +19,8 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 
 		.admin-ui-grid {
 			display: grid;
-			grid-template-columns: repeat(4, 1fr);
-			gap: 24px;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
 			margin-bottom: 24px;
 		}
 
@@ -51,6 +29,7 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 				grid-template-columns: repeat(2, 1fr);
 			}
 
+			.admin-ui-field.span-2,
 			.admin-ui-field.span-3 {
 				grid-column: span 2;
 			}
@@ -61,8 +40,18 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 				grid-template-columns: 1fr;
 			}
 
+			.admin-ui-field.span-2,
 			.admin-ui-field.span-3 {
 				grid-column: span 1;
+			}
+
+			.admin-ui-sub-grid {
+				grid-template-columns: 1fr !important;
+			}
+
+			.admin-ui-inline-group {
+				flex-direction: column;
+				align-items: stretch !important;
 			}
 		}
 
@@ -72,8 +61,37 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			gap: 8px;
 		}
 
+		.admin-ui-field.span-2 {
+			grid-column: span 2;
+		}
+
 		.admin-ui-field.span-3 {
 			grid-column: span 3;
+		}
+
+		.admin-ui-sub-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 12px;
+			width: 100%;
+		}
+
+		.admin-ui-inline-group {
+			display: flex;
+			gap: 12px;
+			align-items: flex-end;
+			width: 100%;
+		}
+
+		.admin-ui-inline-group .admin-ui-field-item {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.admin-ui-inline-group .admin-ui-field-item.flex-fill {
+			flex: 1;
+			min-width: 0;
 		}
 
 		.admin-ui-label {
@@ -145,10 +163,90 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			justify-content: center;
 			gap: 8px;
 			font-family: 'Prompt', sans-serif;
-			margin-top: 25px;
+			box-sizing: border-box;
+			transition: all 0.2s ease;
+		}
+
+		.admin-ui-btn:hover {
+			background-color: #E4C8FF;
+		}
+
+		.admin-ui-btn.variant-danger {
+			background-color: #FFEBEE;
+			color: #D32F2F;
+			border: 1px solid #FFCDD2;
+		}
+
+		.admin-ui-btn.variant-danger:hover {
+			background-color: #FFCDD2;
 		}
 	</style>
 <?php
+}
+
+if (!function_exists('renderAdminUiInputItem')) {
+	function renderAdminUiInputItem($field) {
+		$fieldType = $field['type'] ?? 'text';
+		$fieldValue = $field['value'] ?? '';
+		$htmlInputType = 'text';
+
+		if ($fieldType === 'date_th' || $fieldType === 'date') {
+			$htmlInputType = 'date';
+		}
+
+		$fieldIcon = $field['icon'] ?? '';
+		if ($htmlInputType === 'date') {
+			$fieldIcon = '';
+		}
+
+		$fieldClearable = $field['clearable'] ?? false;
+		$fieldIconOnclick = $field['icon_onclick'] ?? '';
+		$fieldIconId = $field['icon_id'] ?? '';
+		$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
+?>
+		<div class="admin-ui-input-wrapper">
+			<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($field['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($field['placeholder']) ? ' placeholder="' . so_saved_h($field['placeholder']) . '"' : ''; ?><?php echo $htmlInputType === 'date' ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?>>
+			<?php if ($fieldIcon !== '') {
+				$isImgIcon = (strpos($fieldIcon, '/') !== false || strpos($fieldIcon, '.') !== false);
+				$iconClickable = ($fieldIconOnclick !== '') || $fieldClearable;
+				$iconClass = $iconClickable ? 'admin-ui-icon-clickable' : 'admin-ui-icon';
+				if ($fieldIconOnclick !== '') {
+					$iconOnclickAttr = ' onclick="' . so_saved_h($fieldIconOnclick) . '"';
+				} elseif ($fieldClearable) {
+					$iconOnclickAttr = ' onclick="this.previousElementSibling.value=\'\'"';
+				} else {
+					$iconOnclickAttr = '';
+				}
+				$iconIdAttr = $fieldIconId !== '' ? ' id="' . so_saved_h($fieldIconId) . '"' : '';
+				if ($isImgIcon) { ?>
+					<img src="<?php echo so_saved_h($fieldIcon); ?>" alt="icon" class="<?php echo $iconClass; ?>" style="width: 18px; height: 18px; object-fit: contain;"<?php echo $iconIdAttr . $iconOnclickAttr; ?>>
+				<?php } else { ?>
+					<i class="<?php echo so_saved_h($fieldIcon); ?> <?php echo $iconClass; ?>"<?php echo $iconIdAttr . $iconOnclickAttr; ?>></i>
+				<?php }
+			} ?>
+		</div>
+<?php
+	}
+}
+
+if (!function_exists('renderAdminUiButtonItem')) {
+	function renderAdminUiButtonItem($btn) {
+		$variant = $btn['variant'] ?? 'purple';
+		$variantClass = ($variant === 'danger') ? ' variant-danger' : '';
+?>
+		<button type="button" class="admin-ui-btn<?php echo $variantClass; ?>"<?php echo isset($btn['id']) ? ' id="' . so_saved_h($btn['id']) . '"' : ''; ?><?php echo isset($btn['onclick']) ? ' onclick="' . so_saved_h($btn['onclick']) . '"' : ''; ?>>
+			<?php if (!empty($btn['icon'])) {
+				$isImgIcon = (strpos($btn['icon'], '/') !== false || strpos($btn['icon'], '.') !== false);
+				if ($isImgIcon) { ?>
+					<img src="<?php echo so_saved_h($btn['icon']); ?>" alt="icon" style="width: 16px; height: 16px; object-fit: contain;">
+				<?php } else { ?>
+					<i class="<?php echo so_saved_h($btn['icon']); ?>" style="font-size: 16px;"></i>
+				<?php }
+			} ?>
+			<?php echo so_saved_h($btn['label'] ?? ''); ?>
+		</button>
+<?php
+	}
 }
 
 $adminTabId = so_saved_h($adminInfoTab['tab_id'] ?? '');
@@ -160,58 +258,63 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 		<h2 class="admin-ui-title"><?php echo $adminTabTitle; ?></h2>
 
 		<?php foreach ($adminTabRows as $adminTabRow) { ?>
-			<div class="admin-ui-grid" style="margin-bottom: 24px;">
+			<div class="admin-ui-grid">
 				<?php foreach ($adminTabRow as $adminTabField) {
 					$fieldType = $adminTabField['type'] ?? 'text';
-					$fieldSpanClass = (($adminTabField['span'] ?? 1) === 3) ? ' span-3' : '';
+					$spanVal = $adminTabField['span'] ?? 1;
+					$fieldSpanClass = ($spanVal > 1) ? ' span-' . $spanVal : '';
 				?>
 					<div class="admin-ui-field<?php echo $fieldSpanClass; ?>">
-						<?php if ($fieldType === 'button') { ?>
-							<button type="button" class="admin-ui-btn"<?php echo isset($adminTabField['id']) ? ' id="' . so_saved_h($adminTabField['id']) . '"' : ''; ?><?php echo isset($adminTabField['onclick']) ? ' onclick="' . so_saved_h($adminTabField['onclick']) . '"' : ''; ?>>
-								<img src="<?php echo so_saved_h($adminTabField['icon'] ?? ''); ?>" alt="icon" style="width: 16px; height: 16px;"> <?php echo so_saved_h($adminTabField['label'] ?? ''); ?>
-							</button>
-						<?php } else {
-							$fieldValue = $adminTabField['value'] ?? '';
-							$htmlInputType = 'text';
-
-							if ($fieldType === 'date_th' || $fieldType === 'date') {
-								// Use native HTML5 date input. 
-								// Value must remain in YYYY-MM-DD format, so we do NOT convert to Buddhist date.
-								$htmlInputType = 'date';
-							}
-
-							$fieldIcon = $adminTabField['icon'] ?? '';
-							if ($htmlInputType === 'date') {
-								$fieldIcon = ''; // ไม่แสดงไอคอน custom หากเป็น native date picker เพราะมีไอคอนปฏิทินของบราวเซอร์อยู่แล้ว
-							}
-							$fieldClearable = $adminTabField['clearable'] ?? false;
-							$fieldIconOnclick = $adminTabField['icon_onclick'] ?? '';
-							$fieldIconId = $adminTabField['icon_id'] ?? '';
-							$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
+						<?php if ($fieldType === 'inline_group') {
+							$groupLabel = $adminTabField['label'] ?? '';
+							$groupFields = $adminTabField['fields'] ?? [];
 						?>
-							<label class="admin-ui-label"><?php echo so_saved_h($adminTabField['label'] ?? ''); ?></label>
-							<div class="admin-ui-input-wrapper">
-								<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($adminTabField['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($adminTabField['placeholder']) ? ' placeholder="' . so_saved_h($adminTabField['placeholder']) . '"' : ''; ?><?php echo $htmlInputType === 'date' ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?>>
-								<?php if ($fieldIcon !== '') {
-									$isImgIcon = (strpos($fieldIcon, '/') !== false || strpos($fieldIcon, '.') !== false);
-									// icon_onclick มี priority เหนือ clearable — ในทางปฏิบัติจะไม่มี field ไหนตั้งทั้งคู่พร้อมกัน
-									$iconClickable = ($fieldIconOnclick !== '') || $fieldClearable;
-									$iconClass = $iconClickable ? 'admin-ui-icon-clickable' : 'admin-ui-icon';
-									if ($fieldIconOnclick !== '') {
-										$iconOnclickAttr = ' onclick="' . so_saved_h($fieldIconOnclick) . '"';
-									} elseif ($fieldClearable) {
-										$iconOnclickAttr = ' onclick="this.previousElementSibling.value=\'\'"';
-									} else {
-										$iconOnclickAttr = '';
-									}
-									$iconIdAttr = $fieldIconId !== '' ? ' id="' . so_saved_h($fieldIconId) . '"' : '';
-									if ($isImgIcon) { ?>
-										<img src="<?php echo so_saved_h($fieldIcon); ?>" alt="icon" class="<?php echo $iconClass; ?>" style="width: 18px; height: 18px; object-fit: contain;"<?php echo $iconIdAttr . $iconOnclickAttr; ?>>
-									<?php } else { ?>
-										<i class="<?php echo so_saved_h($fieldIcon); ?> <?php echo $iconClass; ?>"<?php echo $iconIdAttr . $iconOnclickAttr; ?>></i>
+							<?php if ($groupLabel !== '') { ?>
+								<label class="admin-ui-label"><?php echo so_saved_h($groupLabel); ?></label>
+							<?php } ?>
+							<div class="admin-ui-inline-group">
+								<?php foreach ($groupFields as $gField) {
+									$gType = $gField['type'] ?? 'text';
+									if ($gType === 'button') {
+										renderAdminUiButtonItem($gField);
+									} else { ?>
+										<div class="admin-ui-field-item flex-fill">
+											<?php if (isset($gField['label']) && $groupLabel === '') { ?>
+												<label class="admin-ui-label"><?php echo so_saved_h($gField['label']); ?></label>
+											<?php } ?>
+											<?php renderAdminUiInputItem($gField); ?>
+										</div>
 									<?php }
 								} ?>
 							</div>
+						<?php } elseif ($fieldType === 'sub_grid') {
+							$subFields = $adminTabField['fields'] ?? [];
+						?>
+							<div class="admin-ui-sub-grid">
+								<?php foreach ($subFields as $sField) { ?>
+									<div class="admin-ui-field">
+										<?php if (isset($sField['label'])) { ?>
+											<label class="admin-ui-label"><?php echo so_saved_h($sField['label']); ?></label>
+										<?php } ?>
+										<?php renderAdminUiInputItem($sField); ?>
+									</div>
+								<?php } ?>
+							</div>
+						<?php } elseif ($fieldType === 'button_field' || $fieldType === 'button') {
+							$btnData = ($fieldType === 'button_field') ? ($adminTabField['button'] ?? $adminTabField) : $adminTabField;
+							$hasLabel = !empty($adminTabField['label']);
+						?>
+							<?php if ($hasLabel) { ?>
+								<label class="admin-ui-label"><?php echo so_saved_h($adminTabField['label']); ?></label>
+							<?php } else { ?>
+								<div style="height: 29px;"></div>
+							<?php } ?>
+							<?php renderAdminUiButtonItem($btnData); ?>
+						<?php } else { ?>
+							<?php if (isset($adminTabField['label'])) { ?>
+								<label class="admin-ui-label"><?php echo so_saved_h($adminTabField['label']); ?></label>
+							<?php } ?>
+							<?php renderAdminUiInputItem($adminTabField); ?>
 						<?php } ?>
 					</div>
 				<?php } ?>
@@ -220,4 +323,5 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 	</div>
 </div>
 <?php
-unset($adminTabId, $adminTabTitle, $adminTabRows, $adminTabRow, $adminTabField, $fieldType, $fieldSpanClass, $fieldValue, $fieldIcon, $fieldClearable, $fieldIconOnclick, $fieldIconId, $hasIconClass, $isImgIcon, $iconClickable, $iconClass, $iconOnclickAttr, $iconIdAttr);
+unset($adminTabId, $adminTabTitle, $adminTabRows, $adminTabRow, $adminTabField, $fieldType, $spanVal, $fieldSpanClass);
+

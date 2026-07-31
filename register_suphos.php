@@ -1809,24 +1809,35 @@ include("head.php"); ?>
 					'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
 					'rows'   => [
 						[
-							['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
-							['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();'],
+							[
+								'type'   => 'inline_group',
+								'label'  => 'เลขที่เอกสาร',
+								'fields' => [
+									['type' => 'text', 'name' => 'admin_doc_no', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
+									['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
+								],
+							],
+							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? ($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
-							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'fas fa-search'],
 						],
 						[
-							['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : '', 'icon' => 'fas fa-search'],
-							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? ($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-							['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : '', 'placeholder' => 'Numbers only'],
-							['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : '', 'placeholder' => 'Numbers only'],
+							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
+							['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
+							[
+								'type'   => 'sub_grid',
+								'fields' => [
+									['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : '', 'placeholder' => 'เฉพาะตัวเลข'],
+									['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : '', 'placeholder' => 'เฉพาะตัวเลข'],
+								],
+							],
 						],
 						[
 							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? ($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
 						[
-							['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
-							['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+							['type' => 'button_field', 'button' => ['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร', 'variant' => 'danger']],
+							['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
 					],
 				];
