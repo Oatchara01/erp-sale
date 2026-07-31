@@ -120,7 +120,8 @@ include "dbconnect_sale.php";
 										<option value="">Select</option>
 										<option value="1" <?php if ($type_doc == '1') echo 'selected'; ?>>ใบสั่งขาย</option>
 										<option value="2" <?php if ($type_doc == '2') echo 'selected'; ?>>ใบสั่งขาย E-Tax</option>
-										<option value="3" <?php if ($type_doc == '3') echo 'selected'; ?>>ใบสั่งขาย IC</option>
+										<option value="3" <?php if ($type_doc == '3') echo 'selected'; ?>>ใบฝากขาย (IC)</option>
+										<!-- <option value="4" <?php if ($type_doc == '4') echo 'selected'; ?>>ใบกำกับอิเล็กทรอนิกส์ (IE)</option> -->
 									</select>
 								</div>
 							</div>
@@ -272,11 +273,15 @@ include "dbconnect_sale.php";
 
 						if ($type_doc != "") {
 							if ($type_doc == '1') {
-								$strSQL .= ' AND (et_ckk = "0" OR et_ckk IS NULL OR et_ckk = "") AND (ic_ckk = "0" OR ic_ckk IS NULL OR ic_ckk = "")';
+								// เอกสาร IE ระบุด้วย prefix iv_no เท่านั้น (et_ckk/ic_ckk เป็น 0 เหมือนใบสั่งขายปกติ)
+								// จึงต้องกันออกจากกลุ่มนี้ ไม่งั้นจะถูกนับเป็นใบสั่งขายทั่วไป
+								$strSQL .= ' AND (et_ckk = "0" OR et_ckk IS NULL OR et_ckk = "") AND (ic_ckk = "0" OR ic_ckk IS NULL OR ic_ckk = "") AND (iv_no IS NULL OR iv_no NOT LIKE "IE%")';
 							} else if ($type_doc == '2') {
 								$strSQL .= ' AND et_ckk = "1"';
 							} else if ($type_doc == '3') {
 								$strSQL .= ' AND ic_ckk = "1"';
+							} else if ($type_doc == '4') {
+								$strSQL .= ' AND iv_no LIKE "IE%"';
 							}
 						}
 
