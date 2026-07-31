@@ -118,8 +118,9 @@ include "dbconnect_sale.php";
 									<label class="so-label">ประเภท</label>
 									<select name="type_doc" id="modal_type_doc" class="so-select">
 										<option value="">Select</option>
-										<option value="3" <?php if ($type_doc == '3') echo 'selected'; ?>>ใบสั่งขาย</option>
-										<option value="4" <?php if ($type_doc == '4') echo 'selected'; ?>>ใบสั่งขาย (NBM)</option>
+										<option value="1" <?php if ($type_doc == '1') echo 'selected'; ?>>ใบสั่งขาย</option>
+										<option value="2" <?php if ($type_doc == '2') echo 'selected'; ?>>ใบสั่งขาย E-Tax</option>
+										<option value="3" <?php if ($type_doc == '3') echo 'selected'; ?>>ใบสั่งขาย IC</option>
 									</select>
 								</div>
 							</div>
@@ -270,10 +271,12 @@ include "dbconnect_sale.php";
 						}
 
 						if ($type_doc != "") {
-							if ($type_doc == '3') {
-								$strSQL .= ' AND type_doc = "3"';
-							} else if ($type_doc == '4') {
-								$strSQL .= ' AND type_doc = "4"';
+							if ($type_doc == '1') {
+								$strSQL .= ' AND (et_ckk = "0" OR et_ckk IS NULL OR et_ckk = "") AND (ic_ckk = "0" OR ic_ckk IS NULL OR ic_ckk = "")';
+							} else if ($type_doc == '2') {
+								$strSQL .= ' AND et_ckk = "1"';
+							} else if ($type_doc == '3') {
+								$strSQL .= ' AND ic_ckk = "1"';
 							}
 						}
 
@@ -286,7 +289,7 @@ include "dbconnect_sale.php";
 						}
 
 						if ($is_deposit == "1") {
-							$strSQL .= ' AND (type_doc = "1" OR type_doc = "2")';
+							$strSQL .= ' AND have_order = "1" AND (have_product = "0" OR have_product IS NULL OR have_product = "")';
 						}
 
 						if ($Keyword != "") {
@@ -359,14 +362,14 @@ include "dbconnect_sale.php";
 							}
 
 							// Map status_doc to class and display text
-							$status_class = 'draft';
-							$status_text = htmlspecialchars($objResult["status_doc"]);
+							$status_class = '';
+							$status_text = '';
 							if ($objResult["status_doc"] == 'Approve' || $objResult["status_doc"] == 'อนุมัติแล้ว') {
 								$status_class = 'approve';
 								$status_text = 'อนุมัติแล้ว';
-							} else if ($objResult["status_doc"] == 'Draft') {
-								$status_class = 'draft';
-								$status_text = 'Draft';
+							} else if ($objResult["status_doc"] == 'Draft' || empty($objResult["status_doc"])) {
+								$status_class = '';
+								$status_text = '';
 							} else if ($objResult["status_doc"] == 'Rejected' || $objResult["status_doc"] == 'ไม่อนุมัติ') {
 								$status_class = 'rejected';
 								$status_text = 'ไม่อนุมัติ';
@@ -382,6 +385,8 @@ include "dbconnect_sale.php";
 							} else if ($objResult["status_doc"] == 'ส่งกลับ') {
 								$status_class = 'returned';
 								$status_text = 'ส่งกลับ';
+							} else {
+								$status_text = htmlspecialchars($objResult["status_doc"]);
 							}
 
 						?>
@@ -413,9 +418,13 @@ include "dbconnect_sale.php";
 								</td>
 								<td><?php echo $total_amount; ?></td>
 								<td>
-									<span class="badge-status <?php echo $status_class; ?>">
-										<?php echo $status_text; ?>
-									</span>
+									<?php if (!empty($status_text)) { ?>
+										<span class="badge-status <?php echo $status_class; ?>">
+											<?php echo $status_text; ?>
+										</span>
+									<?php } else { ?>
+										-
+									<?php } ?>
 								</td>
 								<td style="text-align:center; vertical-align:middle; position:relative;">
 									<div class="so-dropdown">
@@ -623,22 +632,48 @@ include "dbconnect_sale.php";
 		function toggleDropdown(event, dropdownId) {
 			event.stopPropagation(); // Prevent row click expansion
 
+			const trigger = event.currentTarget;
+			const menu = document.getElementById(dropdownId);
+			if (!menu) return;
+
+			const isCurrentlyOpen = menu.classList.contains('show');
+
 			// Close all other dropdowns
 			document.querySelectorAll('.so-dropdown-menu').forEach(m => {
-				if (m.id !== dropdownId) {
-					m.classList.remove('show');
-				}
+				m.classList.remove('show');
 			});
 			document.querySelectorAll('.so-dropdown-trigger').forEach(t => {
-				if (t !== event.currentTarget) {
-					t.setAttribute('aria-expanded', 'false');
-				}
+				t.setAttribute('aria-expanded', 'false');
 			});
 
-			// Toggle target dropdown
-			const menu = document.getElementById(dropdownId);
-			const isOpen = menu.classList.toggle('show');
-			event.currentTarget.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+			if (!isCurrentlyOpen) {
+				menu.classList.add('show');
+				trigger.setAttribute('aria-expanded', 'true');
+
+				const rect = trigger.getBoundingClientRect();
+				menu.style.display = 'block';
+				const menuWidth = menu.offsetWidth || 186;
+				const menuHeight = menu.offsetHeight || 190;
+				menu.style.display = '';
+
+				const spaceBelow = window.innerHeight - rect.bottom;
+
+				menu.style.position = 'fixed';
+				menu.style.zIndex = '99999';
+
+				let left = rect.right - menuWidth;
+				if (left < 10) left = 10;
+				if (left + menuWidth > window.innerWidth - 10) {
+					left = window.innerWidth - menuWidth - 10;
+				}
+				menu.style.left = left + 'px';
+
+				if (spaceBelow < menuHeight + 10 && rect.top > menuHeight) {
+					menu.style.top = (rect.top - menuHeight - 4) + 'px';
+				} else {
+					menu.style.top = (rect.bottom + 4) + 'px';
+				}
+			}
 		}
 
 		// Close dropdowns when clicking anywhere outside
@@ -652,6 +687,15 @@ include "dbconnect_sale.php";
 				});
 			}
 		});
+
+		window.addEventListener('scroll', function() {
+			document.querySelectorAll('.so-dropdown-menu.show').forEach(m => {
+				m.classList.remove('show');
+			});
+			document.querySelectorAll('.so-dropdown-trigger').forEach(t => {
+				t.setAttribute('aria-expanded', 'false');
+			});
+		}, true);
 	</script>
 
 	<!-- <div id="cr_bar"> <?php include "foot.php"; ?></div> -->
