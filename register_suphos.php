@@ -1552,6 +1552,28 @@ include("head.php"); ?>
 				else form.setAttribute('target', originalTarget);
 				previewFlag.remove();
 			}
+
+			function toggleCancelDoc() {
+				var cancelInput = document.getElementById('cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc');
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				if (!cancelInput || !cancelBtn) return;
+
+				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
+				var newActive = !isCurrentlyActive;
+
+				cancelInput.value = newActive ? '1' : '0';
+				cancelBtn.classList.toggle('active', newActive);
+
+				if (reasonInput) {
+					reasonInput.disabled = !newActive;
+					if (!newActive) {
+						reasonInput.value = '';
+					} else {
+						reasonInput.focus();
+					}
+				}
+			}
 		</script>
 
 		<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
@@ -1581,6 +1603,7 @@ include("head.php"); ?>
 			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
+			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'Reject')) ? '1' : '0'; ?>">
 
 			<!-- Card Container -->
 			<div>
@@ -1804,6 +1827,12 @@ include("head.php"); ?>
 
 				<!-- TAB 2: Admin -->
 				<?php
+				$isCancelDisabled = ($savedSo !== null) && (
+					!empty(trim((string)($savedSo['stock_print'] ?? ''))) ||
+					!empty(trim((string)($savedSo['ref_idst'] ?? '')))
+				);
+				$isCancelChecked = ($savedSo !== null) && (($savedSo['status_doc'] ?? '') === 'Reject');
+
 				$adminInfoTab = [
 					'tab_id' => 'tab-admin-info',
 					'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
@@ -1836,13 +1865,22 @@ include("head.php"); ?>
 							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
 						[
-							['type' => 'button_field', 'button' => ['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร', 'variant' => 'danger']],
-							['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
+							['type' => 'button_field', 'button' => [
+								'type' => 'button',
+								'icon' => 'img/icons/circle_x.png',
+								'label' => 'ยกเลิกเอกสาร',
+								'variant' => 'danger',
+								'disabled' => $isCancelDisabled,
+								'active' => $isCancelChecked,
+								'id' => 'btn_cancel_doc',
+								'onclick' => 'toggleCancelDoc();'
+							]],
+							['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $isCancelDisabled || !$isCancelChecked],
 						],
 					],
 				];
 				include __DIR__ . '/partials/admin_info_tab.php';
-				unset($adminInfoTab);
+				unset($adminInfoTab, $isCancelDisabled, $isCancelChecked);
 				?>
 				<!-- End TAB 2 -->
 

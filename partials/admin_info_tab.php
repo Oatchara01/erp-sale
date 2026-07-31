@@ -180,6 +180,27 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 		.admin-ui-btn.variant-danger:hover {
 			background-color: #FFCDD2;
 		}
+
+		.admin-ui-btn.variant-danger.active {
+			background-color: #D32F2F;
+			color: #FFFFFF;
+			border-color: #B71C1C;
+			box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+		}
+
+		.admin-ui-input:disabled {
+			background-color: #EFEFEF;
+			color: #9E9E9E;
+			cursor: not-allowed;
+			border-color: #E0E0E0;
+		}
+
+		.admin-ui-btn:disabled,
+		.admin-ui-btn[disabled] {
+			opacity: 0.5;
+			cursor: not-allowed;
+			pointer-events: none;
+		}
 	</style>
 <?php
 }
@@ -199,16 +220,19 @@ if (!function_exists('renderAdminUiInputItem')) {
 			$fieldIcon = '';
 		}
 
-		$fieldClearable = $field['clearable'] ?? false;
-		$fieldIconOnclick = $field['icon_onclick'] ?? '';
+		$fieldDisabled = !empty($field['disabled']);
+		$fieldClearable = ($field['clearable'] ?? false) && !$fieldDisabled;
+		$fieldIconOnclick = $fieldDisabled ? '' : ($field['icon_onclick'] ?? '');
 		$fieldIconId = $field['icon_id'] ?? '';
+		$fieldIdAttr = isset($field['id']) ? ' id="' . so_saved_h($field['id']) . '"' : '';
 		$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
+		$disabledAttr = $fieldDisabled ? ' disabled' : '';
 ?>
 		<div class="admin-ui-input-wrapper">
-			<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($field['name'] ?? ''); ?>" class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($field['placeholder']) ? ' placeholder="' . so_saved_h($field['placeholder']) . '"' : ''; ?><?php echo $htmlInputType === 'date' ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?>>
+			<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($field['name'] ?? ''); ?>"<?php echo $fieldIdAttr; ?> class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($field['placeholder']) ? ' placeholder="' . so_saved_h($field['placeholder']) . '"' : ''; ?><?php echo ($htmlInputType === 'date' && !$fieldDisabled) ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?><?php echo $disabledAttr; ?>>
 			<?php if ($fieldIcon !== '') {
 				$isImgIcon = (strpos($fieldIcon, '/') !== false || strpos($fieldIcon, '.') !== false);
-				$iconClickable = ($fieldIconOnclick !== '') || $fieldClearable;
+				$iconClickable = (($fieldIconOnclick !== '') || $fieldClearable) && !$fieldDisabled;
 				$iconClass = $iconClickable ? 'admin-ui-icon-clickable' : 'admin-ui-icon';
 				if ($fieldIconOnclick !== '') {
 					$iconOnclickAttr = ' onclick="' . so_saved_h($fieldIconOnclick) . '"';
@@ -233,8 +257,12 @@ if (!function_exists('renderAdminUiButtonItem')) {
 	function renderAdminUiButtonItem($btn) {
 		$variant = $btn['variant'] ?? 'purple';
 		$variantClass = ($variant === 'danger') ? ' variant-danger' : '';
+		$activeClass = !empty($btn['active']) ? ' active' : '';
+		$btnDisabled = !empty($btn['disabled']);
+		$disabledAttr = $btnDisabled ? ' disabled' : '';
+		$onclickAttr = (isset($btn['onclick']) && !$btnDisabled) ? ' onclick="' . so_saved_h($btn['onclick']) . '"' : '';
 ?>
-		<button type="button" class="admin-ui-btn<?php echo $variantClass; ?>"<?php echo isset($btn['id']) ? ' id="' . so_saved_h($btn['id']) . '"' : ''; ?><?php echo isset($btn['onclick']) ? ' onclick="' . so_saved_h($btn['onclick']) . '"' : ''; ?>>
+		<button type="button" class="admin-ui-btn<?php echo $variantClass . $activeClass; ?>"<?php echo isset($btn['id']) ? ' id="' . so_saved_h($btn['id']) . '"' : ''; ?><?php echo $onclickAttr; ?><?php echo $disabledAttr; ?>>
 			<?php if (!empty($btn['icon'])) {
 				$isImgIcon = (strpos($btn['icon'], '/') !== false || strpos($btn['icon'], '.') !== false);
 				if ($isImgIcon) { ?>

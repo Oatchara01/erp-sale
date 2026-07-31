@@ -626,7 +626,8 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		$iv_no = "";
 	}
 
-	$statusDoc = $isDraftRequest ? "Draft" : "Request";
+	$isCancelDoc = (isset($_POST['cancel_doc']) && (string)$_POST['cancel_doc'] === '1');
+	$statusDoc = $isCancelDoc ? "Reject" : ($isDraftRequest ? "Draft" : "Request");
 	$sendSup = $isDraftRequest ? "0" : "1";
 	$approveValue = $isDraftRequest ? "" : $approve;
 	$approveCodeValue = $isDraftRequest ? "" : $sup_code;
