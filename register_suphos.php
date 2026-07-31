@@ -832,28 +832,42 @@ include("head.php"); ?>
 
 <script>
 	function object() {
-		if (document.getElementById('object1').checked) {
-			document.getElementById('dt1').style.display = 'block';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt3').style.display = 'none';
-			document.getElementById('dt4').style.display = 'none';
-		} else if (document.getElementById('object2').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'block';
-			document.getElementById('dt3').style.display = 'none';
-			document.getElementById('dt4').style.display = 'none';
-		} else if (document.getElementById('object3').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt3').style.display = 'block';
-			document.getElementById('dt4').style.display = 'none';
-		} else if (document.getElementById('object4').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt3').style.display = 'none';
-			document.getElementById('dt4').style.display = 'block';
+		// object1-4/dt1-4 ถูกลบออกตอน redesign ฟอร์มตาม Figma แต่ลืมลบฟังก์ชันนี้ทิ้ง
+		// เดิมเรียก .checked บน null ตรง ๆ ทำให้ throw TypeError กลางทาง DOMContentLoaded restore handler
+		// (register_suphos.php ~6425) ที่ไม่มี try/catch ครอบ ผลคือ section 5 (restore checkbox
+		// ic_ckk/et_ckk/with_pr/sn_ckk/book_clear/brn_clear/brnp_clear/full_bill) ที่รันอยู่หลังจุดนี้ไม่เคยถูกรัน
+		var o1 = document.getElementById('object1');
+		var o2 = document.getElementById('object2');
+		var o3 = document.getElementById('object3');
+		var o4 = document.getElementById('object4');
+		var dt1 = document.getElementById('dt1');
+		var dt2 = document.getElementById('dt2');
+		var dt3 = document.getElementById('dt3');
+		var dt4 = document.getElementById('dt4');
+		if (!o1 || !o2 || !o3 || !o4 || !dt1 || !dt2 || !dt3 || !dt4) {
+			return;
 		}
-
+		if (o1.checked) {
+			dt1.style.display = 'block';
+			dt2.style.display = 'none';
+			dt3.style.display = 'none';
+			dt4.style.display = 'none';
+		} else if (o2.checked) {
+			dt1.style.display = 'none';
+			dt2.style.display = 'block';
+			dt3.style.display = 'none';
+			dt4.style.display = 'none';
+		} else if (o3.checked) {
+			dt1.style.display = 'none';
+			dt2.style.display = 'none';
+			dt3.style.display = 'block';
+			dt4.style.display = 'none';
+		} else if (o4.checked) {
+			dt1.style.display = 'none';
+			dt2.style.display = 'none';
+			dt3.style.display = 'none';
+			dt4.style.display = 'block';
+		}
 	}
 
 
@@ -1376,6 +1390,34 @@ include("head.php"); ?>
 					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
 					document.frmMain.province_name.focus();
 					return false;
+				}
+
+				// ตรวจสอบว่าทุกแถวสินค้าที่มี product_id มีจำนวนและราคาต่อหน่วยครบ
+				// (เดิมไม่มีการตรวจสอบนี้ กรณีนำเข้าจากเคลียร์ยืม/จอง populateClearLoanRow จะล้าง
+				// product_price/sale_count เป็นค่าว่างไว้ และ readonly input ไม่ trigger onchange
+				// เพื่อดึงราคาอัตโนมัติ ทำให้บันทึกด้วยราคา/จำนวนว่างได้โดยไม่มี error ใด ๆ)
+				for (var soRowIndex = 1; soRowIndex <= 30; soRowIndex++) {
+					var soRowEl = document.getElementById('product_row_' + soRowIndex);
+					if (!soRowEl || soRowEl.style.display === 'none') {
+						continue;
+					}
+					var soRowProductIdEl = document.getElementById('product_id' + soRowIndex);
+					if (!soRowProductIdEl || String(soRowProductIdEl.value || '').trim() === '') {
+						continue;
+					}
+					var soRowQtyEl = document.getElementById('sale_count' + soRowIndex);
+					var soRowQty = soRowQtyEl ? parseFloat(String(soRowQtyEl.value || '').replace(/,/g, '')) : NaN;
+					if (!soRowQty || soRowQty <= 0) {
+						alert('กรุณาระบุจำนวนสินค้าในแถวที่ ' + soRowIndex);
+						if (soRowQtyEl) soRowQtyEl.focus();
+						return false;
+					}
+					var soRowPriceEl = document.getElementById('product_price' + soRowIndex);
+					if (!soRowPriceEl || String(soRowPriceEl.value || '').trim() === '') {
+						alert('กรุณาระบุราคาต่อหน่วยสินค้าในแถวที่ ' + soRowIndex);
+						if (soRowPriceEl) soRowPriceEl.focus();
+						return false;
+					}
 				}
 
 				// กรณีที่ 2: ตรวจสอบวงเงินไม่เพียงพอสีส้มก่อนบันทึก
@@ -5303,6 +5345,11 @@ include("head.php"); ?>
 		}
 
 		function getClearLoanAvailableRows() {
+			// จำกัดแค่แถว 1-15 เพราะ register_suphos1.php/register_suphos_edit1.php
+			// อ่านค่า clear_br/clear_ivno/jong_ckk/jong_no จาก POST เฉพาะ index 1-15 เท่านั้น
+			// (ดูบล็อก insert ของแถว 16-30 ที่ไม่มีคอลัมน์เหล่านี้) ถ้าเติมแถว 16-30
+			// ข้อมูลเชื่อมโยงใบจอง/ยืมจะหายเงียบ ๆ ตอนบันทึก
+			var MAX_CLEAR_LOAN_ROW = 15;
 			var rows = [];
 			var productRows = document.querySelectorAll('.so-product-row[id^="product_row_"]');
 			for (var i = 0; i < productRows.length; i++) {
@@ -5311,6 +5358,9 @@ include("head.php"); ?>
 					continue;
 				}
 				var rowIndex = parseInt(match[1], 10);
+				if (rowIndex > MAX_CLEAR_LOAN_ROW) {
+					continue;
+				}
 				if (getClearLoanRowField('product_id', rowIndex) && isClearLoanRowEmpty(rowIndex)) {
 					rows.push(rowIndex);
 				}
@@ -5365,6 +5415,31 @@ include("head.php"); ?>
 			return importItems;
 		}
 
+		// กันการนำเข้าเอกสารเดิมซ้ำ (กด "เคลียร์จอง/ยืม" เลือกเอกสารเดียวกันสองรอบ) โดยเทียบกับ
+		// ค่า clear_ivno/jong_no ที่มีอยู่แล้วในแถวสินค้าของฟอร์ม (แถว 1-15 เท่านั้น ตาม getClearLoanAvailableRows)
+		function isClearLoanDocumentAlreadyImported(docType, documentNo) {
+			var normalizedDocumentNo = String(documentNo || '').trim();
+			if (normalizedDocumentNo === '') {
+				return false;
+			}
+			var MAX_CLEAR_LOAN_ROW = 15;
+			for (var rowIndex = 1; rowIndex <= MAX_CLEAR_LOAN_ROW; rowIndex++) {
+				if (isClearLoanRowEmpty(rowIndex)) {
+					continue;
+				}
+				if (docType === 'loan') {
+					if (getClearLoanRowValue('clear_br', rowIndex) === '1' && getClearLoanRowValue('clear_ivno', rowIndex) === normalizedDocumentNo) {
+						return true;
+					}
+				} else {
+					if (getClearLoanRowValue('jong_ckk', rowIndex) === '1' && getClearLoanRowValue('jong_no', rowIndex) === normalizedDocumentNo) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
 		function getClearLoanPrimaryDocument() {
 			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
 			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
@@ -5411,7 +5486,10 @@ include("head.php"); ?>
 			};
 			setClearLoanSelectValue('type_doc_select', companyMap[String(documentRow.company || '')] || documentRow.company);
 			setClearLoanSelectValue('sale_code', documentRow.sale_code || '', true);
-			setClearLoanSelectValue('doc_type_select', '1');
+			// เดิมบังคับ doc_type_select กลับเป็น '1' (ใบสั่งขาย) ทุกครั้งที่ import เอกสารเคลียร์ยืม/จอง
+			// ซึ่งยิง onchange ของ doc_type_select (บรรทัด 1663-1668) ไปเคลียร์ ic_ckk/et_ckk ที่ผู้ใช้เลือกไว้ก่อนหน้าทิ้งโดยไม่มีการแจ้งเตือน
+			// (checkbox ทั้งสองซ่อนอยู่ใน div display:none บรรทัด 1746 จึงไม่มี feedback ใด ๆ ให้เห็น)
+			// ไม่ควรยุ่งกับประเภทเอกสารที่ผู้ใช้เลือกไว้แล้วตอน import ข้อมูลจากเอกสารเคลียร์ยืม/จอง จึงตัดบรรทัดนี้ออก
 
 			var deliveryContract = document.getElementById('delivery_contract');
 			if (deliveryContract) {
@@ -5473,7 +5551,10 @@ include("head.php"); ?>
 				setClearLoanRowField('jong_no', rowIndex, '');
 			} else {
 				setClearLoanRowField('clear_br', rowIndex, '');
-				setClearLoanRowField('clear_ivno', rowIndex, documentNo);
+				// เอกสารใบจอง (reserve) ไม่ใช่ใบยืม (BR) จึงไม่ควรเขียน clear_ivno
+				// (เดิมเขียนเลขใบจองซ้ำลง clear_ivno ทำให้ ajax_get_clear_br_details.php
+				// จับคู่ผิดว่าเป็นการเคลียร์ยืม ถ้าเลขที่บังเอิญตรงกับ ivno ของใบยืมจริง)
+				setClearLoanRowField('clear_ivno', rowIndex, '');
 				setClearLoanRowField('jong_ckk', rowIndex, '1');
 				setClearLoanRowField('jong_no', rowIndex, documentNo);
 			}
@@ -5775,6 +5856,24 @@ include("head.php"); ?>
 				if (!importItems.length) {
 					alert('กรุณาเลือกรายการที่ต้องการนำเข้า');
 					return;
+				}
+
+				// กันนำเข้าเอกสารเดิมซ้ำ ถ้าเลขที่เอกสารนี้ถูกเคลียร์เข้าแถวสินค้าอยู่แล้วในฟอร์ม
+				var duplicateDocumentNos = {};
+				importItems = importItems.filter(function(importItem) {
+					var isDuplicate = isClearLoanDocumentAlreadyImported(importItem.doc_type, importItem.document_no);
+					if (isDuplicate) {
+						duplicateDocumentNos[importItem.document_no] = true;
+					}
+					return !isDuplicate;
+				});
+				if (!importItems.length) {
+					alert('เอกสารที่เลือกถูกนำเข้าไปในรายการสินค้าแล้ว');
+					return;
+				}
+				var duplicateDocumentNoList = Object.keys(duplicateDocumentNos);
+				if (duplicateDocumentNoList.length) {
+					alert('ข้ามเอกสารที่นำเข้าไปแล้ว: ' + duplicateDocumentNoList.join(', '));
 				}
 				if (!primaryDocument || !String(primaryDocument.customer_id || '').trim()) {
 					alert('ไม่พบรหัสลูกค้าในเอกสารต้นทาง');
@@ -6426,8 +6525,13 @@ include("head.php"); ?>
 					var mfRadio = document.querySelector('input[name="move_furn"][value="' + savedTransaction.want_employee + '"]');
 					if (mfRadio) {
 						mfRadio.checked = true;
-						if (typeof object === 'function') {
-							object();
+						try {
+							if (typeof object === 'function') {
+								object();
+							}
+						} catch (e) {
+							// กันไม่ให้ error จากโค้ด legacy จุดนี้หยุด section ถัดไป (restore checkbox ic_ckk/et_ckk ฯลฯ)
+							console.error('object() restore failed:', e);
 						}
 					}
 				}

@@ -99,6 +99,29 @@ function hosSubsoColumnExists($conn, $columnName)
 	return $columnCache[$columnName];
 }
 
+// เดิม INSERT ของแถวสินค้าใน hos__subso ไม่มีคอลัมน์ sn/pm_year ทำให้หมายเลข SN
+// ที่นำเข้าจากการเคลียร์ยืม/จอง (populateClearLoanRow) หายไปตอนสร้างเอกสารใหม่
+// (ฝั่งแก้ไขเอกสาร register_suphos_edit1.php มี applyHosSubsoInsertExtras() อยู่แล้ว ใช้ชื่อเดียวกันเพื่อความสอดคล้อง)
+function applyHosSubsoInsertExtras($conn, $newRowId, $snValue, $pmYearValue, $adminRemarkValue)
+{
+	$newRowId = (int)$newRowId;
+	if ($newRowId <= 0) {
+		return;
+	}
+
+	$setParts = array(
+		"sn = '" . mysqli_real_escape_string($conn, $snValue) . "'"
+	);
+	if (hosSubsoColumnExists($conn, 'pm_year')) {
+		$setParts[] = "pm_year = '" . mysqli_real_escape_string($conn, $pmYearValue) . "'";
+	}
+	if (hosSubsoColumnExists($conn, 'admin_remark')) {
+		$setParts[] = "admin_remark = '" . mysqli_real_escape_string($conn, $adminRemarkValue) . "'";
+	}
+
+	mysqli_query($conn, "UPDATE hos__subso SET " . implode(', ', $setParts) . " WHERE id = " . $newRowId);
+}
+
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 	$defaultPostFields = array(
@@ -533,8 +556,10 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$ref_13 = $_POST["ref_13"];
 	$ref_des = $_POST["ref_des"];
 
-	$ic_ckk = isset($_POST['ic_ckk']) ? 1 : 0;
-	$et_ckk = isset($_POST['et_ckk']) ? 1 : 0;
+	// ic_ckk/et_ckk อยู่ใน $defaultPostFields (บรรทัด 171-172) ซึ่งลูปที่ 291-295 เติมค่า '' ให้ทุกฟิลด์ที่ไม่ได้ส่งมา
+	// ทำให้ isset() เป็น true เสมอ แม้ผู้ใช้ไม่ได้ติ๊ก checkbox จึงต้องเช็ค !== '' ด้วย (pattern เดียวกับ que_ckk/have_order/plan_ckk)
+	$ic_ckk = isset($_POST['ic_ckk']) && $_POST['ic_ckk'] !== '' ? 1 : 0;
+	$et_ckk = isset($_POST['et_ckk']) && $_POST['et_ckk'] !== '' ? 1 : 0;
 	$repeat_cus = isset($_POST['repeat_cus']) ? 1 : 0;
 	$time_range = $_POST["time_range"] ?? '';
 	$status_comment_val = $_POST["status_comment"] ?? '';
@@ -1512,6 +1537,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count1 . "','" . $sale_count1 . "','" . $product_price1 . "','" . $product_price1 . "','" . $sum_amount1 . "','" . $sale_remarkk1 . "','" . $discount_unit1 . "','" . $warranty1 . "','" . $cal1 . "','" . $pm1 . "','" . $product_id1 . "','" . $product_id1 . "','" . $have_order . "','" . $clear_br1 . "','" . $clear_ivno1 . "','" . $jong_no1 . "','" . $jong_ckk1 . "','1')";
 
 				$objQuery1 = mysqli_query($conn, $strSQL1);
+				if ($objQuery1) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn1"] ?? ($_POST["sn1"] ?? ''), $_POST["pm_year1"] ?? '', $_POST["display_name1"] ?? '');
+				}
 			}
 		}
 
@@ -1646,6 +1674,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count2 . "','" . $sale_count2 . "','" . $product_price2 . "','" . $product_price2 . "','" . $sum_amount2 . "','" . $sale_remarkk2 . "','" . $discount_unit2 . "','" . $warranty2 . "','" . $cal2 . "','" . $pm2 . "','" . $product_id2 . "','" . $product_id2 . "','" . $have_order . "','" . $clear_br2 . "','" . $clear_ivno2 . "','" . $jong_no2 . "','" . $jong_ckk2 . "','2')";
 
 				$objQuery2 = mysqli_query($conn, $strSQL2);
+				if ($objQuery2) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn2"] ?? ($_POST["sn2"] ?? ''), $_POST["pm_year2"] ?? '', $_POST["display_name2"] ?? '');
+				}
 			}
 		}
 
@@ -1783,6 +1814,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count3 . "','" . $sale_count3 . "','" . $product_price3 . "','" . $product_price3 . "','" . $sum_amount3 . "','" . $sale_remarkk3 . "','" . $discount_unit3 . "','" . $warranty3 . "','" . $cal3 . "','" . $pm3 . "','" . $product_id3 . "','" . $product_id3 . "','" . $have_order . "','" . $clear_br3 . "','" . $clear_ivno3 . "','" . $jong_no3 . "','" . $jong_ckk3 . "','3')";
 
 				$objQuery3 = mysqli_query($conn, $strSQL3);
+				if ($objQuery3) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn3"] ?? ($_POST["sn3"] ?? ''), $_POST["pm_year3"] ?? '', $_POST["display_name3"] ?? '');
+				}
 			}
 		}
 
@@ -1912,6 +1946,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count4 . "','" . $sale_count4 . "','" . $product_price4 . "','" . $product_price4 . "','" . $sum_amount4 . "','" . $sale_remarkk4 . "','" . $discount_unit4 . "','" . $warranty4 . "','" . $cal4 . "','" . $pm4 . "','" . $product_id4 . "','" . $product_id4 . "','" . $have_order . "','" . $clear_br4 . "','" . $clear_ivno4 . "','" . $jong_no4 . "','" . $jong_ckk4 . "','4')";
 
 				$objQuery4 = mysqli_query($conn, $strSQL4);
+				if ($objQuery4) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn4"] ?? ($_POST["sn4"] ?? ''), $_POST["pm_year4"] ?? '', $_POST["display_name4"] ?? '');
+				}
 			}
 		}
 
@@ -2043,6 +2080,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count5 . "','" . $sale_count5 . "','" . $product_price5 . "','" . $product_price5 . "','" . $sum_amount5 . "','" . $sale_remarkk5 . "','" . $discount_unit5 . "','" . $warranty5 . "','" . $cal5 . "','" . $pm5 . "','" . $product_id5 . "','" . $product_id5 . "','" . $have_order . "','" . $clear_br5 . "','" . $clear_ivno5 . "','" . $jong_no5 . "','" . $jong_ckk5 . "','5')";
 
 				$objQuery5 = mysqli_query($conn, $strSQL5);
+				if ($objQuery5) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn5"] ?? ($_POST["sn5"] ?? ''), $_POST["pm_year5"] ?? '', $_POST["display_name5"] ?? '');
+				}
 			}
 		}
 
@@ -2171,6 +2211,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count6 . "','" . $sale_count6 . "','" . $product_price6 . "','" . $product_price6 . "','" . $sum_amount6 . "','" . $sale_remarkk6 . "','" . $discount_unit6 . "','" . $warranty6 . "','" . $cal6 . "','" . $pm6 . "','" . $product_id6 . "','" . $product_id6 . "','" . $have_order . "','" . $clear_br6 . "','" . $clear_ivno6 . "','" . $jong_no6 . "','" . $jong_ckk6 . "','6')";
 
 				$objQuery6 = mysqli_query($conn, $strSQL6);
+				if ($objQuery6) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn6"] ?? ($_POST["sn6"] ?? ''), $_POST["pm_year6"] ?? '', $_POST["display_name6"] ?? '');
+				}
 			}
 		}
 
@@ -2300,6 +2343,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count7 . "','" . $sale_count7 . "','" . $product_price7 . "','" . $product_price7 . "','" . $sum_amount7 . "','" . $sale_remarkk7 . "','" . $discount_unit7 . "','" . $warranty7 . "','" . $cal7 . "','" . $pm7 . "','" . $product_id7 . "','" . $product_id7 . "','" . $have_order . "','" . $clear_br7 . "','" . $clear_ivno7 . "','" . $jong_no7 . "','" . $jong_ckk7 . "','7')";
 
 				$objQuery7 = mysqli_query($conn, $strSQL7);
+				if ($objQuery7) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn7"] ?? ($_POST["sn7"] ?? ''), $_POST["pm_year7"] ?? '', $_POST["display_name7"] ?? '');
+				}
 			}
 		}
 
@@ -2430,6 +2476,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count8 . "','" . $sale_count8 . "','" . $product_price8 . "','" . $product_price8 . "','" . $sum_amount8 . "','" . $sale_remarkk8 . "','" . $discount_unit8 . "','" . $warranty8 . "','" . $cal8 . "','" . $pm8 . "','" . $product_id8 . "','" . $product_id8 . "','" . $have_order . "','" . $clear_br8 . "','" . $clear_ivno8 . "','" . $jong_no8 . "','" . $jong_ckk8 . "','8')";
 
 				$objQuery8 = mysqli_query($conn, $strSQL8);
+				if ($objQuery8) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn8"] ?? ($_POST["sn8"] ?? ''), $_POST["pm_year8"] ?? '', $_POST["display_name8"] ?? '');
+				}
 			}
 		}
 
@@ -2560,6 +2609,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count9 . "','" . $sale_count9 . "','" . $product_price9 . "','" . $product_price9 . "','" . $sum_amount9 . "','" . $sale_remarkk9 . "','" . $discount_unit9 . "','" . $warranty9 . "','" . $cal9 . "','" . $pm9 . "','" . $product_id9 . "','" . $product_id9 . "','" . $have_order . "','" . $clear_br9 . "','" . $clear_ivno9 . "','" . $jong_no9 . "','" . $jong_ckk9 . "','9')";
 
 				$objQuery9 = mysqli_query($conn, $strSQL9);
+				if ($objQuery9) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn9"] ?? ($_POST["sn9"] ?? ''), $_POST["pm_year9"] ?? '', $_POST["display_name9"] ?? '');
+				}
 			}
 		}
 
@@ -2690,6 +2742,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count10 . "','" . $sale_count10 . "','" . $product_price10 . "','" . $product_price10 . "','" . $sum_amount10 . "','" . $sale_remarkk10 . "','" . $discount_unit10 . "','" . $warranty10 . "','" . $cal10 . "','" . $pm10 . "','" . $product_id10 . "','" . $product_id10 . "','" . $have_order . "','" . $clear_br10 . "','" . $clear_ivno10 . "','" . $jong_no10 . "','" . $jong_ckk10 . "','10')";
 
 				$objQuery10 = mysqli_query($conn, $strSQL10);
+				if ($objQuery10) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn10"] ?? ($_POST["sn10"] ?? ''), $_POST["pm_year10"] ?? '', $_POST["display_name10"] ?? '');
+				}
 			}
 		}
 
@@ -2821,6 +2876,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count11 . "','" . $sale_count11 . "','" . $product_price11 . "','" . $product_price11 . "','" . $sum_amount11 . "','" . $sale_remarkk11 . "','" . $discount_unit11 . "','" . $warranty11 . "','" . $cal11 . "','" . $pm11 . "','" . $product_id11 . "','" . $product_id11 . "','" . $have_order . "','" . $clear_br11 . "','" . $clear_ivno11 . "','" . $jong_no11 . "','" . $jong_ckk11 . "','11')";
 
 				$objQuery11 = mysqli_query($conn, $strSQL11);
+				if ($objQuery11) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn11"] ?? ($_POST["sn11"] ?? ''), $_POST["pm_year11"] ?? '', $_POST["display_name11"] ?? '');
+				}
 			}
 		}
 
@@ -2949,6 +3007,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count12 . "','" . $sale_count12 . "','" . $product_price12 . "','" . $product_price12 . "','" . $sum_amount12 . "','" . $sale_remarkk12 . "','" . $discount_unit12 . "','" . $warranty12 . "','" . $cal12 . "','" . $pm12 . "','" . $product_id12 . "','" . $product_id12 . "','" . $have_order . "','" . $clear_br12 . "','" . $clear_ivno12 . "','" . $jong_no12 . "','" . $jong_ckk12 . "','12')";
 
 				$objQuery12 = mysqli_query($conn, $strSQL12);
+				if ($objQuery12) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn12"] ?? ($_POST["sn12"] ?? ''), $_POST["pm_year12"] ?? '', $_POST["display_name12"] ?? '');
+				}
 			}
 		}
 
@@ -3077,6 +3138,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count13 . "','" . $sale_count13 . "','" . $product_price13 . "','" . $product_price13 . "','" . $sum_amount13 . "','" . $sale_remarkk13 . "','" . $discount_unit13 . "','" . $warranty13 . "','" . $cal13 . "','" . $pm13 . "','" . $product_id13 . "','" . $product_id13 . "','" . $have_order . "','" . $clear_br13 . "','" . $clear_ivno13 . "','" . $jong_no13 . "','" . $jong_ckk13 . "','13')";
 
 				$objQuery13 = mysqli_query($conn, $strSQL13);
+				if ($objQuery13) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn13"] ?? ($_POST["sn13"] ?? ''), $_POST["pm_year13"] ?? '', $_POST["display_name13"] ?? '');
+				}
 			}
 		}
 
@@ -3205,6 +3269,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 (ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
 values ('" . $ref_id . "','" . $sale_count14 . "','" . $sale_count14 . "','" . $product_price14 . "','" . $product_price14 . "','" . $sum_amount14 . "','" . $sale_remarkk14 . "','" . $discount_unit14 . "','" . $warranty14 . "','" . $cal14 . "','" . $pm14 . "','" . $product_id14 . "','" . $product_id14 . "','" . $have_order . "','" . $clear_br14 . "','" . $clear_ivno14 . "','" . $jong_no14 . "','" . $jong_ckk14 . "','14')";
 				$objQuery14 = mysqli_query($conn, $strSQL14);
+				if ($objQuery14) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn14"] ?? ($_POST["sn14"] ?? ''), $_POST["pm_year14"] ?? '', $_POST["display_name14"] ?? '');
+				}
 			}
 		}
 
@@ -3335,6 +3402,9 @@ values ('" . $ref_id . "','" . $unit10 . "','" . $unit10 . "','0.00','0.00','0.0
 values ('" . $ref_id . "','" . $sale_count15 . "','" . $sale_count15 . "','" . $product_price15 . "','" . $product_price15 . "','" . $sum_amount15 . "','" . $sale_remarkk15 . "','" . $discount_unit15 . "','" . $warranty15 . "','" . $cal15 . "','" . $pm15 . "','" . $product_id15 . "','" . $product_id15 . "','" . $have_order . "','" . $clear_br15 . "','" . $clear_ivno15 . "','" . $jong_no15 . "','" . $jong_ckk15 . "','15')";
 
 				$objQuery15 = mysqli_query($conn, $strSQL15);
+				if ($objQuery15) {
+					applyHosSubsoInsertExtras($conn, mysqli_insert_id($conn), $_POST["product_sn15"] ?? ($_POST["sn15"] ?? ''), $_POST["pm_year15"] ?? '', $_POST["display_name15"] ?? '');
+				}
 			}
 		}
 

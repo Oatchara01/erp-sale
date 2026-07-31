@@ -916,9 +916,11 @@
                         <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
                         <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
                         <input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
-                        <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="1">
+                        <!-- ค่าเริ่มต้นต้องเป็นค่าว่าง ไม่ใช่ "1" มิฉะนั้นรายการขายปกติทุกแถวจะถูก
+                        report_clearbr.php นับเป็นรายการเคลียร์ยืม/จอง (ดู WHERE clear_br='1') -->
+                        <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="">
                         <input type="hidden" name="clear_ivno<?php echo $i; ?>" id="clear_ivno<?php echo $i; ?>">
-                        <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="1">
+                        <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="">
                         <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
                         <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
                         <input type="hidden" name="product_sn<?php echo $i; ?>" id="product_sn<?php echo $i; ?>">
@@ -1270,8 +1272,10 @@
             document.getElementById('clear_ivno' + rowIndex).value = '';
             document.getElementById('jong_no' + rowIndex).value = '';
             document.getElementById('display_name' + rowIndex).value = '';
-            document.getElementById('clear_br' + rowIndex).value = '1';
-            document.getElementById('jong_ckk' + rowIndex).value = '1';
+            // ลบสินค้าออกจากแถว ไม่ใช่การเคลียร์ยืม/จอง จึงต้องล้างเป็นค่าว่าง
+            // (เดิมตั้งเป็น '1' ทำให้แถวว่างถูกนับเป็นรายการเคลียร์ยืมใน report_clearbr.php)
+            document.getElementById('clear_br' + rowIndex).value = '';
+            document.getElementById('jong_ckk' + rowIndex).value = '';
 
             document.getElementById('product_row_' + rowIndex).style.display = 'none';
 
@@ -1565,6 +1569,17 @@
                     // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
                     // เพราะแถวนี้อาจเป็นแถวที่เพิ่งลบสินค้าเดิมไป แล้วเลือกสินค้าใหม่ทันที
                     // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
+
+                    // กันค่า clear_br/clear_ivno/jong_ckk/jong_no ของสินค้าเดิม (จากการเคลียร์ยืม/จอง)
+                    // ติดค้างมากับแถวที่เพิ่งเลือกสินค้าใหม่เข้ามาทับ
+                    var clearBrInput = document.getElementById('clear_br' + emptyRowIndex);
+                    var clearIvnoInput = document.getElementById('clear_ivno' + emptyRowIndex);
+                    var jongCkkInput = document.getElementById('jong_ckk' + emptyRowIndex);
+                    var jongNoInput = document.getElementById('jong_no' + emptyRowIndex);
+                    if (clearBrInput) clearBrInput.value = '';
+                    if (clearIvnoInput) clearIvnoInput.value = '';
+                    if (jongCkkInput) jongCkkInput.value = '';
+                    if (jongNoInput) jongNoInput.value = '';
 
                     // Trigger the ajax call to populate the row
                     doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);

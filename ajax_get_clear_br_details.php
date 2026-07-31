@@ -55,8 +55,8 @@ $soIvNoList = array();
 $sqlSoIv = "SELECT DISTINCT s.iv_no 
             FROM hos__so s 
             LEFT JOIN hos__subso ss ON s.ref_id = ss.ref_idd 
-            WHERE (s.ref_ren = '{$safe_ref}' OR (ss.clear_ivno = '{$ivNoEsc}' AND ss.clear_ivno != '')) 
-              AND s.status_doc = 'Approve' 
+            WHERE (s.ref_ren = '{$safe_ref}' OR (ss.clear_br = '1' AND ss.clear_ivno = '{$ivNoEsc}' AND ss.clear_ivno != ''))
+              AND s.status_doc = 'Approve'
               AND s.iv_no IS NOT NULL AND s.iv_no != ''";
 $resSoIv = mysqli_query($conn, $sqlSoIv);
 if ($resSoIv) {
