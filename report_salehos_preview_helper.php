@@ -223,6 +223,8 @@ function salehos_build_preview_context($conn, $accountConnection)
 			'pm' => salehos_preview_value('pm' . $i),
 			'clear_br' => salehos_preview_value('clear_br' . $i, '0'),
 			'clear_ivno' => salehos_preview_value('clear_ivno' . $i),
+			'jong_ckk' => salehos_preview_value('jong_ckk' . $i, '0'),
+			'jong_no' => salehos_preview_value('jong_no' . $i),
 			'lot_no' => salehos_preview_value('lot_no' . $i)
 		);
 	}

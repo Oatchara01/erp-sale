@@ -610,12 +610,16 @@ if ($objResult11["ref_13"] == '1') {
 				$discount = number_format($discount1, 2) . "";
 				$clear_br = $objResult1["clear_br"];
 				$clear_ivno = $objResult1["clear_ivno"];
+				$jong_ckk = $objResult1["jong_ckk"] ?? '';
+				$jong_no = $objResult1["jong_no"] ?? '';
 				$lot_no = $objResult1["lot_no"];
 				$date_expir = $rs["date_expir"] ?? "";
+				$clearChecked = ($clear_br == '1' || $jong_ckk == '1');
+				$clearDisplayNo = $clear_br == '1' ? $clear_ivno : $jong_no;
 			?>
 				<tr>
-					<td align="center" class="td"><?php if ($clear_br == '1') { ?><input type="checkbox" checked><?php } ?><br>
-						<?php echo $clear_ivno; ?>
+					<td align="center" class="td"><?php if ($clearChecked) { ?><input type="checkbox" checked><?php } ?><br>
+						<?php echo $clearDisplayNo; ?>
 					</td>
 					<td align="center" class="td"><?php echo $i; ?></td>
 					<td align="center" class="td"><?php
