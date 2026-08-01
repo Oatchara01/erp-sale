@@ -1305,6 +1305,10 @@ include("head.php"); ?>
 		<script language="javascript">
 			function fncSubmit() //ตรวจสอบข้อมูลก่อนบันทึก
 			{
+				if (window.soSkipValidation) {
+					window.soSkipValidation = false;
+					return true;
+				}
 				syncFormCompatibilityFields();
 				if (typeof syncDeptComments === 'function') {
 					syncDeptComments();
@@ -3234,16 +3238,78 @@ include("head.php"); ?>
 
 		<!-- ปุ่ม action ติดล่างของฟอร์มหลัก: submit จริงและปุ่ม draft สำหรับต่อยอด logic ภายหลัง -->
 		</div>
+		<?php
+		$soStatusDoc = $savedSo['status_doc'] ?? '';
+		$soSendCm = $savedSo['send_cm'] ?? '';
+		$soSendSup = $savedSo['send_sup'] ?? '0';
+		$soFinalStates = in_array($soStatusDoc, ['Approve', 'Reject', 'Rejected'], true)
+			|| ($soSendCm === '1' && $soStatusDoc === 'Request');
+		// Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') ตามสเปค "หลังจากกด Submit ปุ่ม Submit จะหาย"
+		$soHideSubmit = ($savedSo !== null) && ($soSendSup === '1' || $soFinalStates);
+		$soIsEditMode = ($savedSo !== null);
+		$soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
+		$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover
+			&& ($soStatusDoc === 'Request')
+			&& ($soSendCm !== '1');
+		// Update ยังใช้แก้ไขต่อได้จนกว่าจะถึงสถานะจบ/ส่งบัญชี (ไม่ผูกกับ send_sup)
+		// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่แล้ว เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองอยู่แล้ว กันไม่ให้เห็นปุ่ม Update ซ้ำสองปุ่ม
+		$soHideUpdate = $soFinalStates || $soCanShowApproveBar;
+		?>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
-			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px;">
-				<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
-					<i class="far fa-paper-plane"></i> Submit
-				</button>
-				<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-					<i class="far fa-save"></i> Save Draft
+			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
+				<?php if ($soCanShowApproveBar): ?>
+					<div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
+						<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
+							<i class="fas fa-ellipsis-v"></i>
+						</button>
+						<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
+							<button type="submit" name="approve_action" value="return" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
+							<button type="submit" name="approve_action" value="reject" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+							<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="far fa-window-close" style="width:16px;"></i> ยกเลิกเอกสาร</button>
+						</div>
+						<button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+							<i class="far fa-check-circle"></i> อนุมัติ
+						</button>
+						<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+							<i class="far fa-save"></i> Update
+						</button>
+					</div>
+				<?php endif; ?>
+				<?php if (!$soHideSubmit): ?>
+					<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
+						<i class="far fa-paper-plane"></i> Submit
+					</button>
+				<?php endif; ?>
+				<?php if (!$soHideUpdate): ?>
+					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+						<i class="far fa-save"></i> <?php echo $soIsEditMode ? 'Update' : 'Save Draft'; ?>
+					</button>
+				<?php endif; ?>
+				<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
+					ยกเลิก
 				</button>
 			</div>
 		</div>
+		<script>
+			function toggleApproveOverflowMenu() {
+				var menu = document.getElementById('approveOverflowMenu');
+				if (!menu) return;
+				menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+			}
+			document.addEventListener('click', function(e) {
+				var menu = document.getElementById('approveOverflowMenu');
+				var trigger = document.getElementById('btn_approve_overflow');
+				if (!menu || menu.style.display === 'none') return;
+				if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+				if (!menu.contains(e.target)) menu.style.display = 'none';
+			});
+
+			function triggerCancelDocFromApproveMenu() {
+				toggleCancelDoc();
+				var form = document.forms['frmMain'];
+				if (form) HTMLFormElement.prototype.submit.call(form);
+			}
+		</script>
 		<!-- hidden fields กลุ่มนี้ยังคงส่งค่าไปกับ form แม้ไม่มี input ให้ผู้ใช้แก้บนหน้า -->
 		<input type="hidden" name="end_time" value="<?php echo so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 1)); ?>">
 		<input type="hidden" name="mode_name" id="mode_name" value="">
@@ -6150,7 +6216,7 @@ include("head.php"); ?>
 	}
 
 	function goMainSuphos() {
-		window.location.href = 'main_suphos_so.php';
+		window.location.href = 'status_adminhos.php';
 	}
 </script>
 

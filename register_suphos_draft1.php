@@ -15,9 +15,14 @@ $refId = trim((string)($_POST["ref_id"] ?? ""));
 try {
 	if ($refId !== "") {
 		$safeRefId = mysqli_real_escape_string($conn, $refId);
-		$draftQuery = mysqli_query($conn, "SELECT status_doc FROM hos__so WHERE ref_id = '" . $safeRefId . "' LIMIT 1");
+		$draftQuery = mysqli_query($conn, "SELECT status_doc, send_cm FROM hos__so WHERE ref_id = '" . $safeRefId . "' LIMIT 1");
 		if ($draftQuery && ($draftRow = mysqli_fetch_assoc($draftQuery))) {
-			if (($draftRow["status_doc"] ?? "") === "Draft") {
+			$draftStatusDoc = $draftRow["status_doc"] ?? "";
+			$draftSendCm = $draftRow["send_cm"] ?? "";
+			$isFinalState = in_array($draftStatusDoc, ['Approve', 'Reject', 'Rejected'], true)
+				|| ($draftSendCm === '1' && $draftStatusDoc === 'Request');
+
+			if (!$isFinalState) {
 				include("register_suphos_edit1.php");
 				exit();
 			}

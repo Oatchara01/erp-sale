@@ -480,13 +480,7 @@ exit();
 
 
 	$cancelDocPost = $_POST["cancel_doc"] ?? null;
-	if ($cancelDocPost === '1') {
-		$statusDoc = 'Reject';
-	} elseif ($cancelDocPost === '0') {
-		$statusDoc = '';
-	} else {
-		$statusDoc = 'Request';
-	}
+	$statusDoc = ($cancelDocPost === '1') ? 'Reject' : 'Request';
 
 	$save = "Update  hos__so set
 bill_name ='" . $bill_name . "',bill_tel ='" . $bill_tel . "',bill_address  ='" . $bill_address . "',full_bill ='" . $full_bill . "',date_so ='" . $date_so . "',suggest ='" . $suggest . "',payment ='" . $payment . "',payment_method ='" . $payment_method . "',sale_comment ='" . $sale_comment . "',po_no ='" . $po_no . "',delivery_contract ='" . $delivery_contract . "',book_clear ='" . $book_clear . "',book_no ='" . $book_no . "',brn_clear ='" . $brn_clear . "',brn_no ='" . $brn_no . "',brnp_clear ='" . $brnp_clear . "',brnp_no ='" . $brnp_no . "',sn_ckk ='" . $sn_ckk . "',sn_no ='" . $sn_no . "',install_place ='" . $install_place . "',with_pr ='" . $with_pr . "',type_type ='" . $type_type . "',type_detail ='" . $type_detail . "',delivery_type ='" . $delivery_type . "',delivery_date ='" . $delivery_date . "',delivery_time ='" . $delivery_time . "',delivery_address ='" . $delivery_address . "',delivery_contact ='" . $delivery_contact . "',delivery_tel ='" . $delivery_tel . "',pr_no ='" . $pr_no . "',add_by ='" . $add_by . "',payment_des ='" . $payment_des . "',slip1 = '" . $slip1 . "',slip2 = '" . $slip2 . "',slip3 = '" . $slip3 . "',slip4 = '" . $slip4 . "',slip5 = '" . $slip5 . "',date_send_key='" . $date_send_key . "',have_order='" . $have_order . "',bill_id = '" . $bill_id . "',date_tranfer = '" . $date_tranfer . "',cm_no='" . $cm_no . "',send_sup='1',status_doc = '" . $statusDoc . "',pre_name='" . $pre_name . "',que_ckk='" . $que_ckk . "',mode_cus ='" . $mode_cus . "',plan_ckk='" . $plan_ckk . "',email='" . $email . "',sale_code='" . $sale_code . "',tax_id='" . $tax_id . "',ic_ckk='" . $ic_ckk . "',et_ckk='" . $et_ckk . "',repeat_cus='" . $repeat_cus . "',admin='" . $admin . "',admin_code='" . $admin_code . "',admin_date='" . $admin_date . "'  where ref_id='" . $ref_id . "'";
@@ -4020,7 +4014,97 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		mysqli_query($conn, $strDeliveryBillInsert) or die(mysqli_error($conn));
 	}
 
+	// ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ ของ Sup (register_suphos.php) — ทำงานหลังบันทึกข้อมูลฟอร์มปกติเสร็จแล้ว
+	$soApproveAction = $_POST['approve_action'] ?? '';
+	if ($soApproveAction !== '' && $qsave) {
+		$approve_name = trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''));
+		$approve_code = $_SESSION['code'] ?? '';
+		$approve_date_val = date('Y-m-d');
+		$approve_time_val = date('H:i:s');
+
+		if ($soApproveAction === 'return') {
+			mysqli_query($conn, "UPDATE hos__so SET status_doc='Returned', send_sup='0' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+		} elseif ($soApproveAction === 'reject') {
+			mysqli_query($conn, "UPDATE hos__so SET status_doc='Rejected', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+		} elseif ($soApproveAction === 'approve') {
+			// เช็คเคลียร์ยืม/เคลียร์จองต่อแถวสินค้า (พอร์ตจาก salehos_approve.php)
+			foreach ($id as $key => $value) {
+				$clear_ivno_new = trim($clear_ivno[$key] ?? '');
+				$product_id_new = $product_id[$key] ?? '';
+				$sale_count_new = $sale_count[$key] ?? 0;
+				$jong_no_new = $jong_no[$key] ?? '';
+
+				if (substr($clear_ivno_new, 0, 4) === 'BREG') {
+					// เอกสารใบยืม BREG ไม่ต้องเช็คเคลียร์ยืม (ตามพฤติกรรมเดิม)
+				} elseif ($clear_ivno_new !== '') {
+					$rssc1 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT ref_id FROM hos__consig WHERE iv_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_doc = 'Approve'"));
+					$rssc2 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS sale_count FROM hos__subconsig WHERE ref_idd = '" . ($rssc1['ref_id'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+
+					$rse1 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT ref_id FROM hos__breg WHERE iv_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_doc = 'Approve'"));
+					$rse2 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count1) AS sale_count FROM hos__subbreg1 WHERE ref_id1 = '" . ($rse1['ref_id'] ?? '') . "' AND product_id1 = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+
+					$rs1 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT ref_id_br FROM hos__br WHERE iv_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_doc = 'Approve'"));
+					$rs2 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS sale_count FROM hos__subbr WHERE ref_idd_br = '" . ($rs1['ref_id_br'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+
+					$rs21 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT ref_id FROM so__main WHERE doc_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND cancel_ckk='0'"));
+					$rs22 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(sale_count) AS sale_count FROM so__submain WHERE ref_idd = '" . ($rs21['ref_id'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+
+					$rs3 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM hos__subspr WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND clear_br = '1' AND clear_ivno = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_spr = 'Approve'"));
+					$rs13 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS count3 FROM hos__subso WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND clear_br = '1' AND clear_ivno = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_so = 'Approve'"));
+					$rs41 = mysqli_fetch_array(mysqli_query($conn, "SELECT ref_id FROM hos__receive WHERE iv_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "'"));
+					$rs4 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS count4 FROM hos__subreceive WHERE ref_idd = '" . ($rs41['ref_id'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+					$rs12 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM hos__subsmp WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND clear_br = '1' AND br_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_smp = 'Approve'"));
+
+					$count3 = $rs3['count3'] ?? 0;
+					$count13 = $rs13['count3'] ?? 0;
+					$count4 = $rs4['count4'] ?? 0;
+					$count5 = $rs12['count3'] ?? 0;
+					$count2 = (($rs2['sale_count'] ?? 0) + ($rs22['sale_count'] ?? 0) + ($rse2['sale_count'] ?? 0) + ($rssc2['sale_count'] ?? 0)) - ($count3 + $count4 + $count5 + $count13 + $sale_count_new);
+
+					if ($count2 <= 0) {
+						mysqli_query($conn, "UPDATE hos__subbr SET clear_ckk='1' WHERE ref_idd_br='" . ($rs1['ref_id_br'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
+						mysqli_query($conn, "UPDATE hos__subconsig SET clear_ckk='1' WHERE ref_idd='" . ($rssc1['ref_id'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
+					}
+				}
+
+				if ($jong_no_new !== '') {
+					$objResultj = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM hos__jongproduct WHERE iv_no = '" . mysqli_real_escape_string($conn, $jong_no_new) . "'"));
+					$objResultj1 = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM hos__subjongpro WHERE ref_idd = '" . ($objResultj['ref_id'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+
+					$rsj3 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM so__submain WHERE product_id = '" . ($objResultj1['product_id'] ?? '') . "' AND jong_ckk='1' AND jong_no='" . ($objResultj['iv_no'] ?? '') . "' AND status_sol='Approve'"));
+					$rsj13 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(count) AS count3 FROM hos__subso WHERE product_id = '" . ($objResultj1['product_id'] ?? '') . "' AND jong_ckk='1' AND jong_no='" . ($objResultj['iv_no'] ?? '') . "' AND status_so='Approve'"));
+
+					$countj2 = ($objResultj1['count'] ?? 0) - (($rsj3['count3'] ?? 0) + ($rsj13['count3'] ?? 0));
+					if ((float)$countj2 == 0.0) {
+						mysqli_query($conn, "UPDATE hos__subjongpro SET close_ckk='1' WHERE ref_idd='" . ($objResultj['ref_id'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
+					}
+				}
+			}
+
+			// คำนวณ send_cm ตามประเภทเอกสาร (IC) / ยอดรวม+วิธีชำระเป็นเครดิต ≤2000 (พอร์ตจาก salehos_approve.php)
+			$rsPaymentApprove = mysqli_fetch_assoc(mysqli_query($conn, "SELECT payment FROM hos__so WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'"));
+			$paymentApprove = $rsPaymentApprove['payment'] ?? '';
+			$rsAmountApprove = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(amount) AS amount FROM hos__subso WHERE ref_idd='" . mysqli_real_escape_string($conn, $ref_id) . "'"));
+			$amountApprove = $rsAmountApprove['amount'] ?? 0;
+
+			if ($ic_ckk === '1') {
+				mysqli_query($conn, "UPDATE hos__so SET send_cm='2', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "', approve_time='" . $approve_time_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+			} elseif ((float)$amountApprove <= 2000 && in_array($paymentApprove, ['36', '38', '39', '40', '41', '42'], true)) {
+				mysqli_query($conn, "UPDATE hos__so SET send_cm='1' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+			} else {
+				mysqli_query($conn, "UPDATE hos__so SET status_doc='Approve', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "', send_admin='1', approve_time='" . $approve_time_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+				mysqli_query($conn, "UPDATE hos__subso SET status_so='Approve' WHERE ref_idd='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+			}
+		}
+	}
+
 	if ($qsave) {
+		if (($_POST['is_draft'] ?? '') === '1') {
+			header('Content-Type: application/json; charset=utf-8');
+			echo json_encode(array('success' => true, 'ref_id' => $ref_id));
+			exit();
+		}
+
 		echo "<script language=\"JavaScript\">";
 		$redirect_url = $redirect_to . "?ref_id=" . urlencode($ref_id);
 		if (strpos($redirect_to, "register_suphos.php") !== false) {
@@ -4029,6 +4113,12 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		echo "window.location='" . $redirect_url . "';";
 		echo "</script>";
 	} else {
+		if (($_POST['is_draft'] ?? '') === '1') {
+			header('Content-Type: application/json; charset=utf-8');
+			echo json_encode(array('success' => false, 'message' => 'Cannot save draft'));
+			exit();
+		}
+
 		echo "Cannot";
 	}
 }

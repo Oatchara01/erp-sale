@@ -387,7 +387,7 @@ include "dbconnect_sale.php";
 							} else if ($objResult["status_doc"] == 'รอผู้บริหาร') {
 								$status_class = 'pending-exec';
 								$status_text = 'รอผู้บริหาร';
-							} else if ($objResult["status_doc"] == 'ส่งกลับ') {
+							} else if ($objResult["status_doc"] == 'ส่งกลับ' || $objResult["status_doc"] == 'Returned') {
 								$status_class = 'returned';
 								$status_text = 'ส่งกลับ';
 							} else {
