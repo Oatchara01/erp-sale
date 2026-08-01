@@ -1631,6 +1631,10 @@ include("head.php"); ?>
 
 				</div>
 				<div class="so-header-right">
+					<div class="so-ref-info" id="clearLoanReserveInfo" style="display:none;">
+						<span class="so-ref-label">เลขที่ใบจอง</span>
+						<span class="so-ref-value" id="clearLoanReserveInfoValue"></span>
+					</div>
 					<button type="button" class="btn-clear-loan-reserve" id="clearLoanTriggerButton">เคลียร์จอง/ยืม</button>
 					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
@@ -1654,6 +1658,14 @@ include("head.php"); ?>
 
 					<!-- เคลียร์ยืม/จอง Section (hidden by default) -->
 					<div class="so-card">
+						<!-- book_no/book_clear: เดิมเป็นส่วนหนึ่งของการ์ด "เคลียร์ยืม/จอง" ด้านล่างที่ถูกคอมเมนต์ปิดไว้
+						ตอนนี้ popup เคลียร์จอง/ยืม (#clearLoanModal) เขียนค่าเข้าฟิลด์นี้แทน (ดู mapClearLoanDocumentHeader())
+						เพื่อให้ register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit ได้ถูกต้อง
+						จึงต้องคงฟิลด์นี้ไว้เป็น DOM node จริง (ซ่อนด้วย CSS แทนการคอมเมนต์ HTML ซึ่งจะไม่ถูกสร้างเป็น DOM เลย) -->
+						<label class="so-checkbox-label" style="display:none">
+							<input type="checkbox" name="book_clear" id="book_clear" value="1"> เคลียร์ใบจอง :
+						</label>
+						<input name="book_no" id="book_no" class="so-input" placeholder="เลขที่..." style="display:none">
 						<!-- <div id="clear_loan_reserve_section" class="collapsible-clear-section">
 							<div style="background-color: #FAF9FC; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px dashed #D3C9FC;">
 								<h3 class="so-section-sub-title" style="color: #612989; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">เคลียร์ยืม/จอง</h3>
@@ -5498,6 +5510,26 @@ include("head.php"); ?>
 					bubbles: true
 				}));
 			}
+
+			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อ (1) ให้แสดงผลได้ และ (2) ให้
+			// register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit จริง
+			// (เดิม popup เคลียร์จอง/ยืมไม่เคยเขียนฟิลด์นี้เลย ทำให้ใบจองไม่ถูกปิดและกลับมาเลือกซ้ำได้)
+			// หมายเหตุ: ฝั่งใบยืม (loan) ใช้กลไกปิดเอกสารคนละทาง (per-row clear_br{i}/clear_ivno{i})
+			// brn_no ไม่มี logic ปิด hos__br ต่อจากนั้น จึงยังไม่ implement ส่วนนี้
+			if (documentRow.doc_type !== 'loan') {
+				var docNo = documentRow.document_no || '';
+				var bookNo = document.getElementById('book_no');
+				var bookClear = document.getElementById('book_clear');
+				if (bookNo) bookNo.value = docNo;
+				if (bookClear) bookClear.checked = !!docNo;
+
+				// #book_no/#book_clear ด้านบนเป็น hidden field ไว้ใช้แค่ตอน submit (ไม่มีอะไรให้ผู้ใช้เห็น)
+				// จึงต้องมี element ที่มองเห็นได้แยกต่างหากเพื่อยืนยันบนหน้าจอว่าเลขที่ใบจองถูกดึงมาแล้วจริง
+				var reserveInfo = document.getElementById('clearLoanReserveInfo');
+				var reserveInfoValue = document.getElementById('clearLoanReserveInfoValue');
+				if (reserveInfoValue) reserveInfoValue.textContent = docNo;
+				if (reserveInfo) reserveInfo.style.display = docNo ? '' : 'none';
+			}
 		}
 
 		function loadClearLoanCustomer(documentRow, onComplete) {
@@ -6712,52 +6744,12 @@ include("head.php"); ?>
 				}
 
 				// 10. Handle Products table
-				if (Array.isArray(savedProducts) && savedProducts.length > 0) {
-					savedProducts.forEach(function(prod, index) {
-						var i = index + 1;
-						if (i <= 30) {
-							var rowFields = {
-								'subso_db_id': prod.id || prod.ID || '',
-								'product_id': prod.product_id || prod.product_ID || '',
-								'product_sn': prod.sn || prod.product_sn || '',
-								'unit_name': prod.unit_name,
-								'warranty': prod.warranty,
-								'cal': prod.cal,
-								'pm': prod.pm,
-								'pm_year': prod.pm_year,
-								'sale_remarkk': prod.sale_remark,
-								'clear_br': prod.clear_br,
-								'clear_ivno': prod.clear_ivno,
-								'jong_ckk': prod.jong_ckk,
-								'jong_no': prod.jong_no,
-								'display_name': prod.admin_remark || prod.display_name,
-								'product_codet': prod.product_code || prod.product_codet,
-								'product_name': prod.product_name,
-								'sale_count': prod.count,
-								'product_price': prod.price,
-								'discount_unit': prod.discount,
-								'sum_amount': prod.amount
-							};
-
-							Object.keys(rowFields).forEach(function(key) {
-								var el = document.getElementById(key + i) || document.querySelector('input[name="' + key + i + '"]');
-								if (el) {
-									el.value = rowFields[key] || '';
-								}
-							});
-
-							var labelEl = document.getElementById('product_name_label' + i);
-							if (labelEl) {
-								labelEl.textContent = prod.product_name || '';
-							}
-
-							var row = document.getElementById('product_row_' + i);
-							if (row) {
-								row.style.display = '';
-							}
-						}
-					});
-				}
+				// เดิม savedProducts เป็น raw row ของ hos__subso.* ซึ่งไม่มีคอลัมน์ product_name และ
+				// product_code เก็บค่าซ้ำของ product_id (ไม่ใช่รหัสสินค้าจริง) การ set ค่าจาก savedProducts
+				// ที่นี่ (ทำงานหลัง savedProductsForForm ที่ถูกต้องด้านบน เพราะ <script> อยู่หลังกว่า)
+				// จึงไปทับชื่อ/รหัสสินค้าที่ set มาถูกต้องแล้วให้กลายเป็นค่าว่าง/ผิด ตารางสินค้าถูกเติมค่าครบถ้วน
+				// (รวมทั้ง h_product_codet และ remark_hc ที่บล็อกนี้ไม่ได้ set) โดย savedProductsForForm
+				// ด้านบนอยู่แล้ว จึงตัดบล็อกนี้ทิ้งเพื่อไม่ให้ทับข้อมูลที่ถูกต้อง
 
 				// 11. Sync compatibility fields and calculate grand total
 				if (typeof syncFormCompatibilityFields === 'function') {

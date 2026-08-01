@@ -340,6 +340,7 @@
                 border-bottom: 1px solid #E5DFEC;
                 padding-bottom: 10px;
             }
+
             .so-product-summary-col:last-child {
                 border-bottom: none;
                 padding-bottom: 0;
@@ -862,104 +863,104 @@
     </div>
 
     <div class="so-product-table-wrap">
-    <table class="so-product-table" id="product_table">
-        <thead>
-            <tr>
-                <th style="width: 70px; text-align: center;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <i class="fas fa-grip-vertical" style="opacity: 0; margin: 0; pointer-events: none;"></i>
-                        <input type="checkbox" id="select_all_rows" class="so-row-checkbox" onclick="toggleSelectAllRows(this)">
-                    </div>
-                </th>
-                <th style="width: 15%; text-align: left;">รหัสสินค้า</th>
-                <th style="width: 25%; text-align: left;">รายการสินค้า</th>
-                <th style="width: 8%; text-align: center;">จำนวน</th>
-                <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
-                <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
-                <th style="width: 15%; text-align: center;">ยอดรวม</th>
-                <th style="width: 10%;"></th>
-            </tr>
-        </thead>
-        <tbody>
-
-            <?php for ($i = 1; $i <= 30; $i++): ?>
-                <tr class="so-product-row" id="product_row_<?php echo $i; ?>" <?php if ($i > 3) echo 'style="display:none;"'; ?>
-                    ondragstart="handleDragStart(event, <?php echo $i; ?>)"
-                    ondragover="handleDragOver(event)"
-                    ondragenter="handleDragEnter(event)"
-                    ondragleave="handleDragLeave(event)"
-                    ondrop="handleDrop(event, <?php echo $i; ?>)"
-                    ondragend="handleDragEnd(event)">
-                    <td style="text-align: center;">
-                        <!-- ไอคอนลากสลับตำแหน่ง และ Checkbox สำหรับไฮไลท์แถว -->
+        <table class="so-product-table" id="product_table">
+            <thead>
+                <tr>
+                    <th style="width: 70px; text-align: center;">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <i class="fas fa-grip-vertical drag-handle" style="margin: 0; cursor: grab;" onmousedown="document.getElementById('product_row_<?php echo $i; ?>').setAttribute('draggable', true)" onmouseup="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')" onmouseleave="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')"></i>
-                            <input type="checkbox" class="so-row-checkbox" onchange="toggleRowHighlight(this, <?php echo $i; ?>)">
+                            <i class="fas fa-grip-vertical" style="opacity: 0; margin: 0; pointer-events: none;"></i>
+                            <input type="checkbox" id="select_all_rows" class="so-row-checkbox" onclick="toggleSelectAllRows(this)">
                         </div>
-
-                        <!-- ค่า Hidden เบื้องหลัง: เก็บข้อมูลรหัส, ID สินค้า และหน่วยสินค้า เพื่อส่งเข้าระบบตอนบันทึก -->
-                        <input type="hidden" name="h_product_codet<?php echo $i; ?>" id="h_product_codet<?php echo $i; ?>">
-                        <input type="hidden" name="h_product_code<?php echo $i; ?>" id="h_product_code<?php echo $i; ?>">
-                        <input type="hidden" name="h_product_c<?php echo $i; ?>" id="h_product_c<?php echo $i; ?>">
-                        <input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
-                        <input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
-                        <input type="hidden" name="subso_db_id<?php echo $i; ?>" id="subso_db_id<?php echo $i; ?>">
-                        <input type="hidden" name="row_deleted<?php echo $i; ?>" id="row_deleted<?php echo $i; ?>" value="0">
-                        <input type="hidden" name="deleted_subso_db_id<?php echo $i; ?>" id="deleted_subso_db_id<?php echo $i; ?>">
-                        <input type="hidden" name="deleted_product_code<?php echo $i; ?>" id="deleted_product_code<?php echo $i; ?>">
-
-                        <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
-                        <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
-                        <input type="hidden" name="warranty_unit<?php echo $i; ?>" id="warranty_unit<?php echo $i; ?>" value="ปี">
-                        <input type="hidden" name="remark_hc<?php echo $i; ?>" id="remark_hc<?php echo $i; ?>">
-                        <input type="hidden" name="cal<?php echo $i; ?>" id="cal<?php echo $i; ?>">
-                        <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
-                        <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
-                        <input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
-                        <!-- ค่าเริ่มต้นต้องเป็นค่าว่าง ไม่ใช่ "1" มิฉะนั้นรายการขายปกติทุกแถวจะถูก
-                        report_clearbr.php นับเป็นรายการเคลียร์ยืม/จอง (ดู WHERE clear_br='1') -->
-                        <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="">
-                        <input type="hidden" name="clear_ivno<?php echo $i; ?>" id="clear_ivno<?php echo $i; ?>">
-                        <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="">
-                        <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
-                        <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
-                        <input type="hidden" name="product_sn<?php echo $i; ?>" id="product_sn<?php echo $i; ?>">
-                    </td>
-                    <td>
-                        <!-- รหัสสินค้า: แสดงผลอย่างเดียว (readonly) ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหาด้านบน -->
-                        <input type='text' name="product_codet<?php echo $i; ?>" id="product_codet<?php echo $i; ?>" class="so-transparent-input product-code-input" placeholder="" readonly OnChange="JavaScript:doCallAjax('product_codet<?php echo $i; ?>','product_id<?php echo $i; ?>','product_name<?php echo $i; ?>','unit_name<?php echo $i; ?>','product_price<?php echo $i; ?>','discount_unit<?php echo $i; ?>','warranty<?php echo $i; ?>'); calculateSummary();" />
-                    </td>
-                    <td>
-                        <!-- ชื่อรายการสินค้า: แสดงเป็น label ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหา -->
-                        <input type="hidden" name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>">
-                        <span id="product_name_label<?php echo $i; ?>" class="so-product-name-label"></span>
-                    </td>
-                    <td>
-                        <!-- จำนวน: ใส่จำนวนชิ้นที่ต้องการขาย เมื่อแก้ไขจะคำนวณยอดใหม่ทันที -->
-                        <input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-pill-input calc-qty" style="text-align:center" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" />
-                    </td>
-                    <td>
-                        <!-- ราคา/หน่วย: ราคาขายต่อ 1 ชิ้น สามารถแก้ไขได้ -->
-                        <input type='text' name="product_price<?php echo $i; ?>" id="product_price<?php echo $i; ?>" class="so-pill-input calc-price" style="text-align:right" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
-                    </td>
-                    <td>
-                        <!-- ส่วนลด/หน่วย: หากมีส่วนลด ให้กรอกที่ช่องนี้ (หักออกจากราคาต่อชิ้น) -->
-                        <input type='text' name="discount_unit<?php echo $i; ?>" id="discount_unit<?php echo $i; ?>" class="so-pill-input calc-discount" style="text-align:right" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
-                    </td>
-                    <td>
-                        <!-- ยอดรวมสุทธิของแถวนี้: คำนวณอัตโนมัติ (จำนวน * ราคา) - (ส่วนลด * จำนวน) -->
-                        <input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-transparent-input calc-total" style="text-align:right;" readonly />
-                    </td>
-                    <td style="text-align: right; padding-right: 16px;">
-                        <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
-                        <i class="far fa-edit action-icon" onclick="openEditModal(<?php echo $i; ?>)"></i>
-                        <i class="far fa-trash-alt action-icon" onclick="clearRow(<?php echo $i; ?>)"></i>
-                    </td>
+                    </th>
+                    <th style="width: 15%; text-align: left;">รหัสสินค้า</th>
+                    <th style="width: 25%; text-align: left;">รายการสินค้า</th>
+                    <th style="width: 8%; text-align: center;">จำนวน</th>
+                    <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
+                    <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
+                    <th style="width: 15%; text-align: center;">ยอดรวม</th>
+                    <th style="width: 10%;"></th>
                 </tr>
-            <?php endfor; ?>
+            </thead>
+            <tbody>
 
-        </tbody>
-    </table>
+                <?php for ($i = 1; $i <= 30; $i++): ?>
+                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" <?php if ($i > 3) echo 'style="display:none;"'; ?>
+                        ondragstart="handleDragStart(event, <?php echo $i; ?>)"
+                        ondragover="handleDragOver(event)"
+                        ondragenter="handleDragEnter(event)"
+                        ondragleave="handleDragLeave(event)"
+                        ondrop="handleDrop(event, <?php echo $i; ?>)"
+                        ondragend="handleDragEnd(event)">
+                        <td style="text-align: center;">
+                            <!-- ไอคอนลากสลับตำแหน่ง และ Checkbox สำหรับไฮไลท์แถว -->
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fas fa-grip-vertical drag-handle" style="margin: 0; cursor: grab;" onmousedown="document.getElementById('product_row_<?php echo $i; ?>').setAttribute('draggable', true)" onmouseup="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')" onmouseleave="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')"></i>
+                                <input type="checkbox" class="so-row-checkbox" onchange="toggleRowHighlight(this, <?php echo $i; ?>)">
+                            </div>
+
+                            <!-- ค่า Hidden เบื้องหลัง: เก็บข้อมูลรหัส, ID สินค้า และหน่วยสินค้า เพื่อส่งเข้าระบบตอนบันทึก -->
+                            <input type="hidden" name="h_product_codet<?php echo $i; ?>" id="h_product_codet<?php echo $i; ?>">
+                            <input type="hidden" name="h_product_code<?php echo $i; ?>" id="h_product_code<?php echo $i; ?>">
+                            <input type="hidden" name="h_product_c<?php echo $i; ?>" id="h_product_c<?php echo $i; ?>">
+                            <input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
+                            <input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
+                            <input type="hidden" name="subso_db_id<?php echo $i; ?>" id="subso_db_id<?php echo $i; ?>">
+                            <input type="hidden" name="row_deleted<?php echo $i; ?>" id="row_deleted<?php echo $i; ?>" value="0">
+                            <input type="hidden" name="deleted_subso_db_id<?php echo $i; ?>" id="deleted_subso_db_id<?php echo $i; ?>">
+                            <input type="hidden" name="deleted_product_code<?php echo $i; ?>" id="deleted_product_code<?php echo $i; ?>">
+
+                            <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
+                            <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
+                            <input type="hidden" name="warranty_unit<?php echo $i; ?>" id="warranty_unit<?php echo $i; ?>" value="ปี">
+                            <input type="hidden" name="remark_hc<?php echo $i; ?>" id="remark_hc<?php echo $i; ?>">
+                            <input type="hidden" name="cal<?php echo $i; ?>" id="cal<?php echo $i; ?>">
+                            <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
+                            <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
+                            <input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
+                            <!-- ค่าเริ่มต้นต้องเป็นค่าว่าง ไม่ใช่ "1" มิฉะนั้นรายการขายปกติทุกแถวจะถูก
+                        report_clearbr.php นับเป็นรายการเคลียร์ยืม/จอง (ดู WHERE clear_br='1') -->
+                            <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="">
+                            <input type="hidden" name="clear_ivno<?php echo $i; ?>" id="clear_ivno<?php echo $i; ?>">
+                            <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="">
+                            <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
+                            <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
+                            <input type="hidden" name="product_sn<?php echo $i; ?>" id="product_sn<?php echo $i; ?>">
+                        </td>
+                        <td>
+                            <!-- รหัสสินค้า: แสดงผลอย่างเดียว (readonly) ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหาด้านบน -->
+                            <input type='text' name="product_codet<?php echo $i; ?>" id="product_codet<?php echo $i; ?>" class="so-transparent-input product-code-input" placeholder="" readonly OnChange="JavaScript:doCallAjax('product_codet<?php echo $i; ?>','product_id<?php echo $i; ?>','product_name<?php echo $i; ?>','unit_name<?php echo $i; ?>','product_price<?php echo $i; ?>','discount_unit<?php echo $i; ?>','warranty<?php echo $i; ?>'); calculateSummary();" />
+                        </td>
+                        <td>
+                            <!-- ชื่อรายการสินค้า: แสดงเป็น label ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหา -->
+                            <input type="hidden" name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>">
+                            <span id="product_name_label<?php echo $i; ?>" class="so-product-name-label"></span>
+                        </td>
+                        <td>
+                            <!-- จำนวน: ใส่จำนวนชิ้นที่ต้องการขาย เมื่อแก้ไขจะคำนวณยอดใหม่ทันที -->
+                            <input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-pill-input calc-qty" style="text-align:center" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" />
+                        </td>
+                        <td>
+                            <!-- ราคา/หน่วย: ราคาขายต่อ 1 ชิ้น สามารถแก้ไขได้ -->
+                            <input type='text' name="product_price<?php echo $i; ?>" id="product_price<?php echo $i; ?>" class="so-pill-input calc-price" style="text-align:right" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
+                        </td>
+                        <td>
+                            <!-- ส่วนลด/หน่วย: หากมีส่วนลด ให้กรอกที่ช่องนี้ (หักออกจากราคาต่อชิ้น) -->
+                            <input type='text' name="discount_unit<?php echo $i; ?>" id="discount_unit<?php echo $i; ?>" class="so-pill-input calc-discount" style="text-align:right" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
+                        </td>
+                        <td>
+                            <!-- ยอดรวมสุทธิของแถวนี้: คำนวณอัตโนมัติ (จำนวน * ราคา) - (ส่วนลด * จำนวน) -->
+                            <input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-transparent-input calc-total" style="text-align:right;" readonly />
+                        </td>
+                        <td style="text-align: right; padding-right: 16px;">
+                            <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
+                            <i class="far fa-edit action-icon" onclick="openEditModal(<?php echo $i; ?>)"></i>
+                            <i class="far fa-trash-alt action-icon" onclick="clearRow(<?php echo $i; ?>)"></i>
+                        </td>
+                    </tr>
+                <?php endfor; ?>
+
+            </tbody>
+        </table>
     </div>
 
     <!-- Edit Modal -->
@@ -1402,11 +1403,16 @@
             document.getElementById('m_pm_year').value = document.getElementById('pm_year' + rowIndex).value;
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
             document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
-            document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
+
+            // ต้องคำนวณ isReserveRow ก่อน แล้วค่อยเลือกฟิลด์ที่จะอ่าน เพราะแถวใบจองเก็บเลขที่ไว้ใน jong_no{i}
+            // ไม่ใช่ clear_ivno{i} (ดู populateClearLoanRow() ที่ register_suphos.php:5547-5560)
+            var isReserveRow = document.getElementById('jong_ckk' + rowIndex).value === '1' &&
+                document.getElementById('clear_br' + rowIndex).value !== '1';
+            document.getElementById('m_clear_ivno').value = isReserveRow ?
+                document.getElementById('jong_no' + rowIndex).value :
+                document.getElementById('clear_ivno' + rowIndex).value;
 
             // สลับ label ตามประเภทเอกสารต้นทางของแถว (ใบจอง = jong, ใบยืม/ปกติ = ยืม)
-            var isReserveRow = document.getElementById('jong_ckk' + rowIndex).value === '1'
-                            && document.getElementById('clear_br' + rowIndex).value !== '1';
             var clearIvnoLabel = document.getElementById('modal_clear_ivno_label');
             if (clearIvnoLabel) {
                 clearIvnoLabel.textContent = isReserveRow ? 'เลขที่ของ/ใบจอง' : 'เลขที่ของ/ใบยืม';
@@ -1431,7 +1437,16 @@
             document.getElementById('pm_year' + rowIndex).value = document.getElementById('m_pm_year').value;
             document.getElementById('pm' + rowIndex).value = document.getElementById('m_pm').value;
             document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('m_sale_remarkk').value;
-            document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
+
+            // เขียนกลับให้ตรงฟิลด์ตามประเภทแถวเช่นเดียวกับตอนอ่าน (สอดคล้องกับ openEditModal ด้านบน)
+            var isReserveRowSave = document.getElementById('jong_ckk' + rowIndex).value === '1' &&
+                document.getElementById('clear_br' + rowIndex).value !== '1';
+            if (isReserveRowSave) {
+                document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_clear_ivno').value;
+            } else {
+                document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
+            }
+
             document.getElementById('display_name' + rowIndex).value = document.getElementById('m_display_name').value;
 
             closeEditModal();
@@ -1641,7 +1656,10 @@
             var hasItems = false;
             for (var i = 1; i <= 30; i++) {
                 var c = document.getElementById('product_codet' + i);
-                if (c && c.value.trim() !== '') { hasItems = true; break; }
+                if (c && c.value.trim() !== '') {
+                    hasItems = true;
+                    break;
+                }
             }
             if (hasItems) {
                 if (!confirm('การเปลี่ยนบริษัทจะล้างรายการสินค้าที่เลือกไว้ทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
@@ -1663,7 +1681,9 @@
             var td = document.getElementById('type_doc_select');
             if (td) {
                 td.setAttribute('data-prev', td.value);
-                td.addEventListener('focus', function() { this.setAttribute('data-prev', this.value); });
+                td.addEventListener('focus', function() {
+                    this.setAttribute('data-prev', this.value);
+                });
             }
         });
 

@@ -706,7 +706,9 @@ $qsave=mysqli_query($conn,$save);
 			$pm_new = $pm[$key];
 			$sn_new = $sn[$key];
 			$cal_new = $cal[$key];
-			$product_id_new = $product_id[$key];
+			// hos__subso.product_id เป็นคอลัมน์ int ถ้าค่าที่ POST มาไม่ใช่ตัวเลข (เช่น access_code
+			// หลุดมาจาก mapping ผิดฝั่ง endpoint) MySQL จะ cast เป็น 0 แบบเงียบ ๆ (sql_mode='')
+			$product_id_new = (isset($product_id[$key]) && ctype_digit((string)$product_id[$key])) ? $product_id[$key] : '0';
 			$discount_unit1 = $discount_unit[$key];
 			$discount_unit_new = str_replace(',', '', $discount_unit1);
 			$clear_br_new = $clear_br[$key];
@@ -891,6 +893,15 @@ $qsave=mysqli_query($conn,$save);
 
 
 
+
+	// hos__subso.product_id เป็นคอลัมน์ int ถ้าค่าที่ POST มาไม่ใช่ตัวเลข (เช่น access_code หลุดมาจาก
+	// mapping ผิดฝั่ง endpoint) MySQL จะ cast เป็น 0 แบบเงียบ ๆ (sql_mode='') ทำให้แถวใหม่ที่ insert จากที่นี่หลุด join
+	for ($i = 1; $i <= 30; $i++) {
+		$productIdField = 'product_id' . $i;
+		if (isset($_POST[$productIdField]) && $_POST[$productIdField] !== '' && !ctype_digit((string)$_POST[$productIdField])) {
+			$_POST[$productIdField] = '0';
+		}
+	}
 
 	// เพิ่มใหม่: อ่าน field ของแถว 1-5 (เดิมไฟล์นี้อ่านเฉพาะแถว 6-30 ทำให้เพิ่มสินค้าในแถว 1-5 ไม่ถูกบันทึก)
 	$clear_br1 = $_POST["clear_br1"] ?? '';

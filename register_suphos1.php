@@ -317,6 +317,16 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		}
 	}
 
+	// hos__subso.product_id เป็นคอลัมน์ int ถ้าค่าที่ POST มาไม่ใช่ตัวเลข (เช่น access_code
+	// หลุดมาจาก mapping ผิดฝั่ง endpoint) MySQL จะ cast เป็น 0 แบบเงียบ ๆ (sql_mode='') ทำให้
+	// รายการสินค้าหลุดการ join กับ tb_product ตอนแสดงผล จึงบังคับตรวจที่นี่จุดเดียวก่อนเข้าสู่การบันทึกแต่ละแถว
+	for ($i = 1; $i <= 30; $i++) {
+		$productIdField = 'product_id' . $i;
+		if ($_POST[$productIdField] !== '' && !ctype_digit((string)$_POST[$productIdField])) {
+			$_POST[$productIdField] = '0';
+		}
+	}
+
 	applyDeliveryTimeRangeToPost();
 
 	// Backend validation กันกรณีปิด JS หรือยิง POST ตรงเข้ามาโดยไม่ผ่านฟอร์ม (เดิมพึ่ง JS validation ใน fncSubmit() ฝั่งเดียว)
