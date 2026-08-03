@@ -52,6 +52,12 @@ $sql = "SELECT *   FROM hos__so where ref_id = '".$escRefId."'";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
 
+// เลขที่ IV ส่งมาจากหน้า register_suphos.php ได้ (ค่าสดในช่อง 'เลขที่เอกสาร' ที่อาจยังไม่ถูกบันทึกลง hos__so)
+// ถ้าไม่ส่งมา ให้ใช้ค่าจากฐานข้อมูลตามเดิม
+$ivNoParam = isset($_GET['iv_no']) ? trim($_GET['iv_no']) : '';
+$ivNoEffective = ($ivNoParam !== '') ? $ivNoParam : ($rs['iv_no'] ?? '');
+$escIvNo = mysqli_real_escape_string($conn, $ivNoEffective);
+
 
 $strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.product_ID=tb_product.product_id) WHERE ref_idd = '".$escRefId."' ";
 //echo $strSQL;
@@ -136,7 +142,7 @@ $today = $year . '-' . $month . '-' . $day;
 
 </p>
 เลขที่ IV :&nbsp;&nbsp;
-<input type="text" name="iv_no_ref" id="iv_no_ref" value ="<?php echo $rs["iv_no"];?>" class="button4" style="width:30%;"  > 
+<input type="text" name="iv_no_ref" id="iv_no_ref" value ="<?php echo htmlspecialchars($ivNoEffective, ENT_QUOTES, 'UTF-8');?>" class="button4" style="width:30%;"  >
 <input type="hidden" name="mode_cus" id="mode_cus" value ="<?php echo $rs["mode_cus"];?>" class="button4" style="width:30%;"  > 
 	
 	<input type="hidden" name="sale_code" id="sale_code" value ="<?php echo $rs["sale_code"];?>" class="button4" style="width:12%;"  >
@@ -229,7 +235,7 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 {
 
  
-$sql3 = "SELECT sum(count) as count3   FROM  (tb_credit_note LEFT JOIN tb_subcredit ON tb_credit_note.ref_credit=tb_subcredit.ref_creditt) where iv_no_ref = '".$rs["iv_no"]."' and product_id = '".$objResult1['product_id']."' and status_doc ='Approve'";
+$sql3 = "SELECT sum(count) as count3   FROM  (tb_credit_note LEFT JOIN tb_subcredit ON tb_credit_note.ref_credit=tb_subcredit.ref_creditt) where iv_no_ref = '".$escIvNo."' and product_id = '".$objResult1['product_id']."' and status_doc ='Approve'";
 $qry3 = mysqli_query($conn,$sql3) or die(mysqli_error());
 
 while($rs3 = mysqli_fetch_assoc($qry3)){

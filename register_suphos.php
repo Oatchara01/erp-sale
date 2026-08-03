@@ -5059,10 +5059,17 @@ include("head.php"); ?>
 				return;
 			}
 
-			window.open(
-				'register_credinot.php?ref_id=' + encodeURIComponent(refId) + '&opener=suphos',
-				'_blank'
-			);
+			// เลขที่เอกสารบนหน้าจออาจเพิ่ง Run มาแต่ยังไม่ได้บันทึกลง hos__so จึงส่งค่าสดไปเติมช่อง 'เลขที่ IV'
+			// ส่งเฉพาะตอนมีค่า เพื่อให้กรณีช่องว่างยัง fallback ไปใช้ค่าจากฐานข้อมูลตามเดิม
+			var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+			var ivNo = docNoInput ? docNoInput.value.trim() : '';
+
+			var url = 'register_credinot.php?ref_id=' + encodeURIComponent(refId) + '&opener=suphos';
+			if (ivNo !== '') {
+				url += '&iv_no=' + encodeURIComponent(ivNo);
+			}
+
+			window.open(url, '_blank');
 		}
 
 		// เรียกกลับจาก register_credinot1.php ผ่าน window.opener หลังบันทึกใบลดหนี้สำเร็จ

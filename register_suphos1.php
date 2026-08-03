@@ -355,9 +355,9 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			$validationErrors[] = 'กรุณาเลือกแผนก/เขตการขาย';
 		}
 
-		if (($_POST['payment'] ?? '') === '7' && trim((string)($_POST['date_tranfer'] ?? '')) === '') {
-			$validationErrors[] = 'กรุณาใส่วันที่โอน';
-		}
+		// if (($_POST['payment'] ?? '') === '7' && trim((string)($_POST['date_tranfer'] ?? '')) === '') {
+		// 	$validationErrors[] = 'กรุณาใส่วันที่โอน';
+		// }
 
 		if (!empty($validationErrors)) {
 			$validationText = implode("\\n", array_map(function ($msg) {
