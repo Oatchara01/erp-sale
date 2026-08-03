@@ -19,7 +19,7 @@ try {
 		if ($draftQuery && ($draftRow = mysqli_fetch_assoc($draftQuery))) {
 			$draftStatusDoc = $draftRow["status_doc"] ?? "";
 			$draftSendCm = $draftRow["send_cm"] ?? "";
-			$isFinalState = in_array($draftStatusDoc, ['Approve', 'Reject', 'Rejected'], true)
+			$isFinalState = in_array($draftStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true)
 				|| ($draftSendCm === '1' && $draftStatusDoc === 'Request');
 
 			if (!$isFinalState) {

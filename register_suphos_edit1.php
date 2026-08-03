@@ -479,11 +479,23 @@ exit();
 
 
 
+	// ไฟล์นี้เป็น handler ร่วมของทั้งปุ่ม Submit และปุ่ม Update/Save Draft (ผ่าน register_suphos_draft1.php
+	// ซึ่งเซ็ต is_draft='1' ไว้เสมอ) ถ้าเซ็ต send_sup/status_doc ทุกครั้ง เอกสาร Draft จะถูกส่งให้ Sup
+	// ทันทีที่กด Save Draft และเอกสาร Returned จะเด้งกลับเป็น Request ทันทีที่กด Update
+	$isDraftRequest = (($_POST['is_draft'] ?? '') === '1');
 	$cancelDocPost = $_POST["cancel_doc"] ?? null;
-	$statusDoc = ($cancelDocPost === '1') ? 'Reject' : 'Request';
+
+	if ($cancelDocPost === '1') {
+		$statusFields = "send_sup='1',status_doc='ยกเลิก',";
+	} elseif ($isDraftRequest) {
+		$statusFields = "";
+	} else {
+		$statusFields = "send_sup='1',send_supname='" . $add_by . "',send_supdate='" . $add_date
+			. "',send_admin='0',status_doc='Request',";
+	}
 
 	$save = "Update  hos__so set
-bill_name ='" . $bill_name . "',bill_tel ='" . $bill_tel . "',bill_address  ='" . $bill_address . "',full_bill ='" . $full_bill . "',date_so ='" . $date_so . "',suggest ='" . $suggest . "',payment ='" . $payment . "',payment_method ='" . $payment_method . "',sale_comment ='" . $sale_comment . "',po_no ='" . $po_no . "',delivery_contract ='" . $delivery_contract . "',book_clear ='" . $book_clear . "',book_no ='" . $book_no . "',brn_clear ='" . $brn_clear . "',brn_no ='" . $brn_no . "',brnp_clear ='" . $brnp_clear . "',brnp_no ='" . $brnp_no . "',sn_ckk ='" . $sn_ckk . "',sn_no ='" . $sn_no . "',install_place ='" . $install_place . "',with_pr ='" . $with_pr . "',type_type ='" . $type_type . "',type_detail ='" . $type_detail . "',delivery_type ='" . $delivery_type . "',delivery_date ='" . $delivery_date . "',delivery_time ='" . $delivery_time . "',delivery_address ='" . $delivery_address . "',delivery_contact ='" . $delivery_contact . "',delivery_tel ='" . $delivery_tel . "',pr_no ='" . $pr_no . "',add_by ='" . $add_by . "',payment_des ='" . $payment_des . "',slip1 = '" . $slip1 . "',slip2 = '" . $slip2 . "',slip3 = '" . $slip3 . "',slip4 = '" . $slip4 . "',slip5 = '" . $slip5 . "',date_send_key='" . $date_send_key . "',have_order='" . $have_order . "',bill_id = '" . $bill_id . "',date_tranfer = '" . $date_tranfer . "',cm_no='" . $cm_no . "',send_sup='1',status_doc = '" . $statusDoc . "',pre_name='" . $pre_name . "',que_ckk='" . $que_ckk . "',mode_cus ='" . $mode_cus . "',plan_ckk='" . $plan_ckk . "',email='" . $email . "',sale_code='" . $sale_code . "',tax_id='" . $tax_id . "',ic_ckk='" . $ic_ckk . "',et_ckk='" . $et_ckk . "',repeat_cus='" . $repeat_cus . "',admin='" . $admin . "',admin_code='" . $admin_code . "',admin_date='" . $admin_date . "'  where ref_id='" . $ref_id . "'";
+bill_name ='" . $bill_name . "',bill_tel ='" . $bill_tel . "',bill_address  ='" . $bill_address . "',full_bill ='" . $full_bill . "',date_so ='" . $date_so . "',suggest ='" . $suggest . "',payment ='" . $payment . "',payment_method ='" . $payment_method . "',sale_comment ='" . $sale_comment . "',po_no ='" . $po_no . "',delivery_contract ='" . $delivery_contract . "',book_clear ='" . $book_clear . "',book_no ='" . $book_no . "',brn_clear ='" . $brn_clear . "',brn_no ='" . $brn_no . "',brnp_clear ='" . $brnp_clear . "',brnp_no ='" . $brnp_no . "',sn_ckk ='" . $sn_ckk . "',sn_no ='" . $sn_no . "',install_place ='" . $install_place . "',with_pr ='" . $with_pr . "',type_type ='" . $type_type . "',type_detail ='" . $type_detail . "',delivery_type ='" . $delivery_type . "',delivery_date ='" . $delivery_date . "',delivery_time ='" . $delivery_time . "',delivery_address ='" . $delivery_address . "',delivery_contact ='" . $delivery_contact . "',delivery_tel ='" . $delivery_tel . "',pr_no ='" . $pr_no . "',add_by ='" . $add_by . "',payment_des ='" . $payment_des . "',slip1 = '" . $slip1 . "',slip2 = '" . $slip2 . "',slip3 = '" . $slip3 . "',slip4 = '" . $slip4 . "',slip5 = '" . $slip5 . "',date_send_key='" . $date_send_key . "',have_order='" . $have_order . "',bill_id = '" . $bill_id . "',date_tranfer = '" . $date_tranfer . "',cm_no='" . $cm_no . "'," . $statusFields . "pre_name='" . $pre_name . "',que_ckk='" . $que_ckk . "',mode_cus ='" . $mode_cus . "',plan_ckk='" . $plan_ckk . "',email='" . $email . "',sale_code='" . $sale_code . "',tax_id='" . $tax_id . "',ic_ckk='" . $ic_ckk . "',et_ckk='" . $et_ckk . "',repeat_cus='" . $repeat_cus . "',admin='" . $admin . "',admin_code='" . $admin_code . "',admin_date='" . $admin_date . "'  where ref_id='" . $ref_id . "'";
 
 	$qsave = mysqli_query($conn, $save);
 
@@ -4090,7 +4102,7 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 			if ($ic_ckk === '1') {
 				mysqli_query($conn, "UPDATE hos__so SET send_cm='2', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "', approve_time='" . $approve_time_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
 			} elseif ((float)$amountApprove <= 2000 && in_array($paymentApprove, ['36', '38', '39', '40', '41', '42'], true)) {
-				mysqli_query($conn, "UPDATE hos__so SET send_cm='1' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+				mysqli_query($conn, "UPDATE hos__so SET send_cm='1', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "', approve_time='" . $approve_time_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
 			} else {
 				mysqli_query($conn, "UPDATE hos__so SET status_doc='Approve', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "', send_admin='1', approve_time='" . $approve_time_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
 				mysqli_query($conn, "UPDATE hos__subso SET status_so='Approve' WHERE ref_idd='" . mysqli_real_escape_string($conn, $ref_id) . "'");

@@ -1653,7 +1653,7 @@ include("head.php"); ?>
 			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
-			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'Reject')) ? '1' : '0'; ?>">
+			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
 
 			<!-- Card Container -->
 			<div>
@@ -1889,7 +1889,7 @@ include("head.php"); ?>
 					!empty(trim((string)($savedSo['stock_print'] ?? ''))) ||
 					!empty(trim((string)($savedSo['ref_idst'] ?? '')))
 				);
-				$isCancelChecked = ($savedSo !== null) && (($savedSo['status_doc'] ?? '') === 'Reject');
+				$isCancelChecked = ($savedSo !== null) && (($savedSo['status_doc'] ?? '') === 'ยกเลิก');
 
 				$adminInfoTab = [
 					'tab_id' => 'tab-admin-info',
@@ -3242,18 +3242,23 @@ include("head.php"); ?>
 		$soStatusDoc = $savedSo['status_doc'] ?? '';
 		$soSendCm = $savedSo['send_cm'] ?? '';
 		$soSendSup = $savedSo['send_sup'] ?? '0';
-		$soFinalStates = in_array($soStatusDoc, ['Approve', 'Reject', 'Rejected'], true)
-			|| ($soSendCm === '1' && $soStatusDoc === 'Request');
+		// เอกสารจบแล้ว (อนุมัติ/ยกเลิก/ไม่อนุมัติ) กับ "ส่งบัญชีแล้ว" ต้องแยกกัน เพราะสเปคให้
+		// send_cm='1'+Request ยังมีปุ่ม Update อยู่ แต่ปุ่ม Submit ต้องหาย
+		$soIsClosed = in_array($soStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
+		$soSentToCm = ($soSendCm === '1' && $soStatusDoc === 'Request');
+		$soFinalStates = $soIsClosed || $soSentToCm;
 		// Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') ตามสเปค "หลังจากกด Submit ปุ่ม Submit จะหาย"
 		$soHideSubmit = ($savedSo !== null) && ($soSendSup === '1' || $soFinalStates);
 		$soIsEditMode = ($savedSo !== null);
 		$soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
+		// send_cm='1' ส่งบัญชีแล้ว / send_cm='2' เอกสาร IC ส่งอนุมัติต่อแล้ว ทั้งคู่ต้องไม่ให้แถบอนุมัติ
+		// โผล่ซ้ำ ไม่งั้นกดอนุมัติซ้ำได้อีกรอบทั้งที่ส่งต่อไปแล้ว (status_doc ยังค้างเป็น Request)
 		$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover
 			&& ($soStatusDoc === 'Request')
-			&& ($soSendCm !== '1');
-		// Update ยังใช้แก้ไขต่อได้จนกว่าจะถึงสถานะจบ/ส่งบัญชี (ไม่ผูกกับ send_sup)
+			&& !in_array($soSendCm, ['1', '2'], true);
+		// Update ยังใช้แก้ไขต่อได้จนกว่าเอกสารจะจบ (ไม่ผูกกับ send_sup และไม่ผูกกับ send_cm)
 		// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่แล้ว เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองอยู่แล้ว กันไม่ให้เห็นปุ่ม Update ซ้ำสองปุ่ม
-		$soHideUpdate = $soFinalStates || $soCanShowApproveBar;
+		$soHideUpdate = $soIsClosed || $soCanShowApproveBar;
 		?>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
