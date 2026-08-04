@@ -198,7 +198,7 @@ $today = $year . '-' . $month . '-' . $day;
 </p>
 ID ลูกค้า :&nbsp;&nbsp;
 <input type="text" name="bill_id" id="bill_id" value ="<?php echo $rs["bill_id"];?>" class="button4" style="width:30%;"  placeholder="Search ชื่อลูกค้า..."  OnChange="JavaScript:doCallAjax1('bill_id','customer_name','address_name','customer_tel');" > 
-<input type="hidden" name="h_bill_id" id="h_bill_id" value ="<?php echo $rs["h_bill_id"];?>" class="button4" style="width:30%;"  > 
+<input type="hidden" name="h_bill_id" id="h_bill_id" value ="<?php echo $rs["h_bill_id"] ?? $rs["bill_id"] ?? '';?>" class="button4" style="width:30%;"  > 
 </p>
 
 ชื่อลูกค้า :&nbsp;&nbsp;

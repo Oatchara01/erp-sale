@@ -1,0 +1,218 @@
+/* Page-specific styling for register_credinot.php */
+.calendar-wrapper {
+	position: relative;
+}
+.calendar-wrapper::after {
+	content: "";
+	background-image: url("img/icons/calendar.png");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: 18px;
+	height: 18px;
+}
+.calendar-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: auto;
+	height: auto;
+	color: transparent;
+	background: transparent;
+	cursor: pointer;
+}
+.w3-container[style*="max-width: 1096px"] {
+	width: 100%;
+	max-width: 1096px;
+	padding-inline: 16px;
+	box-sizing: border-box;
+}
+.so-input-wrapper,
+.so-select-wrapper,
+.so-input-wrapper .so-input,
+.so-select-wrapper .so-select {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.credinot-table-wrap {
+	overflow-x: auto;
+}
+.credinot-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+.credinot-table th {
+	background-color: var(--so-input-bg);
+	color: var(--so-primary);
+	font-weight: 500;
+	text-align: left;
+	padding: 12px 10px;
+	border-bottom: 1px solid var(--so-border);
+	white-space: nowrap;
+}
+.credinot-table td {
+	padding: 8px 10px;
+	border-bottom: 1px solid var(--so-border);
+	vertical-align: middle;
+}
+.credinot-table .so-input {
+	height: 40px;
+	padding: 0 10px;
+}
+.credinot-table .so-textarea {
+	min-height: 40px;
+	height: 40px;
+	padding: 8px 10px;
+	resize: vertical;
+}
+.so-summary-box {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--so-divider);
+}
+.so-summary-content {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 280px;
+}
+.so-summary-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 14px;
+}
+.so-summary-row.grand-total {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--so-primary);
+	padding-top: 4px;
+}
+
+.so-tabs-container {
+	display: flex;
+	background-color: transparent;
+	margin-bottom: -1px;
+	padding-left: 10px;
+	position: relative;
+}
+
+.so-tab-btn {
+	background: #ffffff;
+	border: 1px solid #ffffff;
+	border-bottom: none;
+	outline: none;
+	padding: 12px 28px;
+	font-size: 14px;
+	font-weight: 500;
+	color: #3b3b3b;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	position: relative;
+	font-family: "Prompt", sans-serif;
+}
+
+.so-tab-btn:first-child {
+	border-radius: 12px 0 0 0;
+}
+
+.so-tab-btn:last-child {
+	border-radius: 0 12px 0 0;
+}
+
+.so-tab-btn:hover {
+	color: #612989;
+	background: #efebff;
+}
+
+.so-tab-btn.active {
+	color: #612989;
+	font-weight: 500;
+	font-size: 14px;
+	background: #ffffff;
+	padding-bottom: 11px;
+}
+
+.so-tab-btn.active::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background-color: #612989;
+	border-radius: 25px;
+}
+
+.so-tab-content {
+	display: none;
+}
+
+.so-tab-content.active {
+	display: block;
+	background-color: transparent;
+}
+
+/* Badge pill above document reference */
+.so-doc-pill-wrapper {
+	margin-bottom: 12px;
+}
+.so-doc-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 16px;
+	background-color: #F8F6FF;
+	border: 1px solid #EFEBFF;
+	border-radius: 20px;
+	color: #612989;
+	font-size: 13px;
+	font-weight: 500;
+	font-family: 'Prompt', sans-serif;
+	cursor: default;
+}
+.so-doc-pill i {
+	font-size: 12px;
+	color: #612989;
+}
+
+/* Customer Info Card credit term & badge styling */
+.cidc-credit-term {
+	color: #612989;
+	text-decoration: underline;
+	font-weight: 500;
+	cursor: pointer;
+}
+.cidc-status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: #333333;
+	font-weight: 500;
+}
+
+/* E-Tax Notice Text */
+.etax-notice-container {
+	margin-top: 16px;
+	margin-bottom: 8px;
+	padding-left: 4px;
+}
+.etax-notice-text {
+	color: #D32F2F;
+	font-size: 13px;
+	font-weight: 500;
+	font-family: 'Prompt', sans-serif;
+}
+
