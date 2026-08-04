@@ -191,7 +191,7 @@ echo $objResult2["express_code"];
 					<td>
 					<?php } ?>
 <?php if($objResult["send_admin"] =='1' and $objResult["close_mount"]=='0'){	 ?>
-				<a href="register_credinot_edit.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_credinot_edit.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo htmlspecialchars($start_date, ENT_QUOTES, 'UTF-8'); ?>&end_date=<?php echo htmlspecialchars($end_date, ENT_QUOTES, 'UTF-8');?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 					<?php } ?>			
 				</td>
 					<td>
@@ -206,7 +206,7 @@ echo $objResult2["express_code"];
 
 
 					<td>
-			<a href="register_credit_createnew.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/sticker.png" width="23" height="23" border="0" /></a>
+			<a href="register_credit_createnew.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo htmlspecialchars($start_date, ENT_QUOTES, 'UTF-8'); ?>&end_date=<?php echo htmlspecialchars($end_date, ENT_QUOTES, 'UTF-8');?>"><img src="img/sticker.png" width="23" height="23" border="0" /></a>
 								
 				</td>
 			</tr>

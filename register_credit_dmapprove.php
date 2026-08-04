@@ -50,10 +50,10 @@ $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
 
 	
-$ref_idww = trim($rs["ref_id"]);		
+$ref_idww = trim($rs["ref_id"] ?? '');		
 	
 $sqlfb = "SELECT *   FROM fb__maim where ref_idm = '".$ref_idww."'";
-$qryfb = mysqli_query($user,$sqlfb) or die(mysqli_error());
+$qryfb = mysqli_query($conn,$sqlfb) or die(mysqli_error());
 $rsfb = mysqli_fetch_assoc($qryfb);
 	
 	
@@ -90,7 +90,7 @@ $strSQL = "SELECT *  FROM hos__rental WHERE ref_ai = '".$ref_idww."' ";
 $objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
 $objResult = mysqli_fetch_array($objQuery);
 											
-if($ref_idww!='' and $objResult["ref_id"]!=''){	
+if($ref_idww!='' and !empty($objResult["ref_id"])){	
 	
 ?>							
 <a href="register_adminrental_edit.php?ref_id=<?php echo $objResult["ref_id"]; ?>" class="w3-button w3-right w3-grey "  target="_blank"><font color="330066">ข้อมูลใบสั่งเช่า</font></a>
@@ -252,7 +252,7 @@ $sel = "";
 	<?php }
 ?>
 <input type="text" name="credit_no" id="credit_no" value ="<?php echo $rs["credit_no"];?>" class="button4" style="width:12%;"  >
-<?php if($rsfb["ref_id"]!=''){ ?>
+<?php if(!empty($rsfb["ref_id"])){ ?>
 <a href="https://feedback.allwellcenter.com/register_deptveiw.php?ref_id=<?php echo $rsfb["ref_id"];?>" class="w3-button w3-yellow "  target="_blank"><font color="330066"><?php echo $rsfb["ref_id"]; ?></font></a>
 <?php } ?>
 
