@@ -165,26 +165,34 @@
 	background-color: transparent;
 }
 
-/* Badge pill above document reference */
+/* Badge pill above document reference (Matching Figma Node 910-3052) */
 .so-doc-pill-wrapper {
-	margin-bottom: 12px;
+	margin-bottom: 16px;
 }
 .so-doc-pill {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	padding: 6px 16px;
-	background-color: #F8F6FF;
-	border: 1px solid #EFEBFF;
-	border-radius: 20px;
+	gap: 10px;
+	height: 42px;
+	padding: 0 20px;
+	border: 1px solid #EAE3F7;
+	border-radius: 21px;
 	color: #612989;
-	font-size: 13px;
-	font-weight: 500;
+	font-size: 15px;
+	font-weight: 600;
 	font-family: 'Prompt', sans-serif;
 	cursor: default;
+	box-sizing: border-box;
+	user-select: none;
+}
+.so-doc-pill-icon {
+	width: 22px;
+	height: 22px;
+	flex-shrink: 0;
+	color: #612989;
 }
 .so-doc-pill i {
-	font-size: 12px;
+	font-size: 14px;
 	color: #612989;
 }
 

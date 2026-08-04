@@ -192,7 +192,15 @@
                     <div class="so-customer-top-grid">
                         <div class="so-customer-top-left">
                             <div class="so-doc-pill-wrapper">
-                                <span class="so-doc-pill"><i class="fas fa-search"></i> ข้อมูลเอกสาร</span>
+                                <span class="so-doc-pill">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="so-doc-pill-icon">
+                                        <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <circle cx="11.5" cy="14.5" r="2.5" stroke="currentColor" stroke-width="2" />
+                                        <path d="M13.25 16.25L15.5 18.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                    </svg>
+                                    ข้อมูลเอกสาร
+                                </span>
                             </div>
 
                             <!-- เอกสารอ้างอิง (เลขที่ IV) -->
@@ -434,32 +442,32 @@
                                         ?>
                                             <td>
 
-                                                <input type="hidden" name="id[]<?php echo $objResult1["id"]; ?>" value="<?php echo $objResult1['id']; ?>">
+                                                <input type="hidden" name="id[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1['id']; ?>">
 
-                                                <input type="text" name="product_id[]<?php echo $objResult1["id"]; ?>" class="so-input" style="text-align:center;" value="<?php echo $objResult1['product_id']; ?>">
+                                                <input type="text" name="product_id[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:center;" value="<?php echo $objResult1['product_id']; ?>">
 
-                                                <input type='hidden' name="product_code[]<?php echo $objResult1["id"]; ?>" value="<?php echo $objResult1["access_code"]; ?>" id="product_code[]<?php echo $objResult1["id"]; ?>">
+                                                <input type='hidden' name="product_code[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1["access_code"]; ?>" id="product_code[<?php echo $objResult1["id"]; ?>]">
                                             </td>
 
-                                            <td><textarea name="product_name[]<?php echo $objResult1["id"]; ?>" id="product_name[]<?php echo $objResult1["id"]; ?>" class="so-textarea" readonly><?php echo $objResult1["sol_name"]; ?></textarea></td>
+                                            <td><textarea name="product_name[<?php echo $objResult1["id"]; ?>]" id="product_name[<?php echo $objResult1["id"]; ?>]" class="so-textarea" readonly><?php echo $objResult1["sol_name"]; ?></textarea></td>
 
-                                            <td><input type='text' name="unit_name[]<?php echo $objResult1["id"]; ?>" value="<?php echo $objResult1["unit_name"]; ?>" id="unit_name[]<?php echo $objResult1["id"]; ?>" class="so-input" readonly /></td>
+                                            <td><input type='text' name="unit_name[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1["unit_name"]; ?>" id="unit_name[<?php echo $objResult1["id"]; ?>]" class="so-input" readonly /></td>
 
                                             <td>
 
-                                                <input type='text' name="count[]<?php echo $objResult1["id"]; ?>" value="<?php echo $count2; ?>" id="count[]<?php echo $objResult1["id"]; ?>" class="so-input" style="text-align:center" />
+                                                <input type='text' name="count[<?php echo $objResult1["id"]; ?>]" value="<?php echo $count2; ?>" id="count[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:center" />
 
                                             </td>
 
-                                            <td><input type='text' name="unit_price[]<?php echo $objResult1["id"]; ?>" value="<?php $price = $objResult1["price"];
-                                                                                                                                echo number_format($price, 2) . ""; ?>" id="unit_price[]<?php echo $objResult1["id"]; ?>" class="so-input" style="text-align:right" /></td>
+                                            <td><input type='text' name="unit_price[<?php echo $objResult1["id"]; ?>]" value="<?php $price = $objResult1["price"];
+                                                                                                                                echo number_format($price, 2) . ""; ?>" id="unit_price[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:right" /></td>
 
-                                            <td><input type='text' name="discount_unit[]<?php echo $objResult1["id"]; ?>" value="<?php $discount_unit = $objResult1["discount"];
-                                                                                                                                    echo number_format($discount_unit, 2) . ""; ?>" id="discount_unit[]<?php echo $objResult1["id"]; ?>" class="so-input" style="text-align:right" /></td>
+                                            <td><input type='text' name="discount_unit[<?php echo $objResult1["id"]; ?>]" value="<?php $discount_unit = $objResult1["discount"];
+                                                                                                                                    echo number_format($discount_unit, 2) . ""; ?>" id="discount_unit[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:right" /></td>
 
 
                                             <td>
-                                                <input type='text' name="sum_amount[]<?php echo $objResult1["id"]; ?>" value="<?php echo number_format($sum_amount, 2) . ""; ?>" id="sum_amount[]<?php echo $objResult1["id"]; ?>" class="so-input" style="text-align:right" />
+                                                <input type='text' name="sum_amount[<?php echo $objResult1["id"]; ?>]" value="<?php echo number_format($sum_amount, 2) . ""; ?>" id="sum_amount[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:right" />
 
 
                                             </td>
