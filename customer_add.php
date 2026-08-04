@@ -92,7 +92,7 @@ if ($successStatus === 'created') {
 $customerData = array(
     'customer_id' => $customerId,
     'customer_code' => '',
-    'customer_coden' => '',
+    'customer_no' => '',
     'preface_name' => '',
     'customer_name' => '',
     'cus_tel' => '',
@@ -956,7 +956,7 @@ if (empty($shippingRecords)) {
             <form method="POST" name="frmMain" id="customerForm" action="<?php echo h($formAction); ?>" enctype="multipart/form-data" class="customer-form" novalidate>
                 <input type="hidden" name="submit" value="submit">
                 <input type="hidden" name="customer_id" value="<?php echo h($customerData['customer_id']); ?>">
-                <input type="hidden" name="customer_coden" value="<?php echo h($customerData['customer_coden']); ?>">
+                <input type="hidden" name="customer_no" value="<?php echo h($customerData['customer_no']); ?>">
                 <input type="hidden" name="close_ckk" value="<?php echo h($customerData['close_ckk']); ?>">
 
                 <div class="customer-header">
@@ -1116,7 +1116,7 @@ if (empty($shippingRecords)) {
 
                                         <div class="field">
                                             <label class="field-label">รหัสลูกค้า NBM</label>
-                                            <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_coden'] !== '' ? $customerData['customer_coden'] : 'Auto'); ?>" readonly></div>
+                                            <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_no'] !== '' ? $customerData['customer_no'] : 'Auto'); ?>" readonly></div>
                                         </div>
 
                                         <div class="field">
@@ -1413,7 +1413,7 @@ if (empty($shippingRecords)) {
                     <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly></div>
                 </div>
                 <div class="field"><label class="field-label">รหัสลูกค้า NBM</label>
-                    <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_coden'] !== '' ? $customerData['customer_coden'] : 'Auto'); ?>" readonly></div>
+                    <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_no'] !== '' ? $customerData['customer_no'] : 'Auto'); ?>" readonly></div>
                 </div>
                 <div class="field"><label class="field-label">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-preface" name="billing_preface_name[]" required>

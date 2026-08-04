@@ -106,7 +106,7 @@ function ensureCustomerChildTables($connection)
 if (isset($_POST["submit"])) {
     $customer_id = (int)postValue("customer_id", 0);
     $customer_code = postValue("customer_code");
-    $customer_coden = postValue("customer_coden");
+    $customer_no = postValue("customer_no");
     $preface_name = postValue("preface_name");
     $customer_name1 = normalizeThaiName(postValue("customer_name"));
     $customer_name = trim($preface_name . " " . $customer_name1);
@@ -220,7 +220,7 @@ if (isset($_POST["submit"])) {
             del_postcode='" . esc($conn, $del_postcode) . "',
             del_tel='" . esc($conn, $del_tel) . "',
             contact_name='" . esc($conn, $contact_name) . "',
-            customer_coden='" . esc($conn, $customer_coden) . "',
+            customer_no='" . esc($conn, $customer_no) . "',
             warranty='" . esc($conn, $warranty) . "',
             brun_no='" . esc($conn, $brun_no) . "',
             h_ckk='" . esc($conn, $h_ckk) . "',
