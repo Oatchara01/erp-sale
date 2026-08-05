@@ -4,7 +4,7 @@
 }
 .calendar-wrapper::after {
 	content: "";
-	background-image: url("img/icons/calendar.png");
+	background-image: url("../img/icons/calendar.png");
 	background-size: contain;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -52,7 +52,7 @@
 	font-size: 14px;
 }
 .credinot-table th {
-	background-color: var(--so-input-bg);
+	background-color: #ffffff;
 	color: var(--so-primary);
 	font-weight: 500;
 	text-align: left;
@@ -70,10 +70,12 @@
 	padding: 0 10px;
 }
 .credinot-table .so-textarea {
+	width: 100%;
+	min-width: 300px;
 	min-height: 40px;
-	height: 40px;
+	height: auto;
 	padding: 8px 10px;
-	resize: vertical;
+	resize: none;
 }
 .so-summary-box {
 	display: flex;
@@ -99,6 +101,208 @@
 	font-weight: 600;
 	color: var(--so-primary);
 	padding-top: 4px;
+}
+
+/* ============ รายการสินค้า card: header, stat boxes, search, table restyle ============ */
+.credinot-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+.credinot-count-badge {
+	color: var(--so-text);
+	font-size: 16px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.credinot-stat-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	margin: 16px 0;
+	border-radius: 10px;
+	background-color: var(--so-input-bg);
+	overflow: hidden;
+}
+.credinot-stat-box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 16px 18px;
+	text-align: center;
+}
+.credinot-stat-box + .credinot-stat-box {
+	border-left: 1px solid var(--so-border);
+}
+.credinot-stat-label {
+	font-size: 13px;
+	color: var(--so-muted);
+}
+.credinot-stat-value {
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--so-text);
+}
+.credinot-stat-box.is-highlight .credinot-stat-value {
+	color: var(--so-primary);
+	font-size: 24px;
+}
+
+.credinot-search-wrap {
+	margin-bottom: 16px;
+}
+.credinot-search {
+	background-color: #ffffff;
+	border: 1px solid var(--so-border);
+}
+.credinot-search input {
+	width: 100%;
+}
+
+.credinot-code-input {
+	min-width: 96px;
+}
+.credinot-table .credinot-code-input[readonly] {
+	font-weight: 600;
+	text-align: left !important;
+}
+
+/* คอลัมน์ควบคุมหน้าแถวสินค้า: ลากจัดเรียง (client-side) / จุด select (แสดงผลอย่างเดียว) / caret ขยายรายละเอียด */
+.credinot-row-controls {
+	width: 84px;
+	white-space: nowrap;
+}
+.credinot-row-controls-inner {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.credinot-drag-handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 28px;
+	color: var(--so-muted);
+	font-size: 14px;
+	cursor: grab;
+}
+.credinot-row.is-dragging {
+	opacity: 0.5;
+}
+.credinot-row.is-drop-target {
+	box-shadow: inset 0 2px 0 var(--so-primary);
+}
+.credinot-select-dot {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 1.5px solid var(--so-border);
+	flex-shrink: 0;
+}
+.credinot-caret {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--so-primary);
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+}
+.credinot-caret:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.35);
+	outline-offset: 2px;
+}
+
+.credinot-table tbody tr.credinot-row.is-open {
+	background: #f1e1ff;
+}
+.credinot-table tbody tr.credinot-detail-row {
+	display: none;
+}
+.credinot-table tbody tr.credinot-detail-row.is-open {
+	display: table-row;
+	background: #f1e1ff;
+}
+.credinot-detail-row > td {
+	padding: 12px 16px 16px 44px;
+}
+.credinot-detail-empty {
+	color: var(--so-muted);
+	font-size: 13px;
+}
+
+/* ตารางย่อย หมายเลข SN / Lot No. / Exp. Date ภายในแถวรายละเอียด */
+.credinot-sn-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+.credinot-sn-table th {
+	text-align: left;
+	color: var(--so-primary);
+	font-weight: 500;
+	padding: 6px 10px;
+	white-space: nowrap;
+	background-color: transparent;
+	border-bottom: 1px solid rgba(97, 41, 137, 0.15);
+}
+.credinot-sn-table td {
+	padding: 4px 10px;
+	color: var(--so-text);
+}
+
+.credinot-qty-pill {
+	display: inline-flex;
+	border-radius: 20px;
+	background-color: var(--so-input-bg);
+	overflow: hidden;
+}
+.credinot-qty-pill .so-input {
+	background: transparent;
+	min-width: 56px;
+	height: 36px;
+}
+
+.credinot-edit-col {
+	width: 40px;
+	text-align: center;
+}
+.credinot-edit-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--so-border);
+	border-radius: 8px;
+	background: transparent;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+.credinot-edit-btn:hover {
+	background-color: var(--so-input-bg);
+}
+.credinot-edit-btn.is-active {
+	background-color: #efebff;
+	border-color: #efebff;
+}
+.credinot-table .so-input[readonly],
+.credinot-table .so-textarea[readonly] {
+	background-color: transparent;
+	border-color: transparent;
+	cursor: default;
+	padding-left: 2px;
+	padding-right: 2px;
+}
+.credinot-table td .so-input[readonly],
+.credinot-table td .so-textarea[readonly] {
+	height: auto;
+	min-height: 0;
 }
 
 .so-tabs-container {
@@ -181,9 +385,20 @@
 	font-size: 15px;
 	font-weight: 600;
 	font-family: 'Prompt', sans-serif;
-	cursor: default;
+	/* เป็น <button> เปิด modal เอกสารอ้างอิง จึงต้อง reset สไตล์ปุ่มของเบราว์เซอร์ */
+	background: none;
+	cursor: pointer;
 	box-sizing: border-box;
 	user-select: none;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.so-doc-pill:hover {
+	background-color: #F6EFFD;
+	border-color: #612989;
+}
+.so-doc-pill:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.35);
+	outline-offset: 2px;
 }
 .so-doc-pill-icon {
 	width: 22px;
@@ -211,6 +426,89 @@
 	font-weight: 500;
 }
 
+/* เลขที่ลดหนี้ + ปุ่ม Run เลขที่ (อยู่บรรทัดเดียวกันในหนึ่งคอลัมน์ของ grid) */
+.credit-no-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.credit-no-row .so-input-wrapper {
+	flex: 1;
+	min-width: 0;
+}
+.btn-run-credit-no {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+	height: 42px;
+	padding: 0 16px;
+	border: none;
+	border-radius: 10px;
+	background-color: #efebff;
+	color: #612989;
+	font-size: 14px;
+	font-weight: 500;
+	font-family: "Prompt", sans-serif;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+.btn-run-credit-no:hover {
+	background-color: #e2daff;
+}
+.btn-run-credit-no:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+.btn-run-credit-no img {
+	width: 16px;
+	height: 16px;
+	object-fit: contain;
+}
+
+/* กล่องแนบไฟล์ Book Bank (หน้าตาเหมือน .so-input พร้อมไอคอนรูปภาพชิดขวา) */
+.so-file-picker {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	height: 42px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: var(--so-input-bg);
+	font-size: 14px;
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+.so-file-picker-input {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+}
+.so-file-picker-text {
+	color: var(--so-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.so-file-picker-text.has-file {
+	color: var(--so-text);
+}
+.so-file-picker-icon {
+	flex-shrink: 0;
+	color: #612989;
+	font-size: 16px;
+}
+
 /* E-Tax Notice Text */
 .etax-notice-container {
 	margin-top: 16px;
@@ -222,5 +520,156 @@
 	font-size: 13px;
 	font-weight: 500;
 	font-family: 'Prompt', sans-serif;
+}
+
+/* ===== Modal เอกสารอ้างอิง (#docRefPopupModal) =====
+   ต่อยอดจาก component .customer-popup-* ใน so-core.css
+   กำหนดเฉพาะส่วนที่ต่างจากของเดิม เพื่อไม่ให้กระทบ popup ของหน้าอื่น */
+.docref-popup-box {
+	height: min(1226px, 92vh);
+}
+
+/* Toolbar: ช่องค้นหาอยู่ซ้าย, ตัวเลือกประเภทเอกสารอยู่ขวา */
+.docref-popup-toolbar {
+	align-items: flex-end;
+}
+.docref-type-wrap {
+	flex: 0 0 340px;
+	min-width: 0;
+}
+.docref-type-wrap label {
+	display: block;
+	margin-bottom: 4px;
+	color: #612989;
+	font-size: 14px;
+	font-weight: 400;
+}
+.docref-type-wrap .so-select {
+	height: 42px;
+}
+
+/* ตาราง 6 คอลัมน์ ต้อง override ความกว้าง/ระยะขอบของ .customer-popup-table ที่ตั้งไว้สำหรับ 4 คอลัมน์ */
+.docref-popup-table th,
+.docref-popup-table td {
+	padding: 0 16px;
+}
+.docref-popup-table th:nth-child(1),
+.docref-popup-table td:nth-child(1) {
+	width: 48px;
+	padding: 0 0 0 12px;
+}
+.docref-popup-table th:nth-child(2) {
+	width: 16%;
+}
+.docref-popup-table th:nth-child(3) {
+	width: 20%;
+}
+.docref-popup-table th:nth-child(4) {
+	width: 18%;
+}
+.docref-popup-table th:nth-child(5) {
+	width: 20%;
+}
+.docref-popup-table th:nth-child(6) {
+	width: auto;
+}
+
+.docref-caret-col {
+	text-align: center;
+}
+.docref-caret {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #612989;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+}
+.docref-caret:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.35);
+	outline-offset: 2px;
+}
+
+/* เลขที่เอกสารแสดงเป็นลิงก์สีม่วงตาม Design */
+.docref-doc-no {
+	border: 0;
+	padding: 0;
+	background: transparent;
+	color: #612989;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	font-weight: 500;
+	text-decoration: underline;
+	text-align: left;
+	cursor: pointer;
+}
+
+/* แถวรายละเอียด (ที่อยู่ / เบอร์โทร) ซ่อนไว้จนกว่าจะกดลูกศร */
+.docref-main-row.is-open {
+	background: #f1e1ff;
+}
+/* ต้องระบุ .docref-popup-table tbody เพื่อชนะ .customer-popup-table tbody tr { cursor: pointer } ใน so-core.css */
+.docref-popup-table tbody tr.docref-detail-row {
+	display: none;
+	cursor: default;
+}
+.docref-popup-table tbody tr.docref-detail-row.is-open {
+	display: table-row;
+	background: #f1e1ff;
+}
+.docref-detail-row > td {
+	height: auto;
+	padding: 0 16px 20px 60px;
+	border-bottom: 1px solid #ebebeb;
+}
+.docref-detail-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px 24px;
+}
+.docref-detail-item {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+.docref-detail-label {
+	color: #612989;
+	font-size: 14px;
+	font-weight: 600;
+}
+.docref-detail-value {
+	color: #3b3b3b;
+	font-size: 14px;
+	font-weight: 400;
+	word-break: break-word;
+}
+
+/* ปุ่ม "ย้อนกลับ" ใน Design มีเส้นขอบ ต่างจาก .customer-popup-cancel เดิมที่ border: 0 */
+.docref-cancel {
+	border: 1px solid #d9c8ea !important;
+}
+
+@media (max-width: 768px) {
+	.docref-popup-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 12px;
+	}
+	.docref-type-wrap {
+		flex: 1 1 auto;
+	}
+	.docref-popup-table {
+		min-width: 760px;
+	}
+	.docref-detail-grid {
+		grid-template-columns: 1fr;
+	}
+	.docref-detail-row > td {
+		padding: 0 16px 16px 24px;
+	}
 }
 

@@ -391,7 +391,6 @@ body {
 
 .clear-loan-header {
 	padding: 24px 32px 0;
-	border-bottom: 1px solid #eee7f4;
 }
 
 .credit-term-popup-box {
@@ -533,6 +532,11 @@ body {
 	.so-customer-top-right {
 			grid-column: 1;
 			grid-row: auto;
+		}
+
+	.customer-info-display-card {
+			flex-direction: column;
+			gap: 24px;
 		}
 
 	.clear-loan-header {
@@ -993,6 +997,7 @@ body {
 	overflow: auto;
 	border-top: 1px solid #612989;
 	border-bottom: 1px solid #f0edf2;
+	margin-top: 20px;
 }
 
 .customer-popup-table {
