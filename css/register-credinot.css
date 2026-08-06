@@ -673,3 +673,62 @@
 	}
 }
 
+/* ===== โหมดสร้างแบบไม่มีเอกสารอ้างอิง / แก้ไข: ปุ่มค้นหาลูกค้า, ปุ่มเพิ่มสินค้า, ปุ่มลบรายการ ===== */
+.credinot-no-ref-note {
+	margin: 0;
+	padding: 12px 16px;
+	border-radius: 10px;
+	background-color: var(--so-input-bg);
+	color: var(--so-muted);
+	font-size: 14px;
+}
+
+.credinot-customer-label-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 6px;
+}
+.credinot-customer-label-row .btn-run-credit-no {
+	height: 32px;
+	padding: 0 12px;
+	font-size: 13px;
+}
+
+.credinot-add-product-btn {
+	margin-left: auto;
+	height: 32px;
+	padding: 0 14px;
+	font-size: 13px;
+}
+
+.credinot-delete-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--so-border);
+	border-radius: 8px;
+	background: transparent;
+	color: #d32f2f;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+.credinot-delete-btn:hover {
+	background-color: #fdecea;
+}
+.credinot-edit-col {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+
+/* แถวสินค้าที่กดลบ (รอลบจริงตอน submit) — ซ่อนไว้ก่อน ยังกู้คืนได้ด้วยปุ่ม "ยกเลิก" จนกว่าจะ submit */
+.credinot-table tbody tr.credinot-row.is-pending-delete,
+.credinot-table tbody tr.credinot-detail-row.is-pending-delete {
+	display: none;
+}
+

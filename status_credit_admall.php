@@ -205,7 +205,7 @@ $objResult3 = mysqli_fetch_array($objQuery3);
 				<td  ><?php echo $objResult["sale_code"];?></td>
 <td>
 	<?php if( $objResult["close_mount"]=='0'){ ?>
-				<a href="register_credit_adm.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo htmlspecialchars($start_date, ENT_QUOTES, 'UTF-8'); ?>&end_date=<?php echo htmlspecialchars($end_date, ENT_QUOTES, 'UTF-8');?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_credinot.php?ref_credit=<?php echo $objResult["ref_credit"];?>&start_date=<?php echo htmlspecialchars($start_date, ENT_QUOTES, 'UTF-8'); ?>&end_date=<?php echo htmlspecialchars($end_date, ENT_QUOTES, 'UTF-8');?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 				<?php } ?>				
 				</td>
 					<td>

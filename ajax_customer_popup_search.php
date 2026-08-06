@@ -22,31 +22,35 @@ if ($limit > 50) {
     $limit = 50;
 }
 
-$sql = "SELECT customer_id, first_name, last_name, customer_name, bill_name, cus_tel, bill_tel, cus_address
-        FROM tb_customer
+$sql = "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.cus_address,
+               c.customer_no, c.type_customer, c.credit_thb, c.status_cus, c.vip_ckk, t.type_name
+        FROM tb_customer c
+        LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id
         WHERE 1";
 $types = '';
 $params = array();
 
 if ($lastId > 0) {
-    $sql .= " AND customer_id < ?";
+    $sql .= " AND c.customer_id < ?";
     $types .= 'i';
     $params[] = $lastId;
 }
 
 if ($keyword !== '') {
     $sql .= " AND (
-        customer_name LIKE ?
-        OR cus_tel LIKE ?
+        c.customer_name LIKE ?
+        OR c.cus_tel LIKE ?
+        OR c.customer_no LIKE ?
     )";
-    $types .= 'ss';
+    $types .= 'sss';
     $params = array_merge($params, array(
+        $keywordLike,
         $keywordLike,
         $keywordLike
     ));
 }
 
-$sql .= " ORDER BY customer_id DESC LIMIT ?";
+$sql .= " ORDER BY c.customer_id DESC LIMIT ?";
 $types .= 'i';
 $params[] = $limit + 1;
 
@@ -92,7 +96,13 @@ foreach ($rows as $row) {
         'customer_name' => $displayName,
         'bill_name' => $row['bill_name'],
         'cus_tel' => $displayTel,
-        'cus_address' => $row['cus_address']
+        'cus_address' => $row['cus_address'],
+        'customer_no' => $row['customer_no'],
+        'type_customer' => $row['type_customer'],
+        'type_name' => $row['type_name'],
+        'credit_thb' => $row['credit_thb'],
+        'status_cus' => $row['status_cus'],
+        'vip_ckk' => $row['vip_ckk']
     );
 }
 
