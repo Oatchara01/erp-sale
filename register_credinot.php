@@ -39,6 +39,23 @@
         $rs = mysqli_fetch_assoc($qry) ?: array();
     }
 
+    // ===== แถบอนุมัติ: หา "ระดับ" ปัจจุบันของเอกสารจากสถานะที่โหลดมา (เฉพาะโหมดแก้ไข) =====
+    $creditSendSup = $rs['send_sup'] ?? '0';
+    $creditSendDm = $rs['send_dm'] ?? '0';
+    $creditStatusDoc = $rs['status_doc'] ?? '';
+    $creditIsClosed = in_array($creditStatusDoc, ['Approve', 'Rejected', 'ยกเลิก'], true);
+    $creditBucket = 3;
+    if (!$creditIsClosed) {
+        if ($creditSendDm === '1' && $creditStatusDoc === 'Request') {
+            $creditBucket = 2;
+        } elseif ($creditSendSup === '1' && $creditSendDm === '0' && $creditStatusDoc === 'Request') {
+            $creditBucket = 1;
+        } else {
+            $creditBucket = 0;
+        }
+    }
+    $creditCanShowApproveBar = ($mode === 'edit') && !$creditIsClosed;
+
     $customerNo = '';
     $customerTypeName = '';
     $customerCreditThb = '';
@@ -800,6 +817,29 @@
 
         <div class="so-sticky-actions">
             <div class="so-sticky-actions-inner">
+                <?php if ($creditCanShowApproveBar): ?>
+                    <div class="credinot-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
+                        <button type="button" class="credinot-approve-overflow-trigger" id="btn_credinot_approve_overflow" onclick="toggleCreditApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div id="creditApproveOverflowMenu" class="credinot-approve-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
+                            <?php if ($creditBucket === 1 || $creditBucket === 2): ?>
+                                <button type="submit" name="approve_action" value="return" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
+                                <button type="submit" name="approve_action" value="reject" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+                            <?php endif; ?>
+                            <button type="submit" name="approve_action" value="cancel" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="far fa-window-close" style="width:16px;"></i> ยกเลิกเอกสาร</button>
+                        </div>
+                        <?php if ($creditBucket === 0): ?>
+                            <button type="submit" name="approve_action" value="send_sup" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                                <i class="far fa-paper-plane"></i> ส่งให้ SUP อนุมัติ
+                            </button>
+                        <?php else: ?>
+                            <button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                                <i class="far fa-check-circle"></i> อนุมัติ
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
                 <button type="submit" name="submit" value="submit" class="btn-so-submit">
                     <i class="far fa-paper-plane"></i> Submit
                 </button>
@@ -808,6 +848,23 @@
                 </button>
             </div>
         </div>
+
+        <?php if ($creditCanShowApproveBar): ?>
+        <script>
+            function toggleCreditApproveOverflowMenu() {
+                var menu = document.getElementById('creditApproveOverflowMenu');
+                if (!menu) return;
+                menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+            }
+            document.addEventListener('click', function(e) {
+                var menu = document.getElementById('creditApproveOverflowMenu');
+                var trigger = document.getElementById('btn_credinot_approve_overflow');
+                if (!menu || menu.style.display === 'none') return;
+                if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+                if (!menu.contains(e.target)) menu.style.display = 'none';
+            });
+        </script>
+        <?php endif; ?>
     </form>
 
     <!-- Modal เอกสารอ้างอิง: ค้นหา/เลือกใบสั่งขายที่จะใช้เป็นเอกสารอ้างอิงของใบลดหนี้ -->

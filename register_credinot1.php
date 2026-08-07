@@ -112,9 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 			remark_et = '" . credinotEsc($conn, $remark_et) . "',
 			desnew_bill = '" . credinotEsc($conn, $desnew_bill) . "',
 			new_bill = '" . credinotEsc($conn, $new_bill) . "',
-			date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "',
-			send_sup = '" . credinotEsc($conn, $send_sup) . "',
-			status_doc = '" . credinotEsc($conn, $status_doc) . "'
+			date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "'
 			WHERE ref_credit = '" . $escRefCredit . "'";
 
 		$qsave = mysqli_query($conn, $save);
@@ -236,7 +234,52 @@ values
 		}
 	}
 
+	// ===== แถบอนุมัติ (รวม flow เดิมของ credit_approve.php / credit_cmapprove.php /
+	// credit_rejected.php / credit_cmrejected.php / send_credit_approve.php / send_credit_admin.php
+	// เข้ามาไว้จุดเดียว) — ทำงานหลังบันทึกข้อมูลฟอร์มหลักสำเร็จแล้วเท่านั้น =====
+	$approveAction = $_POST['approve_action'] ?? '';
+	if ($approveAction !== '' && $qsave && $ref_credit !== '') {
+		$escRefCredit = credinotEsc($conn, $ref_credit);
+		$approverCode = $_SESSION['code'] ?? '';
+		$today = date('Y-m-d');
+		$now = date('Y-m-d H:i:s');
 
+		$curRow = mysqli_fetch_assoc(mysqli_query($conn, "SELECT send_sup, send_dm, status_doc FROM tb_credit_note WHERE ref_credit = '" . $escRefCredit . "'"));
+		$curSendSup = $curRow['send_sup'] ?? '0';
+		$curSendDm = $curRow['send_dm'] ?? '0';
+		$curStatusDoc = $curRow['status_doc'] ?? '';
+		$isBucket1 = ($curSendSup === '1' && $curSendDm === '0' && $curStatusDoc === 'Request');
+		$isBucket2 = ($curSendDm === '1' && $curStatusDoc === 'Request');
+
+		if ($approveAction === 'send_sup') {
+			mysqli_query($conn, "UPDATE tb_credit_note SET send_sup='1' WHERE ref_credit='" . $escRefCredit . "'");
+		} elseif ($approveAction === 'approve') {
+			if ($isBucket1) {
+				if ($approverCode === 'SS5') {
+					// ทีม SS5: ประทับว่าตรวจแล้ว แต่ยังค้างอยู่ระดับ SUP เหมือนเดิม (ตาม credit_approve.php เดิม)
+					mysqli_query($conn, "UPDATE tb_credit_note SET send_sup='1', status_doc='Request' WHERE ref_credit='" . $escRefCredit . "'");
+				} else {
+					mysqli_query($conn, "UPDATE tb_credit_note SET send_dm='1', approve_name='" . credinotEsc($conn, $add_by) . "', approve_date='" . $today . "', approve_datetime='" . $now . "' WHERE ref_credit='" . $escRefCredit . "'");
+				}
+			} elseif ($isBucket2) {
+				mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Approve', send_admin='1', dm_name='" . credinotEsc($conn, $add_by) . "', dm_date='" . $today . "', dm_datetime='" . $now . "' WHERE ref_credit='" . $escRefCredit . "'");
+			}
+		} elseif ($approveAction === 'return') {
+			if ($isBucket1) {
+				mysqli_query($conn, "UPDATE tb_credit_note SET send_sup='0' WHERE ref_credit='" . $escRefCredit . "'");
+			} elseif ($isBucket2) {
+				mysqli_query($conn, "UPDATE tb_credit_note SET send_dm='0' WHERE ref_credit='" . $escRefCredit . "'");
+			}
+		} elseif ($approveAction === 'reject') {
+			if ($isBucket1) {
+				mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Rejected', approve_name='" . credinotEsc($conn, $add_by) . "', approve_date='" . $today . "' WHERE ref_credit='" . $escRefCredit . "'");
+			} elseif ($isBucket2) {
+				mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Rejected' WHERE ref_credit='" . $escRefCredit . "'");
+			}
+		} elseif ($approveAction === 'cancel') {
+			mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='ยกเลิก' WHERE ref_credit='" . $escRefCredit . "'");
+		}
+	}
 
 	if ($qsave) {
 		if ($opener === 'suphos') {
