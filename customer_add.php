@@ -935,11 +935,11 @@ if (empty($shippingRecords)) {
             <button type="button" class="delete-popup-close" id="deletePopupCloseIcon">&times;</button>
             <div class="delete-popup-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6H20V8H4V6Z" fill="#ff0000"/>
-                    <path d="M10 2H14V4H10V2Z" fill="#ff0000"/>
-                    <path d="M5 9H19V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V9Z" fill="#ff0000"/>
-                    <rect x="9" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
-                    <rect x="13" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+                    <path d="M4 6H20V8H4V6Z" fill="#ff0000" />
+                    <path d="M10 2H14V4H10V2Z" fill="#ff0000" />
+                    <path d="M5 9H19V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V9Z" fill="#ff0000" />
+                    <rect x="9" y="11" width="2" height="7" rx="1" fill="#ffffff" />
+                    <rect x="13" y="11" width="2" height="7" rx="1" fill="#ffffff" />
                 </svg>
             </div>
             <h2 id="deletePopupTitle" class="delete-popup-title">ลบข้อมูล ?</h2>
@@ -1029,7 +1029,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="credit_ckk">วิธีชำระเงิน</label>
                                 <div class="select-shell">
                                     <select name="credit_ckk" id="credit_ckk" class="form-select">
-                                        <option value="">เลือกวิธีชำระเงิน</option>                
+                                        <option value="">เลือกวิธีชำระเงิน</option>
                                         <?php foreach ($creditBanks as $creditBank) { ?>
                                             <option value="<?php echo h($creditBank['id']); ?>" <?php echo ((string)$customerData['credit_ckk'] === (string)$creditBank['id']) ? 'selected' : ''; ?>><?php echo h($creditBank['pay_in']); ?></option>
                                         <?php } ?>
@@ -1388,7 +1388,6 @@ if (empty($shippingRecords)) {
                 </div>
             </form>
 
-            <div id="cr_bar"><?php include 'foot.php'; ?></div>
         </div>
     </div>
 

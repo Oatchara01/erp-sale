@@ -112,7 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 			remark_et = '" . credinotEsc($conn, $remark_et) . "',
 			desnew_bill = '" . credinotEsc($conn, $desnew_bill) . "',
 			new_bill = '" . credinotEsc($conn, $new_bill) . "',
-			date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "'
+			date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "',
+			send_sup = '" . credinotEsc($conn, $send_sup) . "',
+			status_doc = '" . credinotEsc($conn, $status_doc) . "'
 			WHERE ref_credit = '" . $escRefCredit . "'";
 
 		$qsave = mysqli_query($conn, $save);
