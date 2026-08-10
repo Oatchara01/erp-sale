@@ -78,8 +78,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	// โหมดแก้ไข: ถ้าไม่ได้อัปโหลดไฟล์ใหม่ ให้คงชื่อไฟล์เดิมไว้ (ส่งมาเป็น hidden input book_bank_existing จากฟอร์ม)
 	$book_bank = $_POST['book_bank_existing'] ?? '';
 	if (!empty($_FILES['book_bank']['name'])) {
+		$maxFileSize = 2 * 1024 * 1024; // 2 MB
+		if ($_FILES['book_bank']['size'] > $maxFileSize) {
+			echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
+			echo "<script language=\"JavaScript\">";
+			echo "Swal.fire({";
+			echo "  title: 'ขนาดไฟล์เกินกำหนด',";
+			echo "  text: 'ขนาดไฟล์ Book Bank ต้องไม่เกิน 2 MB ครับ',";
+			echo "  icon: 'warning',";
+			echo "  confirmButtonColor: '#612989',";
+			echo "  confirmButtonText: 'ตกลง'";
+			echo "}).then(function() {";
+			echo "  history.back();";
+			echo "});";
+			echo "</script>";
+			exit;
+		}
 		move_uploaded_file($_FILES['book_bank']['tmp_name'], "credit_no/" . iconv("UTF-8", "TIS-620", $_FILES['book_bank']['name']));
 		$book_bank = $_FILES['book_bank']['name'];
+	}
+
+	// ===== ตรวจสอบจำนวนสินค้าไม่ให้เกินยอดคงเหลือจากใบสั่งขายต้นทาง (เฉพาะสินค้าที่มาจาก SO เดิม) =====
+	// ทำก่อน save ใด ๆ ทั้งหมด เพื่อบล็อกการบันทึกทันทีถ้าเกินขอบเขต (ไม่ใช่แค่เตือน)
+	$creditQtyErrors = array();
+	if ($ref_id !== '') {
+		$escRefIdForCheck = credinotEsc($conn, $ref_id);
+		$escIvNoForCheck = credinotEsc($conn, $iv_no_ref);
+		$excludeRefCredit = $isEdit ? $postedRefCredit : '';
+
+		$sqlOrigQty = "SELECT product_ID, SUM(count) AS orig_qty FROM hos__subso WHERE ref_idd = '" . $escRefIdForCheck . "' GROUP BY product_ID";
+		$qryOrigQty = mysqli_query($conn, $sqlOrigQty);
+		$origQtyByProduct = array();
+		if ($qryOrigQty) {
+			while ($rowOrig = mysqli_fetch_assoc($qryOrigQty)) {
+				$origQtyByProduct[$rowOrig['product_ID']] = (float)$rowOrig['orig_qty'];
+			}
+		}
+
+		$sqlUsedQty = "SELECT sc.product_id, SUM(sc.count) AS used_qty
+			FROM tb_subcredit sc
+			INNER JOIN tb_credit_note cn ON cn.ref_credit = sc.ref_creditt
+			WHERE cn.iv_no_ref = '" . $escIvNoForCheck . "'
+			AND cn.status_doc = 'Approve'"
+			. ($excludeRefCredit !== '' ? " AND cn.ref_credit != '" . credinotEsc($conn, $excludeRefCredit) . "'" : "")
+			. " GROUP BY sc.product_id";
+		$qryUsedQty = mysqli_query($conn, $sqlUsedQty);
+		$usedQtyByProduct = array();
+		if ($qryUsedQty) {
+			while ($rowUsed = mysqli_fetch_assoc($qryUsedQty)) {
+				$usedQtyByProduct[$rowUsed['product_id']] = (float)$rowUsed['used_qty'];
+			}
+		}
+
+		$submittedQtyByProduct = array();
+		if (is_array($id)) {
+			foreach ($id as $key => $value) {
+				$pid = $product_id[$key] ?? '';
+				if ($pid === '') continue;
+				if (isset($deleteSubcreditIdSet[(string)$value])) continue;
+				$qty = (float)str_replace(',', '', $count[$key] ?? 0);
+				$submittedQtyByProduct[$pid] = ($submittedQtyByProduct[$pid] ?? 0) + $qty;
+			}
+		}
+
+		foreach ($submittedQtyByProduct as $pid => $submittedQty) {
+			if (!isset($origQtyByProduct[$pid])) continue; // สินค้านี้ไม่ได้มาจาก SO เดิม ไม่ต้องเช็คขอบเขต
+			$remaining = $origQtyByProduct[$pid] - ($usedQtyByProduct[$pid] ?? 0);
+			if ($submittedQty > $remaining) {
+				$prodNameRs = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sol_name FROM tb_product WHERE product_id = '" . credinotEsc($conn, $pid) . "'"));
+				$prodName = $prodNameRs['sol_name'] ?? $pid;
+				$creditQtyErrors[] = $prodName . ': ขอลดหนี้ ' . $submittedQty . ' ชิ้น แต่คงเหลือให้ลดหนี้ได้เพียง ' . $remaining . ' ชิ้น';
+			}
+		}
+	}
+
+	if (!empty($creditQtyErrors)) {
+		$errMsgHtml = implode("<br>", array_map('htmlspecialchars', $creditQtyErrors));
+		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
+		echo "<script language=\"JavaScript\">";
+		echo "Swal.fire({";
+		echo "  title: 'จำนวนสินค้าเกินยอดคงเหลือที่ลดหนี้ได้',";
+		echo "  html: " . json_encode($errMsgHtml) . ",";
+		echo "  icon: 'warning',";
+		echo "  confirmButtonColor: '#612989',";
+		echo "  confirmButtonText: 'ตกลง'";
+		echo "}).then(function() {";
+		echo "  history.back();";
+		echo "});";
+		echo "</script>";
+		exit;
 	}
 
 	$qsave = false;
@@ -282,22 +369,45 @@ values
 	}
 
 	if ($qsave) {
+		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		if ($opener === 'suphos') {
 			echo "<script language=\"JavaScript\">";
 			echo "if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') {";
 			echo "  window.opener.handleCreditNoteCreated(" . json_encode($ref_credit) . ");";
 			echo "  window.close();";
 			echo "} else {";
-			echo "  alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');";
-			echo "  window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "  Swal.fire({";
+			echo "    title: 'บันทึกข้อมูลเรียบร้อยแล้ว',";
+			echo "    icon: 'success',";
+			echo "    confirmButtonColor: '#612989',";
+			echo "    confirmButtonText: 'ตกลง'";
+			echo "  }).then(function() {";
+			echo "    window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "  });";
 			echo "}";
 			echo "</script>";
 		} else {
 			echo "<script language=\"JavaScript\">";
-			echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "Swal.fire({";
+			echo "  title: 'บันทึกข้อมูลเรียบร้อยแล้ว',";
+			echo "  icon: 'success',";
+			echo "  confirmButtonColor: '#612989',";
+			echo "  confirmButtonText: 'ตกลง'";
+			echo "}).then(function() {";
+			echo "  window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "});";
 			echo "</script>";
 		}
 	} else {
-		echo "Cannot ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีรายการใบสั่งลดหนี้แล้วค่ะ";
+		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
+		echo "<script language=\"JavaScript\">";
+		echo "Swal.fire({";
+		echo "  title: 'ไม่สามารถบันทึกข้อมูลได้',";
+		echo "  text: 'เนื่องจากไม่มีรายการใบสั่งลดหนี้แล้วค่ะ',";
+		echo "  icon: 'error',";
+		echo "  confirmButtonColor: '#dc3545',";
+		echo "  confirmButtonText: 'ตกลง'";
+		echo "});";
+		echo "</script>";
 	}
 }

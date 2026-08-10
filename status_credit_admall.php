@@ -348,6 +348,10 @@ include "dbconnect_sale.php";
 												</a>
 											<?php } ?>
 
+											<a href="report_credit_adm.php?ref_credit=<?php echo $ref_credit_url; ?>" target="_blank" class="so-dropdown-item">
+												<i class="fas fa-eye" style="width:16px;"></i> Preview
+											</a>
+
 											<?php if ($objResult["credit_no"] != '') { ?>
 												<a href="report_credit_adm.php?ref_credit=<?php echo $ref_credit_url; ?>" class="so-dropdown-item">
 													<i class="fas fa-print" style="width:16px;"></i> Print

@@ -5,6 +5,8 @@
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <!-- Page-specific styling for register_credinot.php -->
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <body>
     <?php
@@ -172,6 +174,11 @@
                     </div>
                 </div>
                 <div class="so-header-right">
+                    <?php if ($creditCanShowApproveBar): ?>
+                        <button type="button" class="btn-preview-so" style="color:#DC3545; border-color:#F1B0B7;" onclick="openCancelCreditModal();">
+                            <i class="far fa-window-close"></i> ยกเลิกใบลดหนี้
+                        </button>
+                    <?php endif; ?>
                     <button type="button" class="btn-preview-so" onclick="openPrintReport();">
                         <img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview
                     </button>
@@ -585,7 +592,7 @@
                             $count2 = $objResult1["count"] - $count3;
 
 
-                    ?>
+                ?>
                         <?php
 
                         }
@@ -601,23 +608,19 @@
                                 $total_qty += (float)$count2;
 
                             ?>
-                                <td class="credinot-row-controls">
-                                    <div class="credinot-row-controls-inner">
-                                        <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
-                                        <span class="credinot-select-dot" aria-hidden="true"></span>
-                                        <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
-                                            <i class="fas fa-caret-down"></i>
-                                        </button>
+                                <td class="credinot-code-col">
+                                    <div class="credinot-code-cell-inner">
+                                        <div class="credinot-row-controls-inner">
+                                            <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
+                                            <span class="credinot-select-dot" aria-hidden="true"></span>
+                                            <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
+                                                <i class="fas fa-caret-down"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="id[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1['id']; ?>">
+                                        <input type="text" name="product_id[<?php echo $objResult1["id"]; ?>]" class="so-input credinot-code-input" value="<?php echo $objResult1['product_id']; ?>" readonly>
+                                        <input type='hidden' name="product_code[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1["access_code"]; ?>" id="product_code[<?php echo $objResult1["id"]; ?>]">
                                     </div>
-                                </td>
-
-                                <td>
-
-                                    <input type="hidden" name="id[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1['id']; ?>">
-
-                                    <input type="text" name="product_id[<?php echo $objResult1["id"]; ?>]" class="so-input credinot-code-input" value="<?php echo $objResult1['product_id']; ?>" readonly>
-
-                                    <input type='hidden' name="product_code[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1["access_code"]; ?>" id="product_code[<?php echo $objResult1["id"]; ?>]">
                                 </td>
 
                                 <td>
@@ -669,7 +672,7 @@
                                 $lotNoDisplay = trim((string)$objResult1["lot_no"]);
                         ?>
                         <tr class="credinot-detail-row">
-                            <td colspan="7">
+                            <td colspan="6">
                                 <?php if (count($snList) > 0) { ?>
                                     <table class="credinot-sn-table">
                                         <thead>
@@ -682,7 +685,7 @@
                                         <tbody>
                                             <?php foreach ($snList as $snItem) { ?>
                                                 <tr>
-                                                    <td><?php echo htmlspecialchars($snItem, ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td><i class="fas fa-check-circle" style="color: #612989; margin-right: 8px; font-size: 14px;"></i><?php echo htmlspecialchars($snItem, ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td><?php echo htmlspecialchars($lotNoDisplay, ENT_QUOTES, 'UTF-8'); ?></td>
                                                     <td></td>
                                                 </tr>
@@ -695,66 +698,65 @@
                             </td>
                         </tr>
 
-                <?php
+                    <?php
                                 $i++;
                             }
                         }
-                } elseif ($mode === 'edit') {
-                    // โหมดแก้ไข: แสดงรายการจริงจาก tb_subcredit ตรงๆ ไม่คำนวณยอดคงเหลือ, มีปุ่มลบรายการ
-                    while ($objResult1 = mysqli_fetch_array($objQuery1)) {
-                        $rowId = $objResult1['id'];
-                        $count2 = $objResult1['count'];
-                        $unitPriceVal = (float)$objResult1['unit_price'];
-                        $discountUnitVal = (float)$objResult1['discount_unit'];
-                        $sum_amount = (float)$objResult1['sum_amount'];
+                    } elseif ($mode === 'edit') {
+                        // โหมดแก้ไข: แสดงรายการจริงจาก tb_subcredit ตรงๆ ไม่คำนวณยอดคงเหลือ, มีปุ่มลบรายการ
+                        while ($objResult1 = mysqli_fetch_array($objQuery1)) {
+                            $rowId = $objResult1['id'];
+                            $count2 = $objResult1['count'];
+                            $unitPriceVal = (float)$objResult1['unit_price'];
+                            $discountUnitVal = (float)$objResult1['discount_unit'];
+                            $sum_amount = (float)$objResult1['sum_amount'];
 
-                        $item_count++;
-                        $total_qty += (float)$count2;
-                        $grand_total_amount += $sum_amount;
-                ?>
-                        <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . ($objResult1['sol_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" draggable="true" ondragstart="handleCreditItemDragStart(event)" ondragend="handleCreditItemDragEnd(event)" ondragover="handleCreditItemDragOver(event)" ondrop="handleCreditItemDrop(event)">
-                            <td class="credinot-row-controls">
+                            $item_count++;
+                            $total_qty += (float)$count2;
+                            $grand_total_amount += $sum_amount;
+                    ?>
+                    <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . ($objResult1['sol_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" draggable="true" ondragstart="handleCreditItemDragStart(event)" ondragend="handleCreditItemDragEnd(event)" ondragover="handleCreditItemDragOver(event)" ondrop="handleCreditItemDrop(event)">
+                        <td class="credinot-code-col">
+                            <div class="credinot-code-cell-inner">
                                 <div class="credinot-row-controls-inner">
                                     <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
                                     <span class="credinot-select-dot" aria-hidden="true"></span>
                                 </div>
-                            </td>
-
-                            <td>
                                 <input type="hidden" name="id[<?php echo $rowId; ?>]" value="<?php echo $rowId; ?>">
                                 <input type="text" name="product_id[<?php echo $rowId; ?>]" class="so-input credinot-code-input" value="<?php echo htmlspecialchars($objResult1['product_id'], ENT_QUOTES, 'UTF-8'); ?>" readonly>
                                 <input type='hidden' name="product_code[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($objResult1['access_code'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                            </td>
+                            </div>
+                        </td>
 
-                            <td>
-                                <textarea name="product_name[<?php echo $rowId; ?>]" class="so-textarea" readonly><?php echo htmlspecialchars($objResult1['sol_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
-                            </td>
+                        <td>
+                            <textarea name="product_name[<?php echo $rowId; ?>]" class="so-textarea" readonly><?php echo htmlspecialchars($objResult1['sol_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                        </td>
 
-                            <td>
-                                <div class="credinot-qty-pill">
-                                    <input type='text' name="count[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($count2, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" style="text-align:center">
-                                </div>
-                            </td>
+                        <td>
+                            <div class="credinot-qty-pill">
+                                <input type='text' name="count[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($count2, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" style="text-align:center">
+                            </div>
+                        </td>
 
-                            <td><input type='text' name="unit_price[<?php echo $rowId; ?>]" value="<?php echo number_format($unitPriceVal, 2); ?>" class="so-input" style="text-align:right"></td>
+                        <td><input type='text' name="unit_price[<?php echo $rowId; ?>]" value="<?php echo number_format($unitPriceVal, 2); ?>" class="so-input" style="text-align:right"></td>
 
-                            <td>
-                                <input type='text' name="sum_amount[<?php echo $rowId; ?>]" value="<?php echo number_format($sum_amount, 2); ?>" class="so-input" style="text-align:right" readonly />
-                                <input type="hidden" name="discount_unit[<?php echo $rowId; ?>]" value="<?php echo number_format($discountUnitVal, 2); ?>">
-                            </td>
+                        <td>
+                            <input type='text' name="sum_amount[<?php echo $rowId; ?>]" value="<?php echo number_format($sum_amount, 2); ?>" class="so-input" style="text-align:right" readonly />
+                            <input type="hidden" name="discount_unit[<?php echo $rowId; ?>]" value="<?php echo number_format($discountUnitVal, 2); ?>">
+                        </td>
 
-                            <td class="credinot-edit-col">
-                                <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                        </tr>
-                <?php
-                        $i++;
+                        <td class="credinot-edit-col">
+                            <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+            <?php
+                            $i++;
+                        }
                     }
-                }
-                // โหมดสร้างแบบไม่มีเอกสารอ้างอิง: ไม่มีรายการตั้งต้น ผู้ใช้เพิ่มเองผ่าน modal "เพิ่มสินค้า"
-                ?>
+                    // โหมดสร้างแบบไม่มีเอกสารอ้างอิง: ไม่มีรายการตั้งต้น ผู้ใช้เพิ่มเองผ่าน modal "เพิ่มสินค้า"
+            ?>
 
             <?php
             $tbodyHtml = ob_get_clean();
@@ -795,7 +797,6 @@
                     <table class="credinot-table">
                         <thead>
                             <tr>
-                                <th scope="col" class="credinot-row-controls" aria-label="จัดเรียง/ขยายรายละเอียด"></th>
                                 <th>รหัสสินค้า</th>
                                 <th>รายการสินค้า</th>
                                 <th style="text-align: center;">จำนวน</th>
@@ -850,20 +851,20 @@
         </div>
 
         <?php if ($creditCanShowApproveBar): ?>
-        <script>
-            function toggleCreditApproveOverflowMenu() {
-                var menu = document.getElementById('creditApproveOverflowMenu');
-                if (!menu) return;
-                menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
-            }
-            document.addEventListener('click', function(e) {
-                var menu = document.getElementById('creditApproveOverflowMenu');
-                var trigger = document.getElementById('btn_credinot_approve_overflow');
-                if (!menu || menu.style.display === 'none') return;
-                if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
-                if (!menu.contains(e.target)) menu.style.display = 'none';
-            });
-        </script>
+            <script>
+                function toggleCreditApproveOverflowMenu() {
+                    var menu = document.getElementById('creditApproveOverflowMenu');
+                    if (!menu) return;
+                    menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+                }
+                document.addEventListener('click', function(e) {
+                    var menu = document.getElementById('creditApproveOverflowMenu');
+                    var trigger = document.getElementById('btn_credinot_approve_overflow');
+                    if (!menu || menu.style.display === 'none') return;
+                    if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+                    if (!menu.contains(e.target)) menu.style.display = 'none';
+                });
+            </script>
         <?php endif; ?>
     </form>
 
@@ -1017,6 +1018,27 @@
         </div>
     </div>
 
+    <!-- Modal ยืนยันยกเลิกใบลดหนี้ -->
+    <div id="cancelCreditModal" class="customer-popup-modal" aria-hidden="true">
+        <div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="cancelCreditModalTitle" style="max-width: 420px;">
+            <button type="button" class="customer-popup-close" onclick="closeCancelCreditModal()" aria-label="Close">&times;</button>
+
+            <div class="clear-loan-header">
+                <h2 id="cancelCreditModalTitle">ยกเลิกใบลดหนี้</h2>
+            </div>
+
+            <p style="padding: 8px 0 24px; color:#4A4A4A; font-family:'Prompt',sans-serif; font-size:14px;">
+                คุณต้องการยกเลิกใบลดหนี้เลขที่ <strong><?php echo htmlspecialchars($refCreditFull, ENT_QUOTES, 'UTF-8'); ?></strong> ใช่หรือไม่?<br>
+                การยกเลิกไม่สามารถย้อนกลับได้
+            </p>
+
+            <div class="customer-popup-actions">
+                <button type="button" class="customer-popup-confirm" style="background-color:#DC3545; border-color:#DC3545;" onclick="confirmCancelCredit()">ยืนยันยกเลิก</button>
+                <button type="button" class="customer-popup-cancel" onclick="closeCancelCreditModal()">ย้อนกลับ</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ดึงเลขที่ลดหนี้ถัดไปจากฐานข้อมูล (รูปแบบเดียวกับเลขที่อ้างอิงหัวเอกสาร)
         function runCreditNo(btn) {
@@ -1043,19 +1065,44 @@
                     document.getElementById('credit_no').value = data.credit_no;
                 })
                 .catch(function() {
-                    alert('ไม่สามารถดึงเลขที่ลดหนี้ได้ กรุณาลองใหม่อีกครั้ง');
+                    Swal.fire({
+                        title: 'ไม่สามารถดึงเลขที่ลดหนี้ได้',
+                        text: 'กรุณาลองใหม่อีกครั้ง',
+                        icon: 'error',
+                        confirmButtonColor: '#612989',
+                        confirmButtonText: 'ตกลง'
+                    });
                 })
                 .finally(function() {
                     btn.disabled = false;
                 });
         }
 
-        // แสดงชื่อไฟล์ที่เลือกในกล่องแนบไฟล์ Book Bank
+        // แสดงชื่อไฟล์ที่เลือกในกล่องแนบไฟล์ Book Bank (จำกัดขนาดไม่เกิน 2 MB)
         function showBookBankName(input) {
             var label = document.getElementById('book_bank_text');
-            var fileName = (input.files && input.files.length) ? input.files[0].name : '';
-            label.textContent = fileName || 'Choose File';
-            label.classList.toggle('has-file', fileName !== '');
+            if (input.files && input.files.length > 0) {
+                var file = input.files[0];
+                var maxSize = 2 * 1024 * 1024; // 2 MB
+                if (file.size > maxSize) {
+                    Swal.fire({
+                        title: 'ขนาดไฟล์เกินกำหนด',
+                        text: 'ขนาดไฟล์ Book Bank ต้องไม่เกิน 2 MB ครับ',
+                        icon: 'warning',
+                        confirmButtonColor: '#612989',
+                        confirmButtonText: 'ตกลง'
+                    });
+                    input.value = '';
+                    label.textContent = 'Choose File';
+                    label.classList.remove('has-file');
+                    return;
+                }
+                label.textContent = file.name;
+                label.classList.add('has-file');
+            } else {
+                label.textContent = 'Choose File';
+                label.classList.remove('has-file');
+            }
         }
 
         // ค้นหารายการสินค้าในตาราง (กรองด้วยรหัสสินค้า/ชื่อสินค้า)
@@ -1440,13 +1487,23 @@
         // จึงแค่เติมเลขที่เอกสารอ้างอิง/หมายเลขคำสั่งซื้อลงในฟอร์มตรงๆ พอ
         function confirmDocRefSelection() {
             if (!docRefSelected) {
-                alert('กรุณาเลือกเอกสารก่อน');
+                Swal.fire({
+                    title: 'กรุณาเลือกเอกสารก่อน',
+                    icon: 'warning',
+                    confirmButtonColor: '#612989',
+                    confirmButtonText: 'ตกลง'
+                });
                 return;
             }
 
             var selectedRefId = String(docRefSelected.ref_id || '').trim();
             if (!selectedRefId) {
-                alert('เอกสารที่เลือกไม่มีหมายเลขคำสั่งซื้อ');
+                Swal.fire({
+                    title: 'เอกสารที่เลือกไม่มีหมายเลขคำสั่งซื้อ',
+                    icon: 'warning',
+                    confirmButtonColor: '#612989',
+                    confirmButtonText: 'ตกลง'
+                });
                 return;
             }
 
@@ -1726,7 +1783,12 @@
         // ยืนยันการเลือกลูกค้า: เติมข้อมูลลูกค้าลงในฟอร์มหลักทันที ไม่ reload หน้า
         function confirmCustomerSearchSelection() {
             if (!custSearchSelected) {
-                alert('กรุณาเลือกลูกค้าก่อน');
+                Swal.fire({
+                    title: 'กรุณาเลือกลูกค้าก่อน',
+                    icon: 'warning',
+                    confirmButtonColor: '#612989',
+                    confirmButtonText: 'ตกลง'
+                });
                 return;
             }
 
@@ -1804,6 +1866,31 @@
             if (!modal) return;
             modal.style.display = 'none';
             modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function openCancelCreditModal() {
+            var modal = document.getElementById('cancelCreditModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeCancelCreditModal() {
+            var modal = document.getElementById('cancelCreditModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function confirmCancelCredit() {
+            var form = document.forms['frmMain'];
+            if (!form) return;
+            var actionField = document.createElement('input');
+            actionField.type = 'hidden';
+            actionField.name = 'approve_action';
+            actionField.value = 'cancel';
+            form.appendChild(actionField);
+            HTMLFormElement.prototype.submit.call(form);
         }
 
         function toggleProdSearchLoadMore(visible, loading) {

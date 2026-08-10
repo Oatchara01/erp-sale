@@ -93,7 +93,7 @@ $objResult16= mysqli_fetch_array($objQuery16);
 $discount_unit1=$objResult16['discount_unit'];
 $discount_unit= number_format( $discount_unit1,2)."";
 
-$id = $objResult['id'];
+$id = $objResult['id'] ?? '';
 $ref_credit = $objResult['ref_credit'];
 $date_credit = DateThai($objResult['date_credit']);
 $customer_name = $objResult['customer_name'];

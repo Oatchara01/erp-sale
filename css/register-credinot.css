@@ -44,39 +44,92 @@
 }
 
 .credinot-table-wrap {
+	width: 100%;
 	overflow-x: auto;
 }
 .credinot-table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: 14px;
+	table-layout: fixed;
 }
+.credinot-table th:nth-child(1) {
+	width: 20%;
+	padding-left: 82px !important; /* เว้นพื้นที่ด้านซ้าย 82px ให้ตรงกับจุดเริ่มต้นของตัวเลขรหัสสินค้า 5209 พอดีเป๊ะ */
+}
+.credinot-table th:nth-child(2) { width: 42%; } /* รายการสินค้า (กว้างพิเศษให้อ่านชื่อสินค้าง่าย) */
+.credinot-table th:nth-child(3) { width: 10%; text-align: center; } /* จำนวน */
+.credinot-table th:nth-child(4) { width: 11%; text-align: right; } /* ราคา/หน่วย */
+.credinot-table th:nth-child(5) { width: 11%; text-align: right; } /* ยอดรวม */
+.credinot-table th:nth-child(6) { width: 6%; text-align: center; }  /* ปุ่มแก้ไข/ลบ */
+
 .credinot-table th {
 	background-color: #ffffff;
-	color: var(--so-primary);
-	font-weight: 500;
+	color: #612989 !important;
+	font-weight: 600 !important;
+	font-family: 'Prompt', sans-serif !important;
 	text-align: left;
-	padding: 12px 10px;
-	border-bottom: 1px solid var(--so-border);
+	padding: 14px 10px;
+	border-bottom: 1px solid #EBEBEB;
 	white-space: nowrap;
 }
 .credinot-table td {
-	padding: 8px 10px;
-	border-bottom: 1px solid var(--so-border);
+	padding: 12px 10px;
+	border-bottom: 1px solid #EBEBEB;
 	vertical-align: middle;
+	box-sizing: border-box;
+}
+.credinot-table td:nth-child(3) {
+	text-align: center;
+}
+.credinot-table td:nth-child(4),
+.credinot-table td:nth-child(5) {
+	text-align: right;
+}
+.credinot-table .so-input,
+.credinot-table .so-textarea {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	outline: none !important;
+	font-family: 'Prompt', sans-serif !important;
+	color: #2D2533 !important;
+	font-size: 14px !important;
+	box-sizing: border-box;
 }
 .credinot-table .so-input {
-	height: 40px;
-	padding: 0 10px;
+	height: auto;
+	padding: 0;
+	width: 100%;
 }
 .credinot-table .so-textarea {
 	width: 100%;
-	min-width: 300px;
-	min-height: 40px;
+	min-width: 0;
+	min-height: 24px;
 	height: auto;
-	padding: 8px 10px;
+	padding: 2px 0;
 	resize: none;
+	overflow: hidden !important;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
+
+.credinot-code-col {
+	white-space: nowrap;
+}
+.credinot-code-cell-inner {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.credinot-code-input {
+	min-width: 0;
+	width: 100%;
+	font-weight: 600 !important;
+	color: #2D2533 !important;
+}
+
 .so-summary-box {
 	display: flex;
 	justify-content: flex-end;
@@ -121,8 +174,8 @@
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	margin: 16px 0;
-	border-radius: 10px;
-	background-color: var(--so-input-bg);
+	border-radius: 12px;
+	background-color: #F8F7FA;
 	overflow: hidden;
 }
 .credinot-stat-box {
@@ -134,19 +187,19 @@
 	text-align: center;
 }
 .credinot-stat-box + .credinot-stat-box {
-	border-left: 1px solid var(--so-border);
+	border-left: 1px solid #EBEBEB;
 }
 .credinot-stat-label {
 	font-size: 13px;
-	color: var(--so-muted);
+	color: #7A7280;
 }
 .credinot-stat-value {
 	font-size: 20px;
 	font-weight: 600;
-	color: var(--so-text);
+	color: #2D2533;
 }
 .credinot-stat-box.is-highlight .credinot-stat-value {
-	color: var(--so-primary);
+	color: #612989;
 	font-size: 24px;
 }
 
@@ -155,21 +208,30 @@
 }
 .credinot-search {
 	background-color: #ffffff;
-	border: 1px solid var(--so-border);
+	border: 1px solid #EBEBEB;
+	border-radius: 24px;
+	height: 44px;
+	padding: 0 16px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	box-sizing: border-box;
+}
+.credinot-search i {
+	color: #A098AE;
+	font-size: 16px;
 }
 .credinot-search input {
+	border: none !important;
+	outline: none !important;
+	background: transparent !important;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	color: #2D2533;
 	width: 100%;
 }
 
-.credinot-code-input {
-	min-width: 96px;
-}
-.credinot-table .credinot-code-input[readonly] {
-	font-weight: 600;
-	text-align: left !important;
-}
-
-/* คอลัมน์ควบคุมหน้าแถวสินค้า: ลากจัดเรียง (client-side) / จุด select (แสดงผลอย่างเดียว) / caret ขยายรายละเอียด */
+/* คอลัมน์ควบคุมหน้าแถวสินค้า */
 .credinot-row-controls {
 	width: 84px;
 	white-space: nowrap;
@@ -177,15 +239,16 @@
 .credinot-row-controls-inner {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
+	flex-shrink: 0;
 }
 .credinot-drag-handle {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 20px;
-	height: 28px;
-	color: var(--so-muted);
+	width: 18px;
+	height: 24px;
+	color: #A098AE;
 	font-size: 14px;
 	cursor: grab;
 }
@@ -193,23 +256,23 @@
 	opacity: 0.5;
 }
 .credinot-row.is-drop-target {
-	box-shadow: inset 0 2px 0 var(--so-primary);
+	box-shadow: inset 0 2px 0 #612989;
 }
 .credinot-select-dot {
 	width: 16px;
 	height: 16px;
 	border-radius: 50%;
-	border: 1.5px solid var(--so-border);
+	border: 1.5px solid #DCD8E3;
 	flex-shrink: 0;
 }
 .credinot-caret {
-	width: 28px;
-	height: 28px;
+	width: 24px;
+	height: 24px;
 	padding: 0;
 	border: 0;
 	background: transparent;
-	color: var(--so-primary);
-	font-size: 16px;
+	color: #612989;
+	font-size: 14px;
 	line-height: 1;
 	cursor: pointer;
 }
@@ -232,7 +295,7 @@
 	padding: 12px 16px 16px 44px;
 }
 .credinot-detail-empty {
-	color: var(--so-muted);
+	color: #7A7280;
 	font-size: 13px;
 }
 
@@ -244,7 +307,7 @@
 }
 .credinot-sn-table th {
 	text-align: left;
-	color: var(--so-primary);
+	color: #612989;
 	font-weight: 500;
 	padding: 6px 10px;
 	white-space: nowrap;
@@ -253,56 +316,53 @@
 }
 .credinot-sn-table td {
 	padding: 4px 10px;
-	color: var(--so-text);
+	color: #2D2533;
 }
 
 .credinot-qty-pill {
 	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	border-radius: 20px;
-	background-color: var(--so-input-bg);
+	background-color: #F4F3F7 !important;
 	overflow: hidden;
+	height: 38px;
+	padding: 0 12px;
 }
 .credinot-qty-pill .so-input {
-	background: transparent;
-	min-width: 56px;
+	background: transparent !important;
+	border: none !important;
+	min-width: 36px;
 	height: 36px;
+	padding: 0;
+	text-align: center !important;
+	font-weight: 500 !important;
+	color: #2D2533 !important;
 }
 
 .credinot-edit-col {
 	width: 40px;
 	text-align: center;
 }
-.credinot-edit-btn {
+.credinot-edit-btn,
+.credinot-delete-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border: 1px solid var(--so-border);
-	border-radius: 8px;
-	background: transparent;
+	width: 34px;
+	height: 34px;
+	border: 1px solid #EAE3F7 !important;
+	border-radius: 8px !important;
+	background: #FFFFFF !important;
+	color: #612989 !important;
 	cursor: pointer;
-	transition: background-color 0.2s ease;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 4px rgba(97, 41, 137, 0.04);
 }
-.credinot-edit-btn:hover {
-	background-color: var(--so-input-bg);
-}
-.credinot-edit-btn.is-active {
-	background-color: #efebff;
-	border-color: #efebff;
-}
-.credinot-table .so-input[readonly],
-.credinot-table .so-textarea[readonly] {
-	background-color: transparent;
-	border-color: transparent;
-	cursor: default;
-	padding-left: 2px;
-	padding-right: 2px;
-}
-.credinot-table td .so-input[readonly],
-.credinot-table td .so-textarea[readonly] {
-	height: auto;
-	min-height: 0;
+.credinot-edit-btn:hover,
+.credinot-delete-btn:hover {
+	background-color: #F6EFFD !important;
+	border-color: #612989 !important;
 }
 
 .so-tabs-container {
@@ -707,24 +767,7 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border: 1px solid var(--so-border);
-	border-radius: 8px;
-	background: transparent;
-	color: #d32f2f;
-	cursor: pointer;
-	transition: background-color 0.2s ease;
-}
-.credinot-delete-btn:hover {
-	background-color: #fdecea;
-}
-.credinot-edit-col {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-}
+
 
 /* แถวสินค้าที่กดลบ (รอลบจริงตอน submit) — ซ่อนไว้ก่อน ยังกู้คืนได้ด้วยปุ่ม "ยกเลิก" จนกว่าจะ submit */
 .credinot-table tbody tr.credinot-row.is-pending-delete,
