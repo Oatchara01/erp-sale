@@ -402,7 +402,7 @@ values
 			echo "    confirmButtonColor: '#612989',";
 			echo "    confirmButtonText: 'ตกลง'";
 			echo "  }).then(function() {";
-			echo "    window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "    window.location.replace('register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "');";
 			echo "  });";
 			echo "}";
 			echo "</script>";
@@ -414,7 +414,7 @@ values
 			echo "  confirmButtonColor: '#612989',";
 			echo "  confirmButtonText: 'ตกลง'";
 			echo "}).then(function() {";
-			echo "  window.location='register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "';";
+			echo "  window.location.replace('register_credinot.php?ref_credit=" . rawurlencode($ref_credit) . "');";
 			echo "});";
 			echo "</script>";
 		}

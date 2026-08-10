@@ -30,7 +30,7 @@ if ($objQuery) {
     } else if ($code == 'Admin_hos') {
 
         echo "<script language=\"JavaScript\">";
-        echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_credinot.php?ref_credit=$ref_credit';";
+        echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location.replace('register_credinot.php?ref_credit=$ref_credit');";
         echo "</script>";
     }
 } else {

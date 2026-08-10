@@ -859,7 +859,7 @@
                         <i class="far fa-paper-plane"></i> Submit
                     </button>
                 <?php } ?>
-                <button type="button" class="btn-so-draft" onclick="window.history.back();">
+                <button type="button" class="btn-so-draft" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.history.back(); }">
                     ยกเลิก
                 </button>
             </div>
@@ -1326,6 +1326,7 @@
         // report_credit_adm.php อ่าน ref_credit จาก $_GET เท่านั้น (ดู pattern เดียวกันใน status_credit_admall.php)
         // จึงเปิดลิงก์ตรงแทนการ submit ฟอร์ม เพราะปลายทางไม่อ่านค่าจาก POST body เลย
         var creditPreviewRefCredit = <?php echo json_encode($refCreditFull); ?>;
+
         function openPrintReport() {
             window.open('report_credit_adm.php?ref_credit=' + encodeURIComponent(creditPreviewRefCredit), '_blank');
         }
