@@ -365,27 +365,34 @@
             color: #612989;
         }
 
-        .so-product-search-bar {
+        .pf-search-bar {
             display: flex;
             align-items: center;
-            background-color: #F4F3F7;
-            border-radius: 8px;
+            gap: 10px;
+            background-color: #ffffff;
+            border: 1px solid #EBEBEB;
+            border-radius: 24px;
+            height: 44px;
             padding: 0 16px;
+            box-sizing: border-box;
             margin-bottom: 16px;
             width: 100%;
             max-width: 680px;
-            height: 42px;
-            box-sizing: border-box;
         }
 
-        .so-product-search-bar input {
-            border: none;
-            background: transparent;
-            width: 100%;
-            outline: none;
-            margin-left: 8px;
-            font-size: 14px;
+        .pf-search-bar i {
+            color: #A098AE;
+            font-size: 16px;
+        }
+
+        .pf-search-bar input {
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
             font-family: 'Prompt', sans-serif;
+            font-size: 14px;
+            color: #2D2533;
+            width: 100%;
         }
 
         .so-product-row.dragging {
@@ -850,8 +857,8 @@
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px;">
         <div style="flex: 1; min-width: 260px;">
             <div class="so-summary-label" style="color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</div>
-            <div class="so-product-search-bar" style="margin-bottom: 0;">
-                <i class="fas fa-search" style="color: #333;"></i>
+            <div class="pf-search-bar" style="margin-bottom: 0;">
+                <i class="fas fa-search"></i>
                 <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
             </div>
         </div>

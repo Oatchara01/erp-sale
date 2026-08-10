@@ -164,9 +164,12 @@
 	gap: 12px;
 }
 .credinot-count-badge {
-	color: var(--so-text);
-	font-size: 16px;
+	color: #612989;
+	background-color: #F3EDF8;
+	font-size: 14px;
 	font-weight: 600;
+	padding: 4px 12px;
+	border-radius: 20px;
 	white-space: nowrap;
 }
 
@@ -205,23 +208,25 @@
 
 .credinot-search-wrap {
 	margin-bottom: 16px;
+	position: relative;
+	max-width: 680px;
 }
-.credinot-search {
+.pf-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 	background-color: #ffffff;
 	border: 1px solid #EBEBEB;
 	border-radius: 24px;
 	height: 44px;
 	padding: 0 16px;
-	display: flex;
-	align-items: center;
-	gap: 10px;
 	box-sizing: border-box;
 }
-.credinot-search i {
+.pf-search-bar i {
 	color: #A098AE;
 	font-size: 16px;
 }
-.credinot-search input {
+.pf-search-bar input {
 	border: none !important;
 	outline: none !important;
 	background: transparent !important;
@@ -229,6 +234,38 @@
 	font-size: 14px;
 	color: #2D2533;
 	width: 100%;
+}
+
+.credinot-search-suggest {
+	position: absolute;
+	top: calc(100% + 2px);
+	left: 0;
+	right: 0;
+	background: #f2f2f2;
+	border: 1px solid gray;
+	max-height: 280px;
+	overflow-y: auto;
+	z-index: 20;
+	font-family: "myriad pro", "segoe ui", "trebuchet ms", sans-serif;
+	font-size: 13px;
+}
+.credinot-search-suggest-item {
+	padding: 4px;
+	cursor: pointer;
+	color: #111;
+	border-bottom: 1px solid silver;
+}
+.credinot-search-suggest-item:hover {
+	background: #b4d5fe;
+	color: #000;
+}
+.credinot-search-suggest-item b {
+	font-weight: bold;
+}
+.credinot-search-suggest-empty {
+	padding: 4px;
+	font-style: italic;
+	color: #999;
 }
 
 /* คอลัมน์ควบคุมหน้าแถวสินค้า */

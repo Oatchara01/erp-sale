@@ -46,6 +46,12 @@
     $creditSendDm = $rs['send_dm'] ?? '0';
     $creditStatusDoc = $rs['status_doc'] ?? '';
     $creditIsClosed = in_array($creditStatusDoc, ['Approve', 'Rejected', 'ยกเลิก'], true);
+    $creditSendAdmin = $rs['send_admin'] ?? '0';
+    // เคย Approve มาก่อนหรือไม่ (send_admin='1' ถูกตั้งตอนอนุมัติระดับสุดท้ายเท่านั้น และไม่มีจุดไหนเซ็ตกลับเป็น '0')
+    $creditWasEverApproved = ($creditSendAdmin === '1');
+    // Lock ถาวรเฉพาะ: (1) กำลัง Approve อยู่ หรือ (2) ถูกยกเลิกหลังจากเคย Approve ไปแล้ว (มีผลบัญชีไปแล้ว)
+    // ส่วนยกเลิกก่อนเคย Approve (เหมือน Rejected) ยังเปิดให้แก้ไขแล้ว resubmit ได้
+    $creditItemsLocked = ($creditStatusDoc === 'Approve') || ($creditStatusDoc === 'ยกเลิก' && $creditWasEverApproved);
     $creditBucket = 3;
     if (!$creditIsClosed) {
         if ($creditSendDm === '1' && $creditStatusDoc === 'Request') {
@@ -57,6 +63,8 @@
         }
     }
     $creditCanShowApproveBar = ($mode === 'edit') && !$creditIsClosed;
+    // ยกเลิกเอกสารได้ตลอด ไม่ว่าจะอยู่ระดับอนุมัติไหนหรือ Approve ไปแล้วก็ตาม ยกเว้นถูกยกเลิกไปแล้ว
+    $creditCanCancel = ($mode === 'edit') && $creditStatusDoc !== 'ยกเลิก';
 
     $customerNo = '';
     $customerTypeName = '';
@@ -174,7 +182,7 @@
                     </div>
                 </div>
                 <div class="so-header-right">
-                    <?php if ($creditCanShowApproveBar): ?>
+                    <?php if ($creditCanCancel): ?>
                         <button type="button" class="btn-preview-so" style="color:#DC3545; border-color:#F1B0B7;" onclick="openCancelCreditModal();">
                             <i class="far fa-window-close"></i> ยกเลิกใบลดหนี้
                         </button>
@@ -582,7 +590,7 @@
                     while ($objResult1 = mysqli_fetch_array($objQuery1)) {
 
 
-                        $sql3 = "SELECT sum(count) as count3   FROM  (tb_credit_note LEFT JOIN tb_subcredit ON tb_credit_note.ref_credit=tb_subcredit.ref_creditt) where iv_no_ref = '" . $escIvNo . "' and product_id = '" . $objResult1['product_id'] . "' and status_doc ='Approve'";
+                        $sql3 = "SELECT sum(count) as count3   FROM  (tb_credit_note LEFT JOIN tb_subcredit ON tb_credit_note.ref_credit=tb_subcredit.ref_creditt) where iv_no_ref = '" . $escIvNo . "' and product_id = '" . $objResult1['product_id'] . "' and status_doc IN ('Approve','Request')";
                         $qry3 = mysqli_query($conn, $sql3) or die(mysqli_error());
 
                         while ($rs3 = mysqli_fetch_assoc($qry3)) {
@@ -649,6 +657,9 @@
                                 <td class="credinot-edit-col">
                                     <button type="button" class="credinot-edit-btn" title="แก้ไขรายการ" onclick="toggleCreditRowEdit(this)">
                                         <img src="img/icons/edit.png" alt="edit" style="width: 16px; height: 16px;">
+                                    </button>
+                                    <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="removeNewCreditRow(this)">
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </td>
 
@@ -734,11 +745,11 @@
 
                         <td>
                             <div class="credinot-qty-pill">
-                                <input type='text' name="count[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($count2, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" style="text-align:center">
+                                <input type='text' name="count[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($count2, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" style="text-align:center" <?php echo $creditItemsLocked ? 'readonly' : ''; ?>>
                             </div>
                         </td>
 
-                        <td><input type='text' name="unit_price[<?php echo $rowId; ?>]" value="<?php echo number_format($unitPriceVal, 2); ?>" class="so-input" style="text-align:right"></td>
+                        <td><input type='text' name="unit_price[<?php echo $rowId; ?>]" value="<?php echo number_format($unitPriceVal, 2); ?>" class="so-input" style="text-align:right" <?php echo $creditItemsLocked ? 'readonly' : ''; ?>></td>
 
                         <td>
                             <input type='text' name="sum_amount[<?php echo $rowId; ?>]" value="<?php echo number_format($sum_amount, 2); ?>" class="so-input" style="text-align:right" readonly />
@@ -746,9 +757,11 @@
                         </td>
 
                         <td class="credinot-edit-col">
-                            <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            <?php if (!$creditItemsLocked) { ?>
+                                <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            <?php } ?>
                         </td>
                     </tr>
             <?php
@@ -766,11 +779,6 @@
                 <div class="so-section-title-container credinot-title-row">
                     <h2 class="so-section-title">รายการสินค้า</h2>
                     <span class="credinot-count-badge"><?php echo $item_count; ?> รายการ</span>
-                    <?php if ($mode !== 'create_so') { ?>
-                        <button type="button" class="btn-run-credit-no credinot-add-product-btn" onclick="openProductSearchPopup()">
-                            <i class="fas fa-plus"></i> เพิ่มสินค้า
-                        </button>
-                    <?php } ?>
                 </div>
                 <hr class="so-divider">
 
@@ -785,13 +793,18 @@
                     </div>
                 </div>
 
-                <div class="so-field-group credinot-search-wrap">
-                    <label class="so-label" for="credinot_search">ค้นหารายการสินค้า</label>
-                    <div class="customer-popup-search credinot-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="credinot_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" oninput="filterCreditNoteRows(this.value)">
+                <?php if (!$creditItemsLocked) { ?>
+                    <div class="so-field-group credinot-search-wrap">
+                        <label class="so-label" for="credinot_search">ค้นหารายการสินค้า</label>
+                        <div class="customer-popup-search pf-search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="credinot_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off"
+                                oninput="filterCreditNoteRows(this.value); handleCreditSearchSuggestInput(this.value);"
+                                onfocus="if (this.value.trim() !== '') handleCreditSearchSuggestInput(this.value);">
+                        </div>
+                        <div id="credinotSearchSuggest" class="credinot-search-suggest" style="display:none;"></div>
                     </div>
-                </div>
+                <?php } ?>
 
                 <div class="credinot-table-wrap">
                     <table class="credinot-table">
@@ -841,9 +854,11 @@
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-                <button type="submit" name="submit" value="submit" class="btn-so-submit">
-                    <i class="far fa-paper-plane"></i> Submit
-                </button>
+                <?php if (!$creditItemsLocked) { ?>
+                    <button type="submit" name="submit" value="submit" class="btn-so-submit">
+                        <i class="far fa-paper-plane"></i> Submit
+                    </button>
+                <?php } ?>
                 <button type="button" class="btn-so-draft" onclick="window.history.back();">
                     ยกเลิก
                 </button>
@@ -1018,26 +1033,7 @@
         </div>
     </div>
 
-    <!-- Modal ยืนยันยกเลิกใบลดหนี้ -->
-    <div id="cancelCreditModal" class="customer-popup-modal" aria-hidden="true">
-        <div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="cancelCreditModalTitle" style="max-width: 420px;">
-            <button type="button" class="customer-popup-close" onclick="closeCancelCreditModal()" aria-label="Close">&times;</button>
 
-            <div class="clear-loan-header">
-                <h2 id="cancelCreditModalTitle">ยกเลิกใบลดหนี้</h2>
-            </div>
-
-            <p style="padding: 8px 0 24px; color:#4A4A4A; font-family:'Prompt',sans-serif; font-size:14px;">
-                คุณต้องการยกเลิกใบลดหนี้เลขที่ <strong><?php echo htmlspecialchars($refCreditFull, ENT_QUOTES, 'UTF-8'); ?></strong> ใช่หรือไม่?<br>
-                การยกเลิกไม่สามารถย้อนกลับได้
-            </p>
-
-            <div class="customer-popup-actions">
-                <button type="button" class="customer-popup-confirm" style="background-color:#DC3545; border-color:#DC3545;" onclick="confirmCancelCredit()">ยืนยันยกเลิก</button>
-                <button type="button" class="customer-popup-cancel" onclick="closeCancelCreditModal()">ย้อนกลับ</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         // ดึงเลขที่ลดหนี้ถัดไปจากฐานข้อมูล (รูปแบบเดียวกับเลขที่อ้างอิงหัวเอกสาร)
@@ -1103,6 +1099,116 @@
                 label.textContent = 'Choose File';
                 label.classList.remove('has-file');
             }
+        }
+
+        /* ===== Autocomplete แทรกสินค้าใหม่จากช่องค้นหา #credinot_search (ทำงานควบคู่กับ filterCreditNoteRows ด้านล่าง) ===== */
+        var creditSearchSuggestTimer = null;
+        var creditSearchSuggestData = [];
+        var creditSearchSuggestAbort = null;
+        var creditSearchSuggestReqId = 0;
+        var creditSearchSuggestKeyword = '';
+
+        function handleCreditSearchSuggestInput(keyword) {
+            clearTimeout(creditSearchSuggestTimer);
+            if (!keyword || keyword.trim() === '') {
+                hideCreditSearchSuggest();
+                return;
+            }
+            creditSearchSuggestTimer = setTimeout(function() {
+                fetchCreditSearchSuggest(keyword.trim());
+            }, 250);
+        }
+
+        function fetchCreditSearchSuggest(keyword) {
+            if (creditSearchSuggestAbort) {
+                creditSearchSuggestAbort.abort();
+            }
+            creditSearchSuggestAbort = new AbortController();
+            var requestController = creditSearchSuggestAbort;
+            var requestId = ++creditSearchSuggestReqId;
+            creditSearchSuggestKeyword = keyword;
+
+            showCreditSearchSuggestMessage('กำลังค้นหา...');
+
+            fetch('ajax_credinot_product_search.php?q=' + encodeURIComponent(keyword) + '&limit=8', {
+                    credentials: 'same-origin',
+                    signal: requestController.signal
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (requestId !== creditSearchSuggestReqId) return;
+                    if (!data || !data.success) {
+                        renderCreditSearchSuggest([]);
+                        return;
+                    }
+                    renderCreditSearchSuggest(data.products || []);
+                })
+                .catch(function(error) {
+                    if (error && error.name === 'AbortError') return;
+                    if (requestId !== creditSearchSuggestReqId) return;
+                    showCreditSearchSuggestMessage('ไม่สามารถค้นหาข้อมูลได้');
+                });
+        }
+
+        function renderCreditSearchSuggest(products) {
+            var box = document.getElementById('credinotSearchSuggest');
+            if (!box) return;
+
+            creditSearchSuggestData = products || [];
+
+            if (creditSearchSuggestData.length === 0) {
+                showCreditSearchSuggestMessage('ไม่พบสินค้า');
+                return;
+            }
+
+            box.innerHTML = creditSearchSuggestData.map(function(prod, index) {
+                var displayName = highlightCreditSearchKeyword(prod.sol_name || '-', creditSearchSuggestKeyword);
+                return '<div class="credinot-search-suggest-item" onclick="pickCreditSearchSuggest(' + index + ')">' +
+                    displayName +
+                    '</div>';
+            }).join('');
+            box.style.display = '';
+        }
+
+        // ทำตัวหนาคำที่ตรงกับคำค้น เลียนแบบ logic ฝั่ง PHP ใน data_pro_notdemoth.php:44-46 (ที่ใช้กับ product_salehos.php)
+        function highlightCreditSearchKeyword(text, keyword) {
+            var safeText = escapeDocRefHtml(text);
+            var trimmedKeyword = (keyword || '').trim();
+            if (trimmedKeyword === '') return safeText;
+
+            var safeKeyword = escapeDocRefHtml(trimmedKeyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var re = new RegExp('(' + safeKeyword + ')', 'giu');
+            return safeText.replace(re, '<b>$1</b>');
+        }
+
+        function showCreditSearchSuggestMessage(message) {
+            var box = document.getElementById('credinotSearchSuggest');
+            if (!box) return;
+            box.innerHTML = '<div class="credinot-search-suggest-empty">' + escapeDocRefHtml(message) + '</div>';
+            box.style.display = '';
+        }
+
+        function hideCreditSearchSuggest() {
+            var box = document.getElementById('credinotSearchSuggest');
+            if (!box) return;
+            box.style.display = 'none';
+        }
+
+        function pickCreditSearchSuggest(index) {
+            var prod = (creditSearchSuggestData || [])[index];
+            if (!prod) return;
+
+            addProductRowToTable(prod);
+
+            var search = document.getElementById('credinot_search');
+            if (search) {
+                search.value = '';
+                search.focus();
+            }
+            filterCreditNoteRows('');
+            hideCreditSearchSuggest();
         }
 
         // ค้นหารายการสินค้าในตาราง (กรองด้วยรหัสสินค้า/ชื่อสินค้า)
@@ -1217,27 +1323,11 @@
         }
 
         // ดูตัวอย่างรายงานใบลดหนี้ (Preview)
+        // report_credit_adm.php อ่าน ref_credit จาก $_GET เท่านั้น (ดู pattern เดียวกันใน status_credit_admall.php)
+        // จึงเปิดลิงก์ตรงแทนการ submit ฟอร์ม เพราะปลายทางไม่อ่านค่าจาก POST body เลย
+        var creditPreviewRefCredit = <?php echo json_encode($refCreditFull); ?>;
         function openPrintReport() {
-            var form = document.forms['frmMain'];
-            if (!form) return;
-
-            var originalAction = form.action;
-            var originalTarget = form.target;
-
-            var flag = document.createElement('input');
-            flag.type = 'hidden';
-            flag.name = '_report_preview';
-            flag.value = '1';
-            form.appendChild(flag);
-
-            form.action = 'report_credit_adm.php';
-            form.target = '_blank';
-
-            HTMLFormElement.prototype.submit.call(form);
-
-            form.action = originalAction;
-            form.target = originalTarget;
-            form.removeChild(flag);
+            window.open('report_credit_adm.php?ref_credit=' + encodeURIComponent(creditPreviewRefCredit), '_blank');
         }
 
         /* ===== Modal เอกสารอ้างอิง (ล้อ pattern เดียวกับ js/customer-popup.js) ===== */
@@ -1571,34 +1661,83 @@
         // ลบแถวสินค้าที่มีอยู่แล้วจริงใน tb_subcredit — ไม่ลบทันที แค่ซ่อนแถว + จำ id ไว้เป็น "รอลบ"
         // ลบจริงตอน submit ฟอร์มเท่านั้น (ที่ register_credinot1.php) เพื่อให้ปุ่ม "ยกเลิก" ยังกู้คืนได้ก่อนกด Submit
         function deleteCreditSubRow(btn, subId) {
-            if (!confirm('ต้องการลบรายการสินค้านี้ใช่หรือไม่ (จะลบออกจริงเมื่อกด Submit)')) return;
-            var row = btn.closest('tr');
-            if (row) {
-                row.classList.add('is-pending-delete');
-            }
+            Swal.fire({
+                title: 'ยืนยันการลบรายการ',
+                html: 'ต้องการลบรายการสินค้านี้ใช่หรือไม่ (จะลบออกจริงเมื่อกด Submit)',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันลบ',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true,
+                confirmButtonColor: '#DC3545',
+                cancelButtonColor: '#612989'
+            }).then(function(result) {
+                if (!result.isConfirmed) return;
 
-            var form = document.forms['frmMain'];
-            if (form) {
-                var pendingInput = document.createElement('input');
-                pendingInput.type = 'hidden';
-                pendingInput.name = 'delete_subcredit_id[]';
-                pendingInput.value = subId;
-                form.appendChild(pendingInput);
-            }
-
-            var badge = document.querySelector('.credinot-count-badge');
-            if (badge) {
-                var currentCount = parseInt(badge.textContent, 10);
-                if (!isNaN(currentCount) && currentCount > 0) {
-                    badge.textContent = (currentCount - 1) + ' รายการ';
+                var row = btn.closest('tr');
+                if (!row) {
+                    console.error('deleteCreditSubRow: หา <tr> ของแถวที่กดลบไม่เจอ (subId=' + subId + ')');
+                    return;
                 }
-            }
+                row.classList.add('is-pending-delete');
+                // ซ่อนแถวด้วย inline style ตรงๆ ควบคู่กับ class ไปด้วย กัน CSS ไฟล์ภายนอกโหลดไม่ทัน/ถูก cache ค้าง
+                row.style.display = 'none';
+
+                var form = document.forms['frmMain'];
+                if (form) {
+                    var pendingInput = document.createElement('input');
+                    pendingInput.type = 'hidden';
+                    pendingInput.name = 'delete_subcredit_id[]';
+                    pendingInput.value = subId;
+                    form.appendChild(pendingInput);
+                }
+
+                var badge = document.querySelector('.credinot-count-badge');
+                if (badge) {
+                    var currentCount = parseInt(badge.textContent, 10);
+                    if (!isNaN(currentCount) && currentCount > 0) {
+                        badge.textContent = (currentCount - 1) + ' รายการ';
+                    }
+                }
+            });
         }
 
         // ลบแถวสินค้าที่เพิ่งเพิ่มเองด้วย modal (ยังไม่ถูกบันทึก) — ลบออกจาก DOM ได้เลยไม่ต้องยิง AJAX
         function removeNewCreditRow(btn) {
-            var row = btn.closest('tr');
-            if (row && row.parentNode) row.parentNode.removeChild(row);
+            Swal.fire({
+                title: 'ยืนยันการลบรายการ',
+                html: 'ต้องการลบรายการสินค้านี้ใช่หรือไม่',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันลบ',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true,
+                confirmButtonColor: '#DC3545',
+                cancelButtonColor: '#612989'
+            }).then(function(result) {
+                if (!result.isConfirmed) return;
+
+                var row = btn.closest('tr');
+                if (!row || !row.parentNode) {
+                    console.error('removeNewCreditRow: หา <tr> ของแถวที่กดลบไม่เจอ');
+                    return;
+                }
+                // แถวจาก SO (mode create_so) มีแถวรายละเอียด SN ตามหลังทันที ต้องลบคู่กัน
+                var detailRow = row.nextElementSibling;
+                var detailIsPair = detailRow && detailRow.classList.contains('credinot-detail-row');
+                row.parentNode.removeChild(row);
+                if (detailIsPair && detailRow.parentNode) {
+                    detailRow.parentNode.removeChild(detailRow);
+                }
+
+                var badge = document.querySelector('.credinot-count-badge');
+                if (badge) {
+                    var currentCount = parseInt(badge.textContent, 10);
+                    if (!isNaN(currentCount) && currentCount > 0) {
+                        badge.textContent = (currentCount - 1) + ' รายการ';
+                    }
+                }
+            });
         }
 
         /* ===== Modal ค้นหาลูกค้า (โหมดสร้างแบบไม่มีเอกสารอ้างอิง) — ล้อ pattern เดียวกับ modal เอกสารอ้างอิง ===== */
@@ -1869,17 +2008,26 @@
         }
 
         function openCancelCreditModal() {
-            var modal = document.getElementById('cancelCreditModal');
-            if (!modal) return;
-            modal.style.display = 'flex';
-            modal.setAttribute('aria-hidden', 'false');
+            var refCredit = <?php echo json_encode($refCreditFull); ?>;
+            Swal.fire({
+                title: 'ยืนยันการยกเลิกใบลดหนี้',
+                html: 'คุณต้องการยกเลิกใบลดหนี้เลขที่ <strong>' + escapeDocRefHtml(refCredit) + '</strong> ใช่หรือไม่?<br><span style="color:#DC3545;">การยกเลิกไม่สามารถย้อนกลับได้</span>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันยกเลิก',
+                cancelButtonText: 'ย้อนกลับ',
+                confirmButtonColor: '#DC3545',
+                cancelButtonColor: '#612989',
+                reverseButtons: true
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    confirmCancelCredit();
+                }
+            });
         }
 
         function closeCancelCreditModal() {
-            var modal = document.getElementById('cancelCreditModal');
-            if (!modal) return;
-            modal.style.display = 'none';
-            modal.setAttribute('aria-hidden', 'true');
+            // retain empty function for safety
         }
 
         function confirmCancelCredit() {
@@ -2031,6 +2179,11 @@
             var row = document.createElement('tr');
             row.className = 'credinot-row';
             row.setAttribute('data-search-text', String(prod.access_code + ' ' + prod.sol_name).toLowerCase());
+            row.setAttribute('draggable', 'true');
+            row.addEventListener('dragstart', handleCreditItemDragStart);
+            row.addEventListener('dragend', handleCreditItemDragEnd);
+            row.addEventListener('dragover', handleCreditItemDragOver);
+            row.addEventListener('drop', handleCreditItemDrop);
             row.innerHTML =
                 '<td class="credinot-row-controls">' +
                 '<div class="credinot-row-controls-inner">' +
@@ -2114,6 +2267,14 @@
                 if (event.key !== 'Escape') return;
                 if (custModal && custModal.style.display === 'flex') closeCustomerSearchPopup();
                 if (prodModal && prodModal.style.display === 'flex') closeProductSearchPopup();
+                hideCreditSearchSuggest();
+            });
+
+            document.addEventListener('click', function(event) {
+                var searchWrap = document.querySelector('.credinot-search-wrap');
+                if (searchWrap && !searchWrap.contains(event.target)) {
+                    hideCreditSearchSuggest();
+                }
             });
         });
     </script>

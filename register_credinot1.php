@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 			FROM tb_subcredit sc
 			INNER JOIN tb_credit_note cn ON cn.ref_credit = sc.ref_creditt
 			WHERE cn.iv_no_ref = '" . $escIvNoForCheck . "'
-			AND cn.status_doc = 'Approve'"
+			AND cn.status_doc IN ('Approve','Request')"
 			. ($excludeRefCredit !== '' ? " AND cn.ref_credit != '" . credinotEsc($conn, $excludeRefCredit) . "'" : "")
 			. " GROUP BY sc.product_id";
 		$qryUsedQty = mysqli_query($conn, $sqlUsedQty);
@@ -170,91 +170,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	}
 
 	$qsave = false;
+	$blockedByLock = false;
+	$cancelSucceeded = false;
 	$ref_credit = $postedRefCredit;
 
 	if ($isEdit) {
 		// ================== โหมดแก้ไข: UPDATE เอกสารที่มีอยู่แล้ว ==================
 		$escRefCredit = credinotEsc($conn, $ref_credit);
 
-		$save = "UPDATE tb_credit_note SET
-			date_credit = '" . credinotEsc($conn, $date_credit) . "',
-			ref_id = '" . credinotEsc($conn, $ref_id) . "',
-			customer_name = '" . credinotEsc($conn, $customer_name) . "',
-			customer_tel = '" . credinotEsc($conn, $customer_tel) . "',
-			address_name = '" . credinotEsc($conn, $address_name) . "',
-			return_des = '" . credinotEsc($conn, $return_des) . "',
-			receive_name = '" . credinotEsc($conn, $receive_name) . "',
-			date_receive = '" . credinotEsc($conn, $date_receive) . "',
-			credit_no = '" . credinotEsc($conn, $credit_no) . "',
-			ttype_doc = '" . credinotEsc($conn, $ttype_doc) . "',
-			iv_no_ref = '" . credinotEsc($conn, $iv_no_ref) . "',
-			sale_code = '" . credinotEsc($conn, $sale_code) . "',
-			company_type = '" . credinotEsc($conn, $company_type) . "',
-			type_return = '" . credinotEsc($conn, $type_return) . "',
-			bank_name = '" . credinotEsc($conn, $bank_name) . "',
-			account_name = '" . credinotEsc($conn, $account_name) . "',
-			account_no = '" . credinotEsc($conn, $account_no) . "',
-			book_bank = '" . credinotEsc($conn, $book_bank) . "',
-			bill_id = '" . credinotEsc($conn, $bill_id) . "',
-			remark_et = '" . credinotEsc($conn, $remark_et) . "',
-			desnew_bill = '" . credinotEsc($conn, $desnew_bill) . "',
-			new_bill = '" . credinotEsc($conn, $new_bill) . "',
-			date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "'
-			WHERE ref_credit = '" . $escRefCredit . "'";
+		// Lock ถาวรเฉพาะ: (1) กำลัง Approve อยู่ หรือ (2) ถูกยกเลิกหลังจากเคย Approve ไปแล้ว (มีผลบัญชีไปแล้ว)
+		// ส่วน Rejected หรือ ยกเลิกก่อนเคย Approve ยังเปิดให้แก้ไขได้ เพื่อให้แก้แล้ว resubmit กลับเข้า flow อนุมัติใหม่ได้ (ดูด้านล่าง)
+		$curDocRow = mysqli_fetch_assoc(mysqli_query($conn, "SELECT status_doc, send_admin FROM tb_credit_note WHERE ref_credit = '" . $escRefCredit . "'"));
+		$curDocStatus = $curDocRow['status_doc'] ?? '';
+		$curDocWasEverApproved = (($curDocRow['send_admin'] ?? '0') === '1');
+		$isLockedDoc = ($curDocStatus === 'Approve') || ($curDocStatus === 'ยกเลิก' && $curDocWasEverApproved);
+		$needsStatusReset = ($curDocStatus === 'Rejected') || ($curDocStatus === 'ยกเลิก' && !$curDocWasEverApproved);
+		$blockedByLock = $isLockedDoc;
 
-		$qsave = mysqli_query($conn, $save);
+		if (!$isLockedDoc) {
+			$statusResetSql = $needsStatusReset
+				? ", status_doc = 'Request', send_sup = '1', send_dm = '0'"
+				: '';
 
-		if (is_array($id)) {
-			foreach ($id as $key => $value) {
-				$count_new = $count[$key] ?? 0;
-				$product_price1 = $unit_price[$key] ?? 0;
-				$unit_price_new = str_replace(',', '', $product_price1);
-				$product_id_new = $product_id[$key] ?? '';
-				$discount_unit1 = $discount_unit[$key] ?? 0;
-				$discount_unit_new = str_replace(',', '', $discount_unit1);
-				$sum_amount_new = ((float)$unit_price_new - (float)$discount_unit_new) * (float)$count_new;
-				$sum_discount = (float)$discount_unit_new * (float)$count_new;
+			$save = "UPDATE tb_credit_note SET
+				date_credit = '" . credinotEsc($conn, $date_credit) . "',
+				ref_id = '" . credinotEsc($conn, $ref_id) . "',
+				customer_name = '" . credinotEsc($conn, $customer_name) . "',
+				customer_tel = '" . credinotEsc($conn, $customer_tel) . "',
+				address_name = '" . credinotEsc($conn, $address_name) . "',
+				return_des = '" . credinotEsc($conn, $return_des) . "',
+				receive_name = '" . credinotEsc($conn, $receive_name) . "',
+				date_receive = '" . credinotEsc($conn, $date_receive) . "',
+				credit_no = '" . credinotEsc($conn, $credit_no) . "',
+				ttype_doc = '" . credinotEsc($conn, $ttype_doc) . "',
+				iv_no_ref = '" . credinotEsc($conn, $iv_no_ref) . "',
+				sale_code = '" . credinotEsc($conn, $sale_code) . "',
+				company_type = '" . credinotEsc($conn, $company_type) . "',
+				type_return = '" . credinotEsc($conn, $type_return) . "',
+				bank_name = '" . credinotEsc($conn, $bank_name) . "',
+				account_name = '" . credinotEsc($conn, $account_name) . "',
+				account_no = '" . credinotEsc($conn, $account_no) . "',
+				book_bank = '" . credinotEsc($conn, $book_bank) . "',
+				bill_id = '" . credinotEsc($conn, $bill_id) . "',
+				remark_et = '" . credinotEsc($conn, $remark_et) . "',
+				desnew_bill = '" . credinotEsc($conn, $desnew_bill) . "',
+				new_bill = '" . credinotEsc($conn, $new_bill) . "',
+				date_oldbill = '" . credinotEsc($conn, $date_oldbill) . "'" . $statusResetSql . "
+				WHERE ref_credit = '" . $escRefCredit . "'";
 
-				if ($product_id_new == "") {
-					continue;
-				}
+			$qsave = mysqli_query($conn, $save);
 
-				// แถวที่กดลบไว้ (รอลบจริงตอน submit) ไม่ต้อง update ให้เสียเที่ยว เดี๋ยวก็โดนลบด้านล่างอยู่ดี
-				if (isset($deleteSubcreditIdSet[(string)$value])) {
-					continue;
-				}
+			if (is_array($id)) {
+				foreach ($id as $key => $value) {
+					$count_new = $count[$key] ?? 0;
+					$product_price1 = $unit_price[$key] ?? 0;
+					$unit_price_new = str_replace(',', '', $product_price1);
+					$product_id_new = $product_id[$key] ?? '';
+					$discount_unit1 = $discount_unit[$key] ?? 0;
+					$discount_unit_new = str_replace(',', '', $discount_unit1);
+					$sum_amount_new = ((float)$unit_price_new - (float)$discount_unit_new) * (float)$count_new;
+					$sum_discount = (float)$discount_unit_new * (float)$count_new;
 
-				// แถวที่เพิ่มเองผ่าน modal "เพิ่มสินค้า" ใช้ key ขึ้นต้นด้วย new_ (ยังไม่มี id จริงใน tb_subcredit) -> INSERT
-				// แถวเดิมที่มาจาก tb_subcredit อยู่แล้ว key เป็น id จริง -> UPDATE
-				$isNewRow = (strpos((string)$key, 'new_') === 0);
+					if ($product_id_new == "") {
+						continue;
+					}
 
-				if ($isNewRow) {
-					$strSQL = "insert into tb_subcredit
+					// แถวที่กดลบไว้ (รอลบจริงตอน submit) ไม่ต้อง update ให้เสียเที่ยว เดี๋ยวก็โดนลบด้านล่างอยู่ดี
+					if (isset($deleteSubcreditIdSet[(string)$value])) {
+						continue;
+					}
+
+					// แถวที่เพิ่มเองผ่าน modal "เพิ่มสินค้า" ใช้ key ขึ้นต้นด้วย new_ (ยังไม่มี id จริงใน tb_subcredit) -> INSERT
+					// แถวเดิมที่มาจาก tb_subcredit อยู่แล้ว key เป็น id จริง -> UPDATE
+					$isNewRow = (strpos((string)$key, 'new_') === 0);
+
+					if ($isNewRow) {
+						$strSQL = "insert into tb_subcredit
 	(ref_creditt,count,unit_price,sum_amount,discount_unit,product_id,sum_discount)
 	values ('" . $escRefCredit . "','" . credinotEsc($conn, $count_new) . "','" . credinotEsc($conn, $unit_price_new) . "','" . credinotEsc($conn, $sum_amount_new) . "','" . credinotEsc($conn, $discount_unit_new) . "','" . credinotEsc($conn, $product_id_new) . "','" . credinotEsc($conn, $sum_discount) . "')";
-					mysqli_query($conn, $strSQL);
-				} else {
-					$escSubId = credinotEsc($conn, $value);
-					$strSQL = "UPDATE tb_subcredit SET
-						count = '" . credinotEsc($conn, $count_new) . "',
-						unit_price = '" . credinotEsc($conn, $unit_price_new) . "',
-						sum_amount = '" . credinotEsc($conn, $sum_amount_new) . "',
-						discount_unit = '" . credinotEsc($conn, $discount_unit_new) . "',
-						product_id = '" . credinotEsc($conn, $product_id_new) . "',
-						sum_discount = '" . credinotEsc($conn, $sum_discount) . "'
-						WHERE id = '" . $escSubId . "'";
-					mysqli_query($conn, $strSQL);
+						mysqli_query($conn, $strSQL);
+					} else {
+						$escSubId = credinotEsc($conn, $value);
+						$strSQL = "UPDATE tb_subcredit SET
+							count = '" . credinotEsc($conn, $count_new) . "',
+							unit_price = '" . credinotEsc($conn, $unit_price_new) . "',
+							sum_amount = '" . credinotEsc($conn, $sum_amount_new) . "',
+							discount_unit = '" . credinotEsc($conn, $discount_unit_new) . "',
+							product_id = '" . credinotEsc($conn, $product_id_new) . "',
+							sum_discount = '" . credinotEsc($conn, $sum_discount) . "'
+							WHERE id = '" . $escSubId . "'";
+						mysqli_query($conn, $strSQL);
+					}
 				}
 			}
-		}
 
-		// ลบรายการสินค้าที่ผู้ใช้กดลบไว้ระหว่างแก้ไข (deferred delete — ลบจริงตอนนี้เท่านั้น)
-		foreach ($deleteSubcreditIds as $delId) {
-			$delId = trim((string)$delId);
-			if ($delId === '' || !ctype_digit($delId)) {
-				continue;
+			// ลบรายการสินค้าที่ผู้ใช้กดลบไว้ระหว่างแก้ไข (deferred delete — ลบจริงตอนนี้เท่านั้น)
+			foreach ($deleteSubcreditIds as $delId) {
+				$delId = trim((string)$delId);
+				if ($delId === '' || !ctype_digit($delId)) {
+					continue;
+				}
+				mysqli_query($conn, "DELETE FROM tb_subcredit WHERE id = '" . credinotEsc($conn, $delId) . "'");
 			}
-			mysqli_query($conn, "DELETE FROM tb_subcredit WHERE id = '" . credinotEsc($conn, $delId) . "'");
 		}
 	} else {
 		// ================== โหมดสร้างใหม่ (จาก SO หรือไม่มีเอกสารอ้างอิง): INSERT ==================
@@ -325,7 +342,9 @@ values
 	// credit_rejected.php / credit_cmrejected.php / send_credit_approve.php / send_credit_admin.php
 	// เข้ามาไว้จุดเดียว) — ทำงานหลังบันทึกข้อมูลฟอร์มหลักสำเร็จแล้วเท่านั้น =====
 	$approveAction = $_POST['approve_action'] ?? '';
-	if ($approveAction !== '' && $qsave && $ref_credit !== '') {
+	// ยกเลิกเอกสารได้ตลอด แม้เอกสารจะถูก Lock (Approve/ยกเลิกไปแล้ว) เพราะไม่แตะรายการสินค้า/ข้อมูลหัวเอกสารเลย
+	$isCancelBypassLock = ($approveAction === 'cancel' && $isEdit && $blockedByLock);
+	if ($approveAction !== '' && $ref_credit !== '' && ($qsave || $isCancelBypassLock)) {
 		$escRefCredit = credinotEsc($conn, $ref_credit);
 		$approverCode = $_SESSION['code'] ?? '';
 		$today = date('Y-m-d');
@@ -365,10 +384,11 @@ values
 			}
 		} elseif ($approveAction === 'cancel') {
 			mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='ยกเลิก' WHERE ref_credit='" . $escRefCredit . "'");
+			$cancelSucceeded = true;
 		}
 	}
 
-	if ($qsave) {
+	if ($qsave || $cancelSucceeded) {
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		if ($opener === 'suphos') {
 			echo "<script language=\"JavaScript\">";
@@ -398,6 +418,19 @@ values
 			echo "});";
 			echo "</script>";
 		}
+	} elseif ($blockedByLock && !$cancelSucceeded) {
+		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
+		echo "<script language=\"JavaScript\">";
+		echo "Swal.fire({";
+		echo "  title: 'ไม่สามารถแก้ไขได้',";
+		echo "  text: 'เอกสารนี้ถูกอนุมัติหรือยกเลิกแล้ว ไม่สามารถแก้ไขหรือลบรายการสินค้าได้',";
+		echo "  icon: 'error',";
+		echo "  confirmButtonColor: '#dc3545',";
+		echo "  confirmButtonText: 'ตกลง'";
+		echo "}).then(function() {";
+		echo "  history.back();";
+		echo "});";
+		echo "</script>";
 	} else {
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		echo "<script language=\"JavaScript\">";
