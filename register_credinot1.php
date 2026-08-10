@@ -1,4 +1,20 @@
-<?php include("head.php"); ?>
+<?php
+$isDraft = (($_POST['is_draft'] ?? '') === '1');
+if ($isDraft) {
+	if (session_status() === PHP_SESSION_NONE) {
+		session_start();
+	}
+	if (($_SESSION['UserID'] ?? '') === '') {
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(401);
+		echo json_encode(['success' => false, 'message' => 'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่']);
+		exit();
+	}
+	header('Content-Type: application/json; charset=utf-8');
+} else {
+	include("head.php");
+}
+?>
 
 <?php
 include("dbconnect.php");
@@ -80,6 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	if (!empty($_FILES['book_bank']['name'])) {
 		$maxFileSize = 2 * 1024 * 1024; // 2 MB
 		if ($_FILES['book_bank']['size'] > $maxFileSize) {
+			if ($isDraft) {
+				echo json_encode([
+					'success' => false,
+					'message' => 'ขนาดไฟล์ Book Bank ต้องไม่เกิน 2 MB ครับ'
+				]);
+				exit();
+			}
 			echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 			echo "<script language=\"JavaScript\">";
 			echo "Swal.fire({";
@@ -153,6 +176,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	}
 
 	if (!empty($creditQtyErrors)) {
+		if ($isDraft) {
+			echo json_encode([
+				'success' => false,
+				'message' => 'จำนวนสินค้าเกินยอดคงเหลือที่ลดหนี้ได้: ' . implode('; ', $creditQtyErrors)
+			]);
+			exit();
+		}
 		$errMsgHtml = implode("<br>", array_map('htmlspecialchars', $creditQtyErrors));
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		echo "<script language=\"JavaScript\">";
@@ -341,6 +371,9 @@ values
 	// ===== แถบอนุมัติ (รวม flow เดิมของ credit_approve.php / credit_cmapprove.php /
 	// credit_rejected.php / credit_cmrejected.php / send_credit_approve.php / send_credit_admin.php
 	// เข้ามาไว้จุดเดียว) — ทำงานหลังบันทึกข้อมูลฟอร์มหลักสำเร็จแล้วเท่านั้น =====
+	// ปุ่ม Update (is_draft=1) ยิง FormData ตรงจาก form โดยไม่ผ่าน requestSubmit() จึงไม่มี
+	// approve_action ติดมาด้วยเลย (browser ใส่ name/value ของปุ่ม submit ที่ถูกกดจริงเท่านั้น) —
+	// บล็อกนี้จึงไม่ทำงานกับ flow ของปุ่ม Update โดยธรรมชาติ ไม่ต้องดัก is_draft เพิ่ม
 	$approveAction = $_POST['approve_action'] ?? '';
 	// ยกเลิกเอกสารได้ตลอด แม้เอกสารจะถูก Lock (Approve/ยกเลิกไปแล้ว) เพราะไม่แตะรายการสินค้า/ข้อมูลหัวเอกสารเลย
 	$isCancelBypassLock = ($approveAction === 'cancel' && $isEdit && $blockedByLock);
@@ -389,6 +422,10 @@ values
 	}
 
 	if ($qsave || $cancelSucceeded) {
+		if ($isDraft) {
+			echo json_encode(['success' => true, 'ref_credit' => $ref_credit]);
+			exit();
+		}
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		if ($opener === 'suphos') {
 			echo "<script language=\"JavaScript\">";
@@ -419,6 +456,13 @@ values
 			echo "</script>";
 		}
 	} elseif ($blockedByLock && !$cancelSucceeded) {
+		if ($isDraft) {
+			echo json_encode([
+				'success' => false,
+				'message' => 'เอกสารนี้ถูกอนุมัติหรือยกเลิกแล้ว ไม่สามารถแก้ไขหรือลบรายการสินค้าได้'
+			]);
+			exit();
+		}
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		echo "<script language=\"JavaScript\">";
 		echo "Swal.fire({";
@@ -432,6 +476,13 @@ values
 		echo "});";
 		echo "</script>";
 	} else {
+		if ($isDraft) {
+			echo json_encode([
+				'success' => false,
+				'message' => 'ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีรายการใบสั่งลดหนี้แล้วค่ะ'
+			]);
+			exit();
+		}
 		echo "<script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script>";
 		echo "<script language=\"JavaScript\">";
 		echo "Swal.fire({";

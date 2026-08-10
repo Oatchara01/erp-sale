@@ -65,6 +65,9 @@
     $creditCanShowApproveBar = ($mode === 'edit') && !$creditIsClosed;
     // ยกเลิกเอกสารได้ตลอด ไม่ว่าจะอยู่ระดับอนุมัติไหนหรือ Approve ไปแล้วก็ตาม ยกเว้นถูกยกเลิกไปแล้ว
     $creditCanCancel = ($mode === 'edit') && $creditStatusDoc !== 'ยกเลิก';
+    // ปุ่ม Update (AJAX บันทึกโดยไม่รีโหลดหน้า) โชว์เฉพาะตอนแก้ไขเอกสารเดิม และไม่ถูก lock เหมือนปุ่ม Submit
+    $creditIsEditMode = ($mode === 'edit');
+    $creditHideUpdate = !$creditIsEditMode || $creditItemsLocked;
 
     $customerNo = '';
     $customerTypeName = '';
@@ -859,7 +862,12 @@
                         <i class="far fa-paper-plane"></i> Submit
                     </button>
                 <?php } ?>
-                <button type="button" class="btn-so-draft" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.history.back(); }">
+                <?php if (!$creditHideUpdate): ?>
+                    <button type="button" name="save_draft" onclick="saveDraftCredit()" class="btn-so-update">
+                        <i class="far fa-save"></i> Update
+                    </button>
+                <?php endif; ?>
+                <button type="button" class="btn-so-cancel-nav" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.history.back(); }">
                     ยกเลิก
                 </button>
             </div>
@@ -2040,6 +2048,69 @@
             actionField.value = 'cancel';
             form.appendChild(actionField);
             HTMLFormElement.prototype.submit.call(form);
+        }
+
+        function saveDraftCredit() {
+            var form = document.forms['frmMain'];
+            if (!form) return;
+
+            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                return;
+            }
+
+            var btn = form.querySelector('[name="save_draft"]');
+            var defaultHtml = btn ? btn.innerHTML : '';
+            var formData = new FormData(form);
+            formData.set('is_draft', '1');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+            }
+
+            fetch('register_credinot_draft1.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(res) {
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (data && data.success) {
+                        return Swal.fire({
+                            title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+                            icon: 'success',
+                            confirmButtonColor: '#612989',
+                            confirmButtonText: 'ตกลง'
+                        }).then(function() {
+                            window.location.replace('register_credinot.php?ref_credit=' + encodeURIComponent(data.ref_credit));
+                        });
+                    }
+
+                    var message = data && data.message ? data.message : 'ไม่สามารถบันทึกข้อมูลได้';
+                    return Swal.fire({
+                        title: 'ไม่สามารถบันทึกข้อมูลได้',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545',
+                        confirmButtonText: 'ตกลง'
+                    });
+                })
+                .catch(function() {
+                    return Swal.fire({
+                        title: 'ไม่สามารถบันทึกข้อมูลได้',
+                        text: 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545',
+                        confirmButtonText: 'ตกลง'
+                    });
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = defaultHtml;
+                    }
+                });
         }
 
         function toggleProdSearchLoadMore(visible, loading) {
