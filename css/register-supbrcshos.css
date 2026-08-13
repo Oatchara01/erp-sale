@@ -19,6 +19,14 @@
 	font-weight: 500;
 }
 
+.br-returns-row-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 16px;
+	align-items: end;
+}
+
+
 /* Figma node 627:2680 (627:2759) shows an item-count badge to the right of
    the "รายการสินค้า" card title, e.g. "3 รายการ". Value is written by
    csRecalcSummary() in detail_brschos_so.php - purely a display readout of

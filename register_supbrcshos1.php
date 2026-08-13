@@ -16,7 +16,7 @@ $address = $_POST["address"];
 $sale_comment = $_POST["sale_comment"];
 $objective = $_POST["objective"];
 $objective_des = $_POST["objective_des"];
-$status_doc = "Request";
+$status_doc = (isset($_POST["is_draft"]) && (string)$_POST["is_draft"] === "1") ? "Draft" : "Request";
 $delivery_name = $_POST["address_name"];
 $delivery_type = $_POST["delivery_type"];
 $delivery_date = $_POST["start_date"];
@@ -556,10 +556,25 @@ $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 
 	
  if($qsave){
+   if (isset($_POST["is_draft"]) && (string)$_POST["is_draft"] === "1") {
+      echo json_encode(array(
+         'success' => true,
+         'ref_id' => $nextId,
+         'message' => 'บันทึกร่างเรียบร้อยแล้ว'
+      ));
+      exit();
+   }
    echo "<script language=\"JavaScript\">";
 echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrcshos_edit.php?ref_id=$ref_id';";
 echo "</script>";
   } else {
+   if (isset($_POST["is_draft"]) && (string)$_POST["is_draft"] === "1") {
+      echo json_encode(array(
+         'success' => false,
+         'message' => 'ไม่สามารถบันทึกข้อมูลได้'
+      ));
+      exit();
+   }
    echo "Cannot";
   }
 	}

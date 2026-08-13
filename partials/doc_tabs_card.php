@@ -9,6 +9,7 @@
  * $docTabsCard = [
  *     'open_fn' => 'open3Tab',   // JS tab-switch function already defined by the caller page
  *     'doc_extra' => [
+ *         'enabled' => true,
  *         'pills' => [           // rendered inside a 4-column grid, 'span' out of 4
  *             ['name' => 'ref_3', 'label' => 'ใบ อย.', 'checked' => false, 'span' => 1],
  *         ],
@@ -41,26 +42,46 @@
 
 $docOpenFn = $docTabsCard['open_fn'] ?? 'open3Tab';
 
-$docExtra = $docTabsCard['doc_extra'] ?? [];
+$docExtra = $docTabsCard['doc_extra'] ?? null;
 $docExtraPills = $docExtra['pills'] ?? [];
 $docExtraOtherField = $docExtra['other_field'] ?? null;
 $docExtraTextPairs = $docExtra['text_pairs'] ?? [];
 $docExtraHiddenCompat = $docExtra['hidden_compat'] ?? [];
 
-$deptComment = $docTabsCard['dept_comment'] ?? ['enabled' => false];
-$attachFile = $docTabsCard['attach_file'] ?? ['enabled' => false];
-$relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
+$deptComment = $docTabsCard['dept_comment'] ?? null;
+$attachFile = $docTabsCard['attach_file'] ?? null;
+$relatedDocs = $docTabsCard['related_docs'] ?? null;
+
+$showDocExtra = $docExtra !== null && ($docExtra['enabled'] ?? true);
+$showDeptComment = $deptComment !== null && ($deptComment['enabled'] ?? true || isset($deptComment['placeholder']));
+$showAttachFile = $attachFile !== null && ($attachFile['enabled'] ?? true || isset($attachFile['placeholder']));
+$showRelatedDocs = $relatedDocs !== null && ($relatedDocs['enabled'] ?? true || isset($relatedDocs['placeholder']));
+
+$activeTabId = null;
+if ($showDocExtra && $activeTabId === null) $activeTabId = 'tab_doc_extra';
+if ($showDeptComment && $activeTabId === null) $activeTabId = 'tab_dept_comment';
+if ($showAttachFile && $activeTabId === null) $activeTabId = 'tab_attach_file';
+if ($showRelatedDocs && $activeTabId === null) $activeTabId = 'tab_related_docs';
 ?>
 <div class="so-tabs-container" style="margin-top: 24px;">
-	<button type="button" class="so-tab-btn active" onclick="<?php echo $docOpenFn; ?>('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
-	<button type="button" class="so-tab-btn" onclick="<?php echo $docOpenFn; ?>('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
-	<button type="button" class="so-tab-btn" onclick="<?php echo $docOpenFn; ?>('tab_attach_file', this)">แนบไฟล์</button>
-	<button type="button" class="so-tab-btn" onclick="<?php echo $docOpenFn; ?>('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
+	<?php if ($showDocExtra) { ?>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_doc_extra') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
+	<?php } ?>
+	<?php if ($showDeptComment) { ?>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_dept_comment') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
+	<?php } ?>
+	<?php if ($showAttachFile) { ?>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_attach_file') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_attach_file', this)">แนบไฟล์</button>
+	<?php } ?>
+	<?php if ($showRelatedDocs) { ?>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_related_docs') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
+	<?php } ?>
 </div>
 <div class="so-card" style="padding: 24px;">
 
+	<?php if ($showDocExtra) { ?>
 	<!-- TAB 1: เอกสารเพิ่มเติม -->
-	<div id="tab_doc_extra" class="so-3tab-content">
+	<div id="tab_doc_extra" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_doc_extra') ? 'block' : 'none'; ?>;">
 		<div class="so-section-title-container">
 			<h3 class="so-section-title">เอกสารเพิ่มเติม</h3>
 			<hr class="so-divider">
@@ -120,9 +141,11 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 			</div>
 		<?php } ?>
 	</div>
+	<?php } ?>
 
+	<?php if ($showDeptComment) { ?>
 	<!-- TAB 2: ข้อความแจ้งแผนก -->
-	<div id="tab_dept_comment" class="so-3tab-content" style="display:none;">
+	<div id="tab_dept_comment" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_dept_comment') ? 'block' : 'none'; ?>;">
 		<?php if (!empty($deptComment['enabled'])) {
 			$dcTechChecked = !empty($deptComment['technician_required_checked']);
 		?>
@@ -157,9 +180,11 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 			<p style="color: var(--so-muted); font-size: 14px;"><?php echo so_saved_h($deptComment['placeholder'] ?? 'ยังไม่มีข้อความแจ้งแผนก'); ?></p>
 		<?php } ?>
 	</div>
+	<?php } ?>
 
+	<?php if ($showAttachFile) { ?>
 	<!-- TAB 3: แนบไฟล์ -->
-	<div id="tab_attach_file" class="so-3tab-content" style="display:none;">
+	<div id="tab_attach_file" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_attach_file') ? 'block' : 'none'; ?>;">
 		<?php if (!empty($attachFile['enabled'])) { ?>
 			<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">แนบไฟล์เพิ่มเติม</h3>
 			<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
@@ -192,9 +217,11 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 			</div>
 		<?php } ?>
 	</div>
+	<?php } ?>
 
+	<?php if ($showRelatedDocs) { ?>
 	<!-- TAB 4: เอกสารที่เกี่ยวข้อง -->
-	<div id="tab_related_docs" class="so-3tab-content" style="display:none;">
+	<div id="tab_related_docs" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_related_docs') ? 'block' : 'none'; ?>;">
 		<?php if (!empty($relatedDocs['enabled'])) { ?>
 			<div class="so-related-doc-table">
 				<div class="so-related-doc-header">
@@ -214,6 +241,7 @@ $relatedDocs = $docTabsCard['related_docs'] ?? ['enabled' => false];
 			<p style="color: var(--so-muted); font-size: 14px;"><?php echo so_saved_h($relatedDocs['placeholder'] ?? 'ยังไม่มีเอกสารที่เกี่ยวข้อง'); ?></p>
 		<?php } ?>
 	</div>
+	<?php } ?>
 </div>
 <?php
-unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked);
+unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked);
