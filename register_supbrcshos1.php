@@ -164,6 +164,7 @@ $discount_unit1 = $_POST["discount_unit1"];
 $warranty1  = $_POST["warranty1"];
 $cal1 = $_POST["cal1"];
 $pm1 = $_POST["pm1"];
+$sn1 = isset($_POST["sn1"]) ? $_POST["sn1"] : '';
 
 
 $product_name2 = $_POST["product_name2"];
@@ -178,6 +179,7 @@ $discount_unit2 = $_POST["discount_unit2"];
 $warranty2  = $_POST["warranty2"];
 $cal2 = $_POST["cal2"];
 $pm2 = $_POST["pm2"];
+$sn2 = isset($_POST["sn2"]) ? $_POST["sn2"] : '';
 
 
 $product_name3 = $_POST["product_name3"];
@@ -192,6 +194,7 @@ $discount_unit3 = $_POST["discount_unit3"];
 $warranty3  = $_POST["warranty3"];
 $cal3 = $_POST["cal3"];
 $pm3 = $_POST["pm3"];
+$sn3 = isset($_POST["sn3"]) ? $_POST["sn3"] : '';
 
 
 $product_name4 = $_POST["product_name4"];
@@ -206,6 +209,7 @@ $discount_unit4 = $_POST["discount_unit4"];
 $warranty4  = $_POST["warranty4"];
 $cal4 = $_POST["cal4"];
 $pm4 = $_POST["pm4"];
+$sn4 = isset($_POST["sn4"]) ? $_POST["sn4"] : '';
 
 
 $product_name5 = $_POST["product_name5"];
@@ -220,6 +224,7 @@ $discount_unit5 = $_POST["discount_unit5"];
 $warranty5  = $_POST["warranty5"];
 $cal5 = $_POST["cal5"];
 $pm5 = $_POST["pm5"];
+$sn5 = isset($_POST["sn5"]) ? $_POST["sn5"] : '';
 
 
 
@@ -235,6 +240,7 @@ $discount_unit6 = $_POST["discount_unit6"];
 $warranty6  = $_POST["warranty6"];
 $cal6 = $_POST["cal6"];
 $pm6 = $_POST["pm6"];
+$sn6 = isset($_POST["sn6"]) ? $_POST["sn6"] : '';
 
 
 $product_name7 = $_POST["product_name7"];
@@ -249,6 +255,7 @@ $discount_unit7 = $_POST["discount_unit7"];
 $warranty7  = $_POST["warranty7"];
 $cal7 = $_POST["cal7"];
 $pm7 = $_POST["pm7"];
+$sn7 = isset($_POST["sn7"]) ? $_POST["sn7"] : '';
 
 
 $product_id8 = $_POST["product_id8"];
@@ -261,6 +268,7 @@ $discount_unit8 = $_POST["discount_unit8"];
 $warranty8  = $_POST["warranty8"];
 $cal8 = $_POST["cal8"];
 $pm8 = $_POST["pm8"];
+$sn8 = isset($_POST["sn8"]) ? $_POST["sn8"] : '';
 
 
 $product_id9 = $_POST["product_id9"];
@@ -273,6 +281,7 @@ $discount_unit9 = $_POST["discount_unit9"];
 $warranty9  = $_POST["warranty9"];
 $cal9 = $_POST["cal9"];
 $pm9 = $_POST["pm9"];
+$sn9 = isset($_POST["sn9"]) ? $_POST["sn9"] : '';
 
 
 $product_id10 = $_POST["product_id10"];
@@ -285,6 +294,7 @@ $discount_unit10 = $_POST["discount_unit10"];
 $warranty10  = $_POST["warranty10"];
 $cal10 = $_POST["cal10"];
 $pm10 = $_POST["pm10"];
+$sn10 = isset($_POST["sn10"]) ? $_POST["sn10"] : '';
 
 
 
@@ -292,8 +302,8 @@ $pm10 = $_POST["pm10"];
 if($product_id1!=''){
 
 $strSQL1 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id1."','".$product_id1."','".$sale_count1."','".$product_price1."','".$discount_unit1."','".$sum_amount1."','".$warranty1."','".$cal1."','".$pm1."','".$sale_remarkk1."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id1."','".$product_id1."','".$sale_count1."','".$product_price1."','".$discount_unit1."','".$sum_amount1."','".$warranty1."','".$cal1."','".$pm1."','".$sn1."','".$sale_remarkk1."','".$add_by."','".$add_date."')";
 
 $objQuery1 = mysqli_query($conn,$strSQL1);
 
@@ -304,8 +314,8 @@ $objQuery1 = mysqli_query($conn,$strSQL1);
 if($product_id2!=''){
 
 $strSQL2 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id2."','".$product_id2."','".$sale_count2."','".$product_price2."','".$discount_unit2."','".$sum_amount2."','".$warranty2."','".$cal2."','".$pm2."','".$sale_remarkk2."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id2."','".$product_id2."','".$sale_count2."','".$product_price2."','".$discount_unit2."','".$sum_amount2."','".$warranty2."','".$cal2."','".$pm2."','".$sn2."','".$sale_remarkk2."','".$add_by."','".$add_date."')";
 
 $objQuery2 = mysqli_query($conn,$strSQL2);
 
@@ -315,8 +325,8 @@ $objQuery2 = mysqli_query($conn,$strSQL2);
 if($product_id3!=''){
 
 $strSQL3 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id3."','".$product_id3."','".$sale_count3."','".$product_price3."','".$discount_unit3."','".$sum_amount3."','".$warranty3."','".$cal3."','".$pm3."','".$sale_remarkk3."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id3."','".$product_id3."','".$sale_count3."','".$product_price3."','".$discount_unit3."','".$sum_amount3."','".$warranty3."','".$cal3."','".$pm3."','".$sn3."','".$sale_remarkk3."','".$add_by."','".$add_date."')";
 
 $objQuery3 = mysqli_query($conn,$strSQL3);
 
@@ -326,8 +336,8 @@ $objQuery3 = mysqli_query($conn,$strSQL3);
 if($product_id4!=''){
 
 $strSQL4 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id4."','".$product_id4."','".$sale_count4."','".$product_price4."','".$discount_unit4."','".$sum_amount4."','".$warranty4."','".$cal4."','".$pm4."','".$sale_remarkk4."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id4."','".$product_id4."','".$sale_count4."','".$product_price4."','".$discount_unit4."','".$sum_amount4."','".$warranty4."','".$cal4."','".$pm4."','".$sn4."','".$sale_remarkk4."','".$add_by."','".$add_date."')";
 
 $objQuery4 = mysqli_query($conn,$strSQL4);
 
@@ -337,8 +347,8 @@ $objQuery4 = mysqli_query($conn,$strSQL4);
 if($product_id5!=''){
 
 $strSQL5 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id5."','".$product_id5."','".$sale_count5."','".$product_price5."','".$discount_unit5."','".$sum_amount5."','".$warranty5."','".$cal5."','".$pm5."','".$sale_remarkk5."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id5."','".$product_id5."','".$sale_count5."','".$product_price5."','".$discount_unit5."','".$sum_amount5."','".$warranty5."','".$cal5."','".$pm5."','".$sn5."','".$sale_remarkk5."','".$add_by."','".$add_date."')";
 
 $objQuery5 = mysqli_query($conn,$strSQL5);
 
@@ -348,8 +358,8 @@ $objQuery5 = mysqli_query($conn,$strSQL5);
 if($product_id6!=''){
 
 $strSQL6 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id6."','".$product_id6."','".$sale_count6."','".$product_price6."','".$discount_unit6."','".$sum_amount6."','".$warranty6."','".$cal6."','".$pm6."','".$sale_remarkk6."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id6."','".$product_id6."','".$sale_count6."','".$product_price6."','".$discount_unit6."','".$sum_amount6."','".$warranty6."','".$cal6."','".$pm6."','".$sn6."','".$sale_remarkk6."','".$add_by."','".$add_date."')";
 
 $objQuery6 = mysqli_query($conn,$strSQL6);
 
@@ -359,8 +369,8 @@ $objQuery6 = mysqli_query($conn,$strSQL6);
 if($product_id7!=''){
 
 $strSQL7 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id7."','".$product_id7."','".$sale_count7."','".$product_price7."','".$discount_unit7."','".$sum_amount7."','".$warranty7."','".$cal7."','".$pm7."','".$sale_remarkk7."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id7."','".$product_id7."','".$sale_count7."','".$product_price7."','".$discount_unit7."','".$sum_amount7."','".$warranty7."','".$cal7."','".$pm7."','".$sn7."','".$sale_remarkk7."','".$add_by."','".$add_date."')";
 
 $objQuery7 = mysqli_query($conn,$strSQL7);
 
@@ -370,8 +380,8 @@ $objQuery7 = mysqli_query($conn,$strSQL7);
 if($product_id8!=''){
 
 $strSQL8 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id8."','".$product_id8."','".$sale_count8."','".$product_price8."','".$discount_unit8."','".$sum_amount8."','".$warranty8."','".$cal8."','".$pm8."','".$sale_remarkk8."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id8."','".$product_id8."','".$sale_count8."','".$product_price8."','".$discount_unit8."','".$sum_amount8."','".$warranty8."','".$cal8."','".$pm8."','".$sn8."','".$sale_remarkk8."','".$add_by."','".$add_date."')";
 
 $objQuery8 = mysqli_query($conn,$strSQL8);
 
@@ -381,8 +391,8 @@ $objQuery8 = mysqli_query($conn,$strSQL8);
 if($product_id9!=''){
 
 $strSQL9 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id9."','".$product_id9."','".$sale_count9."','".$product_price9."','".$discount_unit9."','".$sum_amount9."','".$warranty9."','".$cal9."','".$pm9."','".$sale_remarkk9."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id9."','".$product_id9."','".$sale_count9."','".$product_price9."','".$discount_unit9."','".$sum_amount9."','".$warranty9."','".$cal9."','".$pm9."','".$sn9."','".$sale_remarkk9."','".$add_by."','".$add_date."')";
 
 $objQuery9 = mysqli_query($conn,$strSQL9);
 
@@ -392,8 +402,8 @@ $objQuery9 = mysqli_query($conn,$strSQL9);
 if($product_id10!=''){
 
 $strSQL10 = "insert into hos__subconsig
-(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sale_remark,add_by,add_date)
-values ('".$ref_id."','".$product_id10."','".$product_id10."','".$sale_count10."','".$product_price10."','".$discount_unit10."','".$sum_amount10."','".$warranty10."','".$cal10."','".$pm10."','".$sale_remarkk10."','".$add_by."','".$add_date."')";
+(ref_idd,product_id,product_code,count,price,discount,amount,warranty,cal,pm,sn,sale_remark,add_by,add_date)
+values ('".$ref_id."','".$product_id10."','".$product_id10."','".$sale_count10."','".$product_price10."','".$discount_unit10."','".$sum_amount10."','".$warranty10."','".$cal10."','".$pm10."','".$sn10."','".$sale_remarkk10."','".$add_by."','".$add_date."')";
 
 $objQuery10 = mysqli_query($conn,$strSQL10);
 

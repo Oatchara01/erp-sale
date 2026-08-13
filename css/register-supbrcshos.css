@@ -1,0 +1,854 @@
+/* register-supbrcshos.css
+ * Page-specific styles for register_supbrcshos.php (ใบยืมฝากขาย / Borrow Consignment).
+ * Shared .so-* primitives (cards, inputs, labels, buttons, sticky footer, tabs,
+ * toggle pills, payment radios, input-with-checkbox) live in css/so-core.css and
+ * css/register-suphos.css - link both before this file.
+ *
+ * The product-table classes below (.so-product-table*, .so-product-summary-*,
+ * .so-product-remove-btn, .so-product-more-toggle) intentionally mirror
+ * css/register-supbrhos.css's generic (non drag/checkbox) variant, but are
+ * redeclared here rather than shared so this page never depends on a
+ * BR-Order-specific stylesheet.
+ */
+
+/* Figma node 627:2679 specs this page's header title at 24px/Medium;
+   the shared .so-title in so-core.css is 28px/600 (tuned for other pages
+   that reuse it) - override here only, don't touch the shared file. */
+.register-so-main .so-title {
+	font-size: 24px;
+	font-weight: 500;
+}
+
+/* Figma node 627:2680 (627:2759) shows an item-count badge to the right of
+   the "รายการสินค้า" card title, e.g. "3 รายการ". Value is written by
+   csRecalcSummary() in detail_brschos_so.php - purely a display readout of
+   the existing product rows, not a submitted field. */
+.so-section-title-container {
+	position: relative;
+}
+/* Pill badge ตาม .credinot-count-badge ใน register-credinot.css (ค่าเดียวกัน
+   แต่ประกาศซ้ำที่นี่ตาม convention page-isolation ของไฟล์นี้) */
+.so-product-item-count {
+	position: absolute;
+	right: 0;
+	top: 0;
+	/* line-height 20px + padding 2px = กล่องสูง 24px เท่ากับ line box ของ
+	   .so-section-title (20px * 1.2) พอดี badge จึงอยู่กึ่งกลางแนวเดียวกับหัวข้อ */
+	padding: 2px 12px;
+	line-height: 20px;
+	border-radius: 6px;
+	background-color: #F3EDF8;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--so-primary);
+	white-space: nowrap;
+	font-family: 'Prompt', sans-serif;
+}
+
+@media (max-width: 480px) {
+	.so-product-item-count {
+		position: static;
+		/* inline-block ไม่ใช่ block — ไม่งั้น pill จะยืดเต็มความกว้างการ์ด */
+		display: inline-block;
+		margin-top: 4px;
+	}
+}
+
+/* ===== แท็บ "ข้อมูลเอกสาร": บริษัท + งานด่วน บนบรรทัดเดียวกัน (Figma node 627:2681) ===== */
+.so-doc-info-line {
+	display: flex;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	gap: 24px;
+}
+
+.so-doc-info-line .so-field-group {
+	flex: 1;
+	max-width: 328px;
+}
+
+.so-doc-info-line-toggle {
+	margin-bottom: 0;
+}
+
+@media (max-width: 576px) {
+	.so-doc-info-line {
+		align-items: stretch;
+	}
+
+	.so-doc-info-line .so-field-group {
+		max-width: none !important;
+		width: 100%;
+	}
+}
+
+/* ===== แท็บ "Admin": บังคับ 2 แถวตาม admin_brcs.png (แถว 1 = 4 ช่อง, แถว 2 = ปุ่ม+เหตุผล span 3)
+   admin_info_tab.php's .admin-ui-grid ปกติเป็น 3 คอลัมน์ ทำให้แถว 1 (4 ช่อง) ตกไปอีกบรรทัด
+   สโคปด้วย #tab-admin-info เพื่อไม่กระทบ register_suphos.php/register_supbrhos.php ที่ใช้ partial เดียวกัน ===== */
+#tab-admin-info .admin-ui-grid {
+	grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 992px) {
+	#tab-admin-info .admin-ui-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	#tab-admin-info .admin-ui-field.span-2,
+	#tab-admin-info .admin-ui-field.span-3 {
+		grid-column: span 2;
+	}
+}
+
+@media (max-width: 768px) {
+	#tab-admin-info .admin-ui-grid {
+		grid-template-columns: 1fr;
+	}
+
+	#tab-admin-info .admin-ui-field.span-2,
+	#tab-admin-info .admin-ui-field.span-3 {
+		grid-column: span 1;
+	}
+}
+
+/* ===== Static (non-interactive) single-value field, e.g. "บริษัท: AWL" ===== */
+.so-static-box {
+	width: 100%;
+	height: 42px;
+	border-radius: 10px;
+	background: var(--so-input-bg);
+	display: flex;
+	align-items: center;
+	padding: 0 16px;
+	font-size: 14px;
+	color: var(--so-text);
+	box-sizing: border-box;
+	position: relative;
+}
+
+.so-static-box input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* ===== File attachments (slip1..slip5) ===== */
+.so-file-picker-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 16px;
+}
+
+.so-file-picker {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	width: 100%;
+	height: 42px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: var(--so-input-bg);
+	font-size: 13px;
+	cursor: pointer;
+	box-sizing: border-box;
+}
+
+.so-file-picker-input {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.so-file-picker-text {
+	color: var(--so-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.so-file-picker-text.has-file {
+	color: var(--so-text);
+}
+
+.so-file-picker-icon {
+	flex-shrink: 0;
+	color: var(--so-primary);
+	font-size: 14px;
+}
+
+@media (max-width: 992px) {
+	.so-file-picker-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 576px) {
+	.so-file-picker-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ===== Toggle-checkbox row (งานด่วน / สถานะการทำงานเพิ่มเติม) ===== */
+.so-toggle-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 18px;
+}
+
+/* ===== Payment method pairs (เก็บเงินสด / รับเช็ค / รูดการ์ด / วางบิล / โอนเงิน) ===== */
+.so-payment-pair-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px 24px;
+}
+
+@media (max-width: 768px) {
+	.so-payment-pair-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ===== Product table =====
+   Layout tokens (ความกว้าง/ระยะขอบ/สีเส้น/ขนาดตัวอักษร) ยกมาจาก .credinot-table
+   ใน register-credinot.css เพื่อให้สองหน้าเป็น visual language เดียวกัน */
+.so-product-table-wrap {
+	width: 100%;
+	overflow-x: auto;
+	margin-bottom: 16px;
+}
+
+/* ===== แถวเดียวกัน: ช่องค้นหาสินค้า (ซ้าย, ยืดเต็มพื้นที่) + ปุ่มลบรายการที่เลือก (ขวาสุด) =====
+   ปุ่มลบซ่อนอยู่เป็นค่าเริ่มต้น (.cs-delete-selected-btn { display:none }) โผล่มาเมื่อมีติ๊กเลือก
+   แถว - ใช้ align-items: flex-end เพราะช่องค้นหามี label ด้านบนทำให้สูงกว่าปุ่ม จึงชิดขอบล่างเดียวกัน */
+.cs-product-toolbar-row {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.cs-product-toolbar-row .cs-product-search-wrap {
+	flex: 1;
+	min-width: 240px;
+	margin-bottom: 0;
+}
+
+/* ===== Product-table toolbar row (bulk delete) ===== */
+.cs-product-header-row {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 16px;
+}
+
+.cs-delete-selected-btn {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 16px;
+	border-radius: 8px;
+	border: 1px solid #F5D6D9;
+	background-color: #FBEAEC;
+	color: #DC3545;
+	cursor: pointer;
+	font-family: 'Prompt', sans-serif;
+	font-size: 13px;
+	font-weight: 500;
+	transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.cs-delete-selected-btn:hover {
+	background-color: #DC3545;
+	color: #fff;
+	border-color: #DC3545;
+}
+
+/* ===== Code cell: drag-handle + row-select checkbox, grouped in one merged
+   cell before the code display text - adapted from register_credinot.php's
+   .credinot-code-cell-inner/.credinot-row-controls-inner layout (duplicated
+   with a cs- prefix, not linked, per this file's own page-isolation
+   convention). Only 2 icons here (drag + checkbox), matching product_brcs.png
+   exactly - the "เพิ่มเติม" toggle lives on the action-column pencil instead. ===== */
+.cs-code-col {
+	white-space: nowrap;
+}
+
+.cs-code-cell-inner {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.cs-row-controls-inner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.cs-drag-handle {
+	cursor: grab;
+	color: var(--so-muted);
+}
+
+/* Circular checkbox: checkmark is drawn on a sibling <span> since inputs are
+   replaced elements and several browsers won't render ::before/::after on
+   them directly. Input stays focusable/clickable, just visually hidden. */
+.so-row-checkbox-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	cursor: pointer;
+}
+
+.so-row-checkbox {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+	/* opacity:0 hides the real input visually but not its native focus ring -
+	   without this, keyboard focus shows the browser's own outline stacked on
+	   top of the intentional one drawn on .so-row-checkbox-dot below. */
+	outline: none;
+}
+
+.so-row-checkbox-dot {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background-color: var(--so-input-bg);
+	border: 1px solid var(--so-border);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.so-row-checkbox-dot::after {
+	content: "\f00c";
+	font-family: "Font Awesome 5 Free";
+	font-weight: 900;
+	color: #fff;
+	font-size: 10px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.so-row-checkbox:checked + .so-row-checkbox-dot {
+	background-color: var(--so-primary);
+	border-color: var(--so-primary);
+}
+
+.so-row-checkbox:checked + .so-row-checkbox-dot::after {
+	opacity: 1;
+}
+
+.so-row-checkbox:focus-visible + .so-row-checkbox-dot {
+	outline: 2px solid var(--so-primary);
+	outline-offset: 2px;
+}
+
+/* ต้องระบุ .so-product-table tbody เพื่อชนะ .so-product-table tbody tr:hover
+   ไม่งั้นแถวที่ติ๊กเลือกไว้จะเสียไฮไลต์สีม่วงทันทีที่เมาส์ชี้ */
+.so-product-table tbody tr.so-product-row.checked-row {
+	background-color: #f1e1ff;
+}
+
+.so-product-row.dragging {
+	opacity: 0.4;
+}
+
+.so-product-row.drag-over {
+	border-top: 2px solid var(--so-primary);
+}
+
+/* Purple highlight while a row's "เพิ่มเติม" panel is expanded - matches
+   register_credinot.php's tr.credinot-row.is-open / tr.credinot-detail-row.is-open. */
+.so-product-table tbody tr.so-product-row.is-open {
+	background-color: #f1e1ff;
+}
+
+.so-product-table tbody tr.cs-extra-row {
+	display: none;
+}
+
+.so-product-table tbody tr.cs-extra-row.is-open {
+	display: table-row;
+	background-color: #f1e1ff;
+}
+
+.so-product-table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+	font-size: 14px;
+	font-family: 'Prompt', sans-serif;
+	color: var(--so-text);
+}
+
+/* ความกว้างคอลัมน์ประกาศที่ทั้ง th และ td เพราะตาราง "เพิ่มเติม" (แถว 6-10)
+   เป็นอีก <table> ที่ไม่มี <thead> — ต้องพึ่ง td เพื่อให้คอลัมน์ตรงกับตารางบน */
+.so-product-table th:nth-child(1),
+.so-product-table td:nth-child(1) { width: 66px; text-align: center; padding-left: 4px; padding-right: 4px; }
+.so-product-table th:nth-child(2),
+.so-product-table td:nth-child(2) { width: 14%; }
+.so-product-table th:nth-child(3),
+.so-product-table td:nth-child(3) { width: 25%; }
+.so-product-table th:nth-child(4),
+.so-product-table td:nth-child(4) { width: 8%; text-align: center; }
+.so-product-table th:nth-child(5),
+.so-product-table td:nth-child(5) { width: 12%; text-align: right; }
+.so-product-table th:nth-child(6),
+.so-product-table td:nth-child(6) { width: 11%; text-align: right; }
+.so-product-table th:nth-child(7),
+.so-product-table td:nth-child(7) { width: 14%; }
+.so-product-table th:nth-child(8),
+.so-product-table td:nth-child(8) { width: 100px; text-align: center; padding-left: 4px; padding-right: 4px; }
+
+.so-product-table th,
+.so-product-table td {
+	padding: 12px 10px;
+	font-size: 14px;
+	border-bottom: 1px solid #EBEBEB;
+	vertical-align: middle;
+	box-sizing: border-box;
+}
+
+.so-product-table th {
+	background-color: #ffffff;
+	padding: 14px 10px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--so-primary);
+	text-align: left;
+	white-space: nowrap;
+}
+
+.so-product-table tbody tr:hover {
+	background-color: #FAF8FC;
+}
+
+.so-product-table .so-input,
+.so-product-table .so-textarea {
+	width: 100%;
+	box-sizing: border-box;
+	height: auto;
+	line-height: 1.4;
+	font-size: 14px;
+	color: #2D2533;
+}
+
+.so-product-table textarea.so-textarea {
+	min-height: 56px;
+	height: auto;
+	resize: vertical;
+	padding: 8px 12px;
+}
+
+.so-product-table input[readonly] {
+	background-color: transparent;
+	cursor: default;
+	border: none;
+	padding: 0 4px;
+}
+
+/* product_brcs.png reads as flat, borderless "spreadsheet cells" rather than
+   boxed form inputs - flatten every main-row field to match. */
+.so-product-row > td:not(.cs-code-col) .so-input,
+.so-product-row > td:not(.cs-code-col) .so-textarea {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	outline: none;
+	padding: 0;
+	height: auto;
+	min-height: 0;
+	color: var(--so-text);
+	font-size: 16px;
+	font-weight: 400;
+}
+
+.so-product-row > td:not(.cs-code-col) textarea.so-textarea {
+	min-height: 0;
+	resize: none;
+}
+
+/* รหัสสินค้า / รายการสินค้า render as plain read-only text (no input/search box) -
+   the resolved product code and name are only ever set by JS, never typed here. */
+.cs-code-text {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: #2D2533;
+	word-break: break-word;
+}
+
+.cs-product-name-text {
+	display: block;
+	font-size: 14px;
+	font-weight: 500;
+	color: #2D2533;
+	word-break: break-word;
+}
+
+/* Rounded gray "pill" background for the directly-editable จำนวน/ราคา/หน่วย
+   cells, matching product_brcs.png and register_credinot.php's .credinot-qty-pill. */
+.cs-cell-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-width: 0;
+	height: 38px;
+	padding: 0 12px;
+	border-radius: 10px;
+	background-color: #F4F3F7;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.cs-cell-pill .so-input {
+	background: transparent;
+	border: none;
+	padding: 0;
+	width: 100%;
+	min-width: 0;
+	font-weight: 500;
+	color: #2D2533;
+}
+
+/* :not(.cs-cell-pill *) กันไม่ให้ซ้อนกับ .cs-cell-pill:focus-within ด้านบน -
+   อินพุตที่ถูกห่อด้วยเม็ดยาแล้วมีกรอบโฟกัสจากตัวห่ออยู่แล้ว ไม่ต้องมีอีกชั้นที่ตัว input เอง */
+.so-product-row > td .so-input:focus-visible:not(.cs-cell-pill *) {
+	outline: 2px solid rgba(97, 41, 137, 0.45);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+.so-product-remove-cell {
+	text-align: center;
+	vertical-align: middle;
+}
+
+/* Row action cell: 2 icons matching product_brcs.png exactly (edit pencil +
+   delete trash), styled as bordered squares - adapted from
+   register_credinot.php's .credinot-edit-btn/.credinot-delete-btn (duplicated
+   with a cs-/so- prefix, not linked, per this file's page-isolation convention).
+   The pencil doubles as the "เพิ่มเติม" expand/collapse trigger for the
+   extra-fields sub-row, since cshos has no separate edit modal to open and
+   the reference's left icon cluster only shows drag+checkbox (no 3rd icon). */
+.cs-row-actions-cell {
+	text-align: center;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.cs-row-actions-cell .so-product-remove-btn {
+	margin-left: 6px;
+}
+
+.cs-row-edit-btn,
+.so-product-remove-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid #EAE3F7;
+	border-radius: 8px;
+	background: #FFFFFF;
+	color: var(--so-primary);
+	cursor: pointer;
+	padding: 0;
+	box-shadow: 0 2px 4px rgba(97, 41, 137, 0.04);
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.cs-row-edit-btn:hover,
+.so-product-remove-btn:hover {
+	background-color: #F6EFFD;
+	border-color: var(--so-primary);
+}
+
+.cs-row-edit-btn.is-open {
+	background-color: #F6EFFD;
+	border-color: var(--so-primary);
+}
+
+/* "เพิ่มเติม" expandable sub-row holding หน่วย/ส่วนลด/รับประกัน/Cal/PM/หมายเหตุ -
+   fields not shown in the Figma product-row layout but still real, submitted
+   data-entry fields, so they're collapsed (not deleted/hidden permanently). */
+.cs-extra-row td {
+	background-color: #FAFAFB;
+	border-top: none;
+	padding: 0;
+}
+
+.cs-extra-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+	gap: 12px;
+	padding: 14px 16px;
+}
+
+.cs-extra-grid .so-field-group {
+	margin-bottom: 0;
+}
+
+.so-product-more-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--so-primary);
+	cursor: pointer;
+}
+
+.so-product-more-toggle input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--so-primary);
+	cursor: pointer;
+	margin: 0;
+}
+
+/* กล่องสรุป 2 ช่อง — โครงเดียวกับ .credinot-stat-grid / .credinot-stat-box */
+.so-product-summary-bar {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	margin: 16px 0;
+	border-radius: 12px;
+	background-color: #F8F7FA;
+	overflow: hidden;
+}
+
+.so-product-summary-col {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 6px;
+	padding: 16px 18px;
+}
+
+.so-product-summary-col + .so-product-summary-col {
+	border-left: 1px solid #EBEBEB;
+}
+
+.so-product-summary-label {
+	font-size: 13px;
+	/* เข้มกว่า #7A7280 ของ reference เล็กน้อย เพื่อให้ผ่าน WCAG AA (5.3:1 บนพื้น #F8F7FA
+	   ส่วน #7A7280 ได้ 4.33:1 ไม่ถึงเกณฑ์ 4.5:1 ของตัวอักษรขนาดปกติ) */
+	color: #6B6472;
+}
+
+.so-product-summary-value {
+	font-size: 20px;
+	font-weight: 600;
+	color: #2D2533;
+}
+
+/* Only ยอดรวมสุทธิ is highlighted purple/larger in product_brcs.png -
+   จำนวนรวม(ชิ้น) stays plain dark text. Mirrors register_credinot.php's
+   .credinot-stat-box.is-highlight .credinot-stat-value pattern. */
+.so-product-summary-col.is-highlight .so-product-summary-value {
+	color: var(--so-primary);
+	font-size: 24px;
+}
+
+/* Pill search bar — ตรงกับ .pf-search-bar / .credinot-search-wrap ของ register_credinot.php */
+.cs-product-search-wrap {
+	max-width: 680px;
+	margin-bottom: 16px;
+}
+
+.cs-product-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 44px;
+	padding: 0 16px;
+	border: 1px solid #EBEBEB;
+	border-radius: 10px;
+	background: #F5F6F8;
+	box-sizing: border-box;
+}
+
+.cs-product-search-bar i {
+	color: #A098AE;
+	font-size: 16px;
+}
+
+.cs-product-search-bar input {
+	flex: 1;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	color: var(--so-text);
+}
+
+@media (max-width: 768px) {
+	/* จอแคบ: ปล่อยให้ตารางเลื่อนแนวนอนแทนการบีบคอลัมน์จนอ่านไม่ออก */
+	.so-product-table {
+		min-width: 860px;
+	}
+
+	.so-product-summary-col {
+		padding: 14px 12px;
+	}
+
+	.so-product-summary-value {
+		font-size: 18px;
+	}
+
+	.so-product-summary-col.is-highlight .so-product-summary-value {
+		font-size: 20px;
+	}
+}
+
+/* ===== Item Detail Modal Popup (Figma node 984:5469) ===== */
+.cs-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+}
+
+.cs-modal-card {
+	background: #FFFFFF;
+	border-radius: 16px;
+	width: 90%;
+	max-width: 860px;
+	padding: 24px 32px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+	position: relative;
+	font-family: 'Prompt', sans-serif;
+}
+
+.cs-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #EBEBEB;
+	margin-bottom: 20px;
+}
+
+.cs-modal-title {
+	font-size: 20px;
+	font-weight: 600;
+	color: #2D2533;
+	margin: 0;
+}
+
+.cs-modal-close-btn {
+	background: none;
+	border: none;
+	font-size: 24px;
+	color: #A098AE;
+	cursor: pointer;
+	padding: 0 4px;
+	line-height: 1;
+	transition: color 0.2s ease;
+}
+
+.cs-modal-close-btn:hover {
+	color: #E53E3E;
+}
+
+.cs-modal-grid-4 {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.cs-modal-grid-2 {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+	.cs-modal-grid-4 {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.cs-modal-grid-2 {
+		grid-template-columns: 1fr;
+	}
+}
+
+.cs-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 12px;
+	padding-top: 16px;
+	border-top: 1px solid #EBEBEB;
+}
+
+.cs-modal-btn-update {
+	background-color: #692994;
+	color: #ffffff;
+	border: none;
+	padding: 10px 36px;
+	border-radius: 20px;
+	font-family: 'Prompt', sans-serif;
+	font-weight: 500;
+	cursor: pointer;
+	font-size: 15px;
+	transition: background-color 0.2s ease;
+}
+
+.cs-modal-btn-update:hover {
+	background-color: #55207a;
+}
+
+.cs-modal-btn-cancel {
+	background-color: #edf2f7;
+	color: #4a5568;
+	border: 1px solid #cbd5e0;
+	padding: 10px 36px;
+	border-radius: 20px;
+	font-family: 'Prompt', sans-serif;
+	font-weight: 500;
+	cursor: pointer;
+	font-size: 15px;
+	transition: background-color 0.2s ease;
+}
+
+.cs-modal-btn-cancel:hover {
+	background-color: #e2e8f0;
+}
+
+
