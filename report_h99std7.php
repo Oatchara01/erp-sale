@@ -10,14 +10,15 @@ define('FPDF_FONTPATH','font/');
  
 require('fpdf.php');
 
-$ref_id=$_GET["ref_id"];
+$ref_id = isset($_GET["ref_id"]) ? trim((string)$_GET["ref_id"]) : "";
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM tb_delivery_print  WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+$ref_id_escaped = mysqli_real_escape_string($conn, $ref_id);
 
+$strSQL = "SELECT * FROM tb_delivery_print WHERE ref_id = '".$ref_id_escaped."' ";
+$objQuery = mysqli_query($conn, $strSQL);
+$objResult = ($objQuery && mysqli_num_rows($objQuery) > 0) ? mysqli_fetch_array($objQuery) : null;
 
 date_default_timezone_set("Asia/Bangkok");
 function DateThai($strDate)
@@ -30,10 +31,10 @@ function DateThai($strDate)
 		return "$strDay $strMonthThai $strYear";
 	}
 
-$ref_id=$objResult["ref_id"];
-$delivery_name =$objResult["customer_name7"];
-$tel =$objResult["customer_tel7"];
-$address1 =$objResult["address_name7"];
+$ref_id = (string)($objResult["ref_id"] ?? $ref_id);
+$delivery_name = (string)($objResult["customer_name7"] ?? '');
+$tel = (string)($objResult["customer_tel7"] ?? '');
+$address1 = (string)($objResult["address_name7"] ?? '');
 
 
 

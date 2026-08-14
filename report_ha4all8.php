@@ -10,39 +10,52 @@ define('FPDF_FONTPATH','font/');
  
 require('fpdf.php');
 
-$ref_id=$_GET["ref_id"];
+$ref_id = isset($_GET["ref_id"]) ? trim((string)$_GET["ref_id"]) : "";
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM tb_delivery_print  WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+$ref_id_escaped = mysqli_real_escape_string($conn, $ref_id);
 
-$ttt = substr($ref_id,0,2);
+$strSQL = "SELECT * FROM tb_delivery_print WHERE ref_id = '".$ref_id_escaped."' ";
+$objQuery = mysqli_query($conn, $strSQL);
+$objResult = ($objQuery && mysqli_num_rows($objQuery) > 0) ? mysqli_fetch_array($objQuery) : null;
 
-if($ttt=='BR'){
-	$strSQL1 = "SELECT company AS type_doc FROM hos__br  WHERE ref_id_br = '".$ref_id."' ";
-}else{
-	$strSQL1 = "SELECT type_doc FROM hos__so  WHERE ref_id = '".$ref_id."' ";
+$ttt = substr($ref_id, 0, 2);
+
+if ($ttt == 'BR') {
+	$strSQL1 = "SELECT company AS type_doc FROM hos__br WHERE ref_id_br = '".$ref_id_escaped."' ";
+} else if ($ttt == 'BS') {
+	$strSQL1 = "SELECT company AS type_doc FROM hos__consig WHERE ref_id = '".$ref_id_escaped."' ";
+} else {
+	$strSQL1 = "SELECT type_doc FROM hos__so WHERE ref_id = '".$ref_id_escaped."' ";
 }
-$objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error());
-$objResult1 = mysqli_fetch_array($objQuery1);
+$objQuery1 = mysqli_query($conn, $strSQL1);
+$objResult1 = ($objQuery1 && mysqli_num_rows($objQuery1) > 0) ? mysqli_fetch_array($objQuery1) : null;
 
-if($ttt=='BR'){
-	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id."' ";
-}else{
-	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
+if ($ttt == 'BR') {
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subbr WHERE ref_idd_br = '".$ref_id_escaped."' ";
+} else if ($ttt == 'BS') {
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subconsig WHERE ref_idd = '".$ref_id_escaped."' ";
+} else {
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subso WHERE ref_idd = '".$ref_id_escaped."' ";
 }
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
+$objQuery15 = mysqli_query($conn, $strSQL15);
+$objResult15 = ($objQuery15 && mysqli_num_rows($objQuery15) > 0) ? mysqli_fetch_array($objQuery15) : null;
 
-$summary_1=$objResult15['amount_1'];
-$summary= number_format( $summary_1,2)."";
-
-
+$summary_1 = (float)($objResult15['amount_1'] ?? 0);
+$summary = number_format($summary_1, 2) . "";
 
 date_default_timezone_set("Asia/Bangkok");
-function DateThai($strDate)
+if (!function_exists('pdf_text')) {
+	function pdf_text($text)
+	{
+		$converted = @iconv('UTF-8', 'cp874//IGNORE', (string)$text);
+		return ($converted === false) ? '' : $converted;
+	}
+}
+
+if (!function_exists('DateThai')) {
+	function DateThai($strDate)
 	{
 		$strYear = date("Y",strtotime($strDate))+543;
 		$strMonth= date("n",strtotime($strDate));
@@ -51,14 +64,13 @@ function DateThai($strDate)
 		$strMonthThai=$strMonthCut[$strMonth];
 		return "$strDay $strMonthThai $strYear";
 	}
+}
 
-
-
-$type_doc=$objResult1["type_doc"];
-$ref_id=$objResult["ref_id"];
-$delivery_name =$objResult["customer_name8"];
-$customer_tel =$objResult["customer_tel8"];
-$address1 =$objResult["address_name8"];
+$type_doc = (string)($objResult1["type_doc"] ?? '');
+$ref_id = (string)($objResult["ref_id"] ?? $ref_id);
+$delivery_name = (string)($objResult["customer_name8"] ?? '');
+$customer_tel = (string)($objResult["customer_tel8"] ?? '');
+$address1 = (string)($objResult["address_name8"] ?? '');
 
 
 

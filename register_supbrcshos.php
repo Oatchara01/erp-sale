@@ -1458,10 +1458,12 @@ if ($savedBr !== null) {
 					<div style="margin-top: 18px;">
 						<h4 style="margin: 0 0 12px; font-size: 15px; color: #3B3B3B;">ใบปะหน้ากล่องหลัก</h4>
 						<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-							<?php foreach ($coverSheetMainReports as $reportConfig) { ?>
-								<button type="button" onclick="openDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
-									<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
-								</button>
+							<?php if (!empty($coverSheetMainReports) && is_array($coverSheetMainReports)) { ?>
+								<?php foreach ($coverSheetMainReports as $reportConfig) { ?>
+									<button type="button" onclick="openDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
+										<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
+									</button>
+								<?php } ?>
 							<?php } ?>
 						</div>
 					</div>
@@ -1538,10 +1540,12 @@ if ($savedBr !== null) {
 							ใบปะจัดส่งบิลมีรายการเดียว โดยดึงข้อมูลจากเอกสารที่บันทึกแล้ว
 						</p>
 						<div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-							<?php foreach ($billDeliveryReports as $reportConfig) { ?>
-								<button type="button" onclick="openBillDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
-									<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
-								</button>
+							<?php if (!empty($billDeliveryReports) && is_array($billDeliveryReports)) { ?>
+								<?php foreach ($billDeliveryReports as $reportConfig) { ?>
+									<button type="button" onclick="openBillDeliveryPrintReport('<?php echo htmlspecialchars($reportConfig['file'], ENT_QUOTES, 'UTF-8'); ?>')" style="background-color: #FFFFFF; color: #612989; border: 1px solid #E5D8EF; border-radius: 10px; padding: 11px 14px; font-family: 'Prompt', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center;">
+										<?php echo htmlspecialchars($reportConfig['label'], ENT_QUOTES, 'UTF-8'); ?>
+									</button>
+								<?php } ?>
 							<?php } ?>
 						</div>
 					</div>
@@ -1571,7 +1575,7 @@ if ($savedBr !== null) {
 
 					function openDeliveryPrintReport(fileName) {
 						if (!deliveryPrintCanOpen || !deliveryPrintRefId) {
-							const message = 'กรุณาบันทึกใบยืมก่อนพิมพ์ใบปะหน้า เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
+							const message = 'กรุณาบันทึกใบยืมฝากขายก่อนพิมพ์ใบปะหน้า เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
 							if (typeof Swal !== 'undefined') {
 								Swal.fire({
 									icon: 'info',
@@ -1657,7 +1661,7 @@ if ($savedBr !== null) {
 
 					function openBillDeliveryPrintReport(fileName) {
 						if (!deliveryPrintCanOpen || !deliveryPrintRefId) {
-							const message = 'กรุณาบันทึกใบยืมก่อนพิมพ์ใบปะจัดส่งบิล เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
+							const message = 'กรุณาบันทึกใบยืมฝากขายก่อนพิมพ์ใบปะจัดส่งบิล เพื่อให้ระบบมี ref_id และข้อมูลล่าสุดสำหรับรายงาน';
 							if (typeof Swal !== 'undefined') {
 								Swal.fire({
 									icon: 'info',
@@ -1972,7 +1976,7 @@ if ($savedBr !== null) {
 		$savedCustomerDisplayName = $savedCustomer['bill_name'] ?? '';
 	}
 	$savedCustomerDisplayTel = ($savedCustomer['cus_tel'] ?? '') !== '' ? $savedCustomer['cus_tel'] : ($savedCustomer['bill_tel'] ?? '');
-	?>
+?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			setElementText('display_bill_id', <?php echo json_encode($savedCustomer['customer_id'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
