@@ -7,8 +7,10 @@ include('dbconnect_sale.php'); ?>
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
+<link rel="stylesheet" href="css/cshos-modal.css?v=<?php echo filemtime(__DIR__ . '/css/cshos-modal.css'); ?>">
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
+<script src="js/cshos-modal.js?v=<?php echo filemtime(__DIR__ . '/js/cshos-modal.js'); ?>"></script>
 
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>
@@ -949,7 +951,7 @@ if ($savedBr !== null) {
 								<div class="cidc-row">
 									<div class="cidc-label">เครดิตเทอม</div>
 									<div class="cidc-value">
-										<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled onclick="if (typeof window.openCreditTermPopup === 'function') window.openCreditTermPopup();">
+										<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="cshosPopupModal" aria-disabled="true" disabled onclick="if (typeof window.openCshosPopup === 'function') window.openCshosPopup();">
 											<span id="display_credit_thb" class="credit-term-trigger-text"></span>
 										</button>
 									</div>
@@ -2049,58 +2051,77 @@ if ($savedBr !== null) {
 	</div>
 </div>
 
-<!-- Credit Term Modal -->
-<div id="creditTermPopupModal" class="customer-popup-modal" aria-hidden="true" style="display: none;">
-	<div class="customer-popup-box credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
-		<button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
+<!-- Consignment Borrow (CSHOS) & Debt Modal (2 Tabs) -->
+<div id="cshosPopupModal" class="customer-popup-modal" aria-hidden="true" style="display: none;">
+	<div class="customer-popup-box cshos-popup-box" role="dialog" aria-modal="true" aria-labelledby="cshosPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeCshosPopup()" aria-label="Close">&times;</button>
 
-		<div class="clear-loan-header">
-			<h2 id="creditTermPopupTitle">เครดิตเทอม</h2>
+		<div class="cshos-modal-header">
+			<h2 id="cshosPopupTitle" class="cshos-modal-title">ใบฝากขาย/ยอดหนี้คงค้าง</h2>
+		</div>
+		<div class="cshos-header-rule"></div>
+
+		<!-- View Switcher (radio) -->
+		<div class="cshos-switcher" role="radiogroup" aria-labelledby="cshosPopupTitle">
+			<label class="cshos-switcher-option">
+				<input type="radio" name="cshos_view" id="cshosTabBtnCshos" checked onchange="switchCshosTab('cshos')">
+				<span class="cshos-switcher-dot" aria-hidden="true"></span>
+				<span class="cshos-switcher-label">ใบยืมฝากขายคงค้าง</span>
+			</label>
+			<label class="cshos-switcher-option">
+				<input type="radio" name="cshos_view" id="cshosTabBtnDebts" onchange="switchCshosTab('debts')">
+				<span class="cshos-switcher-dot" aria-hidden="true"></span>
+				<span class="cshos-switcher-label">ยอดหนี้คงค้าง</span>
+			</label>
 		</div>
 
-		<div class="credit-term-popup-content">
-			<div class="credit-term-summary">
-				<div class="credit-term-summary-item">
-					<p class="credit-term-summary-label">เครดิต (วัน)</p>
-					<p class="credit-term-summary-value" id="creditTermSummaryDay">-</p>
-				</div>
-				<div class="credit-term-summary-item">
-					<p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p>
-					<p class="credit-term-summary-value" id="creditTermSummaryAmount">0.00</p>
-				</div>
-				<div class="credit-term-summary-item">
-					<p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p>
-					<p class="credit-term-summary-value" id="creditTermSummaryOutstanding">0.00</p>
-				</div>
-				<div class="credit-term-summary-item is-highlight">
-					<p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p>
-					<p class="credit-term-summary-value" id="creditTermSummaryRemaining">0.00</p>
-				</div>
-			</div>
+		<!-- Stat Bar (content swaps per view) -->
+		<div class="cshos-stat-bar" id="cshosStatBar"></div>
 
-			<div class="credit-term-table-panel">
-				<div class="credit-term-table-wrap">
-					<table class="credit-term-table">
-						<thead>
-							<tr>
-								<th scope="col" aria-label="เลือก"></th>
-								<th scope="col">เลขที่ใบสั่งขาย</th>
-								<th scope="col">รายการสินค้า</th>
-								<th scope="col">ยอดที่ต้องชำระ</th>
-								<th scope="col">ยอดชำระแล้ว</th>
-								<th scope="col">ยอดหนี้คงค้าง</th>
-							</tr>
-						</thead>
-						<tbody id="creditTermTableBody">
-							<tr class="credit-term-empty-row">
-								<td><span class="credit-term-caret" aria-hidden="true"></span></td>
-								<td colspan="5">เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
+		<!-- Tab 1: ใบยืมฝากขายคงค้าง -->
+		<div class="cshos-tab-content is-active" id="cshosTabContentCshos">
+			<div class="cshos-table-wrap">
+				<table class="cshos-table">
+					<thead>
+						<tr>
+							<th scope="col">เลขที่เอกสาร</th>
+							<th scope="col">รายการสินค้า</th>
+							<th scope="col" style="text-align: right;">จำนวนคงค้าง</th>
+							<th scope="col" style="text-align: right;">ยอดฝากขายคงค้าง</th>
+						</tr>
+					</thead>
+					<tbody id="cshosTableBody">
+						<tr>
+							<td colspan="4" class="cshos-empty-row">เลือกลูกค้าแล้วกดเปิดดูข้อมูลใบยืมฝากขาย</td>
+						</tr>
+					</tbody>
+				</table>
 			</div>
 		</div>
+
+		<!-- Tab 2: ยอดหนี้คงค้าง -->
+		<div class="cshos-tab-content" id="cshosTabContentDebts">
+			<div class="cshos-table-wrap">
+				<table class="cshos-table">
+					<thead>
+						<tr>
+							<th scope="col" aria-label="ขยายดูติดตามหนี้"></th>
+							<th scope="col">เลขที่ใบสั่งขาย/ใบแจ้งหนี้</th>
+							<th scope="col">รายการสินค้า</th>
+							<th scope="col" style="text-align: right;">ยอดที่ต้องชำระ</th>
+							<th scope="col" style="text-align: right;">ยอดชำระแล้ว</th>
+							<th scope="col" style="text-align: right;">ยอดหนี้คงค้าง</th>
+						</tr>
+					</thead>
+					<tbody id="cshosDebtTableBody">
+						<tr>
+							<td colspan="6" class="cshos-empty-row">เลือกลูกค้าแล้วกดเปิดดูข้อมูลยอดหนี้คงค้าง</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
 	</div>
 </div>
 
