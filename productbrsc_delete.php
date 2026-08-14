@@ -26,7 +26,7 @@ echo "</script>";
 	}else if ($code == 'Sup_Sale' or $code == 'Sup_AllWell' ){
 
   echo "<script language=\"JavaScript\">";
-  echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrcshos_edit.php?ref_id=$ref_id';";
+  echo "alert('ลบข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrcshos.php?ref_id=$ref_id';";
   echo "</script>";
 
 

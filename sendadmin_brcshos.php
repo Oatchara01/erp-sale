@@ -39,7 +39,7 @@ $qsave=mysqli_query($conn,$save);
  if($qsave){
 	 	 
 echo "<script language=\"JavaScript\">";
-echo "alert('ส่งข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrcshos_edit.php?ref_id=$ref_id';";
+echo "alert('ส่งข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_supbrcshos.php?ref_id=$ref_id';";
 echo "</script>";	 
 	 
  }else{

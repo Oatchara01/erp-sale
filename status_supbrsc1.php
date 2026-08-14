@@ -336,7 +336,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>
 				
-	<td><a href="register_supbrcshos_edit.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
+	<td><a href="register_supbrcshos.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
 
 <td><a href="report_brcshos.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a></td>
 

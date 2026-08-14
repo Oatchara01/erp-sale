@@ -2,12 +2,32 @@
 include('dbconnect_sale.php'); ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
+
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			if (typeof Swal === 'undefined') {
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				return;
+			}
+
+			Swal.fire({
+				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: 'success',
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+		});
+	</script>
+<?php } ?>
 
 <script language="JavaScript">
 	var HttPRequest = false;
@@ -156,13 +176,13 @@ include('dbconnect_sale.php'); ?>
 							confirmButtonColor: '#612989'
 						}).then(function() {
 							if (data.ref_id) {
-								window.location.href = 'register_supbrcshos_edit.php?ref_id=' + encodeURIComponent(data.ref_id);
+								window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
 							}
 						});
 					} else {
 						alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
 						if (data.ref_id) {
-							window.location.href = 'register_supbrcshos_edit.php?ref_id=' + encodeURIComponent(data.ref_id);
+							window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
 						}
 					}
 				} else {
@@ -263,47 +283,6 @@ include('dbconnect_sale.php'); ?>
 			btn.style.color = '#FFFFFF';
 			btn.style.borderColor = '#612989';
 			btn.innerHTML = '<i class="fas fa-check"></i> เพิ่มลงฐานลูกค้า (เลือกแล้ว)';
-		}
-	}
-
-	function openShippingAddressPopup() {
-		var customerId = getCurrentShippingPopupCustomerId();
-		if (!customerId) {
-			alert('กรุณาเลือกลูกค้าก่อนค้นหาที่อยู่จัดส่ง');
-			return;
-		}
-
-		var modal = document.getElementById('shippingAddressPopupModal');
-		var search = document.getElementById('shippingAddressPopupSearch');
-		var tbody = document.getElementById('shippingAddressPopupRows');
-		if (!modal || !tbody) return;
-
-		if (!window.originalShippingData) {
-			var contactName = document.querySelector('input[name="customer_name"]');
-			var contactTel = document.querySelector('input[name="customer_tel"]');
-			var contactProvince = document.querySelector('select[name="province_name"]');
-			var shippingAddress = document.querySelector('input[name="address_name"]');
-			var installLocation = document.querySelector('input[name="address_send"]');
-
-			window.originalShippingData = {
-				customer_name: contactName ? contactName.value : '',
-				customer_tel: contactTel ? contactTel.value : '',
-				shipping_name: contactName ? contactName.value : '',
-				shipping_province: contactProvince ? contactProvince.value : '',
-				shipping_full_address: shippingAddress ? shippingAddress.value : '',
-				install_location: installLocation ? installLocation.value : ''
-			};
-		}
-
-		if (typeof shippingAddressPopupCustomerId !== 'undefined') shippingAddressPopupCustomerId = customerId;
-		if (typeof shippingAddressPopupSelected !== 'undefined') shippingAddressPopupSelected = null;
-		if (typeof shippingAddressPopupData !== 'undefined') shippingAddressPopupData = [];
-		if (typeof toggleShippingAddressPopupLoadMore === 'function') toggleShippingAddressPopupLoadMore(false, false);
-		modal.style.display = 'flex';
-		modal.setAttribute('aria-hidden', 'false');
-
-		if (typeof loadShippingAddressPopupRows === 'function') {
-			loadShippingAddressPopupRows(search ? (search.value || '') : '', false);
 		}
 	}
 
@@ -423,8 +402,93 @@ if ($maxId1 == $yearMonth) {
 	$nextId = $yearMonth . $maxId1;
 }
 
+// ===== โหลดเอกสารเดิม (view/edit mode) เมื่อมี ?ref_id=... =====
+// พอร์ตจาก register_supbrhos.php:986-1069 — hos__consig ใช้ ref_id (ไม่ใช่ ref_id_br แบบ hos__br)
+// ทุก query กันด้วย mysqli_num_rows เหมือนต้นแบบ ไม่มีแถวแล้วปล่อยเป็น null/[] เพื่อ fallback เป็นฟอร์มว่าง
+$savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+$savedBr = null;
+$savedCustomer = null;
+$savedProducts = array();
+$savedOtherBill = null;
+$savedComment = null;
+$savedCommentItems = array();
+$savedTransaction = null;
+$savedShippingRows = array();
+$savedDeliveryBillRow = null;
+$savedRegister = null;
+
+if ($savedRefId !== "") {
+	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__consig WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+	if ($savedBrQuery && mysqli_num_rows($savedBrQuery) > 0) {
+		$savedBr = mysqli_fetch_assoc($savedBrQuery);
+
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedOtherBillQuery) {
+			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
+		}
+
+		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedCommentQuery) {
+			$savedComment = mysqli_fetch_assoc($savedCommentQuery);
+		}
+
+		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $savedRefId . "' ORDER BY sort_order ASC, id ASC");
+		if ($savedCommentItemsQuery) {
+			while ($savedCommentItemRow = mysqli_fetch_assoc($savedCommentItemsQuery)) {
+				$savedCommentItems[] = array(
+					'department_id' => (int)$savedCommentItemRow['department_id'],
+					'message' => $savedCommentItemRow['message'],
+					'sort_order' => (int)$savedCommentItemRow['sort_order'],
+				);
+			}
+		}
+
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedTransactionQuery) {
+			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
+		}
+
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedRefId . "' ORDER BY id ASC");
+		if ($savedShippingQuery) {
+			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
+				$savedShippingRows[] = $savedShippingRow;
+			}
+		}
+
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedDeliveryBillQuery) {
+			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
+		}
+
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		if ($savedRegisterQuery) {
+			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
+		}
+
+		// LEFT JOIN tb_product จำเป็น เพราะ hos__subconsig ไม่มีคอลัมน์ product_name/unit_name/access_code ของตัวเอง
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subconsig.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subconsig LEFT JOIN tb_product ON hos__subconsig.product_id = tb_product.product_ID WHERE hos__subconsig.ref_idd = '" . $savedRefId . "' ORDER BY hos__subconsig.id ASC");
+		if ($savedProductsQuery) {
+			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
+				$savedProducts[] = $savedProductRow;
+			}
+		}
+
+		// การ์ด "ข้อมูลลูกค้า" (display_bill_id ฯลฯ) เป็นฟิลด์แสดงผลอย่างเดียว ไม่ได้เก็บใน hos__consig
+		// เดิมเติมจาก selectedCustomer ตอนเลือกลูกค้าผ่าน popup (window.customerPopupOnConfirm) เท่านั้น
+		// view mode จึงต้อง query tb_customer เองเพื่อเติมการ์ดนี้ — ใช้ query เดียวกับ
+		// ajax_customer_popup_search.php:25-28 (LEFT JOIN tb_typecustomer ดึง type_name)
+		if (!empty($savedBr['customer_id'])) {
+			$savedCustomerId = mysqli_real_escape_string($conn, $savedBr['customer_id']);
+			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
+			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
+				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
+			}
+		}
+	}
+}
+
 // ตัวแปรรองรับแท็บ 'ที่อยู่เพิ่มเติม' ที่ port มาจาก register_supbrhos.php
-$printCoverRefId = (isset($savedBr) && $savedBr !== null) ? $savedBr['ref_id_br'] : '';
+$printCoverRefId = ($savedBr !== null) ? $savedBr['ref_id'] : '';
 $savedFirstExtraAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
 $savedDeliveryBillAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
 $savedExtraAddressRows = isset($savedShippingRows) ? $savedShippingRows : [];
@@ -475,6 +539,148 @@ $billDeliveryReports = array(
 	array('label' => 'a4nbm', 'file' => 'reportb_ha4nbm.php')
 );
 
+// ---- แผนที่ค่า prefill สำหรับ view/edit mode ----
+// พอร์ตจาก register_supbrhos.php:1207-1324 — รวมค่าที่ต้องเติมกลับเข้าฟอร์มไว้ที่เดียว
+// แล้วให้ JS ตัวเดียวเป็นคนเติม (ดูบล็อกท้ายฟอร์ม) แทนการไล่ so_saved_h() ทีละช่อง
+$csPrefill = array();
+
+if ($savedBr !== null) {
+	$csPrefill = array(
+		'company' => $savedBr['company'],
+		'customer' => $savedBr['customer'],
+		'customer_id' => $savedBr['customer_id'],
+		'h_customer' => $savedBr['customer'],
+		'address' => $savedBr['address'],
+		'sale_comment' => $savedBr['sale_comment'],
+		'objective' => $savedBr['objective'],
+		'objective_des' => $savedBr['objective_des'],
+		'que_ckk' => $savedBr['que_ckk'],
+		'send_cs' => $savedBr['send_cs'] ?? '',
+		'sale_code' => $savedBr['sale_code'],
+		'returns' => $savedBr['returns'],
+		'returns_date' => $savedBr['returns_date'],
+		'returns_time' => $savedBr['returns_time'],
+		'return_date_bet' => $savedBr['return_date_bet'],
+		'returns_name' => $savedBr['returns_name'],
+		'returns_contact' => $savedBr['returns_contact'],
+		'returns_address' => $savedBr['returns_address'],
+		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
+		'address_name' => $savedBr['delivery_name'],
+		'address_send' => $savedBr['delivery_address'],
+		'customer_name' => $savedBr['delivery_contact'],
+		'customer_tel' => $savedBr['delivery_tel'],
+		'delivery_type' => $savedBr['delivery_type'],
+		'start_date' => $savedBr['delivery_date'],
+		'between_date' => $savedBr['date_send_key'],
+		// ค่าจัดส่ง (แท็บ 2 ของ delivery_info_tab.php)
+		'shipping_date' => $savedBr['date_ker'],
+		'shipping_ref1' => $savedBr['order_refer_code'],
+		'shipping_ref2' => $savedBr['order_refer_code1'],
+		'shipping_cost' => $savedBr['ker_bath'],
+	);
+
+	// delivery_time เก็บรวม "start_time end_time" คั่นด้วยช่องว่างเดียว (ดู register_supbrcshos1.php:203)
+	$savedDeliveryTimeParts = explode(' ', (string)($savedBr['delivery_time'] ?? ''), 2);
+	$csPrefill['start_time'] = $savedDeliveryTimeParts[0] ?? '';
+	$csPrefill['end_time'] = $savedDeliveryTimeParts[1] ?? '';
+
+	if ($savedOtherBill !== null) {
+		$csPrefill['ref_12'] = $savedOtherBill['ref_12'] ?? '';
+	}
+
+	if ($savedComment !== null) {
+		$csPrefill['comment_cs'] = $savedComment['comment_cs'];
+		$csPrefill['comment_en'] = $savedComment['comment_en'];
+		$csPrefill['comment_st'] = $savedComment['comment_st'];
+		$csPrefill['comment_ad'] = $savedComment['comment_ad'];
+		$csPrefill['technician_required'] = $savedComment['technician_required'];
+	}
+
+	// tb_transaction ('แท็บ รายละเอียดที่อยู่') — ผูกกลับด้านของ cs_* mapping ใน register_supbrcshos1.php:448-483
+	if ($savedTransaction !== null) {
+		if (($savedTransaction['car_home'] ?? '') === '1') {
+			$csPrefill['park_front'] = '1';
+		} elseif (($savedTransaction['car_road'] ?? '') === '1') {
+			$csPrefill['park_front'] = '0';
+		}
+		$csPrefill['park_location'] = $savedTransaction['car_park'];
+		$csPrefill['is_high_roof'] = $savedTransaction['height_ltd'];
+
+		if (($savedTransaction['slope'] ?? '') === '1') {
+			$csPrefill['entrance_type'] = '1';
+		} elseif (($savedTransaction['bundai'] ?? '') === '1') {
+			$csPrefill['entrance_type'] = '2';
+		}
+		$csPrefill['stair_count'] = $savedTransaction['unit_bundai'];
+		$csPrefill['install_floor'] = $savedTransaction['install'];
+
+		$csPrefill['room_type'] = $savedTransaction['home_type'];
+		$csPrefill['door_width'] = $savedTransaction['room_bigger'];
+		$csPrefill['door_height'] = $savedTransaction['room_longer'];
+
+		$savedStairSize = explode(' x ', (string)($savedTransaction['bundai_big'] ?? ''), 2);
+		$csPrefill['stair_width'] = $savedStairSize[0] ?? '';
+		$csPrefill['stair_height'] = $savedStairSize[1] ?? '';
+
+		$savedElevDoorSize = explode(' x ', (string)($savedTransaction['lip_big'] ?? ''), 2);
+		$csPrefill['elev_door_width'] = $savedElevDoorSize[0] ?? '';
+		$csPrefill['elev_door_height'] = $savedElevDoorSize[1] ?? '';
+
+		$savedElevSize = explode(' x ', (string)($savedTransaction['lip_long'] ?? ''), 3);
+		$csPrefill['elev_width'] = $savedElevSize[0] ?? '';
+		$csPrefill['elev_height'] = $savedElevSize[1] ?? '';
+		$csPrefill['elev_depth'] = $savedElevSize[2] ?? '';
+
+		$csPrefill['elev_capacity'] = $savedTransaction['lip_weight'];
+
+		$csPrefill['move_furn'] = $savedTransaction['want_employee'];
+		$csPrefill['move_furn_count'] = $savedTransaction['employee_unit'];
+		$csPrefill['move_furn_detail'] = $savedTransaction['ferniger_name'];
+		$csPrefill['addr_note'] = $savedTransaction['description'];
+	}
+
+	// tb_register_data — เฉพาะฟิลด์ที่มี input จริงในฟอร์มนี้ (ที่เหลือไม่มีช่องให้กรอก ข้ามไป)
+	if ($savedRegister !== null) {
+		$csPrefill['status'] = $savedRegister['status'];
+		$csPrefill['department_name'] = $savedRegister['department'];
+		$csPrefill['customer_typename'] = $savedRegister['type_customer'];
+		$csPrefill['province_name'] = $savedRegister['province_name'];
+		$csPrefill['transport_company'] = $savedRegister['transport_company'];
+		$csPrefill['location_link'] = $savedRegister['location_link'];
+		$csPrefill['product_sn'] = $savedRegister['product_sn'];
+		$csPrefill['unit_credit'] = $savedRegister['unit_credit'];
+		$csPrefill['unit_cash'] = $savedRegister['price'];
+		$csPrefill['employee_name'] = $savedRegister['employee_name'];
+		$csPrefill['employee_tel'] = $savedRegister['employee_tel'];
+		$csPrefill['unit_check'] = $savedRegister['unit_check'];
+		$csPrefill['unit_bill'] = $savedRegister['unit_bill'];
+		$csPrefill['unit_tran'] = $savedRegister['unit_tran'];
+		$csPrefill['department_show'] = $savedRegister['department_show'];
+		$csPrefill['dept'] = $savedRegister['dept'];
+		$csPrefill['status_comment'] = $savedRegister['status_comment'];
+		$csPrefill['call_customer'] = $savedRegister['call_customer'];
+	}
+
+	// ที่อยู่เพิ่มเติมสูงสุด 9 แถว (ชุดเดียวกับที่ register_supbrcshos1.php วนบันทึก)
+	foreach ($savedShippingRows as $csShippingIdx => $csShippingRow) {
+		$csShippingNo = $csShippingIdx + 1;
+		if ($csShippingNo > 9) {
+			break;
+		}
+		$csPrefill['extra_contact_name_' . $csShippingNo] = $csShippingRow['contact_name'];
+		$csPrefill['extra_contact_tel_' . $csShippingNo] = $csShippingRow['telephone'];
+		$csPrefill['extra_contact_province_' . $csShippingNo] = $csShippingRow['province'];
+		$csPrefill['extra_shipping_address_' . $csShippingNo] = $csShippingRow['address'];
+	}
+
+	if ($savedDeliveryBillRow !== null) {
+		$csPrefill['bill_extra_contact_name_2'] = $savedDeliveryBillRow['customer_nameb'];
+		$csPrefill['bill_extra_contact_tel_2'] = $savedDeliveryBillRow['customer_telb'];
+		$csPrefill['bill_extra_contact_province_2'] = $savedDeliveryBillRow['province'];
+		$csPrefill['bill_extra_shipping_address_2'] = $savedDeliveryBillRow['address_nameb'];
+	}
+}
+
 ?>
 
 <div class="w3-container register-so-main" style="max-width:1096px;margin:0 auto;">
@@ -484,8 +690,7 @@ $billDeliveryReports = array(
 			<h1 class="so-title">ใบยืมฝากขาย</h1>
 			<div class="so-ref-info">
 				<span class="so-ref-label">เลขที่อ้างอิง</span>
-				<span class="so-ref-value"><?php echo $so;
-											echo $nextId; ?></span>
+				<span class="so-ref-value"><?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id']) : $so . $nextId; ?></span>
 			</div>
 		</div>
 		<div class="so-header-right">
@@ -493,16 +698,19 @@ $billDeliveryReports = array(
 		</div>
 	</div>
 
-	<form action="register_supbrcshos1.php" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action="<?php echo ($savedBr !== null) ? 'register_supbrcshos_edit1.php' : 'register_supbrcshos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
+			var csSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
+				if (csSubmitting) return false;
 
 				if (document.frmMain.start_time.value == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
-					document.frmMain.start_time.focus();
+					brFocusField(document.frmMain.start_time);
 					return false;
 				}
 
@@ -532,17 +740,55 @@ $billDeliveryReports = array(
 
 				if (document.frmMain.province_name.value == "") {
 					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					document.frmMain.province_name.focus();
+					brFocusField(document.frmMain.province_name);
 					return false;
 				}
 
+				var csHasProduct = false;
+				for (var csPi = 1; csPi <= 10; csPi++) {
+					var csPidEl = document.getElementById('product_id' + csPi);
+					if (csPidEl && csPidEl.value !== '') {
+						csHasProduct = true;
+						break;
+					}
+				}
+				if (!csHasProduct) {
+					alert('กรุณาเลือกสินค้าอย่างน้อย 1 รายการ');
+					return false;
+				}
 
-				document.frmMain.submit();
+				// ผ่าน validation ครบแล้ว กำลังจะ submit จริง -> disable ปุ่มกันกดซ้ำ
+				// ไม่ต้อง re-enable เพราะหน้าจะ navigate ออกไปอยู่แล้วเมื่อสำเร็จ
+				csSubmitting = true;
+				var csSubmitBtn = document.querySelector('.btn-so-submit');
+				if (csSubmitBtn) {
+					csSubmitBtn.disabled = true;
+					csSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				}
+
+				// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
+				// จึงเรียกผ่าน prototype โดยตรง และเพราะ .submit() ไม่ส่งค่าปุ่มมาด้วย
+				// ต้องสร้าง hidden name="submit" เอง ไม่งั้น backend จะมองว่าไม่ได้กดบันทึก
+				// (pattern เดียวกับ register_supbrhos.php)
+				var csForm = document.forms['frmMain'];
+				var csSubmitValue = csForm.querySelector('input[type="hidden"][name="submit"]');
+				if (!csSubmitValue) {
+					csSubmitValue = document.createElement('input');
+					csSubmitValue.type = 'hidden';
+					csSubmitValue.name = 'submit';
+					csForm.appendChild(csSubmitValue);
+				}
+				csSubmitValue.value = 'submit';
+				HTMLFormElement.prototype.submit.call(csForm);
+				return false;
 			}
 		</script>
 
 		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo $so;
 																		echo $nextId; ?>">
+		<!-- hos__consig ใช้คีย์ ref_id (ref_id_br ด้านบนเป็นของค้างจากการก็อปฟอร์ม hos__br ไม่มีใครอ่านจริง)
+		     edit mode ต้องส่งเลขเอกสารจริงไปให้ register_supbrcshos_edit1.php ใช้เป็น key ของ UPDATE -->
+		<input type="hidden" name="ref_id" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id']) : so_saved_h($so . $nextId); ?>">
 
 		<!-- ===================== Tab: ข้อมูลเอกสาร / Admin =====================
 		     Pattern ported from register_supbrhos.php:1580-1586 (switchBrMainTab) — UI only,
@@ -575,35 +821,73 @@ $billDeliveryReports = array(
 				</div>
 
 				<input name="add_by" value="<?php echo $_SESSION['name']; ?>&nbsp;<?php echo $_SESSION['surname']; ?>" type='hidden'>
+				<!-- สถานะปุ่ม "ยกเลิกเอกสาร" ในแท็บ Admin — toggleCancelDoc() สลับค่า 0/1
+				     register_supbrcshos1.php อ่านค่านี้ไปตัดสิน status_doc (pattern เดียวกับ register_suphos.php:1656) -->
+				<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedBr !== null && ($savedBr['status_doc'] ?? '') === 'ยกเลิก') ? '1' : '0'; ?>">
 			</div>
 		</div>
 
 		<?php
-		// Admin tab (UI only) — reuses the shared partials/admin_info_tab.php component already
-		// used by register_suphos.php / register_supbrhos.php. register_supbrcshos.php is create-mode
-		// only (no saved-document lookup), so every value below is intentionally blank; none of these
-		// name= fields are read by register_supbrcshos1.php yet (see plan for the Phase-B backend pass).
-		// "Run เอกสาร" / เลขที่ลงงาน-icon / "ยกเลิกเอกสาร" deliberately have no onclick — matches the
-		// reference's own buttons (register_supbrhos.php:1336,1341 also have no onclick) and the
-		// explicit "no new logic for these buttons" instruction.
+		// พอร์ตจาก register_suphos.php:1888-1892 — ตอนนี้รองรับ view/edit mode แล้ว (มี $savedBr)
+		// ไม่มี lock ตามสถานะเอกสาร (เหมือน register_supbrhos.php) จึง disabled คงเป็น false เสมอ
+		// active ผูกกับสถานะจริงจาก DB แล้ว
+		$isCancelDisabled = false;
+		$isCancelChecked = $savedBr !== null && ($savedBr['status_doc'] ?? '') === 'ยกเลิก';
+
 		$adminInfoTab = [
 			'tab_id' => 'tab-admin-info',
 			'title' => 'ข้อมูลเพิ่มเติม (Admin)',
 			'rows' => [
 				[
-					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => '', 'placeholder' => 'No.'],
+					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
-					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'],
-					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'img/icons/preview.png'],
+					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no1'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 				],
 				[
-					['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร', 'variant' => 'danger'],
-					['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+					['type' => 'button_field', 'button' => [
+						'type' => 'button',
+						'icon' => 'img/icons/circle_x.png',
+						'label' => 'ยกเลิกเอกสาร',
+						'variant' => 'danger',
+						'disabled' => $isCancelDisabled,
+						'active' => $isCancelChecked,
+						'id' => 'btn_cancel_doc',
+						'onclick' => 'toggleCancelDoc();'
+					]],
+					// ช่องหมายเหตุเริ่มต้นเป็น disabled จนกว่าจะกดปุ่มยกเลิก (input ที่ disabled จะไม่ถูก POST)
+					['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3, 'disabled' => $isCancelDisabled || !$isCancelChecked],
 				],
 			],
 		];
 		include __DIR__ . '/partials/admin_info_tab.php';
+		unset($adminInfoTab, $isCancelDisabled, $isCancelChecked);
 		?>
+		<script>
+			// คัดลอกจาก register_suphos.php:1602-1622 ตรง ๆ — ใช้ id ชุดเดียวกันทั้งหมด
+			// ปุ่มเป็นแค่ toggle ไม่ได้ submit เอง ผู้ใช้ต้องกด "บันทึก" ต่อ
+			function toggleCancelDoc() {
+				var cancelInput = document.getElementById('cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc');
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				if (!cancelInput || !cancelBtn) return;
+
+				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
+				var newActive = !isCurrentlyActive;
+
+				cancelInput.value = newActive ? '1' : '0';
+				cancelBtn.classList.toggle('active', newActive);
+
+				if (reasonInput) {
+					reasonInput.disabled = !newActive;
+					if (!newActive) {
+						reasonInput.value = '';
+					} else {
+						reasonInput.focus();
+					}
+				}
+			}
+		</script>
 
 		<!-- ===================== Card: ข้อมูลลูกค้า ===================== -->
 		<div class="so-card">
@@ -612,10 +896,6 @@ $billDeliveryReports = array(
 				<hr class="so-divider">
 			</div>
 
-			<!-- ปรับตาม register_supbrhos.php:1758-1856 — ปุ่ม popup ค้นหาลูกค้า + การ์ดแสดงข้อมูลลูกค้า
-			     js/customer-popup.js เป็น component กลาง ใช้ร่วมกับ register_suphos.php/register_supbrhos.php
-			     doCallAjax1()/data_customerbr1.php ของ cshos เองไม่ถูกแก้ไข แค่เปลี่ยนจุด trigger จาก
-			     onchange ของช่องข้อความ มาเป็น customerPopupOnConfirm() หลังเลือกลูกค้าจาก popup แทน -->
 			<div class="so-customer-top-grid">
 				<div class="so-customer-top-left">
 					<div class="so-customer-pills-row">
@@ -704,6 +984,44 @@ $billDeliveryReports = array(
 			</div>
 
 			<?php include('detail_brschos_so.php');	?>
+
+			<?php if (count($savedProducts) > 0) { ?>
+				<?php
+				// prefill รายการสินค้าด้วย JS เหมือนฝั่ง BR (register_supbrhos.php:1929-1966)
+				// ใช้ csSetRowData() ที่ detail_brschos_so.php มีอยู่แล้ว จึงไม่ต้องแก้ partial
+				?>
+				<script>
+					document.addEventListener('DOMContentLoaded', function() {
+						var csSavedProducts = <?php echo json_encode($savedProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+						csSavedProducts.forEach(function(product, index) {
+							var rowIndex = index + 1;
+							if (rowIndex > 10) return;
+
+							csSetRowData(rowIndex, {
+								product_codet: product.tb_access_code || '',
+								product_id: product.product_id || '',
+								product_name: product.tb_sol_name || '',
+								product_name_view: product.tb_sol_name || '',
+								unit_name: product.tb_unit_name || '',
+								sale_count: product.count || '',
+								product_price: product.price || '',
+								discount_unit: product.discount || '',
+								sum_amount: product.amount || '',
+								warranty: product.warranty || '',
+								cal: product.cal || '',
+								pm: product.pm || '',
+								pm_year: product.pm_year || '',
+								sale_remarkk: product.sale_remark || '',
+								print_name: product.admin_remark || '',
+								sn: product.sn || ''
+							});
+						});
+
+						if (typeof csRecalcSummary === 'function') csRecalcSummary();
+					});
+				</script>
+			<?php } ?>
 
 		</div>
 
@@ -845,7 +1163,7 @@ $billDeliveryReports = array(
 				</div>
 
 				<div class="so-address-actions" style="display: flex; gap: 16px; margin-bottom: 24px;">
-					<button type="button" class="so-address-action-btn so-address-action-btn-primary" onclick="openShippingAddressPopup()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+					<button type="button" class="so-address-action-btn so-address-action-btn-primary" onclick="csOpenShippingAddressPopup()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 						<i class="fas fa-search"></i> ค้นหาที่อยู่
 					</button>
 					<input type="hidden" name="save_to_customer_db" id="save_to_customer_db" value="0">
@@ -1572,28 +1890,107 @@ $billDeliveryReports = array(
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>
 		<script>
-			const savedCommentSoForDept = null;
-			const savedCommentSoItemsForDept = [];
+			const savedCommentSoForDept = <?php echo ($savedComment !== null) ? json_encode($savedComment, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : 'null'; ?>;
+			const savedCommentSoItemsForDept = <?php echo json_encode($savedCommentItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 		</script>
 		<script src="js/doc-tabs-dept-comment.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-dept-comment.js'); ?>"></script>
 		<script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 
-		<input type="hidden" name="slip1" id="hidden_slip_val1" value="">
-		<input type="hidden" name="slip2" id="hidden_slip_val2" value="">
-		<input type="hidden" name="slip3" id="hidden_slip_val3" value="">
-		<input type="hidden" name="slip4" id="hidden_slip_val4" value="">
-		<input type="hidden" name="slip5" id="hidden_slip_val5" value="">
+		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo so_saved_h($savedBr['slip1'] ?? ''); ?>">
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo so_saved_h($savedBr['slip2'] ?? ''); ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo so_saved_h($savedBr['slip3'] ?? ''); ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo so_saved_h($savedBr['slip4'] ?? ''); ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo so_saved_h($savedBr['slip5'] ?? ''); ?>">
 
-	</div><!-- /register-so-main -->
+</div><!-- /register-so-main -->
 
-	<div class="so-sticky-actions">
-		<div class="so-sticky-actions-inner">
-			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-			<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
-		</div>
+<div class="so-sticky-actions">
+	<div class="so-sticky-actions-inner">
+		<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+		<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
 	</div>
+</div>
 
-	</form>
+<?php if (count($csPrefill) > 0) { ?>
+	<?php
+	// เติมค่ากลับเข้าฟอร์มใน edit mode — ตัวเดียวจบทั้งฟอร์ม พอร์ตจาก register_supbrhos.php:2888-2944
+	// รองรับ text/hidden/textarea, select, radio และ checkbox โดยเลือกวิธี set ตามชนิดของ element
+	?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var csPrefill = <?php echo json_encode($csPrefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+			var csForm = document.forms['frmMain'];
+			if (!csForm) return;
+
+			Object.keys(csPrefill).forEach(function(fieldName) {
+				var value = csPrefill[fieldName];
+				if (value === null || value === undefined) return;
+				value = String(value);
+
+				var elements = csForm.querySelectorAll('[name="' + fieldName + '"]');
+				if (!elements.length) return;
+
+				elements.forEach(function(el) {
+					if (el.type === 'radio') {
+						if (el.value === value) el.checked = true;
+					} else if (el.type === 'checkbox') {
+						el.checked = (value === '1' || value === el.value);
+					} else if (el.tagName === 'SELECT') {
+						el.value = value;
+						if (el.selectedIndex === -1 && value !== '') {
+							var opt = document.createElement('option');
+							opt.value = value;
+							opt.textContent = value;
+							opt.selected = true;
+							el.appendChild(opt);
+						}
+					} else {
+						el.value = value;
+					}
+				});
+			});
+
+			// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
+			['is_high_roof', 'call_customer', 'ref_12', 'send_cs', 'que_ckk'].forEach(function(name) {
+				var el = document.querySelector('[name="' + name + '"]');
+				if (el) el.dispatchEvent(new Event('change', {
+					bubbles: true
+				}));
+			});
+		});
+	</script>
+<?php } ?>
+
+<?php if ($savedCustomer !== null) {
+	// เติมการ์ด "ข้อมูลลูกค้า" (display_bill_id ฯลฯ) ใน view/edit mode — logic เดียวกับ
+	// window.customerPopupOnConfirm ด้านบน แต่ตั้งค่าตรง ๆ ทาง PHP แทนการเรียก doCallAjax1() ซ้ำ
+	// เพราะ doCallAjax1 จะเขียนทับ customer_name/customer_tel/address_name/province_name
+	// (ข้อมูลผู้ติดต่อจัดส่ง) ด้วยที่อยู่เริ่มต้นของลูกค้า ซึ่งจะลบค่าที่ $csPrefill เติมไว้แล้วให้หายไป
+	$savedCustomerNameParts = trim(($savedCustomer['first_name'] ?? '') . ' ' . ($savedCustomer['last_name'] ?? ''));
+	$savedCustomerDisplayName = $savedCustomerNameParts !== '' ? $savedCustomerNameParts : ($savedCustomer['customer_name'] ?? '');
+	if ($savedCustomerDisplayName === '') {
+		$savedCustomerDisplayName = $savedCustomer['bill_name'] ?? '';
+	}
+	$savedCustomerDisplayTel = ($savedCustomer['cus_tel'] ?? '') !== '' ? $savedCustomer['cus_tel'] : ($savedCustomer['bill_tel'] ?? '');
+	?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			setElementText('display_bill_id', <?php echo json_encode($savedCustomer['customer_id'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_bill_tel', <?php echo json_encode($savedCustomerDisplayTel, JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_bill_name', <?php echo json_encode($savedCustomerDisplayName, JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_customer_typename', <?php echo json_encode($savedCustomer['type_name'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_credit_thb', 'ใบยืมฝากขาย/ยอดหนี้คงค้าง');
+			setElementText('display_mode_name', <?php echo json_encode($savedCustomer['status_cus'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+
+			var vipIcon = document.getElementById('display_vip_icon');
+			if (vipIcon) vipIcon.style.display = (<?php echo json_encode((string)($savedCustomer['vip_ckk'] ?? '')); ?> === '1') ? '' : 'none';
+
+			syncCreditTermTriggerState();
+		});
+	</script>
+<?php } ?>
+
+</form>
 
 <!-- Modal รายชื่อลูกค้า: ported 1:1 from register_supbrhos.php:2957-3004 (shared, doc-type-agnostic
      component — js/customer-popup.js + ajax_customer_popup_search.php). ตกลง -> window.customerPopupOnConfirm()
@@ -2007,8 +2404,8 @@ $billDeliveryReports = array(
 		csSetShippingFieldValueBySelector('input[name="customer_name"]', data.shipping_name || data.customer_name || '');
 		csSetShippingFieldValueBySelector('input[name="customer_tel"]', data.shipping_tel || data.customer_tel || '');
 		csSetShippingFieldValueBySelector('select[name="province_name"]', data.shipping_province || '');
-		csSetShippingFieldValueBySelector('textarea[name="address_name"]', fullAddress);
-		csSetShippingFieldValueBySelector('textarea[name="address_send"]', data.install_location || '');
+		csSetShippingFieldValueBySelector('input[name="address_name"]', fullAddress);
+		csSetShippingFieldValueBySelector('input[name="address_send"]', data.install_location || '');
 		if (data.location_link) {
 			csSetShippingFieldValueBySelector('input[name="location_link"]', data.location_link);
 		}
