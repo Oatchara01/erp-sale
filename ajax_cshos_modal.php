@@ -123,33 +123,11 @@ $totalCshosAmount = 0.0;
 $totalCshosSold = 0.0;
 $totalCshosOutstanding = 0.0;
 
-$cshosSql = "
-    SELECT
-        c.ref_id,
-        c.date_save,
-        c.add_date,
-        c.status_doc,
-        COALESCE(sub.total_amount, 0) AS total_amount,
-        COALESCE(sub.sold_amount, 0) AS sold_amount,
-        COALESCE(sub.outstanding_amount, 0) AS outstanding_amount,
-        COALESCE(sub.outstanding_qty, 0) AS outstanding_qty,
-        sub.product_names
-    FROM hos__consig AS c
-    LEFT JOIN (
-        SELECT
-            hs.ref_idd,
-            SUM(CAST(hs.amount AS DECIMAL(18,2))) AS total_amount,
-            SUM(CASE WHEN hs.clear_br = 1 THEN CAST(hs.amount AS DECIMAL(18,2)) ELSE 0 END) AS sold_amount,
-            SUM(CASE WHEN hs.clear_br = 1 THEN 0 ELSE CAST(hs.amount AS DECIMAL(18,2)) END) AS outstanding_amount,
-            SUM(CASE WHEN hs.clear_br = 1 THEN 0 ELSE CAST(hs.count AS DECIMAL(18,2)) END) AS outstanding_qty,
-            GROUP_CONCAT(DISTINCT NULLIF(TRIM(p.sol_name), '') ORDER BY p.sol_name SEPARATOR '||') AS product_names
-        FROM hos__subso AS hs
-        LEFT JOIN tb_product AS p ON p.product_ID = hs.product_id
-        GROUP BY hs.ref_idd
-    ) AS sub ON sub.ref_idd = c.ref_id
-    WHERE (c.customer_id = ? OR c.customer = ?)
-    ORDER BY c.ref_id DESC
-";
+// เอกสารใบยืมฝากขาย: จำนวน/มูลค่าที่ "ยืมจริง" มาจาก hos__subconsig (ผูกกับ hos__consig ด้วย ref_idd = c.ref_id)
+// ส่วนที่ "เคลียร์แล้ว" (ขายออกไปแล้ว) เช็คจาก hos__subso โดย match กันด้วย iv_no (clear_ivno) + product_id
+// ไม่ใช่ ref_id — เพราะ hos__subso.ref_idd อ้างถึงเอกสารใบสั่งขาย (hos__so) คนละตัวกับ hos__consig
+// (รูปแบบเดียวกับ rister_clearbrsc_st.php และ ajax_get_clear_br_details.php)
+$cshosSql = "SELECT ref_id, iv_no, date_save, add_date, status_doc FROM hos__consig WHERE (customer_id = ? OR customer = ?) ORDER BY ref_id DESC";
 
 $cshosStmt = mysqli_prepare($conn, $cshosSql);
 if ($cshosStmt) {
@@ -162,20 +140,65 @@ if ($cshosStmt) {
                 if ($docDate === '' || $docDate === '0000-00-00') {
                     $docDate = trim((string)($row['add_date'] ?? ''));
                 }
-                $totalAmount = (float)($row['total_amount'] ?? 0);
-                $soldAmount = (float)($row['sold_amount'] ?? 0);
-                $outstandingAmount = (float)($row['outstanding_amount'] ?? 0);
-                $outstandingQty = (float)($row['outstanding_qty'] ?? 0);
+
+                $consigRefId = (string)$row['ref_id'];
+                $ivNo = trim((string)($row['iv_no'] ?? ''));
+                $ivNoEsc = mysqli_real_escape_string($conn, $ivNo);
+                $consigRefIdEsc = mysqli_real_escape_string($conn, $consigRefId);
+
+                $totalAmount = 0.0;
+                $soldAmount = 0.0;
+                $outstandingAmount = 0.0;
+                $outstandingQty = 0.0;
+                $productNames = array();
+
+                $itemsSql = "SELECT hos__subconsig.product_id, hos__subconsig.count, hos__subconsig.amount, hos__subconsig.clear_ckk, tb_product.sol_name
+                             FROM hos__subconsig
+                             LEFT JOIN tb_product ON hos__subconsig.product_id = tb_product.product_ID
+                             WHERE hos__subconsig.ref_idd = '{$consigRefIdEsc}'";
+                $itemsResult = mysqli_query($conn, $itemsSql);
+                if ($itemsResult) {
+                    while ($item = mysqli_fetch_assoc($itemsResult)) {
+                        $borrowQty = isset($item['count']) ? (float)$item['count'] : 0.0;
+                        $itemAmount = isset($item['amount']) ? (float)$item['amount'] : 0.0;
+                        $productId = isset($item['product_id']) ? (string)$item['product_id'] : '';
+                        $productName = trim((string)($item['sol_name'] ?? ''));
+
+                        $totalAmount += $itemAmount;
+                        if ($productName !== '' && !in_array($productName, $productNames, true)) {
+                            $productNames[] = $productName;
+                        }
+
+                        $clearedQty = 0.0;
+                        if (isset($item['clear_ckk']) && $item['clear_ckk'] == '1') {
+                            $clearedQty = $borrowQty;
+                        } elseif ($productId !== '' && $ivNoEsc !== '') {
+                            $prodIdEsc = mysqli_real_escape_string($conn, $productId);
+                            $clearQ = mysqli_query($conn, "SELECT SUM(count) AS cnt FROM hos__subso WHERE clear_br = '1' AND product_id = '{$prodIdEsc}' AND clear_ivno = '{$ivNoEsc}' AND status_so = 'Approve'");
+                            if ($clearQ && $clearRow = mysqli_fetch_assoc($clearQ)) {
+                                $clearedQty = (float)$clearRow['cnt'];
+                            }
+                        }
+
+                        if ($clearedQty > $borrowQty) $clearedQty = $borrowQty;
+                        $remainingQty = $borrowQty - $clearedQty;
+                        if ($remainingQty < 0) $remainingQty = 0;
+
+                        $itemOutstandingAmount = ($borrowQty > 0) ? ($itemAmount * ($remainingQty / $borrowQty)) : 0.0;
+
+                        $outstandingQty += $remainingQty;
+                        $outstandingAmount += $itemOutstandingAmount;
+                        $soldAmount += ($itemAmount - $itemOutstandingAmount);
+                    }
+                }
 
                 $totalCshosAmount += $totalAmount;
                 $totalCshosSold += $soldAmount;
                 $totalCshosOutstanding += $outstandingAmount;
 
-                $productNamesRaw = trim((string)($row['product_names'] ?? ''));
-                $productNames = $productNamesRaw === '' ? array() : explode('||', $productNamesRaw);
-
                 $cshosLoans[] = array(
-                    'ref_id' => (string)$row['ref_id'],
+                    'ref_id' => $consigRefId,
+                    'iv_no' => $ivNo,
                     'date' => $docDate,
                     'status_doc' => (string)($row['status_doc'] ?? ''),
                     'total_amount' => $totalAmount,

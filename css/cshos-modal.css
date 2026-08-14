@@ -115,7 +115,7 @@
 }
 
 .cshos-stat-item {
-	padding: 16px 20px;
+	padding: 20px 24px;
 	text-align: center;
 	border-left: 1px solid #E4E4E9;
 }
@@ -125,15 +125,15 @@
 }
 
 .cshos-stat-label {
-	font-size: 13px;
-	color: #8A8F98;
-	margin: 0 0 6px 0;
+	font-size: 14px;
+	color: #612989;
+	margin: 0 0 8px 0;
 	font-weight: 500;
 }
 
 .cshos-stat-value {
-	font-size: 19px;
-	font-weight: 700;
+	font-size: 28px;
+	font-weight: 600;
 	color: #1F2430;
 	margin: 0;
 }
@@ -177,7 +177,7 @@
 }
 
 .cshos-table td {
-	padding: 14px;
+	padding: 18px 14px;
 	border-bottom: 1px solid #EFEFF2;
 	color: #2B2F38;
 	vertical-align: top;

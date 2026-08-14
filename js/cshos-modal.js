@@ -128,7 +128,7 @@
 				: '<div class="cshos-product-line">-</div>';
 
 			html += '<tr>' +
-				'<td><a class="cshos-doc-link" href="register_supbrcshos.php?ref_id=' + encodeURIComponent(item.ref_id) + '" target="_blank" rel="noopener">' + escapeHtml(item.ref_id) + '</a></td>' +
+				'<td><a class="cshos-doc-link" href="register_supbrcshos.php?ref_id=' + encodeURIComponent(item.ref_id) + '" target="_blank" rel="noopener">' + escapeHtml(item.iv_no || '-') + '</a></td>' +
 				'<td>' + productsHtml + '</td>' +
 				'<td style="text-align: right;">' + formatMoney(item.outstanding_qty).replace(/\.00$/, '') + '</td>' +
 				'<td style="text-align: right; font-weight: 600;">' + formatMoney(item.outstanding_amount) + '</td>' +
