@@ -842,7 +842,7 @@ if ($savedBr !== null) {
 			'rows' => [
 				[
 					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
-					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
 					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no1'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 				],
@@ -888,6 +888,74 @@ if ($savedBr !== null) {
 						reasonInput.focus();
 					}
 				}
+			}
+
+			// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_suphos.php:4918-4977
+			// ต่างกันตรงที่หน้านี้ไม่มี doc_type_select (เอกสารประเภทเดียว จึงส่ง doc_type='5' ตรง ๆ)
+			// และ company_select ของหน้านี้ใช้ 1=AWL/2=NBM ต้อง map เป็น 3=AWL/4=NBM ก่อนส่งให้ ajax_run_doc_no.php
+			function runDocumentNo() {
+				var companySelect = document.getElementById('company_select');
+				var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+				var docDateInput = document.querySelector('input[name="admin_doc_date"]');
+				var runButton = document.getElementById('btn_run_doc_no');
+
+				if (!companySelect || !docNoInput) {
+					return;
+				}
+
+				if (docNoInput.value.trim() !== '') {
+					// เลขถูกจองจริงตอนบันทึกเอกสาร (นับจาก hos__consig.iv_no) การกดซ้ำก่อนบันทึกจึงได้เลขเดิม
+					// แต่ถ้าเอกสารถูกบันทึกไปแล้ว การกดใหม่จะได้เลขถัดไปและเลขเดิมจะกลายเป็นช่องว่าง
+					if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+						return;
+					}
+				}
+
+				var companyMapToAjax = {
+					'1': '3',
+					'2': '4'
+				};
+				var payload = new URLSearchParams();
+				payload.append('company', companyMapToAjax[companySelect.value] || companySelect.value);
+				payload.append('doc_type', '5');
+				payload.append('doc_date', docDateInput ? docDateInput.value : '');
+
+				if (runButton) {
+					runButton.disabled = true;
+				}
+
+				fetch('ajax_run_doc_no.php', {
+						method: 'POST',
+						credentials: 'same-origin',
+						cache: 'no-store',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+						},
+						body: payload.toString()
+					})
+					.then(function(response) {
+						return response.json().then(function(data) {
+							return {
+								ok: response.ok,
+								data: data
+							};
+						});
+					})
+					.then(function(result) {
+						if (!result.ok || !result.data || !result.data.success) {
+							alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+							return;
+						}
+						docNoInput.value = result.data.doc_no;
+					})
+					.catch(function() {
+						alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+					})
+					.then(function() {
+						if (runButton) {
+							runButton.disabled = false;
+						}
+					});
 			}
 		</script>
 

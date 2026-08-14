@@ -9,11 +9,19 @@
  *                       ET69-070001   <- ยกเว้น ET ที่ใช้ "-" ตามระบบเดิม
  * running รีเซ็ตเป็น 0001 ทุกเดือน แยกตามบริษัท + ประเภทเอกสาร
  *
- * ตัวนับใช้ "ตารางเดียวกับระบบเดิม" (register_adminhos_edit1.php:243-399)
- * เพราะรูปแบบเลขเหมือนกันเป๊ะ ถ้านับแยกตารางสองหน้าจอจะออกเลขซ้ำกันจริง
+ * ไฟล์นี้มีสองโหมดการนับ
  *
- * เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) ไม่ใช่แค่ preview เพื่อให้เลขไม่ซ้ำ
- * แลกกับการที่ถ้ากด Run แล้วไม่บันทึกฟอร์ม เลขนั้นจะหายไปเป็นช่องว่าง
+ * 1) โหมดตารางตัวนับ ($docRouting) — IV/ET/IC/IE
+ *    ใช้ "ตารางเดียวกับระบบเดิม" (register_adminhos_edit1.php:243-399)
+ *    เพราะรูปแบบเลขเหมือนกันเป๊ะ ถ้านับแยกตารางสองหน้าจอจะออกเลขซ้ำกันจริง
+ *    เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) ไม่ใช่แค่ preview เพื่อให้เลขไม่ซ้ำ
+ *    แลกกับการที่ถ้ากด Run แล้วไม่บันทึกฟอร์ม เลขนั้นจะหายไปเป็นช่องว่าง
+ *
+ * 2) โหมดนับจากตารางเอกสารจริง ($docSourceTable) — BRSC
+ *    BRSC69080001 -> BRSC6908001   <- ซีรีส์เดียวทั้ง AWL/NBM ไม่มีตัวคั่น running 3 หลัก
+ *    ไม่มี INSERT จองเลข อ่าน MAX จากคอลัมน์เลขที่เอกสารในตารางเอกสารโดยตรง
+ *    เลขจึงถูกจองจริงตอนกดบันทึกเอกสาร (กันเลขซ้ำอีกชั้นที่ register_supbrcshos1.php
+ *    และ register_supbrcshos_edit1.php) และการกด Run ซ้ำก่อนบันทึกจะได้เลขเดิมเสมอ
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -49,6 +57,7 @@ $docTypePrefix = [
 	'2' => 'ET', // ใบสั่งขาย E-Tax
 	'3' => 'IC', // ใบฝากขาย (IC)
 	'4' => 'IE', // ใบกำกับอิเล็กทรอนิกส์ - Admin เท่านั้น
+	'5' => 'BRSC', // ใบยืม/หนี้ฝากขาย (register_supbrcshos.php) - เอกสารประเภทเดียวของหน้านั้น
 ];
 $adminOnlyPrefix = ['IE'];
 
@@ -56,10 +65,26 @@ $adminOnlyPrefix = ['IE'];
 // key ชั้นสอง = value ของ <select id="type_doc_select"> และตรงกับ hos__so.type_doc
 // ชื่อตารางมาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
 $docRouting = [
-	'IV' => ['3' => ['tb_iv_awl', ''],  '4' => ['tb_iv_nbm', '/']],
-	'ET' => ['3' => ['tb_et_awl', ''],  '4' => ['tb_et_nbm', '-']], // NBM ใช้ "-" ตามระบบเดิม ไม่ใช่ "/"
-	'IC' => ['3' => ['tb_ic_awl', ''],  '4' => ['tb_ic_nbm', '/']],
-	'IE' => ['3' => ['tb_doc_ptl', ''], '4' => ['tb_doc_nbm', '/']],
+	'IV'   => ['3' => ['tb_iv_awl', ''],  '4' => ['tb_iv_nbm', '/']],
+	'ET'   => ['3' => ['tb_et_awl', ''],  '4' => ['tb_et_nbm', '-']], // NBM ใช้ "-" ตามระบบเดิม ไม่ใช่ "/"
+	'IC'   => ['3' => ['tb_ic_awl', ''],  '4' => ['tb_ic_nbm', '/']],
+	'IE'   => ['3' => ['tb_doc_ptl', ''], '4' => ['tb_doc_nbm', '/']],
+];
+
+// เอกสารที่นับเลขจาก "คอลัมน์ในตารางเอกสารจริง" แทนตารางตัวนับแยก
+// BRSC ไม่เคยมีตารางตัวนับในระบบเดิม (ผู้ใช้พิมพ์เลขเองมาตลอด) เลขจริงทั้งหมดอยู่ใน
+// hos__consig.iv_no แล้ว ถ้าไปนับจากตารางตัวนับใหม่ที่ว่างเปล่าจะไม่รู้จักเลขเดิม
+// และออกเลขซ้ำกับใบที่พิมพ์เองไว้ได้
+// เป็นซีรีส์เดียวทั้ง AWL/NBM ไม่มีตัวคั่น running 3 หลัก ตามรูปแบบเลขเดิมทั้ง 209 ใบ
+// ชื่อตาราง/คอลัมน์มาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
+$docSourceTable = [
+	'BRSC' => [
+		'table'     => 'hos__consig',
+		'column'    => 'iv_no',
+		'companies' => ['3', '4'],
+		'separator' => '',
+		'pad'       => 3,
+	],
 ];
 
 $company = trim((string)($_POST['company'] ?? ''));
@@ -71,10 +96,25 @@ if (!isset($docTypePrefix[$docType])) {
 }
 $prefix = $docTypePrefix[$docType];
 
-if (!isset($docRouting[$prefix][$company])) {
-	run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
+$sourceConfig = $docSourceTable[$prefix] ?? null;
+$isSourceTableMode = ($sourceConfig !== null);
+
+if ($isSourceTableMode) {
+	if (!in_array($company, $sourceConfig['companies'], true)) {
+		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
+	}
+	$table     = $sourceConfig['table'];
+	$column    = $sourceConfig['column'];
+	$separator = $sourceConfig['separator'];
+	$runPad    = $sourceConfig['pad'];
+} else {
+	if (!isset($docRouting[$prefix][$company])) {
+		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
+	}
+	list($table, $separator) = $docRouting[$prefix][$company];
+	$column = 'run_no';
+	$runPad = 4;
 }
-list($table, $separator) = $docRouting[$prefix][$company];
 
 $isAdmin = (($_SESSION['type_login'] ?? '') === 'Admin');
 if (in_array($prefix, $adminOnlyPrefix, true) && !$isAdmin) {
@@ -102,7 +142,11 @@ $ivDate  = date('Y-m-d', $timestamp);
 // กันสองคนกดพร้อมกันด้วย named lock แทนการเพิ่ม unique index ให้ตารางเดิม
 // (ตารางเดิมมีไฟล์อื่นเขียนร่วมอีกกว่า 30 ไฟล์ การใส่ unique index จะทำให้ไฟล์เหล่านั้น
 //  fatal error แทนที่จะ insert ซ้ำเงียบ ๆ จึงไม่แตะ schema เดิม)
-$lockName = 'docrun_' . $company . '_' . $prefix . '_' . $yearNo . $monthNo;
+// โหมดตารางเอกสารจริงเป็นซีรีส์เดียวทุกบริษัท ชื่อ lock จึงต้องไม่มี $company
+// ไม่งั้น AWL กับ NBM กดพร้อมกันจะไม่บล็อกกันและได้เลขเดียวกัน
+$lockName = $isSourceTableMode
+	? 'docrun_' . $prefix . '_' . $yearNo . $monthNo
+	: 'docrun_' . $company . '_' . $prefix . '_' . $yearNo . $monthNo;
 $lockStmt = mysqli_prepare($conn, "SELECT GET_LOCK(?, 5) AS got_lock");
 mysqli_stmt_bind_param($lockStmt, 's', $lockName);
 mysqli_stmt_execute($lockStmt);
@@ -124,6 +168,40 @@ register_shutdown_function(function () use ($conn, $lockName) {
 	}
 });
 
+// โหมดนับจากตารางเอกสารจริง: ไม่มีคอลัมน์ year_no/mount_no ให้กรอง จึงกรองด้วย prefix ของ
+// เลขที่เอกสารเอง (BRSC6908%) แล้วตัดเฉพาะส่วน running มาหา MAX
+if ($isSourceTableMode) {
+	$docPrefixText = $prefix . $yearNo . $separator . $monthNo;
+	$runOffset = strlen($docPrefixText) + 1; // ตำแหน่งเริ่มของ running ในเลขที่เอกสาร
+	$likePattern = $docPrefixText . '%';
+
+	$selectStmt = mysqli_prepare(
+		$conn,
+		"SELECT MAX(CAST(SUBSTRING(`" . $column . "`, " . $runOffset . ") AS UNSIGNED)) AS max_run"
+			. " FROM `" . $table . "` WHERE `" . $column . "` LIKE ?"
+	);
+	mysqli_stmt_bind_param($selectStmt, 's', $likePattern);
+	mysqli_stmt_execute($selectStmt);
+	$selectResult = mysqli_stmt_get_result($selectStmt);
+	$maxRow = $selectResult ? mysqli_fetch_assoc($selectResult) : null;
+	mysqli_stmt_close($selectStmt);
+
+	$runNo = (int)($maxRow['max_run'] ?? 0) + 1;
+	$runNoText = substr(str_repeat('0', $runPad) . $runNo, -$runPad);
+	$docNo = $docPrefixText . $runNoText;
+
+	echo json_encode([
+		'success'  => true,
+		'doc_no'   => $docNo,
+		'run_no'   => $runNoText,
+		'doc_type' => $prefix,
+		'company'  => $company,
+		'year_no'  => $yearNo,
+		'mount_no' => $monthNo
+	], JSON_UNESCAPED_UNICODE);
+	exit;
+}
+
 // CAST เป็นตัวเลขก่อนหา MAX เพราะ run_no เป็น varchar และข้อมูลเดิมมี padding ไม่เท่ากัน
 // (register_admin1.php:148 เขียน 3 หลักลง tb_doc_ptl ส่วนที่อื่นเขียน 4 หลัก
 //  ถ้าเทียบแบบ string จะได้ '005' > '0012' ซึ่งผิด)
@@ -141,7 +219,7 @@ for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
 	mysqli_stmt_close($selectStmt);
 
 	$runNo = (int)($maxRow['max_run'] ?? 0) + 1;
-	$runNoText = substr('0000' . $runNo, -4);
+	$runNoText = substr(str_repeat('0', $runPad) . $runNo, -$runPad);
 	$docNo = $prefix . $yearNo . $separator . $monthNo . $runNoText;
 
 	try {

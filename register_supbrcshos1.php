@@ -211,6 +211,27 @@ $date_send_key  = cs_post($conn, "between_date");
 //$ckk_war = $_POST["ckk_war"];
 // แท็บ Admin: เลขที่เอกสาร/วันที่ออกเอกสาร/หมายเหตุการยกเลิก (เดิม iv_no ถูก hardcode เป็น "")
 $iv_no = cs_post($conn, "admin_doc_no");
+// เลข BRSC ไม่ได้ถูกจองตอนกดปุ่ม "Run เอกสาร" แล้ว (ajax_run_doc_no.php นับจาก hos__consig.iv_no
+// โดยตรง ไม่มีตารางตัวนับ) ถ้าสองคนกด Run พร้อมกันจะได้เลขเดียวกัน จึงกันเลขซ้ำที่จุดบันทึกแทน
+// นับทุกสถานะรวมเอกสารที่ยกเลิก เพราะเลขที่ออกไปแล้วถือว่าถูกใช้ไปแล้ว
+if ($iv_no !== '') {
+	$csDupQuery = mysqli_query($conn, "SELECT ref_id FROM hos__consig WHERE iv_no = '" . $iv_no . "' LIMIT 1");
+	$csDupRow = $csDupQuery ? mysqli_fetch_assoc($csDupQuery) : null;
+	if ($csDupRow) {
+		if (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		$csDupMessage = 'เลขที่เอกสาร ' . cs_post_raw("admin_doc_no") . ' ถูกใช้กับเอกสาร ' . $csDupRow['ref_id']
+			. ' แล้ว กรุณากดปุ่ม Run เอกสารใหม่อีกครั้ง';
+		if ($isDraftRequest) {
+			echo json_encode(array('success' => false, 'message' => $csDupMessage));
+		} else {
+			$csDupAlert = str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $csDupMessage);
+			echo "<script>alert('$csDupAlert');history.back();</script>";
+		}
+		exit();
+	}
+}
 $iv_date = cs_post_date($conn, "admin_doc_date");
 $remark_cancel = cs_post($conn, "admin_cancel_reason");
 $que_ckk = cs_post($conn, "que_ckk", "0");

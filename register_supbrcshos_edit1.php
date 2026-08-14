@@ -226,6 +226,26 @@ $delivery_contact = cs_post($conn, "customer_name");
 $delivery_tel = cs_post($conn, "customer_tel");
 $date_send_key = cs_post($conn, "between_date");
 $iv_no = cs_post($conn, "admin_doc_no");
+// กันเลขซ้ำชุดเดียวกับ register_supbrcshos1.php — เลขไม่ได้ถูกจองตอนกดปุ่ม "Run เอกสาร" แล้ว
+// ต่างกันตรงที่ต้องยกเว้นเอกสารตัวเอง ไม่งั้นการกด Update ทุกครั้งจะฟ้องเลขซ้ำกับตัวเอง
+if ($iv_no !== '') {
+	$csDupQuery = mysqli_query($conn, "SELECT ref_id FROM hos__consig WHERE iv_no = '" . $iv_no . "' AND ref_id <> '" . $ref_id . "' LIMIT 1");
+	$csDupRow = $csDupQuery ? mysqli_fetch_assoc($csDupQuery) : null;
+	if ($csDupRow) {
+		if (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		$csDupMessage = 'เลขที่เอกสาร ' . cs_post_raw("admin_doc_no") . ' ถูกใช้กับเอกสาร ' . $csDupRow['ref_id']
+			. ' แล้ว กรุณากดปุ่ม Run เอกสารใหม่อีกครั้ง';
+		if ($isDraftRequest) {
+			echo json_encode(array('success' => false, 'message' => $csDupMessage));
+		} else {
+			$csDupAlert = str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $csDupMessage);
+			echo "<script>alert('$csDupAlert');history.back();</script>";
+		}
+		exit();
+	}
+}
 $iv_date = cs_post_date($conn, "admin_doc_date");
 $remark_cancel = cs_post($conn, "admin_cancel_reason");
 $que_ckk = cs_post($conn, "que_ckk", "0");

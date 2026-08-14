@@ -7,7 +7,8 @@
 		debts: [],
 		tracks: {},
 		activeTab: 'cshos',
-		expandedRefIdOff: ''
+		expandedRefIdOff: '',
+		selectedRefIdOff: ''
 	};
 
 	function getElement(id) {
@@ -157,11 +158,16 @@
 		debts.forEach(function(debt) {
 			var refIdOff = debt.id_off;
 			var isExpanded = cshosState.expandedRefIdOff === refIdOff;
+			var isSelected = String(cshosState.selectedRefIdOff || '') === String(refIdOff || '');
 			var trackList = cshosState.tracks[refIdOff] || [];
 
-			html += '<tr class="' + (isExpanded ? 'cshos-row-expanded' : '') + '">' +
+			var rowClasses = [];
+			if (isExpanded) rowClasses.push('cshos-row-expanded');
+			if (isSelected) rowClasses.push('cshos-row-selected');
+
+			html += '<tr class="' + rowClasses.join(' ') + '" onclick="window.selectCshosDebt(\'' + escapeHtml(refIdOff) + '\')">' +
 				'<td>' +
-					'<button type="button" class="cshos-caret-btn ' + (isExpanded ? 'is-expanded' : '') + '" onclick="window.toggleCshosTrackRow(\'' + escapeHtml(refIdOff) + '\')" title="ดูประวัติการติดตาม">' +
+					'<button type="button" class="cshos-caret-btn ' + (isSelected ? 'is-selected ' : '') + (isExpanded ? 'is-expanded' : '') + '" onclick="window.toggleCshosTrackRow(\'' + escapeHtml(refIdOff) + '\'); event.stopPropagation();" title="ดูประวัติการติดตาม">' +
 						'<span class="cshos-caret" aria-hidden="true"></span>' +
 					'</button>' +
 				'</td>' +
@@ -242,7 +248,13 @@
 		}
 	};
 
+	window.selectCshosDebt = function(refIdOff) {
+		cshosState.selectedRefIdOff = refIdOff;
+		renderDebtsTab();
+	};
+
 	window.toggleCshosTrackRow = function(refIdOff) {
+		cshosState.selectedRefIdOff = refIdOff;
 		if (cshosState.expandedRefIdOff === refIdOff) {
 			cshosState.expandedRefIdOff = '';
 		} else {
@@ -324,6 +336,14 @@
 					cshosState.cshosLoans = data.cshos_loans || [];
 					cshosState.debts = data.debts || [];
 					cshosState.tracks = data.tracks || {};
+
+					var hasSelected = cshosState.debts.some(function(debt) {
+						return String(debt.id_off || '') === String(cshosState.selectedRefIdOff || '');
+					});
+					if (!hasSelected) {
+						cshosState.selectedRefIdOff = cshosState.debts.length ? String(cshosState.debts[0].id_off || '') : '';
+					}
+
 					window.switchCshosTab(cshosState.activeTab);
 				} else {
 					alert(data.message || 'ไม่สามารถโหลดข้อมูลได้');

@@ -191,6 +191,10 @@
 	background-color: #FBFAFD;
 }
 
+#cshosDebtTableBody tr:not(.cshos-track-row) {
+	cursor: pointer;
+}
+
 .cshos-empty-row {
 	text-align: center;
 	color: #8A8F98;
@@ -282,6 +286,18 @@
 
 .cshos-row-expanded td {
 	background: #F5EFFA;
+}
+
+.cshos-row-selected td {
+	background: #F7F0FF;
+}
+
+.cshos-row-selected td:first-child {
+	box-shadow: inset 3px 0 0 #612989;
+}
+
+.cshos-caret-btn.is-selected {
+	background: rgba(97, 41, 137, 0.12);
 }
 
 .cshos-track-row td {
