@@ -467,7 +467,13 @@ if ($maxId1 == $yearMonth) {
 // พอร์ตจาก register_supbrhos.php:986-1069 — hos__consig ใช้ ref_id (ไม่ใช่ ref_id_br แบบ hos__br)
 // ทุก query กันด้วย mysqli_num_rows เหมือนต้นแบบ ไม่มีแถวแล้วปล่อยเป็น null/[] เพื่อ fallback เป็นฟอร์มว่าง
 $savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+// คัดลอกใบเดิม: ?copy_from=... โหลดข้อมูลเอกสารเก่ามา prefill แต่ต้องไม่ตั้ง $savedBr
+// เพื่อให้ทุกจุดที่เช็ค $savedBr !== null (form action, เลขที่เอกสาร, สถานะ ฯลฯ) ยังคง
+// เป็นโหมด create ตามปกติ ไม่ใช่ edit ทับเอกสารเดิม
+$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+$loadRefId = $savedRefId !== "" ? $savedRefId : $copyFromRefId;
 $savedBr = null;
+$copySrcBr = null;
 $savedCustomer = null;
 $savedProducts = array();
 $savedOtherBill = null;
@@ -478,22 +484,27 @@ $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
 
-if ($savedRefId !== "") {
-	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__consig WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+if ($loadRefId !== "") {
+	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__consig WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 	if ($savedBrQuery && mysqli_num_rows($savedBrQuery) > 0) {
-		$savedBr = mysqli_fetch_assoc($savedBrQuery);
+		$loadedBr = mysqli_fetch_assoc($savedBrQuery);
+		if ($savedRefId !== "") {
+			$savedBr = $loadedBr;
+		} else {
+			$copySrcBr = $loadedBr;
+		}
 
-		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedOtherBillQuery) {
 			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
 		}
 
-		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedCommentQuery) {
 			$savedComment = mysqli_fetch_assoc($savedCommentQuery);
 		}
 
-		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $savedRefId . "' ORDER BY sort_order ASC, id ASC");
+		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $loadRefId . "' ORDER BY sort_order ASC, id ASC");
 		if ($savedCommentItemsQuery) {
 			while ($savedCommentItemRow = mysqli_fetch_assoc($savedCommentItemsQuery)) {
 				$savedCommentItems[] = array(
@@ -504,30 +515,30 @@ if ($savedRefId !== "") {
 			}
 		}
 
-		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedTransactionQuery) {
 			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 		}
 
-		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedRefId . "' ORDER BY id ASC");
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $loadRefId . "' ORDER BY id ASC");
 		if ($savedShippingQuery) {
 			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
 				$savedShippingRows[] = $savedShippingRow;
 			}
 		}
 
-		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedDeliveryBillQuery) {
 			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
 		}
 
-		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedRegisterQuery) {
 			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
 		}
 
 		// LEFT JOIN tb_product จำเป็น เพราะ hos__subconsig ไม่มีคอลัมน์ product_name/unit_name/access_code ของตัวเอง
-		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subconsig.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subconsig LEFT JOIN tb_product ON hos__subconsig.product_id = tb_product.product_ID WHERE hos__subconsig.ref_idd = '" . $savedRefId . "' ORDER BY hos__subconsig.id ASC");
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subconsig.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subconsig LEFT JOIN tb_product ON hos__subconsig.product_id = tb_product.product_ID WHERE hos__subconsig.ref_idd = '" . $loadRefId . "' ORDER BY hos__subconsig.id ASC");
 		if ($savedProductsQuery) {
 			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
 				$savedProducts[] = $savedProductRow;
@@ -538,8 +549,8 @@ if ($savedRefId !== "") {
 		// เดิมเติมจาก selectedCustomer ตอนเลือกลูกค้าผ่าน popup (window.customerPopupOnConfirm) เท่านั้น
 		// view mode จึงต้อง query tb_customer เองเพื่อเติมการ์ดนี้ — ใช้ query เดียวกับ
 		// ajax_customer_popup_search.php:25-28 (LEFT JOIN tb_typecustomer ดึง type_name)
-		if (!empty($savedBr['customer_id'])) {
-			$savedCustomerId = mysqli_real_escape_string($conn, $savedBr['customer_id']);
+		if (!empty($loadedBr['customer_id'])) {
+			$savedCustomerId = mysqli_real_escape_string($conn, $loadedBr['customer_id']);
 			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
 			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
 				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
@@ -605,43 +616,48 @@ $billDeliveryReports = array(
 // แล้วให้ JS ตัวเดียวเป็นคนเติม (ดูบล็อกท้ายฟอร์ม) แทนการไล่ so_saved_h() ทีละช่อง
 $csPrefill = array();
 
-if ($savedBr !== null) {
+// $csPrefillSource: ข้อมูล "ธุรกิจ" ที่ก็อปได้ ใช้ทั้งโหมด edit จริง ($savedBr) และโหมด
+// คัดลอกใบเดิม ($copySrcBr) — ต่างจาก $savedBr ตรงๆ ที่ยังคุมเฉพาะฟิลด์ identity/workflow
+// (เลขที่เอกสาร, สถานะอนุมัติ, form action ฯลฯ) ซึ่งต้องอยู่ในโหมด create เสมอเมื่อคัดลอก
+$csPrefillSource = $savedBr ?? $copySrcBr;
+
+if ($csPrefillSource !== null) {
 	$csPrefill = array(
-		'company' => $savedBr['company'],
-		'customer' => $savedBr['customer'],
-		'customer_id' => $savedBr['customer_id'],
-		'h_customer' => $savedBr['customer'],
-		'address' => $savedBr['address'],
-		'sale_comment' => $savedBr['sale_comment'],
-		'objective' => $savedBr['objective'],
-		'objective_des' => $savedBr['objective_des'],
-		'que_ckk' => $savedBr['que_ckk'],
-		'send_cs' => $savedBr['send_cs'] ?? '',
-		'sale_code' => $savedBr['sale_code'],
-		'returns' => $savedBr['returns'],
-		'returns_date' => $savedBr['returns_date'],
-		'returns_time' => $savedBr['returns_time'],
-		'return_date_bet' => $savedBr['return_date_bet'],
-		'returns_name' => $savedBr['returns_name'],
-		'returns_contact' => $savedBr['returns_contact'],
-		'returns_address' => $savedBr['returns_address'],
+		'company' => $csPrefillSource['company'],
+		'customer' => $csPrefillSource['customer'],
+		'customer_id' => $csPrefillSource['customer_id'],
+		'h_customer' => $csPrefillSource['customer'],
+		'address' => $csPrefillSource['address'],
+		'sale_comment' => $csPrefillSource['sale_comment'],
+		'objective' => $csPrefillSource['objective'],
+		'objective_des' => $csPrefillSource['objective_des'],
+		'que_ckk' => $csPrefillSource['que_ckk'],
+		'send_cs' => $csPrefillSource['send_cs'] ?? '',
+		'sale_code' => $csPrefillSource['sale_code'],
+		'returns' => $csPrefillSource['returns'],
+		'returns_date' => $csPrefillSource['returns_date'],
+		'returns_time' => $csPrefillSource['returns_time'],
+		'return_date_bet' => $csPrefillSource['return_date_bet'],
+		'returns_name' => $csPrefillSource['returns_name'],
+		'returns_contact' => $csPrefillSource['returns_contact'],
+		'returns_address' => $csPrefillSource['returns_address'],
 		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
-		'address_name' => $savedBr['delivery_name'],
-		'address_send' => $savedBr['delivery_address'],
-		'customer_name' => $savedBr['delivery_contact'],
-		'customer_tel' => $savedBr['delivery_tel'],
-		'delivery_type' => $savedBr['delivery_type'],
-		'start_date' => $savedBr['delivery_date'],
-		'between_date' => $savedBr['date_send_key'],
+		'address_name' => $csPrefillSource['delivery_name'],
+		'address_send' => $csPrefillSource['delivery_address'],
+		'customer_name' => $csPrefillSource['delivery_contact'],
+		'customer_tel' => $csPrefillSource['delivery_tel'],
+		'delivery_type' => $csPrefillSource['delivery_type'],
+		'start_date' => $csPrefillSource['delivery_date'],
+		'between_date' => $csPrefillSource['date_send_key'],
 		// ค่าจัดส่ง (แท็บ 2 ของ delivery_info_tab.php)
-		'shipping_date' => $savedBr['date_ker'],
-		'shipping_ref1' => $savedBr['order_refer_code'],
-		'shipping_ref2' => $savedBr['order_refer_code1'],
-		'shipping_cost' => $savedBr['ker_bath'],
+		'shipping_date' => $csPrefillSource['date_ker'],
+		'shipping_ref1' => $csPrefillSource['order_refer_code'],
+		'shipping_ref2' => $csPrefillSource['order_refer_code1'],
+		'shipping_cost' => $csPrefillSource['ker_bath'],
 	);
 
 	// delivery_time เก็บรวม "start_time end_time" คั่นด้วยช่องว่างเดียว (ดู register_supbrcshos1.php:203)
-	$savedDeliveryTimeParts = explode(' ', (string)($savedBr['delivery_time'] ?? ''), 2);
+	$savedDeliveryTimeParts = explode(' ', (string)($csPrefillSource['delivery_time'] ?? ''), 2);
 	$csPrefill['start_time'] = $savedDeliveryTimeParts[0] ?? '';
 	$csPrefill['end_time'] = $savedDeliveryTimeParts[1] ?? '';
 
@@ -2139,7 +2155,7 @@ $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 	}
 
 	function goMainSupBrcs() {
-		window.location.href = 'status_supbrsc.php';
+		window.location.href = 'status_adminbrsc.php';
 	}
 </script>
 
