@@ -332,6 +332,10 @@ while($objResult = mysqli_fetch_array($objQuery))
 					else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
 				<?php }
+					/* Returned = หัวหน้าส่งกลับให้ Sale แก้ไข (แถบอนุมัติใน register_supbrcshos.php) */
+					else if ($objResult["status_doc"]=='Returned'){ ?>
+				<td bgcolor="#FFC107"><?php echo $objResult["status_doc"];?></td>
+				<?php }
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>

@@ -38,7 +38,8 @@
 /* View Switcher (radio) */
 .cshos-switcher {
 	display: flex;
-	gap: 36px;
+	flex-wrap: wrap;
+	gap: 12px 36px;
 	margin-bottom: 20px;
 }
 
@@ -150,11 +151,13 @@
 	display: flex;
 }
 
-/* Table Container */
+/* Table Container
+   overflow ต้องเป็น auto ทั้งสองแกน: .cshos-popup-box มี overflow:hidden ครอบอยู่
+   ถ้าปล่อยแค่แกน y ตารางบนจอแคบจะถูกบีบ/ตัดทิ้งโดยเลื่อนดูไม่ได้ */
 .cshos-table-wrap {
 	flex: 1;
 	max-height: 440px;
-	overflow-y: auto;
+	overflow: auto;
 }
 
 .cshos-table {
@@ -434,8 +437,28 @@
 }
 
 @media (max-width: 768px) {
+	/* ไฟล์นี้ถูก link หลัง so-core.css ทำให้ .cshos-popup-box ทับ .customer-popup-box
+	   ใน @media 768 ของ so-core ทิ้ง จึงต้องประกาศค่ามือถือซ้ำที่นี่เอง */
+	.cshos-popup-box {
+		width: 100%;
+		max-height: 94vh;
+		padding: 22px 16px;
+	}
+
+	.cshos-modal-title {
+		font-size: 19px;
+	}
+
 	.cshos-stat-bar {
 		grid-template-columns: repeat(2, 1fr) !important;
+	}
+
+	.cshos-stat-item {
+		padding: 16px 12px;
+	}
+
+	.cshos-stat-value {
+		font-size: 22px;
 	}
 
 	.cshos-stat-item:nth-child(2) {
@@ -444,5 +467,42 @@
 
 	.cshos-stat-item:nth-child(odd) {
 		border-left: none;
+	}
+
+	/* จอแคบ: ให้ตารางเลื่อนแนวนอนแทนการบีบคอลัมน์จนอ่านไม่ออก
+	   (แนวเดียวกับ .so-product-table ใน register-supbrcshos.css:720)
+	   แท็บยอดหนี้มี 6 คอลัมน์จึงต้องกว้างกว่าแท็บใบยืมฝากขายที่มี 4 */
+	.cshos-table {
+		min-width: 620px;
+	}
+
+	#cshosTabContentDebts .cshos-table {
+		min-width: 820px;
+	}
+
+	.cshos-table th,
+	.cshos-table td {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
+	.cshos-table td {
+		padding-top: 14px;
+		padding-bottom: 14px;
+	}
+
+	.cshos-track-row td {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
+	.cshos-switcher {
+		gap: 10px 20px;
+	}
+
+	/* touch target ขั้นต่ำ 44px ให้เท่ากับปุ่มอื่นในระบบ (register-suphos.css:1459) */
+	.cshos-switcher-option,
+	.cshos-track-save-btn {
+		min-height: 44px;
 	}
 }

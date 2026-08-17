@@ -5,7 +5,8 @@
 //
 // โครงสร้างมิเรอร์ register_supbrcshos1.php เป็นหลัก (ทันสมัยกว่า register_supbrhos_edit1.php ที่เป็น
 // reference เดิม) ต่างจากไฟล์นั้น 3 จุดหลัก: (1) ref_id มาจาก POST ไม่ใช่ generate ใหม่ (2) hos__consig
-// เป็น UPDATE ไม่แตะ sale/sale_code/sale_date/add_by/add_date/send_sup* เพื่อรักษาประวัติผู้สร้างเดิม
+// เป็น UPDATE ไม่แตะ sale/sale_code/sale_date/add_by/add_date เพื่อรักษาประวัติผู้สร้างเดิม
+// (send_sup*/status_doc ถูกตั้งเฉพาะตอน Submit หรือยกเลิกเอกสาร — ดูบล็อกก่อน UPDATE hos__consig)
 // (3) hos__subconsig / tb_register_data ต้อง DELETE ก่อน INSERT (ตารางลูกอื่นเป็น DELETE+INSERT อยู่แล้ว
 // เหมือนกับ handler สร้างเอกสาร จึงก็อปมาแทบไม่ต้องแก้)
 ob_start();
@@ -298,8 +299,9 @@ mysqli_begin_transaction($conn);
 try {
 
 // ===== hos__consig (UPDATE) =====
-// ไม่แตะ date_save/sale_date/sale/sale_code/add_date/add_by/send_sup/send_supname/send_supdate
-// เพื่อรักษาประวัติผู้สร้าง/สถานะส่งซัพพลายเออร์เดิมไว้ — เหมือนแนวทาง register_supbrhos_edit1.php:236-238
+// ไม่แตะ date_save/sale_date/sale/sale_code/add_date/add_by เพื่อรักษาประวัติผู้สร้างเดิมไว้
+// — เหมือนแนวทาง register_supbrhos_edit1.php:236-238
+// ส่วน status_doc/send_sup* ถูกปรับตามชนิดของคำขอ (Submit / Save Draft / ยกเลิกเอกสาร) ในบล็อกด้านล่าง
 $csConsigUpdateColumns = array(
 	'company' => $company,
 	'customer' => $customer,
@@ -334,6 +336,22 @@ $csConsigUpdateColumns = array(
 	'returns_contact' => $returns_contact,
 	'returns_address' => $returns_address,
 );
+
+// สถานะการส่งให้หัวหน้า — ตั้งเฉพาะตอน Submit/ยกเลิกเอกสารเท่านั้น ถ้าเซ็ตทุกครั้งเอกสาร Draft
+// จะถูกส่งให้หัวหน้าทันทีที่กด Save Draft และเอกสาร Returned จะเด้งกลับเป็น Request ทันทีที่กด Update
+// mirror register_suphos_edit1.php:485-495
+if ($isDraftRequest && !$isCancelDoc) {
+	// Save Draft/Update ต้องไม่แตะสถานะเอกสารเลย ไม่งั้นเอกสารที่ส่งไปแล้ว (Request/Returned)
+	// จะถูกดึงกลับเป็น Draft เพียงเพราะผู้ใช้กดปุ่ม Update
+	unset($csConsigUpdateColumns['status_doc']);
+} elseif ($isCancelDoc) {
+	$csConsigUpdateColumns['send_sup'] = '1';
+} else {
+	$csConsigUpdateColumns['send_sup'] = '1';
+	$csConsigUpdateColumns['send_supname'] = $add_by_session;
+	$csConsigUpdateColumns['send_supdate'] = $add_date;
+	$csConsigUpdateColumns['send_admin'] = '0';
+}
 
 foreach (array('slip1' => $slip1, 'slip2' => $slip2, 'slip3' => $slip3, 'slip4' => $slip4, 'slip5' => $slip5) as $csSlipCol => $csSlipVal) {
 	if ($csSlipVal !== null) {
@@ -706,6 +724,47 @@ if (!$objQuery66) {
 
 if ($saveOk) {
 	mysqli_commit($conn);
+
+	// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_supbrcshos.php =====
+	// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
+	// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — โครงเดียวกับ register_suphos_edit1.php:4029-4111
+	// ตรรกะ 2 ชั้นเดิมของ BRCS พอร์ตจาก approve_brcshos.php:21-30, approve_brcshos_cm.php:15,
+	// rejected_brcshos.php:15 และ rejected_brcshos_cm.php:15
+	$csApproveAction = $_POST['approve_action'] ?? '';
+	if ($csApproveAction !== '') {
+		$csApproveName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+		$csApproveCode = (string)($_SESSION['code'] ?? ''); // ส่งดิบ — cs_update_column_if_exists escape ให้เอง
+		$csApproveDate = date('Y-m-d');
+		$csApproveTime = date('H:i:s');
+		$csApproveStamp = date('Y-m-d H:i:s');
+		$csSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+		// ผู้อนุมัติชั้น CM ยึดชื่อผู้ใช้ตามหน้าเดิม register_brcshos_approve.php:138
+		$csIsCmApprover = in_array(($_SESSION['name'] ?? ''), array('ชลชินี', 'สมบัติ'), true);
+		$csIsExaminer = (($_SESSION['code'] ?? '') === 'SS5');
+
+		if ($csApproveAction === 'return') {
+			// ส่งกลับให้ Sale แก้ไข — send_sup='0' ทำให้ปุ่ม Submit บนฟอร์มกลับมาใช้ได้อีกครั้ง
+			mysqli_query($conn, "UPDATE hos__consig SET status_doc='Returned', send_sup='0' WHERE ref_id='" . $csSafeRefId . "'");
+		} elseif ($csApproveAction === 'reject') {
+			if ($csIsCmApprover) {
+				mysqli_query($conn, "UPDATE hos__consig SET status_doc='Rejected', cm_name='" . $csApproveName . "', cm_date='" . $csApproveStamp . "' WHERE ref_id='" . $csSafeRefId . "'");
+			} else {
+				mysqli_query($conn, "UPDATE hos__consig SET status_doc='Rejected', approve='" . $csApproveName . "', approve_date='" . $csApproveDate . "', approve_time='" . $csApproveTime . "' WHERE ref_id='" . $csSafeRefId . "'");
+			}
+		} elseif ($csApproveAction === 'approve') {
+			if ($csIsCmApprover) {
+				// ชั้นสุดท้าย: CM อนุมัติ เอกสารจบ
+				mysqli_query($conn, "UPDATE hos__consig SET send_admin='1', status_doc='Approve', cm_name='" . $csApproveName . "', cm_date='" . $csApproveStamp . "' WHERE ref_id='" . $csSafeRefId . "'");
+			} elseif ($csIsExaminer) {
+				// ชั้นผู้ตรวจ (SS5): แค่ยืนยันว่าตรวจแล้ว ส่งต่อให้หัวหน้า
+				mysqli_query($conn, "UPDATE hos__consig SET send_sup='1', status_doc='Request', examine_name='" . $csApproveName . "', examine_date='" . $csApproveDate . "' WHERE ref_id='" . $csSafeRefId . "'");
+			} else {
+				// ชั้นหัวหน้า: อนุมัติแล้วส่งต่อให้ CM
+				mysqli_query($conn, "UPDATE hos__consig SET send_cm='1', status_doc='Request', approve='" . $csApproveName . "', approve_date='" . $csApproveDate . "', approve_time='" . $csApproveTime . "' WHERE ref_id='" . $csSafeRefId . "'");
+			}
+			cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'approve_code', $csApproveCode);
+		}
+	}
 
 	if ($isDraftRequest) {
 		if (ob_get_level() > 0) {

@@ -160,7 +160,8 @@ $sel = "";
 }else 	if ($_SESSION['code']=='SUP_EN'){
 
 	?>
-<select name="sale_code" id="sale_code" style="width:280px" class="w3-input" >
+<!-- width:90% ให้ตรงกับ select ของ role อื่นในหน้าเดียวกัน — เดิมเป็น 280px ตายตัวซึ่งล้นจอมือถือ -->
+<select name="sale_code" id="sale_code" style="width:90%" class="w3-input" >
 <option value="">**Please Select**</option>
 <?php
 
@@ -312,7 +313,29 @@ $objQuery  = mysqli_query($conn,$strSQL);
 
 
 ?>
+<style>
+	/* ตารางนี้มี 12 คอลัมน์ บนจอแคบจะบีบจนอ่านไม่ออก (หรือดันหน้าให้ล้นแนวนอนทั้งหน้า)
+	   จึงห่อด้วยกล่องที่เลื่อนแนวนอนได้ แล้วตรึงความกว้างขั้นต่ำของตารางไว้
+	   แนวเดียวกับ .so-product-table-wrap ใน css/register-supbrcshos.css */
+	.brsc-status-table-wrap {
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	@media (max-width: 992px) {
+		.brsc-status-table-wrap > table {
+			min-width: 1100px;
+		}
+	}
+
+	/* ลิงก์แบ่งหน้ามีได้หลายสิบตัว ต้องยอมให้ตัดบรรทัดแทนการดันหน้าให้ล้น */
+	.brsc-status-pager {
+		word-break: break-word;
+	}
+</style>
 <div class="w3-container">
+	<div class="brsc-status-table-wrap">
 	<table border="1" width="100%" class="w3-table">
 		<thead class="w3-gray">
 			<th width="5%">เลขที่อ้างอิง</th>
@@ -376,6 +399,10 @@ while($objResult = mysqli_fetch_array($objQuery))
 					else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
 				<?php }
+					/* Returned = หัวหน้าส่งกลับให้ Sale แก้ไข (แถบอนุมัติใน register_supbrcshos.php) */
+					else if ($objResult["status_doc"]=='Returned'){ ?>
+				<td bgcolor="#FFC107"><?php echo $objResult["status_doc"];?></td>
+				<?php }
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>
@@ -393,8 +420,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 			<?php $i++; } ?>
 		</tbody>
 	</table>
+	</div>
 
- <div class="w3-panel">    <strong>พบทั้งหมด</strong>
+ <div class="w3-panel brsc-status-pager">    <strong>พบทั้งหมด</strong>
       <?= $Num_Rows;?>
       <strong>รายการ<span class="style14"> :</span>จำนวน</strong>
       <?=$Num_Pages;?>

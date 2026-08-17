@@ -697,6 +697,22 @@
 		</div>
 	</div>
 
+	<script>
+		/* ย้าย modal ไปแขวนที่ <body> ตอนโหลดหน้า
+		   partial นี้ถูก include อยู่ใน <div id="pd" class="so-card"> และ .so-card มี
+		   container-type: inline-size (register-suphos.css:1428) ซึ่งบังคับ contain: layout
+		   ทำให้ .so-card กลายเป็น containing block ของลูกที่ position: fixed
+		   -> overlay จะคลุมแค่การ์ดรายการสินค้า ไม่ใช่ทั้งจอ และบนมือถือจะกินพื้นที่แคบมาก
+		   ช่องในฟอร์ม modal ใช้แค่ id ไม่มี name จึงไม่ถูก submit การย้ายออกจาก <form> ปลอดภัย
+		   (csOpenEditModal/csSaveEditModal อ้างอิงทุกอย่างผ่าน getElementById อยู่แล้ว) */
+		(function csDetachEditModal() {
+			var modal = document.getElementById('cs_edit_modal');
+			if (modal && modal.parentNode !== document.body) {
+				document.body.appendChild(modal);
+			}
+		})();
+	</script>
+
 </body>
 
 </html>

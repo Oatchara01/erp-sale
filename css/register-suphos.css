@@ -18,13 +18,12 @@
   }
 }
 
+/* หมายเหตุ: .so-header-container / .so-tabs-container / .so-card เป็น query container
+   เองอยู่แล้ว (ดู container-type ราวบรรทัด 1428) element จึง query container ของตัวเองไม่ได้
+   rule ที่เคยเขียนไว้ให้สามตัวนี้ใน @container จึงไม่เคยทำงานเลย และถูกลบออกแล้ว —
+   พฤติกรรมบนมือถือของสามตัวนี้อยู่ใน @media (max-width: 768px) ท้ายไฟล์แทน
+   selector ที่เหลือใน block นี้เป็น "ลูก" ของ container จึงทำงานได้ตามปกติ */
 @container (max-width: 860px) {
-  .so-header-container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
   .so-header-right {
     width: 100%;
   }
@@ -32,12 +31,6 @@
   .so-header-right > button {
     flex: 1 1 220px;
     justify-content: center;
-  }
-
-  .so-tabs-container {
-    padding-left: 0;
-    flex-wrap: wrap;
-    gap: 8px;
   }
 
   .so-tab-btn {
@@ -54,10 +47,6 @@
   .so-address-action-btn {
     flex: 1 1 220px;
     justify-content: center;
-  }
-
-  .so-card {
-    padding: 24px 18px;
   }
 
   .so-customer-top-grid {
@@ -87,9 +76,8 @@
     gap: 4px;
   }
 
-  .so-card {
-    padding: 20px 14px;
-  }
+  /* .so-card ที่นี่เคยตั้ง padding ไว้แต่ query ตัวเองไม่ได้ (ดูหมายเหตุบน @container แรก)
+     ปัจจุบันความกว้าง padding มาจาก clamp(16px, 3vw, 32px) ใน so-core.css ซึ่งยุบเองอยู่แล้ว */
 
   .so-title {
     font-size: clamp(24px, 6vw, 28px);

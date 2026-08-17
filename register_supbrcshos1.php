@@ -264,6 +264,13 @@ $add_by = "$name $surname";
 // เก็บค่าจาก session ไว้ต่างหากสำหรับตารางที่บันทึกก่อนหน้านั้น
 $add_by_session = mysqli_real_escape_string($conn, $add_by);
 
+// เอกสาร Draft ต้องยังไม่ถูกส่งให้หัวหน้า — เดิม INSERT ฮาร์ดโค้ด send_sup='1' ทุกกรณี ทำให้
+// ปุ่ม Submit บนหน้าฟอร์ม (ซ่อนเมื่อ send_sup='1') หายไปตั้งแต่กด Save Draft ครั้งแรก
+// mirror register_suphos_edit1.php:485-495
+$send_sup_val = ($isDraftRequest && !$isCancelDoc) ? "0" : "1";
+$send_supname_val = ($send_sup_val === "1") ? $add_by_session : "";
+$send_supdate_val = ($send_sup_val === "1") ? $add_date : "";
+
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__consig ";
 $qry = mysqli_query($conn,$sql);
@@ -388,7 +395,7 @@ try {
 $save="insert into hos__consig
 (company,ref_id,date_save,customer,customer_id,address,sale_comment,objective,objective_des,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,slip1,slip2,slip3,slip4,slip5,iv_no,iv_date,remark_cancel,que_ckk,send_cs,date_ker,order_refer_code,order_refer_code1,ker_bath,returns,returns_date,returns_time,return_date_bet,returns_name,returns_contact,returns_address,send_sup,send_supname,send_supdate)
 values
-('".$company."','".$ref_id."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$objective."','".$objective_des."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by_session."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$iv_date."','".$remark_cancel."','".$que_ckk."','".$send_cs."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$returns."','".$returns_date."','".$returns_time."','".$return_date_bet."','".$returns_name."','".$returns_contact."','".$returns_address."','1','".$add_by_session."','".$add_date."')";
+('".$company."','".$ref_id."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$objective."','".$objective_des."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by_session."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$iv_date."','".$remark_cancel."','".$que_ckk."','".$send_cs."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$returns."','".$returns_date."','".$returns_time."','".$return_date_bet."','".$returns_name."','".$returns_contact."','".$returns_address."','".$send_sup_val."','".$send_supname_val."','".$send_supdate_val."')";
 
 
 $qsave=mysqli_query($conn,$save);

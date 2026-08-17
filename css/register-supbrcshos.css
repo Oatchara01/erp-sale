@@ -90,6 +90,29 @@
 	}
 }
 
+/* ===== แถวแท็บบนจอแคบ =====
+   .so-tabs-container ฐาน (register-suphos.css:691) เป็น flex แบบ nowrap และ @media 768
+   ตั้ง .so-tab-btn { flex: 1 1 0 } ให้แบ่งพื้นที่เท่ากันในบรรทัดเดียว หน้านี้มีแถวแท็บ 4 ปุ่ม
+   ("ที่อยู่ / รายละเอียดที่อยู่ / ที่อยู่เพิ่มเติม / ที่อยู่การคืน") ซึ่งบนจอ 320-400px จะเหลือ
+   ปุ่มละ ~60-80px ทำให้ข้อความไทยล้นปุ่ม จึงให้ห่อบรรทัดแทน (2 ปุ่มต่อแถว)
+   สโคปไว้ในไฟล์ของหน้านี้ ไม่กระทบ register_suphos.php / register_supbrhos.php ที่ใช้ CSS ร่วมกัน */
+@media (max-width: 768px) {
+	.so-tabs-container {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.so-tab-btn {
+		flex: 1 1 130px;
+		border-radius: 12px;
+		border-bottom: 1px solid #FFFFFF;
+		padding-left: 10px;
+		padding-right: 10px;
+		white-space: normal;
+		line-height: 1.3;
+	}
+}
+
 /* ===== แท็บ "Admin": บังคับ 2 แถวตาม admin_brcs.png (แถว 1 = 4 ช่อง, แถว 2 = ปุ่ม+เหตุผล span 3)
    admin_info_tab.php's .admin-ui-grid ปกติเป็น 3 คอลัมน์ ทำให้แถว 1 (4 ช่อง) ตกไปอีกบรรทัด
    สโคปด้วย #tab-admin-info เพื่อไม่กระทบ register_suphos.php/register_supbrhos.php ที่ใช้ partial เดียวกัน ===== */
@@ -737,28 +760,37 @@
 }
 
 /* ===== Item Detail Modal Popup (Figma node 984:5469) ===== */
+/* inset:0 แทน width:100vw/height:100vh — 100vw ไม่หัก scrollbar ทำให้เกิด
+   scroll แนวนอนบน desktop ส่วน 100vh บนมือถือวัดรวมแถบ address bar ที่ยุบได้ */
 .cs-modal-overlay {
 	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh;
+	inset: 0;
 	background: rgba(0, 0, 0, 0.45);
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding: 24px 16px;
+	box-sizing: border-box;
+	overflow-y: auto;
 	z-index: 9999;
 }
 
 .cs-modal-card {
 	background: #FFFFFF;
 	border-radius: 16px;
-	width: 90%;
+	width: 100%;
 	max-width: 860px;
 	padding: 24px 32px;
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 	position: relative;
 	font-family: 'Prompt', sans-serif;
+	box-sizing: border-box;
+	/* จำกัดความสูงไม่ให้เกินจอ แล้วให้เนื้อหาในการ์ดเลื่อนเอง — ถ้าปล่อยให้การ์ดสูงเกิน
+	   overlay ที่ align-items:center หัวการ์ดจะถูกตัดออกนอกจอโดยเลื่อนกลับขึ้นไปไม่ได้ */
+	max-height: calc(100vh - 48px);
+	max-height: calc(100dvh - 48px);
+	overflow-y: auto;
+	margin: auto;
 }
 
 .cs-modal-header {
@@ -807,11 +839,38 @@
 }
 
 @media (max-width: 768px) {
+	.cs-modal-overlay {
+		padding: 16px 12px;
+	}
+
+	.cs-modal-card {
+		padding: 20px 16px;
+		max-height: calc(100vh - 32px);
+		max-height: calc(100dvh - 32px);
+	}
+
 	.cs-modal-grid-4 {
 		grid-template-columns: repeat(2, 1fr);
 	}
 
 	.cs-modal-grid-2 {
+		grid-template-columns: 1fr;
+	}
+
+	/* ปุ่มท้าย modal เรียงเต็มแถวและสูงพอสำหรับการแตะ */
+	.cs-modal-footer {
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+
+	.cs-modal-footer button {
+		width: 100%;
+		min-height: 44px;
+	}
+}
+
+@media (max-width: 480px) {
+	.cs-modal-grid-4 {
 		grid-template-columns: 1fr;
 	}
 }

@@ -103,8 +103,67 @@ include('dbconnect_sale.php'); ?>
 		}
 	}
 
-	function csPreviewNotice() {
-		alert('กรุณาบันทึกเอกสารก่อน จึงจะสามารถ Preview ได้');
+	// เปิดพรีวิวใบฝากขายในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ report_brcshos.php
+	// (report มี preview path อ่านจาก POST อยู่ใน report_brcshos_preview_helper.php)
+	function csOpenPreview() {
+		var form = document.forms.frmMain;
+		var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
+		var refId = refInput ? refInput.value.trim() : '';
+
+		if (!form || !refId) {
+			Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id)', 'warning');
+			return;
+		}
+
+		var previewTarget = 'brcshos_preview_' + Date.now();
+		var previewWindow = window.open('', previewTarget);
+		if (!previewWindow) {
+			Swal.fire('แจ้งเตือน', 'เบราว์เซอร์บล็อกหน้าต่าง Preview กรุณาอนุญาต Pop-up แล้วลองใหม่', 'warning');
+			return;
+		}
+
+		var previewFlag = document.createElement('input');
+		previewFlag.type = 'hidden';
+		previewFlag.name = '_report_preview';
+		previewFlag.value = '1';
+		form.appendChild(previewFlag);
+
+		var originalAction = form.getAttribute('action');
+		var originalMethod = form.getAttribute('method');
+		var originalTarget = form.getAttribute('target');
+		var originalEnctype = form.getAttribute('enctype');
+
+		form.action = 'report_brcshos.php';
+		form.method = 'post';
+		form.target = previewTarget;
+		// พรีวิวไม่ใช้ไฟล์แนบ จึงไม่ต้องอัปโหลดสลิปซ้ำไปที่หน้ารายงาน
+		form.enctype = 'application/x-www-form-urlencoded';
+		HTMLFormElement.prototype.submit.call(form);
+
+		if (originalAction === null) form.removeAttribute('action');
+		else form.setAttribute('action', originalAction);
+		if (originalMethod === null) form.removeAttribute('method');
+		else form.setAttribute('method', originalMethod);
+		if (originalTarget === null) form.removeAttribute('target');
+		else form.setAttribute('target', originalTarget);
+		if (originalEnctype === null) form.removeAttribute('enctype');
+		else form.setAttribute('enctype', originalEnctype);
+		previewFlag.remove();
+
+		// เอกสารใหม่ยังไม่ได้เลขจริง (create handler ออกเลขตอนบันทึก) จึงเตือนว่าเลขในพรีวิวเป็นค่าประมาณการ
+		// โหมดแก้ไขจะ action ไป register_supbrcshos_edit1.php ซึ่งแปลว่าเลขที่อ้างอิงเป็นเลขจริงแล้ว
+		var csIsSavedDoc = (originalAction || '').indexOf('register_supbrcshos_edit1.php') !== -1;
+		if (!csIsSavedDoc && typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+			Swal.fire({
+				toast: true,
+				position: 'top-end',
+				icon: 'info',
+				title: 'เลขที่อ้างอิงในพรีวิวเป็นค่าประมาณการ อาจไม่ตรงกับเลขที่บันทึกจริง',
+				showConfirmButton: false,
+				timer: 3500,
+				timerProgressBar: true
+			});
+		}
 	}
 
 	// แท็บ ข้อมูลเอกสาร / Admin — pure UI toggle, ported verbatim from register_supbrhos.php:780-792
@@ -696,7 +755,7 @@ if ($savedBr !== null) {
 			</div>
 		</div>
 		<div class="so-header-right">
-			<button type="button" class="btn-preview-so" onclick="csPreviewNotice();"><i class="far fa-eye"></i> Preview</button>
+			<button type="button" class="btn-preview-so" onclick="csOpenPreview();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 		</div>
 	</div>
 
@@ -768,10 +827,16 @@ if ($savedBr !== null) {
 					csSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
 				}
 
-				// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
-				// จึงเรียกผ่าน prototype โดยตรง และเพราะ .submit() ไม่ส่งค่าปุ่มมาด้วย
-				// ต้องสร้าง hidden name="submit" เอง ไม่งั้น backend จะมองว่าไม่ได้กดบันทึก
-				// (pattern เดียวกับ register_supbrhos.php)
+				HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+				return false;
+			}
+
+			// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
+			// จึงต้องเรียกผ่าน prototype โดยตรง และเพราะ .submit() ไม่ส่งค่าปุ่มมาด้วย
+			// ต้องสร้าง hidden name="submit" เอง ไม่งั้น register_supbrcshos_edit1.php:27
+			// (if isset($_POST["submit"])) จะมองว่าไม่ได้กดบันทึกแล้วข้ามการบันทึกทั้งไฟล์
+			// (pattern เดียวกับ register_supbrhos.php) — ใช้ร่วมกับปุ่มบนแถบอนุมัติด้วย
+			function csEnsureSubmitMarker() {
 				var csForm = document.forms['frmMain'];
 				var csSubmitValue = csForm.querySelector('input[type="hidden"][name="submit"]');
 				if (!csSubmitValue) {
@@ -781,8 +846,7 @@ if ($savedBr !== null) {
 					csForm.appendChild(csSubmitValue);
 				}
 				csSubmitValue.value = 'submit';
-				HTMLFormElement.prototype.submit.call(csForm);
-				return false;
+				return csForm;
 			}
 		</script>
 
@@ -1224,7 +1288,9 @@ if ($savedBr !== null) {
 			<button type="button" class="so-tab-btn" onclick="brOpenAddrTab('br_addr_extra', this)">ที่อยู่เพิ่มเติม</button>
 			<button type="button" class="so-tab-btn" onclick="brOpenAddrTab('br_addr_return', this)">ที่อยู่การคืน</button>
 		</div>
-		<div class="so-card" style="padding: 24px;">
+		<!-- padding เป็น clamp ไม่ใช่ 24px ตายตัว: inline style ไม่มี media query ไหนแก้ได้
+		     ค่าบนสุดยังเป็น 24px เท่าเดิมบน desktop แต่ยุบเหลือ 16px บนจอแคบเหมือน .so-card ใบอื่น -->
+		<div class="so-card" style="padding: clamp(16px, 3vw, 24px);">
 
 			<div id="br_addr_main" class="so-addr-tab-content">
 				<div class="so-section-title-container">
@@ -1505,11 +1571,14 @@ if ($savedBr !== null) {
 					</div>
 				</div>
 
-				<div style="margin-top: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-					<button type="button" onclick="addExtraAddress()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+				<!-- ใช้ .so-address-actions/.so-address-action-btn ตัวเดียวกับแถวปุ่มบนสุดของแท็บ "ที่อยู่"
+				     เพื่อให้ได้ min-height 44px และการยุบเป็นคอลัมน์เต็มความกว้างบนจอแคบไปด้วย
+				     (register-suphos.css:1477 + @container 560) — เดิมไม่มี class จึงแก้ด้วย query ไม่ได้ -->
+				<div class="so-address-actions" style="margin-top: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+					<button type="button" class="so-address-action-btn" onclick="addExtraAddress()" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 						<img src="img/icons/add_address.png" alt="add_address" style="width: 16px; height: 16px;"> เพิ่มที่อยู่
 					</button>
-					<button type="button" onclick="toggleDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+					<button type="button" class="so-address-action-btn" onclick="toggleDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
 						<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์ใบปะ
 					</button>
 				</div>
@@ -1594,7 +1663,7 @@ if ($savedBr !== null) {
 								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 							</div>
 						</div>
-						<button type="button" onclick="toggleBillDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; height: 42px; min-width: 146px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+						<button type="button" class="so-address-action-btn" onclick="toggleBillDeliveryPrintPanel()" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; height: 42px; min-width: 146px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
 							<img src="img/icons/print.png" alt="print" style="width: 16px; height: 16px; object-fit: contain;"> พิมพ์
 						</button>
 					</div>
@@ -1978,12 +2047,101 @@ if ($savedBr !== null) {
 
 </div><!-- /register-so-main -->
 
+<?php
+// ===== แถบปุ่มล่าง — business flow เดียวกับ register_suphos.php:3241-3262 =====
+$csStatusDoc = $savedBr['status_doc'] ?? '';
+$csSendSup = $savedBr['send_sup'] ?? '0';
+$csSendCm = $savedBr['send_cm'] ?? '0';
+$csSendAdmin = $savedBr['send_admin'] ?? '0';
+$csIsEditMode = ($savedBr !== null);
+$csIsClosed = in_array($csStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
+// Submit หายทันทีที่เคยส่งให้หัวหน้าไปแล้ว (send_sup='1') หรือเอกสารปิดแล้ว
+$csHideSubmit = $csIsEditMode && ($csSendSup === '1' || $csIsClosed);
+
+// ตรรกะอนุมัติ 2 ชั้นเดิมของ BRCS — พอร์ตจาก register_brcshos_approve.php:136-146 + approve_brcshos.php:21-30
+$csIsCmApprover = in_array($_SESSION['name'] ?? '', ['ชลชินี', 'สมบัติ'], true);
+$csIsExaminer = (($_SESSION['code'] ?? '') === 'SS5');
+$csIsSaleUser = (($_SESSION['type_login'] ?? '') === 'Sale');
+// แต่ละชั้นโผล่ได้ครั้งเดียว กันกดอนุมัติซ้ำทั้งที่ส่งต่อชั้นถัดไปแล้ว
+$csTierReady = $csIsCmApprover
+	? ($csSendAdmin === '0')
+	: ($csIsExaminer ? ($csSendSup === '0') : ($csSendSup === '1' && $csSendCm === '0'));
+$csCanShowApproveBar = $csIsEditMode && !$csIsSaleUser && ($csStatusDoc === 'Request') && $csTierReady;
+// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่ เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองแล้ว
+$csHideUpdate = $csIsClosed || $csCanShowApproveBar;
+?>
 <div class="so-sticky-actions">
 	<div class="so-sticky-actions-inner">
-		<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-		<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
+		<?php if ($csCanShowApproveBar): ?>
+			<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
+			     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
+			<input type="hidden" name="approve_action" id="cs_approve_action" value="">
+			<div class="so-approve-actions">
+				<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()">
+					<i class="fas fa-ellipsis-v"></i>
+				</button>
+				<div id="approveOverflowMenu" class="so-overflow-menu">
+					<button type="button" onclick="csRunApproveAction('return', true)"><i class="fas fa-reply"></i> ส่งกลับ</button>
+					<button type="button" class="so-menu-danger" onclick="csRunApproveAction('reject', true)"><i class="fas fa-times-circle"></i> ไม่อนุมัติ</button>
+					<button type="button" onclick="triggerCancelDocFromApproveMenu()"><i class="far fa-window-close"></i> ยกเลิกเอกสาร</button>
+				</div>
+				<button type="button" class="btn-so-approve" onclick="csRunApproveAction('approve', false)"><i class="far fa-check-circle"></i> อนุมัติ</button>
+				<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> Update</button>
+			</div>
+		<?php endif; ?>
+		<?php if (!$csHideSubmit): ?>
+			<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+		<?php endif; ?>
+		<?php if (!$csHideUpdate): ?>
+			<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> <?php echo $csIsEditMode ? 'Update' : 'Save Draft'; ?></button>
+		<?php endif; ?>
+		<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupBrcs();">ยกเลิก</button>
 	</div>
 </div>
+<script>
+	function toggleApproveOverflowMenu() {
+		var menu = document.getElementById('approveOverflowMenu');
+		if (!menu) return;
+		menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+	}
+
+	document.addEventListener('click', function(e) {
+		var menu = document.getElementById('approveOverflowMenu');
+		var trigger = document.getElementById('btn_approve_overflow');
+		if (!menu || menu.style.display === 'none' || !menu.style.display) return;
+		if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+		if (!menu.contains(e.target)) menu.style.display = 'none';
+	});
+
+	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป
+	// register_supbrcshos_edit1.php (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ)
+	// ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+	function csRunApproveAction(action, skipValidation) {
+		var field = document.getElementById('cs_approve_action');
+		if (field) field.value = action;
+
+		if (skipValidation) {
+			if (csSubmitting) return;
+			csSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+			HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+			return;
+		}
+
+		fncSubmit();
+		// fncSubmit() คืนค่า false ทั้งกรณีสำเร็จและ validation ไม่ผ่าน จึงดูจากธง csSubmitting แทน
+		if (!csSubmitting && field) field.value = '';
+	}
+
+	// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก cancel_doc แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
+	function triggerCancelDocFromApproveMenu() {
+		toggleCancelDoc();
+		HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+	}
+
+	function goMainSupBrcs() {
+		window.location.href = 'status_supbrsc.php';
+	}
+</script>
 
 <?php if (count($csPrefill) > 0) { ?>
 	<?php

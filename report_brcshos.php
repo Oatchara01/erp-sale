@@ -85,28 +85,43 @@ function DateThai($strDate)
 		return "$strDay $strMonthThai $strYear";
 	}
 
-$ref_id=$_GET["ref_id"];
+$ref_id = $_GET["ref_id"] ?? ($_POST["ref_id"] ?? '');
+
+include_once "report_brcshos_preview_helper.php";
+$isPreview = brcshos_is_preview_request();
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM  hos__consig WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+$previewProductRows = array();
 
-$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id."' ";
-$objQuery3 = mysqli_query($conn,$strSQL3);
-$objResult3 = mysqli_fetch_array($objQuery3);
+if ($isPreview) {
+	// พรีวิวเอกสารที่ยังไม่บันทึก: อ่านค่าจากฟอร์ม register_supbrcshos.php แทนการอ่าน DB
+	$previewContext = brcshos_build_preview_context($conn);
+	$objResult   = $previewContext['consig'];
+	$objResult3  = $previewContext['register'];
+	$objResult11 = $previewContext['other_bill'];
+	$objResult15 = array('amount_1' => $previewContext['summary']);
+	$previewProductRows = $previewContext['products'];
+} else {
+	$strSQL = "SELECT * FROM  hos__consig WHERE ref_id = '".$ref_id."' ";
+	$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error($conn));
+	$objResult = mysqli_fetch_array($objQuery) ?: [];
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subconsig WHERE ref_idd = '".$ref_id."' ";
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
+	$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id."' ";
+	$objQuery3 = mysqli_query($conn,$strSQL3);
+	$objResult3 = mysqli_fetch_array($objQuery3) ?: [];
 
-$summary_1=$objResult15['amount_1'];
-$summary= number_format( $summary_1,2)."";
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subconsig WHERE ref_idd = '".$ref_id."' ";
+	$objQuery15 = mysqli_query($conn,$strSQL15);
+	$objResult15= mysqli_fetch_array($objQuery15) ?: [];
 
-$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id."' ";
-$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
-$objResult11 = mysqli_fetch_array($objQuery11);
+	$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id."' ";
+	$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error($conn));
+	$objResult11 = mysqli_fetch_array($objQuery11) ?: [];
+}
+
+$summary_1 = $objResult15['amount_1'] ?? 0;
+$summary = number_format((float)$summary_1, 2) . "";
 
 
 
@@ -118,110 +133,118 @@ $today1 = $year . '-' . $month . '-' . $day;
 $today=DateThai($today1);
 
 
-$ref_id=$objResult["ref_id"];
-$dep_no =$objResult["dep_no"];
-$job_no =$objResult["job_no"];
-$iv_no =$objResult["iv_no"];
-$customer=$objResult["customer"];
-$address =$objResult["address"];
-$delivery_name =$objResult["delivery_name"];
-$delivery_address =$objResult["delivery_address"];
-$delivery_contact =$objResult["delivery_contact"];
-$delivery_tel =$objResult["delivery_tel"];
-$customer_name =$objResult3["customer_name"];
-$delivery_contact1="$customer_name / $delivery_tel";
-$date_br = DateThai($objResult["date_save"]);
-$objective =$objResult["objective"];
-$objective_des = $objResult["objective_des"];
-$delivery_type = $objResult["delivery_type"];
-$sale_comment = $objResult["sale_comment"];
+$ref_id = $objResult["ref_id"] ?? $ref_id;
+$dep_no = $objResult["dep_no"] ?? '';
+$job_no = $objResult["job_no"] ?? '';
+$iv_no = $objResult["iv_no"] ?? '';
+$customer = $objResult["customer"] ?? '';
+$address = $objResult["address"] ?? '';
+$delivery_name = $objResult["delivery_name"] ?? '';
+$delivery_address = $objResult["delivery_address"] ?? '';
+$delivery_contact = $objResult["delivery_contact"] ?? '';
+$delivery_tel = $objResult["delivery_tel"] ?? '';
+$customer_name = $objResult3["customer_name"] ?? '';
+$delivery_contact1 = "$customer_name / $delivery_tel";
+$date_br = isset($objResult["date_save"]) && $objResult["date_save"] != '0000-00-00' ? DateThai($objResult["date_save"]) : '';
+$objective = $objResult["objective"] ?? '';
+$objective_des = $objResult["objective_des"] ?? '';
+$delivery_type = $objResult["delivery_type"] ?? '';
+$sale_comment = $objResult["sale_comment"] ?? '';
 
-if($objResult["delivery_date"]!='0000-00-00'){
+$time_delivery = $objResult["time_delivery"] ?? ($objResult["delivery_time"] ?? '');
+$packing_remark = $objResult["packing_remark"] ?? '';
+$deposit_no = $objResult["deposit_no"] ?? $dep_no;
+$job_id = $objResult["job_id"] ?? $job_no;
+$province_id = $objResult["province_id"] ?? ($objResult3["province_id"] ?? '');
+$zip_code = $objResult["zip_code"] ?? ($objResult3["zip_code"] ?? '');
+$maps = $objResult["maps"] ?? ($objResult3["maps"] ?? ($objResult3["map"] ?? ''));
+
+if(isset($objResult["delivery_date"]) && $objResult["delivery_date"]!='0000-00-00'){
 $delivery_date=DateThai($objResult["delivery_date"]);
 }else{
-$delivery_date=$objResult["date_send_key"];
+$delivery_date=$objResult["date_send_key"] ?? '';
 }
-$delivery_time =$objResult["delivery_time"];
-$sale = $objResult["sale"];
-$sale_code = $objResult["sale_code"];
-$sale_date = DateThai($objResult["sale_date"]);
-$approve = $objResult["approve"];
-if($objResult["approve_date"]!='0000-00-00'){
+$delivery_time = $objResult["delivery_time"] ?? '';
+$sale = $objResult["sale"] ?? '';
+$sale_code = $objResult["sale_code"] ?? '';
+$sale_date = isset($objResult["sale_date"]) && $objResult["sale_date"] != '0000-00-00' ? DateThai($objResult["sale_date"]) : '';
+$approve = $objResult["approve"] ?? '';
+if(isset($objResult["approve_date"]) && $objResult["approve_date"]!='0000-00-00'){
 $approve_date = DateThai($objResult["approve_date"]);
 }else{
 $approve_date = '';	
 }
-$want_bus  = $objResult3['want_bus'];
-$call_customer  = $objResult3['call_customer'];
-$fix_date  = $objResult3['fix_date'];
-$address_name = $objResult3['address_name'];
-$address_1 = $objResult3['address_1'];
-$address_send = $objResult3['address_send'];
+$want_bus  = $objResult3['want_bus'] ?? '';
+$call_customer  = $objResult3['call_customer'] ?? '';
+$fix_date  = $objResult3['fix_date'] ?? '';
+$address_name = $objResult3['address_name'] ?? '';
+$address_1 = $objResult3['address_1'] ?? '';
+$address_send = $objResult3['address_send'] ?? '';
 
 
-if($objResult11["ref_1"]=='1'){
+if(($objResult11["ref_1"] ?? '')=='1'){
 $ref_1 ="1.เตรียมเอกสาร N-Health";
 }else{
 $ref_1 ="";	
 }
 
-if($objResult11["ref_2"]=='1'){
+if(($objResult11["ref_2"] ?? '')=='1'){
 $ref_2 ="2.เตรียมเอกสารตามสเปคใบเสนอราคา";
 }else{
 $ref_2 ="";	
 }
 
-if($objResult11["ref_3"]=='1'){
+if(($objResult11["ref_3"] ?? '')=='1'){
 $ref_3 ="3.ใบ อย.";
 }else{
 $ref_3 ="";	
 }
 
-if($objResult11["ref_4"]=='1'){
+if(($objResult11["ref_4"] ?? '')=='1'){
 $ref_4 ="4.ใบตัวแทนจำหน่าย";
 }else{
 $ref_4 ="";	
 }
 
-if($objResult11["ref_5"]=='1'){
+if(($objResult11["ref_5"] ?? '')=='1'){
 $ref_5 ="5.ใบช่างอบรม";
 }else{
 $ref_5 ="";	
 }
 
-if($objResult11["ref_6"]=='1'){
+if(($objResult11["ref_6"] ?? '')=='1'){
 $ref_6 ="6.ใบนำเข้าสินค้า";
 }else{
 $ref_6 ="";	
 }
 
-if($objResult11["ref_7"]=='1'){
+if(($objResult11["ref_7"] ?? '')=='1'){
 $ref_7 ="7.ใบ CER เครื่องมือที่ใช้ทดสอบ";
 }else{
 $ref_7 ="";	
 }
 
-if($objResult11["ref_8"]=='1'){
+if(($objResult11["ref_8"] ?? '')=='1'){
 $ref_8 ="8.ใบ PM";
 }else{
 $ref_8 ="";	
 }
 
-if($objResult11["ref_9"]=='1'){
+if(($objResult11["ref_9"] ?? '')=='1'){
 $ref_9 ="9.ใบ CAL";
 }else{
 $ref_9 ="";	
 }
-if($objResult11["ref_11"]=='1'){
-$ref_11des = $objResult11["ref_11des"];
+if(($objResult11["ref_11"] ?? '')=='1'){
+$ref_11des = $objResult11["ref_11des"] ?? '';
 $ref_11 ="11.ใบประเมินสินค้า จำนวน $ref_11des";
 }else{
 $ref_11 ="";	
 }
 
 
-if($objResult11["ref_10"]=='1'){
-$ref_des = $objResult11["ref_des"];
+if(($objResult11["ref_10"] ?? '')=='1'){
+$ref_des = $objResult11["ref_des"] ?? '';
 $ref_10 ="อื่น ๆ $ref_des";
 }else{
 $ref_10 ="";	
@@ -244,7 +267,7 @@ $ref_10 ="";
 	<tr>
 		<td valign="top" style="width:20%;"><input type="checkbox"> ก <input type="checkbox"> C</td>
 		<td valign="top" style="text-align:center; width:60%;"><font size="5">ใบสั่งพิมพ์ใบเบิกจ่ายสินค้า</font><br><font size="4">(Request for issuing stock movement order)</font></td>
-		<td valign="top" style="width:20%;"><?php if($objResult["company"]=='2'){ ?><img src="img/nb_logo.jpg" width="80" align="right" height="30" > <?php } ?></td>
+		<td valign="top" style="width:20%;"><?php if(($objResult["company"] ?? '')=='2'){ ?><img src="img/nb_logo.jpg" width="80" align="right" height="30" > <?php } ?></td>
 	</tr>
 </table>
 <table style="width:100%;">
@@ -256,7 +279,7 @@ $ref_10 ="";
 	<tr>
 		<td>ฝากสินค้าเลขที่ <u><?php echo $deposit_no; ?></u></td>
 		<td>เลขที่ลงงาน <u><?php echo $job_id; ?></u></td>
-		<td><div align="right"><?php echo $iv_no;?></div><div align="right"><?php echo barcode($iv_no);?></div></td>
+		<td><div align="right"><?php echo $iv_no;?></div><div align="right"><?php if($iv_no !== ''){ echo barcode($iv_no); } ?></div></td>
 	</tr>
 </table>
 <table border="1" width="100%">
@@ -320,11 +343,18 @@ $ref_10 ="";
 <td width="10%" align="center">ยอดรวม</td> 
 </tr>
 <?php
-$strSQL1 = "SELECT * FROM (hos__subconsig LEFT JOIN tb_product ON hos__subconsig.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+if ($isPreview) {
+	$reportProductRows = $previewProductRows;
+} else {
+	$strSQL1 = "SELECT * FROM (hos__subconsig LEFT JOIN tb_product ON hos__subconsig.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$reportProductRows = array();
+	while ($savedProductRow = mysqli_fetch_array($objQuery1)) {
+		$reportProductRows[] = $savedProductRow;
+	}
+}
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
+foreach($reportProductRows as $objResult1)
 {
 $sum_amount1  =$objResult1["amount"];
 $sum_amount= number_format( $sum_amount1,2)."";
