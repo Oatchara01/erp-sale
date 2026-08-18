@@ -447,8 +447,8 @@ $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__consig ";
 $qry = mysqli_query($conn, $sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
 
-$maxId = substr($rs['MAXID'], -5);
-$maxId3 = substr($rs['MAXID'], -9);
+$maxId = substr($rs['MAXID'] ?? '0', -5);
+$maxId3 = substr($rs['MAXID'] ?? '0', -9);
 
 $maxId1 = substr($maxId3, 0, -5);
 

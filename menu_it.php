@@ -262,7 +262,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 					</div>
 				</div>
 
-				<a href="main_sup_brsc.php">ใบยืมฝากขาย</a>
+				<a href="register_supbrcshos.php">ใบยืมฝากขาย</a>
 				<a href="main_suphos_change.php">ใบแลกเปลี่ยนสินค้า</a>
 				<a href="main_receivepro.php">ใบรับสินค้า</a>
 				<a href="register_creditnot_create.php">ใบสั่งลดหนี้</a>
