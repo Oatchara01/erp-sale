@@ -3,7 +3,14 @@
 <?php include('dbconnect_sale.php'); ?>
 
 <?php if (($_GET['saved'] ?? '') === '1'): ?>
-<script>alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	var cleanUrl = new URL(window.location.href);
+	cleanUrl.searchParams.delete('saved');
+	window.history.replaceState({}, document.title, cleanUrl);
+	alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');
+});
+</script>
 <?php endif; ?>
 
 <script language="JavaScript">

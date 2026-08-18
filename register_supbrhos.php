@@ -14,6 +14,10 @@
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
+			var cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete('saved');
+			window.history.replaceState({}, document.title, cleanUrl);
+
 			if (typeof Swal === 'undefined') {
 				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
 				return;

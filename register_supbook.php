@@ -1154,6 +1154,10 @@ if ($savedRefId !== "") {
 
 	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 		document.addEventListener('DOMContentLoaded', function() {
+			var cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete('saved');
+			window.history.replaceState({}, document.title, cleanUrl);
+
 			Swal.fire({
 				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
 				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
