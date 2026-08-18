@@ -443,7 +443,7 @@ include "dbconnect_sale.php";
 											</a>
 
 											<!-- คัดลอกใบเดิม -->
-											<a href="register_adminhos_createnew.php?ref_id=<?php echo $ref_id_url; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" onclick="return confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
+											<a href="register_suphos.php?copy_from=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
 												<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 											</a>
 
@@ -508,7 +508,7 @@ include "dbconnect_sale.php";
 
 													if ($subRowsCount > 0) {
 														while ($subResult = mysqli_fetch_array($qrySub)) {
-															$item_name = $subResult['sol_name'] ? $subResult['sol_name'] : $subResult['product_name'];
+															$item_name = $subResult['sol_name'] ?? '-';
 															$clear_status = '-';
 															if (trim($subResult['clear_ivno']) != '') {
 																$clear_status = '<i class="fas fa-check-circle" style="color:#389E0D; margin-right: 6px;"></i><span style="color:#3B3B3B;">' . htmlspecialchars($subResult['clear_ivno']) . '</span>';

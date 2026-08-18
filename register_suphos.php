@@ -906,7 +906,13 @@ include("head.php"); ?>
 	}
 
 	$savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+	// คัดลอกใบเดิม: ?copy_from=... โหลดข้อมูลเอกสารเก่ามา prefill แต่ต้องไม่ตั้ง $savedSo
+	// เพื่อให้ทุกจุดที่เช็ค $savedSo !== null (form action, เลขที่เอกสาร, สถานะ ฯลฯ) ยังคง
+	// เป็นโหมด create ตามปกติ ไม่ใช่ edit ทับเอกสารเดิม
+	$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+	$loadRefId = $savedRefId !== "" ? $savedRefId : $copyFromRefId;
 	$savedSo = null;
+	$copySrcSo = null;
 	$savedRegister = null;
 	$savedProducts = array();
 	$savedProductsForForm = array();
@@ -918,45 +924,50 @@ include("head.php"); ?>
 	$savedDeliveryBill = null;
 	$savedShippingAddresses = array();
 
-	if ($savedRefId !== "") {
-		$savedSoQuery = mysqli_query($conn, "SELECT * FROM hos__so WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+	if ($loadRefId !== "") {
+		$savedSoQuery = mysqli_query($conn, "SELECT * FROM hos__so WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedSoQuery) {
-			$savedSo = mysqli_fetch_assoc($savedSoQuery);
+			$loadedSo = mysqli_fetch_assoc($savedSoQuery);
+			if ($savedRefId !== "") {
+				$savedSo = $loadedSo;
+			} else {
+				$copySrcSo = $loadedSo;
+			}
 		}
 
-		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedRegisterQuery) {
 			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
 		}
 
-		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedOtherBillQuery) {
 			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
 		}
 
-		$savedCommentSoQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefId . "' ORDER BY id DESC LIMIT 1");
+		$savedCommentSoQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $loadRefId . "' ORDER BY id DESC LIMIT 1");
 		if ($savedCommentSoQuery) {
 			$savedCommentSo = mysqli_fetch_assoc($savedCommentSoQuery);
 		}
 
-		$savedCommentSoItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $savedRefId . "' ORDER BY sort_order ASC, id ASC");
+		$savedCommentSoItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $loadRefId . "' ORDER BY sort_order ASC, id ASC");
 		if ($savedCommentSoItemsQuery) {
 			while ($savedCommentSoItem = mysqli_fetch_assoc($savedCommentSoItemsQuery)) {
 				$savedCommentSoItems[] = $savedCommentSoItem;
 			}
 		}
 
-		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedTransactionQuery) {
 			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 		}
 
-		$savedDeliveryPrintQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_print WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedDeliveryPrintQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_print WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedDeliveryPrintQuery) {
 			$savedDeliveryPrint = mysqli_fetch_assoc($savedDeliveryPrintQuery);
 		}
 
-		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedDeliveryBillQuery) {
 			$savedDeliveryBill = mysqli_fetch_assoc($savedDeliveryBillQuery);
 		}
@@ -967,14 +978,14 @@ include("head.php"); ?>
 			$savedShippingAddressOrderBy = " ORDER BY id ASC";
 		}
 
-		$savedShippingAddressQuery = mysqli_query($conn, "SELECT ref_id, contact_name, telephone, province, address FROM tb_shipping_address WHERE ref_id = '" . $savedRefId . "'" . $savedShippingAddressOrderBy);
+		$savedShippingAddressQuery = mysqli_query($conn, "SELECT ref_id, contact_name, telephone, province, address FROM tb_shipping_address WHERE ref_id = '" . $loadRefId . "'" . $savedShippingAddressOrderBy);
 		if ($savedShippingAddressQuery) {
 			while ($savedShippingAddressRow = mysqli_fetch_assoc($savedShippingAddressQuery)) {
 				$savedShippingAddresses[] = $savedShippingAddressRow;
 			}
 		}
 
-		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name, tb_product.remark_hc AS master_remark_hc FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $savedRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1' ORDER BY hos__subso.sort_order, hos__subso.id");
+		$savedProductQuery = mysqli_query($conn, "SELECT hos__subso.*, tb_product.sol_name AS master_product_name, tb_product.access_code AS master_access_code, tb_product.unit_name AS master_unit_name, tb_product.remark_hc AS master_remark_hc FROM hos__subso LEFT JOIN tb_product ON hos__subso.product_id = tb_product.product_ID WHERE hos__subso.ref_idd = '" . $loadRefId . "' AND COALESCE(hos__subso.bom_ckk, '0') <> '1' ORDER BY hos__subso.sort_order, hos__subso.id");
 		if ($savedProductQuery) {
 			while ($savedProduct = mysqli_fetch_assoc($savedProductQuery)) {
 				$savedProducts[] = $savedProduct;
@@ -1303,6 +1314,32 @@ include("head.php"); ?>
 	<form action='<?php echo ($savedSo !== null) ? "register_suphos_edit1.php" : "register_suphos1.php"; ?>' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
+			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
+
+			// return true = วงเงินไม่พอ ต้อง block การบันทึก (โชว์ modal เตือนให้แล้วในตัว)
+			function isCreditOverLimitBlocking() {
+				var remainingInput = document.getElementById('remaining_credit_thb');
+				if (!remainingInput || remainingInput.value === '') return false;
+
+				var remaining = parseFloat(remainingInput.value || 0);
+				var netTotalElem = document.getElementById('summary_net_total');
+				var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
+
+				if ((netTotal > remaining) || (remaining <= 0)) {
+					var customerName = '';
+					var displayBillNameElem = document.getElementById('display_bill_name');
+					if (displayBillNameElem) {
+						customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
+					}
+					var creditLimitElem = document.getElementById('credit_thb');
+					var creditAmount = creditLimitElem ? parseFloat(creditLimitElem.value || 0) : 0;
+
+					showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
+					return true;
+				}
+				return false;
+			}
+
 			function fncSubmit() //ตรวจสอบข้อมูลก่อนบันทึก
 			{
 				if (window.soSkipValidation) {
@@ -1425,24 +1462,8 @@ include("head.php"); ?>
 				}
 
 				// กรณีที่ 2: ตรวจสอบวงเงินไม่เพียงพอสีส้มก่อนบันทึก
-				var remainingInput = document.getElementById('remaining_credit_thb');
-				if (remainingInput && remainingInput.value !== '') {
-					var remaining = parseFloat(remainingInput.value || 0);
-					var netTotalElem = document.getElementById('summary_net_total');
-					var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
-
-					if ((netTotal > remaining) || (remaining <= 0)) {
-						var customerName = '';
-						var displayBillNameElem = document.getElementById('display_bill_name');
-						if (displayBillNameElem) {
-							customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
-						}
-						var creditLimitElem = document.getElementById('credit_thb');
-						var creditAmount = creditLimitElem ? parseFloat(creditLimitElem.value || 0) : 0;
-
-						showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
-						return false;
-					}
+				if (isCreditOverLimitBlocking()) {
+					return false;
 				}
 
 				if (window.soSubmitConfirmed) {
@@ -1490,6 +1511,12 @@ include("head.php"); ?>
 				}
 				if (typeof syncDeliveryTimeRange === 'function') {
 					syncDeliveryTimeRange();
+				}
+
+				// ปุ่มนี้เป็น "Update" ตอนแก้ไขเอกสารที่มีอยู่แล้ว (soIsEditMode) ต้องเช็ควงเงิน
+				// เหมือนปุ่มบันทึกหลัก — ส่วน "Save Draft" ของเอกสารใหม่/คัดลอกใบเดิมปล่อยผ่านเหมือนเดิม
+				if (window.soIsEditMode && isCreditOverLimitBlocking()) {
+					return;
 				}
 
 				var form = document.forms['frmMain'];
@@ -4564,60 +4591,63 @@ include("head.php"); ?>
 				}
 
 				// ดึงและเช็คยอดเครดิตคงเหลือ
-				if (selectedCustId) {
-					fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(selectedCustId), {
-							credentials: 'same-origin',
-							cache: 'no-store'
-						})
-						.then(function(response) {
-							if (!response.ok) throw new Error('Network response not ok');
-							return response.json();
-						})
-						.then(function(data) {
-							if (data && data.success && data.summary) {
-								var remaining = parseFloat(data.summary.remaining_credit || 0);
-								var totalOutstanding = parseFloat(data.summary.total_outstanding || 0);
-								var creditAmount = parseFloat(data.summary.credit_amount || 0);
-
-								var remainingInput = document.getElementById('remaining_credit_thb');
-								if (remainingInput) {
-									remainingInput.value = remaining;
-								}
-
-								// ค้นหาชื่อลูกค้า
-								var customerName = '';
-								var displayBillNameElem = document.getElementById('display_bill_name');
-								if (displayBillNameElem) {
-									customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
-								}
-								if (!customerName && customerPopupSelected) {
-									customerName = customerPopupSelected.customer_name || customerPopupSelected.bill_name || '';
-								}
-
-								// คำนวณและอัปเดตสถานะปุ่มบันทึกข้อมูล
-								var netTotalElem = document.getElementById('summary_net_total');
-								var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
-								var isOverLimit = (netTotal > remaining) || (remaining <= 0);
-								updateSubmitButtonState(isOverLimit);
-
-								// กรณีที่ 1: มียอดหนี้คงค้างเก่าเตือนสีแดง (ตามเงื่อนไขที่กำหนด)
-								console.log(remaining);
-
-								if (remaining <= 0) {
-									showCreditWarningModal('debt', customerName, totalOutstanding, creditAmount, remaining);
-								} else if (isOverLimit) {
-									// กรณีที่ 2: วงเงินไม่เพียงพอเตือนสีส้ม
-									showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
-								}
-							}
-						})
-						.catch(function(err) {
-							console.error('Error fetching remaining credit:', err);
-						});
+				var customerName = '';
+				var displayBillNameElem = document.getElementById('display_bill_name');
+				if (displayBillNameElem) {
+					customerName = displayBillNameElem.value || displayBillNameElem.placeholder || '';
 				}
+				if (!customerName && customerPopupSelected) {
+					customerName = customerPopupSelected.customer_name || customerPopupSelected.bill_name || '';
+				}
+				refreshCreditLimitStatus(selectedCustId, customerName);
 
 				closeCustomerPopup();
 			});
+		}
+
+		// เช็คยอดเครดิตคงเหลือของลูกค้า custId แล้วอัปเดต remaining_credit_thb + เด้ง
+		// showCreditWarningModal ถ้าเกินวงเงิน/มีหนี้ค้าง — เรียกทั้งตอนเลือกลูกค้าจาก popup
+		// และตอน restore เอกสารที่โหลดมา (ref_id/copy_from) เพื่อให้เช็คทันทีตอนโหลดหน้า
+		function refreshCreditLimitStatus(custId, customerName) {
+			if (!custId) return;
+
+			fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(custId), {
+					credentials: 'same-origin',
+					cache: 'no-store'
+				})
+				.then(function(response) {
+					if (!response.ok) throw new Error('Network response not ok');
+					return response.json();
+				})
+				.then(function(data) {
+					if (data && data.success && data.summary) {
+						var remaining = parseFloat(data.summary.remaining_credit || 0);
+						var totalOutstanding = parseFloat(data.summary.total_outstanding || 0);
+						var creditAmount = parseFloat(data.summary.credit_amount || 0);
+
+						var remainingInput = document.getElementById('remaining_credit_thb');
+						if (remainingInput) {
+							remainingInput.value = remaining;
+						}
+
+						// คำนวณและอัปเดตสถานะปุ่มบันทึกข้อมูล
+						var netTotalElem = document.getElementById('summary_net_total');
+						var netTotal = netTotalElem ? parseFloat(String(netTotalElem.textContent || '0').replace(/,/g, '')) : 0;
+						var isOverLimit = (netTotal > remaining) || (remaining <= 0);
+						updateSubmitButtonState(isOverLimit);
+
+						// กรณีที่ 1: มียอดหนี้คงค้างเก่าเตือนสีแดง (ตามเงื่อนไขที่กำหนด)
+						if (remaining <= 0) {
+							showCreditWarningModal('debt', customerName, totalOutstanding, creditAmount, remaining);
+						} else if (isOverLimit) {
+							// กรณีที่ 2: วงเงินไม่เพียงพอเตือนสีส้ม
+							showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
+						}
+					}
+				})
+				.catch(function(err) {
+					console.error('Error fetching remaining credit:', err);
+				});
 		}
 
 		function showCreditWarningModal(type, customerName, totalOutstanding, creditAmount, remainingValue) {
@@ -6336,10 +6366,25 @@ include("head.php"); ?>
 		</div>
 	</div>
 
-	<?php if ($savedSo !== null): ?>
+	<?php
+	// โหมดคัดลอกใบเดิม (copy_from มา, ไม่มี ref_id จริง): ใช้ $copySrcSo เป็นแหล่ง prefill
+	// ฟิลด์ธุรกิจ แต่ต้อง blank ฟิลด์เอกสาร/เลขที่/สถานะ/ไฟล์แนบทิ้งก่อน ไม่งั้นเอกสารใหม่จะ
+	// ติดเลขที่/สถานะของเอกสารเก่ามาด้วย
+	$soJsPrefillSource = $savedSo;
+	if ($soJsPrefillSource === null && $copySrcSo !== null) {
+		$soJsPrefillSource = array_merge($copySrcSo, array(
+			'iv_no' => '', 'job_no' => '', 'sr_no' => '', 'order_no' => '',
+			'iv_date' => '', 'new_bill' => '', 'date_oldbill' => '', 'desnew_bill' => '',
+			'remark_cancel' => '', 'status_doc' => '', 'send_sup' => '0', 'send_cm' => '',
+			'slip1' => '', 'slip2' => '', 'slip3' => '', 'slip4' => '', 'slip5' => '',
+			'stock_print' => '', 'ref_idst' => '',
+		));
+	}
+	?>
+	<?php if ($savedSo !== null || $copySrcSo !== null): ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
-				var savedSo = <?php echo json_encode($savedSo); ?>;
+				var savedSo = <?php echo json_encode($soJsPrefillSource); ?>;
 				var savedRegister = <?php echo json_encode($savedRegister); ?>;
 				var savedOtherBill = <?php echo json_encode($savedOtherBill); ?>;
 				var savedCommentSo = <?php echo json_encode($savedCommentSo); ?>;
@@ -6557,6 +6602,17 @@ include("head.php"); ?>
 									}
 								}, 500);
 							}
+
+							// เช็ควงเงินเครดิตทันทีตอนโหลดเอกสาร (ทั้งโหมดแก้ไข ref_id และ
+							// โหมดคัดลอกใบเดิม copy_from) ไม่ใช่รอจนกว่าจะเปิด popup เลือกลูกค้าเอง
+							var restoredCustomerName = savedSo.bill_name || '';
+							if (!restoredCustomerName) {
+								var restoredDisplayBillNameElem = document.getElementById('display_bill_name');
+								if (restoredDisplayBillNameElem) {
+									restoredCustomerName = restoredDisplayBillNameElem.value || restoredDisplayBillNameElem.placeholder || '';
+								}
+							}
+							refreshCreditLimitStatus(savedBillId, restoredCustomerName);
 						}
 					});
 				}
