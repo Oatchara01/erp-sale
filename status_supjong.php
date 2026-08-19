@@ -307,6 +307,8 @@ include "dbconnect_sale.php";
 									<span class="badge-status cancel">ยกเลิก</span>
 								<?php } else if ($objResult["status_doc"] == 'Rejected') { ?>
 									<span class="badge-status rejected">ไม่อนุมัติ</span>
+								<?php } else if ($objResult["status_doc"] == 'Returned') { ?>
+									<span class="badge-status rejected">ส่งกลับ</span>
 								<?php } else if ($objResult["close_jong"] == '1') { ?>
 									<span class="badge-status closed">ปิดใบจอง</span>
 								<?php } else if ($objResult["status_doc"] == 'Approve') { ?>

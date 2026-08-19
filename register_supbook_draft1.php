@@ -17,14 +17,16 @@ try {
 		$safeRefId = mysqli_real_escape_string($conn, $refId);
 		$draftQuery = mysqli_query($conn, "SELECT status_doc FROM hos__jongproduct WHERE ref_id = '" . $safeRefId . "' LIMIT 1");
 		if ($draftQuery && ($draftRow = mysqli_fetch_assoc($draftQuery))) {
-			if (($draftRow["status_doc"] ?? "") === "Draft") {
+			$isSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
+			$statusDocVal = $draftRow["status_doc"] ?? '';
+			if ($isSupApprover || $statusDocVal !== 'Approve') {
 				include("register_supbook_edit1.php");
 				exit();
 			}
 
 			echo json_encode(array(
 				'success' => false,
-				'message' => 'Only Draft documents can be updated with Save Draft'
+				'message' => 'ไม่สามารถแก้ไขเอกสารที่อนุมัติแล้วได้'
 			));
 			exit();
 		}

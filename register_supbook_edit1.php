@@ -8,7 +8,7 @@ include("dbconnect.php");
 include("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
-if ($_POST["submit"] == "submit") {
+if (($_POST["submit"] ?? '') == "submit" || isset($_POST['approve_action'])) {
 
 	$ref_id = mysqli_real_escape_string($conn, $_POST["ref_id"]);
 	$date_jong = mysqli_real_escape_string($conn, $_POST["date_jong"]);
@@ -25,7 +25,7 @@ if ($_POST["submit"] == "submit") {
 	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
 	$cancel_ckk = mysqli_real_escape_string($conn, $_POST["cancel_ckk"] ?? '0');
 	$admin_cancel_reason = mysqli_real_escape_string($conn, $_POST["admin_cancel_reason"] ?? '');
-	$status_doc = $isDraftRequest ? "Draft" : "Approve";
+	$status_doc = $isDraftRequest ? "Draft" : "Request";
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
 	$add_by = mysqli_real_escape_string($conn, "$name $surname");
@@ -40,7 +40,7 @@ if ($_POST["submit"] == "submit") {
 
 	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "',remark='" . $admin_cancel_reason . "',cancel_ckk='" . $cancel_ckk . "',close_jong='" . $cancel_ckk . "'";
 	if (!$isDraftRequest) {
-		$save .= ", status_doc = 'Approve'";
+		$save .= ", status_doc = 'Request', send_sup = '1'";
 	}
 	$save .= "  where ref_id = '" . $ref_id . "'";
 
@@ -109,6 +109,22 @@ values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc
 			if (!in_array((string)$existingRow['id'], $keptIds, true)) {
 				mysqli_query($conn, "DELETE FROM hos__subjongpro WHERE id = '" . (int)$existingRow['id'] . "'");
 			}
+		}
+	}
+
+	// ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ ของหัวหน้า (register_supbook.php) — ทำงานหลังบันทึกข้อมูลฟอร์มปกติเสร็จแล้ว
+	$soApproveAction = $_POST['approve_action'] ?? '';
+	if ($soApproveAction !== '' && $qsave) {
+		$approve_name = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+		$approve_date_val = date('Y-m-d');
+
+		if ($soApproveAction === 'return') {
+			mysqli_query($conn, "UPDATE hos__jongproduct SET status_doc='Returned', send_sup='0' WHERE ref_id='" . $ref_id . "'");
+		} elseif ($soApproveAction === 'reject') {
+			mysqli_query($conn, "UPDATE hos__jongproduct SET status_doc='Rejected', close_jong='1', date_approve='" . $approve_date_val . "', approve_name='" . $approve_name . "' WHERE ref_id='" . $ref_id . "'");
+		} elseif ($soApproveAction === 'approve') {
+			mysqli_query($conn, "UPDATE hos__jongproduct SET status_doc='Approve', send_stock='1', date_approve='" . $approve_date_val . "', approve_name='" . $approve_name . "' WHERE ref_id='" . $ref_id . "'");
+			mysqli_query($conn, "UPDATE hos__subjongpro SET status_sub='Approve' WHERE ref_idd='" . $ref_id . "'");
 		}
 	}
 

@@ -396,19 +396,72 @@ if ($savedRefId !== "") {
 
 			<div id="productHiddenInputs"></div>
 		</div>
-		</div>
+</div>
 
-		<div class="so-sticky-actions">
-			<div class="so-sticky-actions-inner">
-				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit">
-					<i class="far fa-save"></i> บันทึกข้อมูล
+<?php
+$soIsEditMode = ($savedJong !== null && !$isCopy);
+$soStatusDoc = $savedJong['status_doc'] ?? '';
+$soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
+$soIsApproved = $soIsEditMode && ($soStatusDoc === 'Approve');
+$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover && ($soStatusDoc === 'Request');
+// Sale หลัง Approve: ปิดทุกปุ่ม
+$soHideAllActions = $soIsApproved && !$soIsSupApprover;
+// Submit หายเมื่อส่งรออนุมัติแล้ว (Request) หรือเอกสารอนุมัติแล้ว
+$soHideSubmit = $soIsEditMode && (($soStatusDoc === 'Request') || $soIsApproved);
+// ปุ่ม Update หลักซ้ำกับปุ่ม Update ที่อยู่ในแถบอนุมัติแล้ว
+$soHideUpdate = $soCanShowApproveBar;
+?>
+<?php if (!$soHideAllActions): ?>
+	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
+		<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
+			<?php if ($soCanShowApproveBar): ?>
+				<div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
+					<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
+						<i class="fas fa-ellipsis-v"></i>
+					</button>
+					<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
+						<button type="submit" name="approve_action" value="return" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
+						<button type="submit" name="approve_action" value="reject" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+					</div>
+					<button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+						<i class="far fa-check-circle"></i> อนุมัติ
+					</button>
+					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+						<i class="far fa-save"></i> Update
+					</button>
+				</div>
+			<?php endif; ?>
+			<?php if (!$soHideSubmit): ?>
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
+					<i class="far fa-paper-plane"></i> Submit
 				</button>
-				<button type="button" name="save_draft" onclick="saveDraft()" class="btn-so-draft">
-					<i class="far fa-save"></i> Save Draft
+			<?php endif; ?>
+			<?php if (!$soHideUpdate): ?>
+				<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+					<i class="far fa-save"></i> <?php echo $soIsEditMode ? 'Update' : 'Save Draft'; ?>
 				</button>
-			</div>
+			<?php endif; ?>
+			<button type="button" name="cancel_edit" onclick="goMainSupbook();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
+				ยกเลิก
+			</button>
 		</div>
-	</form>
+	</div>
+	<script>
+		function toggleApproveOverflowMenu() {
+			var menu = document.getElementById('approveOverflowMenu');
+			if (!menu) return;
+			menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+		}
+		document.addEventListener('click', function(e) {
+			var menu = document.getElementById('approveOverflowMenu');
+			var trigger = document.getElementById('btn_approve_overflow');
+			if (!menu || menu.style.display === 'none') return;
+			if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+			if (!menu.contains(e.target)) menu.style.display = 'none';
+		});
+	</script>
+<?php endif; ?>
+</form>
 
 <!-- HTML โครงสร้างป๊อปอัปค้นหาลูกค้า (ตามสไตล์ของ register_suphos.php) -->
 <div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true">
@@ -1030,6 +1083,10 @@ if ($savedRefId !== "") {
 	});
 
 	function fncSubmit(form) {
+		if (window.soSkipValidation) {
+			window.soSkipValidation = false;
+			return true;
+		}
 		var requiredFields = [{
 				id: 'type_jong',
 				label: 'ประเภท'
@@ -1081,6 +1138,10 @@ if ($savedRefId !== "") {
 			}, 0);
 		}
 		return true;
+	}
+
+	function goMainSupbook() {
+		window.location.href = 'status_supjong.php';
 	}
 
 	function previewBooking() {

@@ -21,7 +21,7 @@ if ($_POST["submit"] == "submit") {
 	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
 	$send_sup = $isDraftRequest ? '0' : '1';
 	$date_approve = date('Y-m-d');
-	$status_doc = $isDraftRequest ? "Draft" : "Approve";
+	$status_doc = $isDraftRequest ? "Draft" : "Request";
 	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];

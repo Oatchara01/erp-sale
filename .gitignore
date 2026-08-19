@@ -12,6 +12,7 @@ qou/
 manual/
 img_pro/
 /dbconnect_service.php
+/dbconnect_cs.php
 /.agents/skills/
 /skills-lock.json
 .claude/

@@ -311,8 +311,8 @@ body.has-sidebar.sidebar-collapsed {
 
 /* Rejected / ไม่อนุมัติ */
 .badge-status.cancel {
-	background-color: #F5F5F5;
-	color: #595959;
+	background-color: #696969;
+	color: #ffffff;
 }
 
 /* ยกเลิก */
