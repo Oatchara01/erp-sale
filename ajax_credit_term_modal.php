@@ -81,6 +81,8 @@ if ($billId === '') {
     credit_term_json_error('ไม่พบรหัสลูกค้า');
 }
 
+try {
+
 $customerSql = 'SELECT credit_ckk, credit_thb FROM tb_customer WHERE customer_id = ? LIMIT 1';
 $customerStmt = mysqli_prepare($conn, $customerSql);
 if (!$customerStmt) {
@@ -162,20 +164,16 @@ $debtSql = "
     ORDER BY r.date_inv ASC, r.IV_number ASC
 ";
 
-try {
-    $debtStmt = mysqli_prepare($code, $debtSql);
-    if (!$debtStmt) {
-        credit_term_json_error('ไม่สามารถเตรียมข้อมูลหนี้คงค้างได้', 500);
-    }
-
-    mysqli_stmt_bind_param($debtStmt, 'ss', $today, $billId);
-    if (!mysqli_stmt_execute($debtStmt)) {
-        credit_term_json_error('ดึงข้อมูลหนี้คงค้างไม่สำเร็จ: ' . mysqli_stmt_error($debtStmt), 500);
-    }
-    $debtResult = mysqli_stmt_get_result($debtStmt);
-} catch (Throwable $e) {
-    credit_term_json_error('ดึงข้อมูลหนี้คงค้างไม่สำเร็จ: ' . $e->getMessage(), 500);
+$debtStmt = mysqli_prepare($code, $debtSql);
+if (!$debtStmt) {
+    credit_term_json_error('ไม่สามารถเตรียมข้อมูลหนี้คงค้างได้', 500);
 }
+
+mysqli_stmt_bind_param($debtStmt, 'ss', $today, $billId);
+if (!mysqli_stmt_execute($debtStmt)) {
+    credit_term_json_error('ดึงข้อมูลหนี้คงค้างไม่สำเร็จ: ' . mysqli_stmt_error($debtStmt), 500);
+}
+$debtResult = mysqli_stmt_get_result($debtStmt);
 
 $debts = array();
 $refIdOffList = array();
@@ -232,3 +230,7 @@ echo json_encode(array(
     'tracks' => $tracks,
     'selected_ref_id_off' => $selectedRefIdOff
 ), JSON_UNESCAPED_UNICODE);
+
+} catch (Throwable $e) {
+    credit_term_json_error('เกิดข้อผิดพลาดในการตรวจสอบวงเงินเครดิต: ' . $e->getMessage(), 500);
+}
