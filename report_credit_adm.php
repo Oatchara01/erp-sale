@@ -68,8 +68,109 @@ function DateThai($strDate)
 		$strMonthThai=$strMonthCut[$strMonth];
 		return "$strDay $strMonthThai $strYear";
 	}
-$ref_credit=$_GET["ref_credit"];
+// ใช้เฉพาะโหมด preview: input[type=date] ที่ยังไม่กรอกจะส่งมาเป็นค่าว่าง (ไม่ใช่ '0000-00-00')
+function creditPreviewDate($v, $fallback = '-') {
+	$v = trim((string)$v);
+	if ($v === '' || $v === '0000-00-00' || strtotime($v) === false) return $fallback;
+	return DateThai($v);
+}
 include"dbconnect.php";
+$isFormPreview = ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['preview_source'] ?? '') === 'form');
+$reportRows = null;
+
+if ($isFormPreview) {
+	// ---------- preview จากข้อมูลบนฟอร์ม (ไม่แตะ DB ยกเว้นอ่าน tb_product เพื่อเอาหน่วยนับ) ----------
+	// *** ไม่มี UPDATE print_adm ในสาขานี้โดยเจตนา: preview ต้องไม่เขียนอะไรลง DB ***
+	$id = '';
+	$ref_credit = '';
+	$date_credit = creditPreviewDate($_POST['date_credit'] ?? '', '');
+	$customer_name = $_POST['customer_name'] ?? '';
+	$address_name = $_POST['address_name'] ?? '';
+	$customer_tel = $_POST['customer_tel'] ?? '';
+	$iv_no_ref = $_POST['iv_no_ref'] ?? '';
+	$ttype_doc = $_POST['ttype_doc'] ?? '';
+	// สาเหตุที่คืน มาจาก field ชื่อ return_reason บนฟอร์ม (ไม่ใช่ return_des ซึ่งเป็นคนละความหมาย/map ไปคอลัมน์ remark_et)
+	$return_des = trim($_POST['return_reason'] ?? '');
+	$type_return = $_POST['type_return'] ?? '';
+	$bank_name = $_POST['bank_name'] ?? '';
+	$account_name = $_POST['account_name'] ?? '';
+	$account_no = $_POST['account_no'] ?? '';
+	$send_return_name = $_POST['send_return_name'] ?? '';
+	$date_send_return = creditPreviewDate($_POST['date_send_return'] ?? '', '-');
+	$receive_name = $_POST['receive_name'] ?? '';
+	$date_receive = creditPreviewDate($_POST['date_receive'] ?? '', '-');
+	$sale_name = $_POST['sale_name'] ?? '';
+	$sale_date = creditPreviewDate($_POST['sale_date'] ?? '', '-');
+	$credit_no = $_POST['credit_no'] ?? '';
+
+	// ยังไม่มีบนฟอร์มสร้าง/แก้ไข (เป็นขั้นตอนคลัง/บัญชีที่ทำทีหลัง) แสดงเป็นค่าว่าง/ไม่ติ๊กไปก่อน
+	$stock_complete = '';
+	$stock_name = '';
+	$stock_date = '-';
+	$stock_des = '';
+	$warraty_ckk = '';
+	$credit_ckk = '';
+	$type_return_ckk = '';
+	$type_return_no = '';
+	$dis_credit = '';
+	$dm_name = '';
+	$dm_date = '';
+
+	$postId       = $_POST['id']            ?? array();
+	$postCount    = $_POST['count']         ?? array();
+	$postPrice    = $_POST['unit_price']    ?? array();
+	$postDiscount = $_POST['discount_unit'] ?? array();
+	$postProdId   = $_POST['product_id']    ?? array();
+	$postCode     = $_POST['product_code']  ?? array();
+	$postName     = $_POST['product_name']  ?? array();
+
+	$delIds = $_POST['delete_subcredit_id'] ?? array();
+	if (!is_array($delIds)) $delIds = array();
+	$delSet = array_flip(array_map('strval', $delIds));
+
+	$reportRows   = array();
+	$sumAmountAll = 0.0;
+	$sumDiscAll   = 0.0;
+	$unitCache    = array();
+
+	if (is_array($postId)) {
+		foreach ($postId as $key => $value) {
+			$pid = trim((string)($postProdId[$key] ?? ''));
+			if ($pid === '') continue;
+			if (isset($delSet[(string)$value])) continue;
+
+			$qtyRaw = (string)($postCount[$key] ?? '0');
+			$qty    = (float)str_replace(',', '', $qtyRaw);
+			$price  = (float)str_replace(',', '', (string)($postPrice[$key]    ?? '0'));
+			$disc   = (float)str_replace(',', '', (string)($postDiscount[$key] ?? '0'));
+
+			$rowAmount = ($price - $disc) * $qty;
+			$rowDisc   = $disc * $qty;
+			$sumAmountAll += $rowAmount;
+			$sumDiscAll   += $rowDisc;
+
+			if (!array_key_exists($pid, $unitCache)) {
+				$unitCache[$pid] = '';
+				$escPid = mysqli_real_escape_string($conn, $pid);
+				$q = mysqli_query($conn, "SELECT unit_name FROM tb_product WHERE product_id = '" . $escPid . "' LIMIT 1");
+				if ($q && ($r = mysqli_fetch_assoc($q))) $unitCache[$pid] = $r['unit_name'];
+			}
+
+			$reportRows[] = array(
+				'access_code' => (string)($postCode[$key] ?? ''),
+				'access_name' => (string)($postName[$key] ?? ''),
+				'count'       => $qtyRaw,
+				'unit'        => $unitCache[$pid],
+				'price'       => number_format($price, 2),
+				'sum_amount'  => number_format($rowAmount, 2),
+			);
+		}
+	}
+
+	$summary       = number_format($sumAmountAll, 2);
+	$discount_unit = number_format($sumDiscAll, 2);
+} else {
+$ref_credit=$_GET["ref_credit"];
 $strSQL25="Update  tb_credit_note set print_adm = '1'  where ref_credit ='".$ref_credit."'";
 $objQuery25 = mysqli_query($conn,$strSQL25);
 $strSQL = "SELECT * from tb_credit_note WHERE ref_credit = '".$ref_credit."' ";
@@ -116,20 +217,20 @@ $receive_name = $objResult['receive_name'];
 if($objResult['date_receive']=='0000-00-00'){
 $date_receive = '-';
 }else{
-$date_receive = DateThai($objResult['date_receive']);	
+$date_receive = DateThai($objResult['date_receive']);
 }
 $sale_name = $objResult['sale_name'];
 if($objResult['sale_date']=='0000-00-00'){
 $sale_date = '-';
 }else{
-$sale_date = DateThai($objResult['sale_date']);	
+$sale_date = DateThai($objResult['sale_date']);
 }
 $stock_complete = $objResult['stock_complete'];
 $stock_name = $objResult['stock_name'];
 if($objResult['stock_date']=='0000-00-00'){
 $stock_date = '-';
 }else{
-$stock_date = DateThai($objResult['stock_date']);	
+$stock_date = DateThai($objResult['stock_date']);
 }
 $warraty_ckk = $objResult['warraty_ckk'];
 $credit_ckk = $objResult['credit_ckk'];
@@ -142,7 +243,8 @@ $dm_name = $objResult['dm_name'];
 if($objResult['dm_date']=='0000-00-00'){
 $dm_date = '';
 }else{
-$dm_date = DateThai($objResult['dm_date']);	
+$dm_date = DateThai($objResult['dm_date']);
+}
 }
 
 
@@ -191,27 +293,31 @@ $dm_date = DateThai($objResult['dm_date']);
 <td width="8%" align="center">Amount</td> 
 </tr>
 <?php
-$strSQL1 = "SELECT * FROM (tb_subcredit LEFT JOIN tb_product ON tb_subcredit.product_ID=tb_product.product_id) where ref_creditt = '".$ref_credit."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+if ($reportRows === null) {
+	$reportRows = array();
+	$strSQL1 = "SELECT * FROM (tb_subcredit LEFT JOIN tb_product ON tb_subcredit.product_ID=tb_product.product_id) where ref_creditt = '".$ref_credit."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	while($objResult1 = mysqli_fetch_array($objQuery1)) {
+		$reportRows[] = array(
+			'access_code' => $objResult1["access_code"],
+			'access_name' => $objResult1["sol_name"],
+			'count'       => $objResult1["count"],
+			'unit'        => $objResult1["unit_name"],
+			'price'       => number_format($objResult1["unit_price"], 2),
+			'sum_amount'  => number_format($objResult1["sum_amount"], 2),
+		);
+	}
+}
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1)) {
-$sum_amount1  =$objResult1["sum_amount"];
-$sum_amount= number_format($sum_amount1,2)."";
-$price1  =$objResult1["unit_price"];
-$price= number_format( $price1,2)."";
-$access_name  =$objResult1["sol_name"];
-$access_code  =$objResult1["access_code"];
-$count  =$objResult1["count"];
-$unit  =$objResult1["unit_name"];
+foreach ($reportRows as $row) {
 ?>
 	<tr>
 		<td style="text-align:center;"><?php echo $i;?></td>
-		<td style="text-align:left;padding-left:5px;"><?php echo $access_code;?></td>
-		<td style="text-align:left;padding-left:5px;"><?php echo $access_name;?></td>
-		<td style="text-align:right;padding-right:5px;"><?php echo $count;?> <?php echo $unit;?></td>
-		<td style="text-align:right;padding-right:5px;"><?php echo $price;?></td>
-		<td style="text-align:right;padding-right:5px;"><?php echo $sum_amount;?></td>
+		<td style="text-align:left;padding-left:5px;"><?php echo $row['access_code'];?></td>
+		<td style="text-align:left;padding-left:5px;"><?php echo $row['access_name'];?></td>
+		<td style="text-align:right;padding-right:5px;"><?php echo $row['count'];?> <?php echo $row['unit'];?></td>
+		<td style="text-align:right;padding-right:5px;"><?php echo $row['price'];?></td>
+		<td style="text-align:right;padding-right:5px;"><?php echo $row['sum_amount'];?></td>
 	<?php $i++; } ?>
 	</tr>
 </table>

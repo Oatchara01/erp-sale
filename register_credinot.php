@@ -1398,13 +1398,37 @@
             }
         }
 
-        // ดูตัวอย่างรายงานใบลดหนี้ (Preview)
-        // report_credit_adm.php อ่าน ref_credit จาก $_GET เท่านั้น (ดู pattern เดียวกันใน status_credit_admall.php)
-        // จึงเปิดลิงก์ตรงแทนการ submit ฟอร์ม เพราะปลายทางไม่อ่านค่าจาก POST body เลย
-        var creditPreviewRefCredit = <?php echo json_encode($refCreditFull); ?>;
-
+        // ดูตัวอย่างรายงานใบลดหนี้ (Preview) — แสดงข้อมูลที่กรอกอยู่บนฟอร์ม "ตอนนี้" โดยไม่บันทึกลง DB
+        // สร้าง <form> ชั่วคราว POST ไป report_credit_adm.php เปิดแท็บใหม่ (ไม่ใช้ fetch เพราะต้องให้ผู้ใช้เห็น/สั่งพิมพ์ได้จริง)
         function openPrintReport() {
-            window.open('report_credit_adm.php?ref_credit=' + encodeURIComponent(creditPreviewRefCredit), '_blank');
+            var src = document.forms['frmMain'];
+            if (!src) return;
+
+            var tmp = document.createElement('form');
+            tmp.method = 'POST';
+            tmp.action = 'report_credit_adm.php';
+            tmp.target = '_blank';
+            tmp.style.display = 'none';
+
+            var fd = new FormData(src);
+            fd.forEach(function(value, name) {
+                if (typeof File !== 'undefined' && value instanceof File) return; // ข้าม book_bank (input[type=file])
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name; // ชื่อซ้ำได้ (เช่น delete_subcredit_id[]) — FormData คืนทีละรายการ, PHP รวม array ให้เอง
+                input.value = value;
+                tmp.appendChild(input);
+            });
+
+            var flag = document.createElement('input');
+            flag.type = 'hidden';
+            flag.name = 'preview_source';
+            flag.value = 'form';
+            tmp.appendChild(flag);
+
+            document.body.appendChild(tmp);
+            tmp.submit();
+            document.body.removeChild(tmp);
         }
 
         /* ===== Modal เอกสารอ้างอิง (ล้อ pattern เดียวกับ js/customer-popup.js) ===== */
