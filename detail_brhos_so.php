@@ -426,7 +426,10 @@ function br_product_row_hos($i)
 				return res.json();
 			})
 			.then(function(product) {
-				if (!product || !product.product_ID) return;
+				if (!product || product.found === false || !product.product_ID) {
+					alert('ไม่พบรหัสสินค้า "' + productCode + '" ในระบบ กรุณาตรวจสอบรหัสสินค้าอีกครั้ง');
+					return;
+				}
 
 				document.getElementById('product_code' + rowIndex).value = productCode;
 				document.getElementById('product_id' + rowIndex).value = product.product_ID;

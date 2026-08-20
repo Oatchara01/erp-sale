@@ -468,6 +468,10 @@
 				}
 				try {
 					var product = JSON.parse(req.responseText);
+					if (product.found === false) {
+						alert('ไม่พบรหัสสินค้า "' + accessCode + '" ในระบบ กรุณาตรวจสอบรหัสสินค้าอีกครั้ง');
+						return;
+					}
 					csApplyProductToRow(rowIndex, accessCode, product);
 				} catch (e) {
 					console.error('Failed to parse product JSON:', e, req.responseText);

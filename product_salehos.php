@@ -204,6 +204,13 @@
                     try {
                         var product = JSON.parse(myProduct);
 
+                        if (product.found === false) {
+                            alert('ไม่พบรหัสสินค้า "' + document.getElementById(product_code).value + '" ในระบบ กรุณาตรวจสอบรหัสสินค้าอีกครั้ง');
+                            document.getElementById(product_code).value = '';
+                            document.getElementById(product_id).value = '';
+                            return;
+                        }
+
                         document.getElementById(product_id).value = product.product_ID;
                         // Set hidden input and label span for product_name
                         document.getElementById(product_name).value = product.sol_name;

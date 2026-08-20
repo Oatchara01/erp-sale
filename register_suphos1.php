@@ -355,6 +355,16 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			$validationErrors[] = 'กรุณาเลือกแผนก/เขตการขาย';
 		}
 
+		// กันแถวสินค้าที่พิมพ์/เลือกรหัสไว้แล้ว แต่ AJAX ค้นหาไม่เจอสินค้าจริง (product_id เลยว่างเปล่า)
+		// ถ้าไม่เช็คตรงนี้ MySQL จะ cast ค่าว่างเป็น 0 แบบเงียบๆ (sql_mode='') ทำให้แถวหลุดการ join กับ tb_product ตอนแสดงผล
+		for ($i = 1; $i <= 30; $i++) {
+			$rowCode = trim((string)($_POST['product_codet' . $i] ?? ($_POST['product_code' . $i] ?? ($_POST['product_c' . $i] ?? ''))));
+			$rowProductId = trim((string)($_POST['product_id' . $i] ?? ''));
+			if ($rowCode !== '' && ($rowProductId === '' || $rowProductId === '0')) {
+				$validationErrors[] = "แถวสินค้าที่ $i: ไม่พบรหัสสินค้า '$rowCode' ในระบบ กรุณาเลือกสินค้าจากรายการค้นหาใหม่";
+			}
+		}
+
 		// if (($_POST['payment'] ?? '') === '7' && trim((string)($_POST['date_tranfer'] ?? '')) === '') {
 		// 	$validationErrors[] = 'กรุณาใส่วันที่โอน';
 		// }

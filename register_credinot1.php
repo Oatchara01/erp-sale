@@ -63,6 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	$sum_amount = $_POST["sum_amount"] ?? array();
 	$discount_unit = $_POST["discount_unit"] ?? array();
 	$product_id = $_POST["product_id"] ?? array();
+	$sn = $_POST["sn"] ?? array();
+	$lot_no = $_POST["lot_no"] ?? array();
 	$sale_code = $_POST["sale_code"] ?? '';
 	$send_sup = '1';
 	$status_doc = 'Request';
@@ -225,13 +227,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 			$save = "UPDATE tb_credit_note SET
 				date_credit = '" . credinotEsc($conn, $date_credit) . "',
 				ref_id = '" . credinotEsc($conn, $ref_id) . "',
+				ref_order_id = '" . credinotEsc($conn, $ref_order_id) . "',
 				customer_name = '" . credinotEsc($conn, $customer_name) . "',
 				customer_tel = '" . credinotEsc($conn, $customer_tel) . "',
 				address_name = '" . credinotEsc($conn, $address_name) . "',
 				return_des = '" . credinotEsc($conn, $return_des) . "',
+				send_return_name = '" . credinotEsc($conn, $send_return_name) . "',
+				date_send_return = '" . credinotEsc($conn, $date_send_return) . "',
 				receive_name = '" . credinotEsc($conn, $receive_name) . "',
 				date_receive = '" . credinotEsc($conn, $date_receive) . "',
+				sale_name = '" . credinotEsc($conn, $sale_name) . "',
+				sale_date = '" . credinotEsc($conn, $sale_date) . "',
+				credit_ckk = '" . credinotEsc($conn, $credit_ckk) . "',
 				credit_no = '" . credinotEsc($conn, $credit_no) . "',
+				type_return_ckk = '" . credinotEsc($conn, $type_return_ckk) . "',
+				type_return_no = '" . credinotEsc($conn, $type_return_no) . "',
+				dis_credit = '" . credinotEsc($conn, $dis_credit) . "',
+				mode_cus = '" . credinotEsc($conn, $mode_cus) . "',
 				ttype_doc = '" . credinotEsc($conn, $ttype_doc) . "',
 				iv_no_ref = '" . credinotEsc($conn, $iv_no_ref) . "',
 				sale_code = '" . credinotEsc($conn, $sale_code) . "',
@@ -274,10 +286,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 					// แถวเดิมที่มาจาก tb_subcredit อยู่แล้ว key เป็น id จริง -> UPDATE
 					$isNewRow = (strpos((string)$key, 'new_') === 0);
 
+					// แถวที่เพิ่มผ่าน modal "เพิ่มสินค้า" ไม่มีข้อมูล SN/Lot ผูกมาด้วย (ไม่ได้อ้างอิงจาก hos__subso) จึงเป็นค่าว่างเสมอ
+					$sn_new = $isNewRow ? '' : ($sn[$key] ?? '');
+					$lot_no_new = $isNewRow ? '' : ($lot_no[$key] ?? '');
+
 					if ($isNewRow) {
 						$strSQL = "insert into tb_subcredit
-	(ref_creditt,count,unit_price,sum_amount,discount_unit,product_id,sum_discount)
-	values ('" . $escRefCredit . "','" . credinotEsc($conn, $count_new) . "','" . credinotEsc($conn, $unit_price_new) . "','" . credinotEsc($conn, $sum_amount_new) . "','" . credinotEsc($conn, $discount_unit_new) . "','" . credinotEsc($conn, $product_id_new) . "','" . credinotEsc($conn, $sum_discount) . "')";
+	(ref_creditt,count,unit_price,sum_amount,discount_unit,product_id,sum_discount,sn,lot_no)
+	values ('" . $escRefCredit . "','" . credinotEsc($conn, $count_new) . "','" . credinotEsc($conn, $unit_price_new) . "','" . credinotEsc($conn, $sum_amount_new) . "','" . credinotEsc($conn, $discount_unit_new) . "','" . credinotEsc($conn, $product_id_new) . "','" . credinotEsc($conn, $sum_discount) . "','" . credinotEsc($conn, $sn_new) . "','" . credinotEsc($conn, $lot_no_new) . "')";
 						mysqli_query($conn, $strSQL);
 					} else {
 						$escSubId = credinotEsc($conn, $value);
@@ -287,7 +303,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 							sum_amount = '" . credinotEsc($conn, $sum_amount_new) . "',
 							discount_unit = '" . credinotEsc($conn, $discount_unit_new) . "',
 							product_id = '" . credinotEsc($conn, $product_id_new) . "',
-							sum_discount = '" . credinotEsc($conn, $sum_discount) . "'
+							sum_discount = '" . credinotEsc($conn, $sum_discount) . "',
+							sn = '" . credinotEsc($conn, $sn_new) . "',
+							lot_no = '" . credinotEsc($conn, $lot_no_new) . "'
 							WHERE id = '" . $escSubId . "'";
 						mysqli_query($conn, $strSQL);
 					}
@@ -357,9 +375,12 @@ values
 
 					if ($product_id_new != "") {
 
+						$sn_new = $sn[$key] ?? '';
+						$lot_no_new = $lot_no[$key] ?? '';
+
 						$strSQL = "insert into tb_subcredit
-	(ref_creditt,count,unit_price,sum_amount,discount_unit,product_id,sum_discount)
-	values ('" . $escRefCredit . "','" . credinotEsc($conn, $count_new) . "','" . credinotEsc($conn, $unit_price_new) . "','" . credinotEsc($conn, $sum_amount_new) . "','" . credinotEsc($conn, $discount_unit_new) . "','" . credinotEsc($conn, $product_id_new) . "','" . credinotEsc($conn, $sum_discount) . "')";
+	(ref_creditt,count,unit_price,sum_amount,discount_unit,product_id,sum_discount,sn,lot_no)
+	values ('" . $escRefCredit . "','" . credinotEsc($conn, $count_new) . "','" . credinotEsc($conn, $unit_price_new) . "','" . credinotEsc($conn, $sum_amount_new) . "','" . credinotEsc($conn, $discount_unit_new) . "','" . credinotEsc($conn, $product_id_new) . "','" . credinotEsc($conn, $sum_discount) . "','" . credinotEsc($conn, $sn_new) . "','" . credinotEsc($conn, $lot_no_new) . "')";
 
 						mysqli_query($conn, $strSQL);
 					}

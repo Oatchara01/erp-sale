@@ -9,6 +9,14 @@ $strProduct = trim($_POST["product_code"]);
 $strSQL = "SELECT * FROM tb_product WHERE access_code = '" . $strProduct . "' ";
 $objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");
 $objResult = mysqli_fetch_array($objQuery);
+
+if (isset($_POST['format']) && $_POST['format'] === 'json' && !$objResult) {
+    // ไม่พบสินค้า: ตอบ found=false ชัดเจน กันฝั่ง JS เข้าใจผิดว่าเจอสินค้าแบบเงียบๆ (เดิม response ว่างเปล่า)
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['found' => false]);
+    exit;
+}
+
 if ($objResult) {
 
 
@@ -20,6 +28,7 @@ if ($objResult) {
     if (isset($_POST['format']) && $_POST['format'] === 'json') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
+            'found'        => true,
             'product_ID'   => $objResult["product_ID"],
             'sol_name'     => $objResult["sol_name"],
             'unit_name'    => $objResult["unit_name"],

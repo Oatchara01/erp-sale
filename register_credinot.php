@@ -178,7 +178,7 @@
             <!-- Header Section -->
             <div class="so-header-container">
                 <div class="so-header-left">
-                    <h1 class="so-title"><?php echo $mode === 'edit' ? 'แก้ไขใบลดหนี้ (Credit Note Order)' : 'ใบลดหนี้ (Credit Note Order)'; ?></h1>
+                    <h1 class="so-title">ใบลดหนี้ (Credit Note Order)</h1>
                     <div class="so-ref-info">
                         <span class="so-ref-label">เลขที่อ้างอิง</span>
                         <span class="so-ref-value"><?php echo htmlspecialchars($refCreditFull, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -278,6 +278,9 @@
                     <div class="so-customer-top-grid">
                         <div class="so-customer-top-left">
                             <?php if ($mode !== 'create_blank') { ?>
+                                <!-- ref_id คือ SO key ภายใน ใช้ผูก hos__subso/hos__so และตรวจยอดคงเหลือเท่านั้น ไม่ใช่เลขที่ผู้ใช้แก้เอง -->
+                                <input type="hidden" name="ref_id" id="ref_id" value="<?php echo htmlspecialchars($ref_id, ENT_QUOTES, 'UTF-8'); ?>">
+
                                 <div class="so-doc-pill-wrapper">
                                     <button type="button" class="so-doc-pill" id="docRefPopupTrigger" onclick="openDocRefPopup()">
                                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="so-doc-pill-icon">
@@ -294,23 +297,25 @@
                                 <div class="so-field-group">
                                     <label class="so-label" for="iv_no_ref">เอกสารอ้างอิง<span style="color:#D32F2F;">*</span></label>
                                     <div class="so-input-wrapper">
-                                        <input type="text" name="iv_no_ref" id="iv_no_ref" value="<?php echo htmlspecialchars($ivNoEffective, ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
-                                        <button type="button" class="so-clear-icon" onclick="document.getElementById('iv_no_ref').value=''"><i class="fas fa-times"></i></button>
+                                        <input type="text" name="iv_no_ref" id="iv_no_ref" value="<?php echo htmlspecialchars($ivNoEffective, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" oninput="toggleEtaxCard()">
+                                        <button type="button" class="so-clear-icon" onclick="document.getElementById('iv_no_ref').value=''; toggleEtaxCard();"><i class="fas fa-times"></i></button>
                                     </div>
                                 </div>
 
-                                <!-- หมายเลขคำสั่งซื้อ (ref_id) -->
+                                <!-- หมายเลขคำสั่งซื้อ (ref_order_id): PO/สัญญาจริง จาก hos__so.po_no ตอนสร้าง หรือค่าที่เคยบันทึกไว้ตอนแก้ไข -->
+                                <?php $creditRefOrderIdVal = ($mode === 'edit') ? ($rs['ref_order_id'] ?? '') : ($rs['po_no'] ?? ''); ?>
                                 <div class="so-field-group">
-                                    <label class="so-label" for="ref_id">หมายเลขคำสั่งซื้อ<span style="color:#D32F2F;">*</span></label>
+                                    <label class="so-label" for="ref_order_id">หมายเลขคำสั่งซื้อ<span style="color:#D32F2F;">*</span></label>
                                     <div class="so-input-wrapper">
-                                        <input type="text" name="ref_id" id="ref_id" value="<?php echo htmlspecialchars($rs["ref_id"] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
-                                        <button type="button" class="so-clear-icon" onclick="document.getElementById('ref_id').value=''"><i class="fas fa-times"></i></button>
+                                        <input type="text" name="ref_order_id" id="ref_order_id" value="<?php echo htmlspecialchars($creditRefOrderIdVal, ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
+                                        <button type="button" class="so-clear-icon" onclick="document.getElementById('ref_order_id').value=''"><i class="fas fa-times"></i></button>
                                     </div>
                                 </div>
                             <?php } else { ?>
                                 <!-- โหมดสร้างแบบไม่มีเอกสารอ้างอิง: ไม่มี SO/IV ให้ผูก จึงไม่บังคับกรอก -->
                                 <input type="hidden" name="iv_no_ref" id="iv_no_ref" value="">
                                 <input type="hidden" name="ref_id" id="ref_id" value="">
+                                <input type="hidden" name="ref_order_id" id="ref_order_id" value="">
                                 <p class="credinot-no-ref-note">ใบลดหนี้นี้ไม่มีเอกสารอ้างอิง (SO/IV)</p>
                             <?php } ?>
                         </div>
@@ -389,41 +394,7 @@
                     </div>
                 </div>
 
-                <!-- การ์ดแก้ไขใบลดหนี้ E-Tax -->
-                <div class="so-card">
-                    <div class="so-section-title-container">
-                        <h2 class="so-section-title">แก้ไขใบลดหนี้ E-Tax</h2>
-                        <hr class="so-divider">
-                    </div>
 
-                    <div class="so-grid-3">
-                        <!-- ครั้งที่ -->
-                        <div class="so-field-group">
-                            <label class="so-label" for="etax_count">ครั้งที่</label>
-                            <?php $etaxCountVal = (!empty($rs['new_bill']) && $rs['new_bill'] !== '0') ? $rs['new_bill'] : ''; ?>
-                            <div class="so-input-wrapper">
-                                <input type="text" name="etax_count" id="etax_count" value="<?php echo htmlspecialchars($etaxCountVal, ENT_QUOTES, 'UTF-8'); ?>" placeholder="ใส่เฉพาะตัวเลข" class="so-input">
-                            </div>
-                        </div>
-
-                        <!-- วันที่เอกสารเดิม -->
-                        <div class="so-field-group">
-                            <label class="so-label" for="etax_orig_date">วันที่เอกสารเดิม</label>
-                            <div class="so-input-wrapper calendar-wrapper">
-                                <input type="date" name="etax_orig_date" id="etax_orig_date" value="<?php echo htmlspecialchars($rs['date_oldbill'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
-                            </div>
-                        </div>
-
-                        <!-- หมายเหตุการแก้ไข -->
-                        <div class="so-field-group" style="grid-column: 1 / -1;">
-                            <label class="so-label" for="etax_edit_note">หมายเหตุการแก้ไข</label>
-                            <div class="so-input-wrapper">
-                                <input type="text" name="etax_edit_note" id="etax_edit_note" value="<?php echo htmlspecialchars($rs['desnew_bill'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกหมายเหตุการแก้ไข" class="so-input">
-                                <button type="button" class="so-clear-icon" onclick="document.getElementById('etax_edit_note').value=''"><i class="fas fa-times"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="so-card">
                     <div class="so-section-title-container">
@@ -580,6 +551,43 @@
                     </div>
                 </div>
 
+                <!-- การ์ดแก้ไขใบลดหนี้ E-Tax: แสดงเฉพาะเมื่อเลขที่เอกสารอ้างอิงขึ้นต้นด้วย ET -->
+                <?php $creditShowEtaxCard = (substr($ivNoEffective, 0, 2) === 'ET'); ?>
+                <div class="so-card" id="etaxEditCardWrap" style="<?php echo $creditShowEtaxCard ? '' : 'display:none;'; ?>">
+                    <div class="so-section-title-container">
+                        <h2 class="so-section-title">แก้ไขใบลดหนี้ E-Tax</h2>
+                        <hr class="so-divider">
+                    </div>
+
+                    <div class="so-grid-3">
+                        <!-- ครั้งที่ -->
+                        <div class="so-field-group">
+                            <label class="so-label" for="etax_count">ครั้งที่</label>
+                            <?php $etaxCountVal = (!empty($rs['new_bill']) && $rs['new_bill'] !== '0') ? $rs['new_bill'] : ''; ?>
+                            <div class="so-input-wrapper">
+                                <input type="text" name="etax_count" id="etax_count" value="<?php echo htmlspecialchars($etaxCountVal, ENT_QUOTES, 'UTF-8'); ?>" placeholder="ใส่เฉพาะตัวเลข" class="so-input">
+                            </div>
+                        </div>
+
+                        <!-- วันที่เอกสารเดิม -->
+                        <div class="so-field-group">
+                            <label class="so-label" for="etax_orig_date">วันที่เอกสารเดิม</label>
+                            <div class="so-input-wrapper calendar-wrapper">
+                                <input type="date" name="etax_orig_date" id="etax_orig_date" value="<?php echo htmlspecialchars($rs['date_oldbill'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
+                            </div>
+                        </div>
+
+                        <!-- หมายเหตุการแก้ไข -->
+                        <div class="so-field-group" style="grid-column: 1 / -1;">
+                            <label class="so-label" for="etax_edit_note">หมายเหตุการแก้ไข</label>
+                            <div class="so-input-wrapper">
+                                <input type="text" name="etax_edit_note" id="etax_edit_note" value="<?php echo htmlspecialchars($rs['desnew_bill'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกหมายเหตุการแก้ไข" class="so-input">
+                                <button type="button" class="so-clear-icon" onclick="document.getElementById('etax_edit_note').value=''"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <?php
                 // เรนเดอร์แถวสินค้าลง buffer ก่อน เพื่อให้รู้จำนวนรายการ/ยอดรวมสำหรับ badge และ stat box ด้านบนตาราง
                 ob_start();
@@ -629,8 +637,11 @@
                                             </button>
                                         </div>
                                         <input type="hidden" name="id[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1['id']; ?>">
-                                        <input type="text" name="product_id[<?php echo $objResult1["id"]; ?>]" class="so-input credinot-code-input" value="<?php echo $objResult1['product_id']; ?>" readonly>
+                                        <input type="text" class="so-input credinot-code-input" value="<?php echo htmlspecialchars($objResult1['access_code'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                                        <input type="hidden" name="product_id[<?php echo $objResult1["id"]; ?>]" value="<?php echo htmlspecialchars($objResult1['product_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                         <input type='hidden' name="product_code[<?php echo $objResult1["id"]; ?>]" value="<?php echo $objResult1["access_code"]; ?>" id="product_code[<?php echo $objResult1["id"]; ?>]">
+                                        <input type="hidden" name="sn[<?php echo $objResult1["id"]; ?>]" value="<?php echo htmlspecialchars($objResult1['sn'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                        <input type="hidden" name="lot_no[<?php echo $objResult1["id"]; ?>]" value="<?php echo htmlspecialchars($objResult1['lot_no'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                     </div>
                                 </td>
 
@@ -648,9 +659,13 @@
                                                                                                                     echo number_format($price, 2) . ""; ?>" id="unit_price[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:right" readonly /></td>
 
                                 <td>
+                                    <input type="text" class="so-input" style="text-align:right" value="<?php echo number_format($objResult1["discount"], 2); ?>" readonly>
+                                </td>
+
+                                <td>
                                     <input type='text' name="sum_amount[<?php echo $objResult1["id"]; ?>]" value="<?php echo number_format($sum_amount, 2) . ""; ?>" id="sum_amount[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:right" readonly />
                                     <?php
-                                    // ส่วนลด/หน่วย ไม่แสดงในตารางตาม Design ใหม่ แต่ยังต้อง submit ค่าจริงจาก DB ไปด้วย
+                                    // ส่วนลด/หน่วย submit ผ่าน hidden input นี้ (คอลัมน์แสดงผลด้านบนเป็น readonly แยกต่างหาก)
                                     // เพราะ register_credinot1.php ใช้ discount_unit[] คำนวณ sum_amount/sum_discount ตอนบันทึก
                                     $discount_unit = $objResult1["discount"];
                                     ?>
@@ -686,7 +701,7 @@
                                 $lotNoDisplay = trim((string)$objResult1["lot_no"]);
                         ?>
                         <tr class="credinot-detail-row">
-                            <td colspan="6">
+                            <td colspan="7">
                                 <?php if (count($snList) > 0) { ?>
                                     <table class="credinot-sn-table">
                                         <thead>
@@ -735,10 +750,16 @@
                                 <div class="credinot-row-controls-inner">
                                     <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
                                     <span class="credinot-select-dot" aria-hidden="true"></span>
+                                    <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
+                                        <i class="fas fa-caret-down"></i>
+                                    </button>
                                 </div>
                                 <input type="hidden" name="id[<?php echo $rowId; ?>]" value="<?php echo $rowId; ?>">
-                                <input type="text" name="product_id[<?php echo $rowId; ?>]" class="so-input credinot-code-input" value="<?php echo htmlspecialchars($objResult1['product_id'], ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                                <input type="text" class="so-input credinot-code-input" value="<?php echo htmlspecialchars($objResult1['access_code'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                                <input type="hidden" name="product_id[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($objResult1['product_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type='hidden' name="product_code[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($objResult1['access_code'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                <input type="hidden" name="sn[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($objResult1['sn'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                <input type="hidden" name="lot_no[<?php echo $rowId; ?>]" value="<?php echo htmlspecialchars($objResult1['lot_no'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                         </td>
 
@@ -755,6 +776,10 @@
                         <td><input type='text' name="unit_price[<?php echo $rowId; ?>]" value="<?php echo number_format($unitPriceVal, 2); ?>" class="so-input" style="text-align:right" <?php echo $creditItemsLocked ? 'readonly' : ''; ?>></td>
 
                         <td>
+                            <input type="text" class="so-input" style="text-align:right" value="<?php echo number_format($discountUnitVal, 2); ?>" readonly>
+                        </td>
+
+                        <td>
                             <input type='text' name="sum_amount[<?php echo $rowId; ?>]" value="<?php echo number_format($sum_amount, 2); ?>" class="so-input" style="text-align:right" readonly />
                             <input type="hidden" name="discount_unit[<?php echo $rowId; ?>]" value="<?php echo number_format($discountUnitVal, 2); ?>">
                         </td>
@@ -764,6 +789,48 @@
                                 <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
+                            <?php } ?>
+                        </td>
+                    </tr>
+
+                    <?php
+                            // แยกเลข SN จากฟิลด์ tb_subcredit.sn (คั่นด้วย "/" ตามรูปแบบข้อมูลจริง ตาม pattern เดียวกับโหมดสร้างจาก SO)
+                            // Lot No. ใช้ค่าเดียวกันซ้ำทุกแถว, Exp. Date เว้นว่างไว้เหมือนโหมดสร้างจาก SO เพราะไม่มีแหล่งข้อมูลจริง
+                            $snRawEdit = trim((string)($objResult1['sn'] ?? ''));
+                            $snListEdit = array();
+                            if ($snRawEdit !== '') {
+                                foreach (explode('/', $snRawEdit) as $snPieceEdit) {
+                                    $snPieceEdit = trim($snPieceEdit);
+                                    if ($snPieceEdit !== '') {
+                                        $snListEdit[] = $snPieceEdit;
+                                    }
+                                }
+                            }
+                            $lotNoDisplayEdit = trim((string)($objResult1['lot_no'] ?? ''));
+                    ?>
+                    <tr class="credinot-detail-row">
+                        <td colspan="7">
+                            <?php if (count($snListEdit) > 0) { ?>
+                                <table class="credinot-sn-table">
+                                    <thead>
+                                        <tr>
+                                            <th>หมายเลข SN</th>
+                                            <th>Lot No.</th>
+                                            <th>Exp. Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($snListEdit as $snItemEdit) { ?>
+                                            <tr>
+                                                <td><i class="fas fa-check-circle" style="color: #612989; margin-right: 8px; font-size: 14px;"></i><?php echo htmlspecialchars($snItemEdit, ENT_QUOTES, 'UTF-8'); ?></td>
+                                                <td><?php echo htmlspecialchars($lotNoDisplayEdit, ENT_QUOTES, 'UTF-8'); ?></td>
+                                                <td></td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            <?php } else { ?>
+                                <div class="credinot-detail-empty">ไม่มีข้อมูลหมายเลข SN</div>
                             <?php } ?>
                         </td>
                     </tr>
@@ -788,11 +855,11 @@
                 <div class="credinot-stat-grid">
                     <div class="credinot-stat-box">
                         <span class="credinot-stat-label">จำนวนรวม(ชิ้น)</span>
-                        <span class="credinot-stat-value"><?php echo number_format($total_qty); ?></span>
+                        <span class="credinot-stat-value" id="creditTotalQtyValue"><?php echo number_format($total_qty); ?></span>
                     </div>
                     <div class="credinot-stat-box is-highlight">
                         <span class="credinot-stat-label">ยอดรวมสุทธิ</span>
-                        <span class="credinot-stat-value"><?php echo number_format($grand_total_amount, 2); ?></span>
+                        <span class="credinot-stat-value" id="creditGrandTotalValue"><?php echo number_format($grand_total_amount, 2); ?></span>
                     </div>
                 </div>
 
@@ -817,6 +884,7 @@
                                 <th>รายการสินค้า</th>
                                 <th style="text-align: center;">จำนวน</th>
                                 <th style="text-align: right;">ราคา/หน่วย</th>
+                                <th style="text-align: right;">ส่วนลด/หน่วย</th>
                                 <th style="text-align: right;">ยอดรวม</th>
                                 <th class="credinot-edit-col"></th>
                             </tr>
@@ -857,7 +925,7 @@
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-                <?php if (!$creditItemsLocked) { ?>
+                <?php if (!$creditItemsLocked && $mode !== 'edit') { ?>
                     <button type="submit" name="submit" value="submit" class="btn-so-submit">
                         <i class="far fa-paper-plane"></i> Submit
                     </button>
@@ -867,7 +935,7 @@
                         <i class="far fa-save"></i> Update
                     </button>
                 <?php endif; ?>
-                <button type="button" class="btn-so-cancel-nav" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.history.back(); }">
+                <button type="button" class="btn-so-cancel-nav" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.location.href = 'status_credit_admall.php'; }">
                     ยกเลิก
                 </button>
             </div>
@@ -1351,6 +1419,14 @@
         var docRefAbortController = null;
         var docRefRequestId = 0;
 
+        function toggleEtaxCard() {
+            var ivInput = document.getElementById('iv_no_ref');
+            var wrap = document.getElementById('etaxEditCardWrap');
+            if (!ivInput || !wrap) return;
+            var val = ivInput.value.trim().toUpperCase();
+            wrap.style.display = (val.substring(0, 2) === 'ET') ? '' : 'none';
+        }
+
         function openDocRefPopup() {
             var modal = document.getElementById('docRefPopupModal');
             var search = document.getElementById('docRefPopupSearch');
@@ -1500,7 +1576,7 @@
             // แต่ละเอกสารประกอบด้วย 2 แถว: แถวหลัก + แถวรายละเอียด (ที่อยู่/เบอร์โทร) ที่ซ่อนไว้
             tbody.innerHTML = docs.map(function(doc, index) {
                 var docNo = doc.iv_no || '-';
-                var refId = doc.ref_id || '-';
+                var poNo = doc.po_no || '-';
                 var billName = doc.bill_name || '-';
                 var channel = doc.sale_channel_name || '-';
                 var saleCode = doc.sale_code || '-';
@@ -1510,7 +1586,7 @@
                 return '<tr class="docref-main-row" data-index="' + index + '" onclick="selectDocRefRow(' + index + ')">' +
                     '<td class="docref-caret-col"><button type="button" class="docref-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="event.stopPropagation(); toggleDocRefDetail(' + index + ');"><i class="fas fa-caret-down"></i></button></td>' +
                     '<td><button type="button" class="docref-doc-no" onclick="event.stopPropagation(); selectDocRefRow(' + index + ');">' + escapeDocRefHtml(docNo) + '</button></td>' +
-                    '<td>' + escapeDocRefHtml(refId) + '</td>' +
+                    '<td>' + escapeDocRefHtml(poNo) + '</td>' +
                     '<td>' + escapeDocRefHtml(billName) + '</td>' +
                     '<td>' + escapeDocRefHtml(channel) + '</td>' +
                     '<td>' + escapeDocRefHtml(saleCode) + '</td>' +
@@ -1612,9 +1688,12 @@
             if (formMode === 'edit') {
                 var ivInputEdit = document.getElementById('iv_no_ref');
                 var refIdInputEdit = document.getElementById('ref_id');
+                var refOrderIdInputEdit = document.getElementById('ref_order_id');
                 var selectedIvNoEdit = String(docRefSelected.iv_no || '').trim();
                 if (ivInputEdit) ivInputEdit.value = selectedIvNoEdit;
                 if (refIdInputEdit) refIdInputEdit.value = selectedRefId;
+                if (refOrderIdInputEdit) refOrderIdInputEdit.value = String(docRefSelected.po_no || '').trim();
+                toggleEtaxCard();
                 closeDocRefPopup();
                 return;
             }
@@ -1692,6 +1771,12 @@
                 // ซ่อนแถวด้วย inline style ตรงๆ ควบคู่กับ class ไปด้วย กัน CSS ไฟล์ภายนอกโหลดไม่ทัน/ถูก cache ค้าง
                 row.style.display = 'none';
 
+                // แถวรายละเอียด SN ที่ตามหลังแถวหลักทันที ก็ต้องซ่อนไปด้วย ไม่งั้นค้างแสดงอยู่ใต้แถวที่ถูกลบ
+                var detailRow = row.nextElementSibling;
+                if (detailRow && detailRow.classList.contains('credinot-detail-row')) {
+                    detailRow.style.display = 'none';
+                }
+
                 var form = document.forms['frmMain'];
                 if (form) {
                     var pendingInput = document.createElement('input');
@@ -1701,13 +1786,7 @@
                     form.appendChild(pendingInput);
                 }
 
-                var badge = document.querySelector('.credinot-count-badge');
-                if (badge) {
-                    var currentCount = parseInt(badge.textContent, 10);
-                    if (!isNaN(currentCount) && currentCount > 0) {
-                        badge.textContent = (currentCount - 1) + ' รายการ';
-                    }
-                }
+                recalcCreditTotals();
             });
         }
 
@@ -1739,13 +1818,7 @@
                     detailRow.parentNode.removeChild(detailRow);
                 }
 
-                var badge = document.querySelector('.credinot-count-badge');
-                if (badge) {
-                    var currentCount = parseInt(badge.textContent, 10);
-                    if (!isNaN(currentCount) && currentCount > 0) {
-                        badge.textContent = (currentCount - 1) + ' รายการ';
-                    }
-                }
+                recalcCreditTotals();
             });
         }
 
@@ -2239,6 +2312,56 @@
             loadProdSearchRows(prodSearchKeyword, true);
         }
 
+        // คำนวณ "ยอดรวม" ของแถวเดียว จาก count/ราคา/หน่วย/ส่วนลด (hidden) ที่มีอยู่ในแถวนั้น
+        function recalcCreditRowSum(row) {
+            var countInput = row.querySelector('input[name^="count"]');
+            var priceInput = row.querySelector('input[name^="unit_price"]');
+            var sumInput = row.querySelector('input[name^="sum_amount"]');
+            var discountInput = row.querySelector('input[name^="discount_unit"]');
+            if (!countInput || !priceInput || !sumInput) return;
+            var c = parseFloat(String(countInput.value).replace(/,/g, '')) || 0;
+            var p = parseFloat(String(priceInput.value).replace(/,/g, '')) || 0;
+            var d = discountInput ? (parseFloat(String(discountInput.value).replace(/,/g, '')) || 0) : 0;
+            sumInput.value = ((p - d) * c).toFixed(2);
+        }
+
+        // รวมยอดใหม่ทั้งตาราง (จำนวนรวม/ยอดรวมสุทธิ/จำนวนรายการ) จากค่าที่แสดงอยู่จริงในแต่ละแถว ณ ขณะนั้น
+        function recalcCreditTotals() {
+            var tbody = document.getElementById('credinotTableBody');
+            if (!tbody) return;
+            var totalQty = 0,
+                grandTotal = 0,
+                itemCount = 0;
+            tbody.querySelectorAll('tr.credinot-row').forEach(function(row) {
+                if (row.style.display === 'none') return;
+                var countInput = row.querySelector('input[name^="count"]');
+                var sumInput = row.querySelector('input[name^="sum_amount"]');
+                totalQty += countInput ? (parseFloat(String(countInput.value).replace(/,/g, '')) || 0) : 0;
+                grandTotal += sumInput ? (parseFloat(String(sumInput.value).replace(/,/g, '')) || 0) : 0;
+                itemCount++;
+            });
+            var qtyEl = document.getElementById('creditTotalQtyValue');
+            var totalEl = document.getElementById('creditGrandTotalValue');
+            var badge = document.querySelector('.credinot-count-badge');
+            if (qtyEl) qtyEl.textContent = totalQty.toLocaleString('en-US');
+            if (totalEl) totalEl.textContent = grandTotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            if (badge) badge.textContent = itemCount + ' รายการ';
+        }
+
+        // ผูก listener ให้แก้ count/ราคา ของแถวนี้แล้ว recalc ยอดรวมของแถว + สถิติรวมทั้งตารางทันที (ไม่กระทบ DB จนกว่าจะ submit)
+        function bindCreditRowRecalc(row) {
+            var fields = row.querySelectorAll('input[name^="count"], input[name^="unit_price"]');
+            fields.forEach(function(field) {
+                field.addEventListener('input', function() {
+                    recalcCreditRowSum(row);
+                    recalcCreditTotals();
+                });
+            });
+        }
+
         // เพิ่มแถวสินค้าใหม่ลงตารางรายการสินค้าด้วย JS (client-side) — key ใช้ prefix "new_" กันชนกับ id จริงจาก DB
         function addProductRowToTable(prod) {
             var tbody = document.getElementById('credinotTableBody');
@@ -2265,12 +2388,14 @@
                 '</td>' +
                 '<td>' +
                 '<input type="hidden" name="id[' + key + ']" value="">' +
-                '<input type="text" name="product_id[' + key + ']" class="so-input credinot-code-input" value="' + escapeDocRefHtml(prod.product_id) + '" readonly>' +
+                '<input type="text" class="so-input credinot-code-input" value="' + escapeDocRefHtml(prod.access_code || '') + '" readonly>' +
+                '<input type="hidden" name="product_id[' + key + ']" value="' + escapeDocRefHtml(prod.product_id || '') + '">' +
                 '<input type="hidden" name="product_code[' + key + ']" value="' + escapeDocRefHtml(prod.access_code || '') + '">' +
                 '</td>' +
                 '<td><textarea name="product_name[' + key + ']" class="so-textarea" readonly>' + escapeDocRefHtml(prod.sol_name || '') + '</textarea></td>' +
                 '<td><div class="credinot-qty-pill"><input type="text" name="count[' + key + ']" value="1" class="so-input credinot-new-count" style="text-align:center"></div></td>' +
                 '<td><input type="text" name="unit_price[' + key + ']" value="' + price.toFixed(2) + '" class="so-input credinot-new-price" style="text-align:right"></td>' +
+                '<td><input type="text" class="so-input" style="text-align:right" value="0.00" readonly></td>' +
                 '<td>' +
                 '<input type="text" name="sum_amount[' + key + ']" value="' + price.toFixed(2) + '" class="so-input credinot-new-sum" style="text-align:right" readonly>' +
                 '<input type="hidden" name="discount_unit[' + key + ']" value="0.00">' +
@@ -2281,25 +2406,16 @@
 
             tbody.appendChild(row);
 
-            var countInput = row.querySelector('.credinot-new-count');
-            var priceInput = row.querySelector('.credinot-new-price');
-            var sumInput = row.querySelector('.credinot-new-sum');
-            var recalc = function() {
-                var c = parseFloat(countInput.value) || 0;
-                var p = parseFloat(priceInput.value) || 0;
-                sumInput.value = (c * p).toFixed(2);
-            };
-            countInput.addEventListener('input', recalc);
-            priceInput.addEventListener('input', recalc);
-
-            var badge = document.querySelector('.credinot-count-badge');
-            if (badge) {
-                var currentCount = parseInt(badge.textContent, 10);
-                if (!isNaN(currentCount)) {
-                    badge.textContent = (currentCount + 1) + ' รายการ';
-                }
-            }
+            bindCreditRowRecalc(row);
+            recalcCreditTotals();
         }
+
+        // ผูก recalc ให้แถวที่ render มาจาก server ตั้งแต่โหลดหน้า (ทั้งโหมดสร้างจาก SO และโหมดแก้ไข)
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('#credinotTableBody tr.credinot-row').forEach(function(row) {
+                bindCreditRowRecalc(row);
+            });
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
             var custSearch = document.getElementById('customerSearchPopupSearch');

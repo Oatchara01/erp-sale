@@ -25,7 +25,7 @@ if ($limit > 50) {
 }
 
 // เอาเฉพาะเอกสารที่ออกเลขที่ใบสั่งขายแล้ว (iv_no ไม่ว่าง) เพราะใบลดหนี้ต้องอ้างอิงเลขที่เอกสารเสมอ
-$sql = "SELECT s.id, s.iv_no, s.ref_id, s.bill_name, s.bill_address, s.bill_tel, s.sale_code,
+$sql = "SELECT s.id, s.iv_no, s.ref_id, s.po_no, s.bill_name, s.bill_address, s.bill_tel, s.sale_code,
                c.salechannel_nameshort
         FROM hos__so s
         LEFT JOIN tb_salechannel c ON s.sale_channel = c.salechannel_ID
@@ -91,6 +91,7 @@ foreach ($rows as $row) {
         'id' => $docId,
         'iv_no' => $row['iv_no'],
         'ref_id' => $row['ref_id'],
+        'po_no' => $row['po_no'],
         'bill_name' => $row['bill_name'],
         'bill_address' => $row['bill_address'],
         'bill_tel' => $row['bill_tel'],
