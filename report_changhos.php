@@ -4,30 +4,47 @@ define('FPDF_FONTPATH','font/');
  
 require('fpdf.php');
 
-$ref_id=$_GET["ref_id"];
+$ref_id = $_GET["ref_id"] ?? ($_POST["ref_id"] ?? '');
 
 
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM hos__change  WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+include_once "report_changhos_preview_helper.php";
+$isPreview = changhos_is_preview_request();
 
-$strSQL1 = "SELECT * FROM (hos__subchange LEFT JOIN tb_product ON hos__subchange.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+if (!$isPreview) {
+	$strSQL = "SELECT * FROM hos__change  WHERE ref_id = '".$ref_id."' ";
+	$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
+	$objResult = mysqli_fetch_array($objQuery);
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_sale !='0' ";
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
+	$strSQL1 = "SELECT * FROM (hos__subchange LEFT JOIN tb_product ON hos__subchange.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$Num_Rows1 = mysqli_num_rows($objQuery1);
 
-$strSQL16 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_stock !='0' ";
-$objQuery16 = mysqli_query($conn,$strSQL16);
-$objResult16 = mysqli_fetch_array($objQuery16);
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_sale !='0' ";
+	$objQuery15 = mysqli_query($conn,$strSQL15);
+	$objResult15= mysqli_fetch_array($objQuery15);
 
-$summary_stock=$objResult16['amount_1'];
-$summary_sale=$objResult15['amount_1'];
+	$strSQL16 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_stock !='0' ";
+	$objQuery16 = mysqli_query($conn,$strSQL16);
+	$objResult16 = mysqli_fetch_array($objQuery16);
+
+	$summary_stock=$objResult16['amount_1'];
+	$summary_sale=$objResult15['amount_1'];
+
+	$rows = array();
+	while ($row = mysqli_fetch_array($objQuery1)) {
+		$rows[] = $row;
+	}
+} else {
+	// พรีวิวเอกสารที่ยังไม่บันทึก: อ่านค่าจากฟอร์ม register_supchange.php แทนการอ่าน DB
+	$previewContext = changhos_build_preview_context($conn);
+	$objResult = $previewContext['change'];
+	$summary_stock = $previewContext['summary_stock'];
+	$summary_sale = $previewContext['summary_sale'];
+	$rows = $previewContext['products'];
+}
 
 $summary_1 = $summary_sale-$summary_stock;
 
@@ -109,7 +126,7 @@ $pdf->MultiCell( 9.0,2.0, iconv( 'UTF-8','cp874' , ""),0 ,'L' );
 
 
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
+foreach ($rows as $objResult1)
 {
 
 $sum_amount1  =$objResult1["amount"];

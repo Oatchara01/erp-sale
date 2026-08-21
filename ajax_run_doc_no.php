@@ -22,6 +22,12 @@
  *    ไม่มี INSERT จองเลข อ่าน MAX จากคอลัมน์เลขที่เอกสารในตารางเอกสารโดยตรง
  *    เลขจึงถูกจองจริงตอนกดบันทึกเอกสาร (กันเลขซ้ำอีกชั้นที่ register_supbrcshos1.php
  *    และ register_supbrcshos_edit1.php) และการกด Run ซ้ำก่อนบันทึกจะได้เลขเดิมเสมอ
+ *
+ * 3) โหมดตารางตัวนับกลาง ($docSharedCounterTable) — EXC/EXCN (register_supchange.php)
+ *    ใช้ตาราง "tb_docbreng" ร่วมกับตัวนับของ register_adminchange_edit1.php (ฝั่ง Admin
+ *    อนุมัติ) เพื่อให้เลขที่ปุ่ม "Run เอกสาร" ฝั่งขายออกมาเป็น series เดียวกัน ไม่ชนกัน
+ *    ตารางนี้ถูกใช้ร่วมกับหลายโมดูล จึงต้องกรอง/ล็อกด้วย head_no แทนชื่อตาราง
+ *    เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) เหมือนโหมด 1
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -58,6 +64,7 @@ $docTypePrefix = [
 	'3' => 'IC', // ใบฝากขาย (IC)
 	'4' => 'IE', // ใบกำกับอิเล็กทรอนิกส์ - Admin เท่านั้น
 	'5' => 'BRSC', // ใบยืม/หนี้ฝากขาย (register_supbrcshos.php) - เอกสารประเภทเดียวของหน้านั้น
+	'6' => 'EXC', // ใบเปลี่ยนสินค้า (register_supchange.php) - เอกสารประเภทเดียวของหน้านั้น
 ];
 $adminOnlyPrefix = ['IE'];
 
@@ -87,9 +94,27 @@ $docSourceTable = [
 	],
 ];
 
+// เอกสารที่ใช้ตารางตัวนับกลาง "tb_docbreng" ร่วมกับหลายโมดูล (BREG/BRES/BREQ/BRNP/...)
+// EXC/EXCN เป็น series เดียวกับที่ register_adminchange_edit1.php ใช้ตอน Admin อนุมัติ
+// (head_no='EXC' คือ AWL, 'EXCN' คือ NBM) จึงต้องนับ/จองจากตารางนี้ตรง ๆ ไม่ใช่แยกตารางใหม่
+// มิฉะนั้นเลขที่ปุ่ม "Run เอกสาร" ออกจะชนกับเลขที่ Admin อนุมัติออกไปแล้ว
+// ตารางนี้ใช้คอลัมน์ run_iv (ไม่ใช่ run_no) และมีคอลัมน์ head_no ไว้กรองแยกโมดูล/บริษัท
+// แทนที่จะแยกเป็นคนละตาราง — ชื่อตาราง/คอลัมน์มาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
+$docSharedCounterTable = [
+	'EXC' => [
+		'table'            => 'tb_docbreng',
+		'column'           => 'run_iv',
+		'headNoByCompany'  => ['3' => 'EXC', '4' => 'EXCN'],
+		'companies'        => ['3', '4'],
+		'separator'        => '',
+		'pad'              => 3,
+	],
+];
+
 $company = trim((string)($_POST['company'] ?? ''));
 $docType = trim((string)($_POST['doc_type'] ?? ''));
 $docDate = trim((string)($_POST['doc_date'] ?? ''));
+$refId   = trim((string)($_POST['ref_id'] ?? '')); // ใช้เฉพาะโหมดตารางตัวนับกลาง (tb_docbreng.ref_id)
 
 if (!isset($docTypePrefix[$docType])) {
 	run_doc_no_fail('กรุณาเลือกประเภทเอกสารก่อนออกเลขที่เอกสาร');
@@ -99,6 +124,11 @@ $prefix = $docTypePrefix[$docType];
 $sourceConfig = $docSourceTable[$prefix] ?? null;
 $isSourceTableMode = ($sourceConfig !== null);
 
+$sharedConfig = $docSharedCounterTable[$prefix] ?? null;
+$isSharedCounterMode = ($sharedConfig !== null);
+
+$headNo = null;
+
 if ($isSourceTableMode) {
 	if (!in_array($company, $sourceConfig['companies'], true)) {
 		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
@@ -107,6 +137,15 @@ if ($isSourceTableMode) {
 	$column    = $sourceConfig['column'];
 	$separator = $sourceConfig['separator'];
 	$runPad    = $sourceConfig['pad'];
+} elseif ($isSharedCounterMode) {
+	if (!isset($sharedConfig['headNoByCompany'][$company])) {
+		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
+	}
+	$table     = $sharedConfig['table'];
+	$column    = $sharedConfig['column'];
+	$separator = $sharedConfig['separator'];
+	$runPad    = $sharedConfig['pad'];
+	$headNo    = $sharedConfig['headNoByCompany'][$company];
 } else {
 	if (!isset($docRouting[$prefix][$company])) {
 		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
@@ -144,9 +183,15 @@ $ivDate  = date('Y-m-d', $timestamp);
 //  fatal error แทนที่จะ insert ซ้ำเงียบ ๆ จึงไม่แตะ schema เดิม)
 // โหมดตารางเอกสารจริงเป็นซีรีส์เดียวทุกบริษัท ชื่อ lock จึงต้องไม่มี $company
 // ไม่งั้น AWL กับ NBM กดพร้อมกันจะไม่บล็อกกันและได้เลขเดียวกัน
-$lockName = $isSourceTableMode
-	? 'docrun_' . $prefix . '_' . $yearNo . $monthNo
-	: 'docrun_' . $company . '_' . $prefix . '_' . $yearNo . $monthNo;
+// โหมดตารางตัวนับกลาง (tb_docbreng) ใช้ $headNo แทน $prefix เพราะตารางเดียวกันถูกใช้ร่วมกับ
+// โมดูลอื่น (BREG/BRES/BREQ/BRNP) — ต้องล็อกแยกตาม head_no ไม่งั้นจะบล็อกกันข้ามโมดูลโดยไม่จำเป็น
+if ($isSourceTableMode) {
+	$lockName = 'docrun_' . $prefix . '_' . $yearNo . $monthNo;
+} elseif ($isSharedCounterMode) {
+	$lockName = 'docrun_' . $headNo . '_' . $yearNo . $monthNo;
+} else {
+	$lockName = 'docrun_' . $company . '_' . $prefix . '_' . $yearNo . $monthNo;
+}
 $lockStmt = mysqli_prepare($conn, "SELECT GET_LOCK(?, 5) AS got_lock");
 mysqli_stmt_bind_param($lockStmt, 's', $lockName);
 mysqli_stmt_execute($lockStmt);
@@ -195,6 +240,45 @@ if ($isSourceTableMode) {
 		'doc_no'   => $docNo,
 		'run_no'   => $runNoText,
 		'doc_type' => $prefix,
+		'company'  => $company,
+		'year_no'  => $yearNo,
+		'mount_no' => $monthNo
+	], JSON_UNESCAPED_UNICODE);
+	exit;
+}
+
+// โหมดตารางตัวนับกลาง (tb_docbreng): มี year_no/month_no ให้กรองเหมือน docRouting ปกติ
+// แต่ต้องกรอง head_no เพิ่ม (ตารางเดียวใช้ร่วมกับ BREG/BRES/BREQ/BRNP ฯลฯ) และ insert คอลัมน์
+// ref_id ตาม pattern เดิมของ register_adminchange_edit1.php:146 — เลขถูกจองทันทีที่กดปุ่ม
+// เหมือนโหมด IV/ET/IC (ไม่ใช่ preview เฉย ๆ)
+if ($isSharedCounterMode) {
+	$selectStmt = mysqli_prepare(
+		$conn,
+		"SELECT MAX(CAST(`" . $column . "` AS UNSIGNED)) AS max_run FROM `" . $table . "` WHERE head_no = ? AND month_no = ? AND year_no = ?"
+	);
+	mysqli_stmt_bind_param($selectStmt, 'sss', $headNo, $monthNo, $yearNo);
+	mysqli_stmt_execute($selectStmt);
+	$selectResult = mysqli_stmt_get_result($selectStmt);
+	$maxRow = $selectResult ? mysqli_fetch_assoc($selectResult) : null;
+	mysqli_stmt_close($selectStmt);
+
+	$runNo = (int)($maxRow['max_run'] ?? 0) + 1;
+	$runNoText = substr(str_repeat('0', $runPad) . $runNo, -$runPad);
+	$docNo = $headNo . $yearNo . $separator . $monthNo . $runNoText;
+
+	$insertStmt = mysqli_prepare(
+		$conn,
+		"INSERT INTO `" . $table . "` (head_no, doc_no, year_no, month_no, `" . $column . "`, ref_id) VALUES (?, ?, ?, ?, ?, ?)"
+	);
+	mysqli_stmt_bind_param($insertStmt, 'ssssss', $headNo, $docNo, $yearNo, $monthNo, $runNoText, $refId);
+	mysqli_stmt_execute($insertStmt);
+	mysqli_stmt_close($insertStmt);
+
+	echo json_encode([
+		'success'  => true,
+		'doc_no'   => $docNo,
+		'run_no'   => $runNoText,
+		'doc_type' => $headNo,
 		'company'  => $company,
 		'year_no'  => $yearNo,
 		'mount_no' => $monthNo

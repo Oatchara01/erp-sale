@@ -11,6 +11,30 @@ include('dbconnect_sale.php');
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 <script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete('saved');
+			window.history.replaceState({}, document.title, cleanUrl);
+
+			if (typeof Swal === 'undefined') {
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				return;
+			}
+
+			Swal.fire({
+				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: 'success',
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+		});
+	</script>
+<?php } ?>
 
 <!-- ===================== ค้นหา/เลือกลูกค้า — ported จาก register_supbrcshos.php:38-108
      (doCallAjax1 -> data_customerbr1.php ตัวเดียวกับที่ระบบใช้อยู่แล้ว ไม่มีการแก้ backend) ===================== -->
@@ -257,9 +281,195 @@ if ($maxId1 == $yearMonth) {
 }
 
 $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม');
+
+// ===== โหลดเอกสารเดิม (view/edit mode) เมื่อมี ?ref_id=... =====
+// พอร์ตจาก register_supbrcshos.php:470-564 — hos__change ใช้ ref_id เป็นคีย์ (เหมือน hos__consig)
+// ทุก query กันด้วย mysqli_num_rows เหมือนต้นแบบ ไม่มีแถวแล้วปล่อยเป็น null/[] เพื่อ fallback เป็นฟอร์มว่าง
+$savedChgRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+$savedChg = null;
+$savedCustomer = null;
+$savedProducts = array();
+$savedOtherBill = null;
+$savedTransaction = null;
+$savedShippingRows = array();
+$savedDeliveryBillRow = null;
+$savedRegister = null;
+
+if ($savedChgRefId !== "") {
+	$savedChgQuery = mysqli_query($conn, "SELECT * FROM hos__change WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+	if ($savedChgQuery && mysqli_num_rows($savedChgQuery) > 0) {
+		$savedChg = mysqli_fetch_assoc($savedChgQuery);
+
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		if ($savedOtherBillQuery) {
+			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
+		}
+
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		if ($savedTransactionQuery) {
+			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
+		}
+
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedChgRefId . "' ORDER BY id ASC");
+		if ($savedShippingQuery) {
+			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
+				$savedShippingRows[] = $savedShippingRow;
+			}
+		}
+
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		if ($savedDeliveryBillQuery) {
+			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
+		}
+
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		if ($savedRegisterQuery) {
+			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
+		}
+
+		// LEFT JOIN tb_product จำเป็น เพราะ hos__subchange ไม่มีคอลัมน์ product_name/unit_name/access_code ของตัวเอง
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subchange.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subchange LEFT JOIN tb_product ON hos__subchange.product_id = tb_product.product_ID WHERE hos__subchange.ref_idd = '" . $savedChgRefId . "' ORDER BY hos__subchange.id ASC");
+		if ($savedProductsQuery) {
+			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
+				$savedProducts[] = $savedProductRow;
+			}
+		}
+
+		// การ์ด "ข้อมูลลูกค้า" (display_bill_id ฯลฯ) เป็นฟิลด์แสดงผลอย่างเดียว ไม่ได้เก็บใน hos__change
+		// view mode จึงต้อง query tb_customer เองเพื่อเติมการ์ดนี้ — query เดียวกับ register_supbrcshos.php:558
+		if (!empty($savedChg['customer_id'])) {
+			$savedCustomerId = mysqli_real_escape_string($conn, $savedChg['customer_id']);
+			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
+			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
+				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
+			}
+		}
+	}
+}
+
+$chgIsEditMode = ($savedChg !== null);
+
+// ---- แผนที่ค่า prefill สำหรับ view/edit mode ----
+// พอร์ตจาก register_supbrcshos.php:618-763 — รวมค่าที่ต้องเติมกลับเข้าฟอร์มไว้ที่เดียว
+// แล้วให้ JS ตัวเดียวเป็นคนเติม (ดูบล็อกก่อนปิด </form>) แทนการไล่ so_saved_h() ทีละช่อง
+$chgPrefill = array();
+
+if ($savedChg !== null) {
+	$chgPrefill = array(
+		'company' => $savedChg['company'],
+		'customer' => $savedChg['customer'],
+		'customer_id' => $savedChg['customer_id'],
+		'h_customer' => $savedChg['customer'],
+		'address' => $savedChg['address'],
+		'sale_comment' => $savedChg['sale_comment'],
+		'sn_ckk' => $savedChg['sn_ckk'],
+		'sn' => $savedChg['sn'],
+		'objective' => $savedChg['objective'],
+		'objective_des' => $savedChg['objective_des'],
+		'que_ckk' => $savedChg['que_ckk'] ?? '',
+		'send_cs' => $savedChg['send_cs'] ?? '',
+		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
+		'address_name' => $savedChg['delivery_name'],
+		'address_merged_ui' => $savedChg['delivery_name'],
+		'address_1' => $savedChg['delivery_name'],
+		'address_send' => $savedChg['delivery_address'],
+		'customer_name' => $savedChg['delivery_contact'],
+		'customer_tel' => $savedChg['delivery_tel'],
+		'delivery_type' => $savedChg['delivery_type'],
+		'start_date' => $savedChg['delivery_date'],
+		'between_date' => $savedChg['date_send_key'],
+		// แท็บ Admin — job_no อยู่ในคอลัมน์เสริม เติมด้วย so_saved_h() ตรงจุด include admin_info_tab.php แทน
+		// ค่าจัดส่ง (แท็บ 2 ของ delivery_info_tab.php)
+		'shipping_date' => $savedChg['date_ker'],
+		'shipping_ref1' => $savedChg['order_refer_code'],
+		'shipping_ref2' => $savedChg['order_refer_code1'],
+		'shipping_cost' => $savedChg['ker_bath'],
+	);
+
+	// delivery_time เก็บรวม "start_time end_time" คั่นด้วยช่องว่างเดียว (ดู register_supchange1.php)
+	$savedChgTimeParts = explode(' ', (string)($savedChg['delivery_time'] ?? ''), 2);
+	$chgPrefill['start_time'] = $savedChgTimeParts[0] ?? '';
+	$chgPrefill['end_time'] = $savedChgTimeParts[1] ?? '';
+
+	if ($savedOtherBill !== null) {
+		$chgPrefill['no_money'] = $savedOtherBill['ref_12'] ?? '';
+	}
+
+	// tb_transaction ('แท็บ รายละเอียดที่อยู่') — ผูกกลับด้านของ cs_* mapping ใน register_supchange1.php
+	if ($savedTransaction !== null) {
+		if (($savedTransaction['car_home'] ?? '') === '1') {
+			$chgPrefill['park_front'] = '1';
+		} elseif (($savedTransaction['car_road'] ?? '') === '1') {
+			$chgPrefill['park_front'] = '0';
+		}
+		$chgPrefill['park_location'] = $savedTransaction['car_park'];
+		$chgPrefill['is_high_roof'] = $savedTransaction['height_ltd'];
+
+		if (($savedTransaction['slope'] ?? '') === '1') {
+			$chgPrefill['entrance_type'] = '1';
+		} elseif (($savedTransaction['bundai'] ?? '') === '1') {
+			$chgPrefill['entrance_type'] = '2';
+		}
+		$chgPrefill['stair_count'] = $savedTransaction['unit_bundai'];
+		$chgPrefill['install_floor'] = $savedTransaction['install'];
+
+		$chgPrefill['room_type'] = $savedTransaction['home_type'];
+		$chgPrefill['door_width'] = $savedTransaction['room_bigger'];
+		$chgPrefill['door_height'] = $savedTransaction['room_longer'];
+
+		$savedChgStairSize = explode(' x ', (string)($savedTransaction['bundai_big'] ?? ''), 2);
+		$chgPrefill['stair_width'] = $savedChgStairSize[0] ?? '';
+		$chgPrefill['stair_height'] = $savedChgStairSize[1] ?? '';
+
+		$savedChgElevDoorSize = explode(' x ', (string)($savedTransaction['lip_big'] ?? ''), 2);
+		$chgPrefill['elev_door_width'] = $savedChgElevDoorSize[0] ?? '';
+		$chgPrefill['elev_door_height'] = $savedChgElevDoorSize[1] ?? '';
+
+		$savedChgElevSize = explode(' x ', (string)($savedTransaction['lip_long'] ?? ''), 3);
+		$chgPrefill['elev_width'] = $savedChgElevSize[0] ?? '';
+		$chgPrefill['elev_height'] = $savedChgElevSize[1] ?? '';
+		$chgPrefill['elev_depth'] = $savedChgElevSize[2] ?? '';
+
+		$chgPrefill['elev_capacity'] = $savedTransaction['lip_weight'];
+
+		$chgPrefill['move_furn'] = $savedTransaction['want_employee'];
+		$chgPrefill['move_furn_count'] = $savedTransaction['employee_unit'];
+		$chgPrefill['move_furn_detail'] = $savedTransaction['ferniger_name'];
+		$chgPrefill['addr_note'] = $savedTransaction['description'];
+	}
+
+	// tb_register_data — เฉพาะฟิลด์ที่มี input จริงในฟอร์มนี้
+	if ($savedRegister !== null) {
+		$chgPrefill['province_name'] = $savedRegister['province_name'];
+		$chgPrefill['transport_company'] = $savedRegister['transport_company'];
+		$chgPrefill['location_link'] = $savedRegister['location_link'];
+		$chgPrefill['status_comment'] = $savedRegister['status_comment'];
+		$chgPrefill['on_time'] = $savedRegister['on_time'];
+		$chgPrefill['call_customer'] = $savedRegister['call_customer'];
+	}
+
+	// ที่อยู่เพิ่มเติมสูงสุด 9 แถว (ชุดเดียวกับที่ register_supchange1.php วนบันทึก)
+	foreach ($savedShippingRows as $chgShippingIdx => $chgShippingRow) {
+		$chgShippingNo = $chgShippingIdx + 1;
+		if ($chgShippingNo > 9) {
+			break;
+		}
+		$chgPrefill['extra_contact_name_' . $chgShippingNo] = $chgShippingRow['contact_name'];
+		$chgPrefill['extra_contact_tel_' . $chgShippingNo] = $chgShippingRow['telephone'];
+		$chgPrefill['extra_contact_province_' . $chgShippingNo] = $chgShippingRow['province'];
+		$chgPrefill['extra_shipping_address_' . $chgShippingNo] = $chgShippingRow['address'];
+	}
+
+	if ($savedDeliveryBillRow !== null) {
+		$chgPrefill['bill_extra_contact_name_2'] = $savedDeliveryBillRow['customer_nameb'];
+		$chgPrefill['bill_extra_contact_tel_2'] = $savedDeliveryBillRow['customer_telb'];
+		$chgPrefill['bill_extra_contact_province_2'] = $savedDeliveryBillRow['province'];
+		$chgPrefill['bill_extra_shipping_address_2'] = $savedDeliveryBillRow['address_nameb'];
+	}
+}
 ?>
 
-<form action="register_supchange1.php" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container" style="max-width:1320px;margin:0 auto;">
 
 		<div class="so-header-container">
@@ -267,14 +477,21 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 				<h1 class="so-title">Change Order</h1>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
-					<span class="so-ref-value"><?php echo $so . $nextId; ?></span>
+					<span class="so-ref-value"><?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : $so . $nextId; ?></span>
 				</div>
+			</div>
+			<div class="so-header-right">
+				<button type="button" class="btn-preview-so" onclick="chgOpenPreview();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 			</div>
 		</div>
 
 
 		<script language="javascript">
+			var chgSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+
 			function fncSubmit() {
+				if (chgSubmitting) return false;
+
 				if (document.frmMain.start_time.value == "") {
 					alert('กรุณาใส่เวลาส่ง');
 					chgFocusField(document.frmMain.start_time);
@@ -316,11 +533,124 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 					return false;
 				}
 
-				document.frmMain.submit();
+				var hasProduct = false;
+				for (var pi = 1; pi <= 6; pi++) {
+					var productIdInput = document.getElementsByName('product_id' + pi)[0];
+					if (productIdInput && String(productIdInput.value).trim() !== '') {
+						hasProduct = true;
+						break;
+					}
+				}
+				if (!hasProduct) {
+					alert('กรุณาเลือกสินค้าอย่างน้อย 1 รายการ');
+					return false;
+				}
+
+				// การแลกเปลี่ยนสินค้า: จำนวนแลกเข้า/แลกออกต่างกันได้ แต่มูลค่ารวมสองฝั่งต้องเท่ากัน
+				if (typeof ptcGetValueTotals === 'function') {
+					var chgValueTotals = ptcGetValueTotals();
+					if (Math.abs(chgValueTotals.in - chgValueTotals.out) > 0.01) {
+						alert('มูลค่าสินค้าแลกเข้า (' + chgValueTotals.in.toFixed(2) + ') ต้องเท่ากับมูลค่าแลกออก (' + chgValueTotals.out.toFixed(2) + ')');
+						return false;
+					}
+				}
+
+				// ผ่าน validation ครบแล้ว กำลังจะ submit จริง -> disable ปุ่มกันกดซ้ำ
+				// ไม่ต้อง re-enable เพราะหน้าจะ navigate ออกไปอยู่แล้วเมื่อสำเร็จ
+				chgSubmitting = true;
+				var chgSubmitBtn = document.querySelector('.btn-so-submit');
+				if (chgSubmitBtn) {
+					chgSubmitBtn.disabled = true;
+					chgSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				}
+
+				// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
+				// จึงต้องเรียกผ่าน prototype โดยตรง และเพราะ .submit() ไม่ส่งค่าปุ่มมาด้วย ต้องสร้าง
+				// hidden name="submit" เอง ไม่งั้น register_supchange1.php จะมองว่าไม่ได้กดบันทึก
+				// (pattern เดียวกับ register_supbrcshos.php:854-869)
+				HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+				return false;
+			}
+
+			function chgEnsureSubmitMarker() {
+				var chgForm = document.forms['frmMain'];
+				var chgSubmitValue = chgForm.querySelector('input[type="hidden"][name="submit"]');
+				if (!chgSubmitValue) {
+					chgSubmitValue = document.createElement('input');
+					chgSubmitValue.type = 'hidden';
+					chgSubmitValue.name = 'submit';
+					chgForm.appendChild(chgSubmitValue);
+				}
+				chgSubmitValue.value = 'submit';
+				return chgForm;
+			}
+
+			// เปิดพรีวิวใบแลกเปลี่ยนสินค้าในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ report_changehosptl.php
+			// (report มี preview path อ่านจาก POST อยู่ใน report_changehosptl_preview_helper.php)
+			// พอร์ตจาก register_supbrcshos.php:112-171
+			function chgOpenPreview() {
+				var form = document.forms.frmMain;
+				var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
+				var refId = refInput ? refInput.value.trim() : '';
+
+				if (!form || !refId) {
+					Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id)', 'warning');
+					return;
+				}
+
+				var previewTarget = 'changhos_preview_' + Date.now();
+				var previewWindow = window.open('', previewTarget);
+				if (!previewWindow) {
+					Swal.fire('แจ้งเตือน', 'เบราว์เซอร์บล็อกหน้าต่าง Preview กรุณาอนุญาต Pop-up แล้วลองใหม่', 'warning');
+					return;
+				}
+
+				var previewFlag = document.createElement('input');
+				previewFlag.type = 'hidden';
+				previewFlag.name = '_report_preview';
+				previewFlag.value = '1';
+				form.appendChild(previewFlag);
+
+				var originalAction = form.getAttribute('action');
+				var originalMethod = form.getAttribute('method');
+				var originalTarget = form.getAttribute('target');
+				var originalEnctype = form.getAttribute('enctype');
+
+				form.action = 'report_changehosptl.php';
+				form.method = 'post';
+				form.target = previewTarget;
+				// พรีวิวไม่ใช้ไฟล์แนบ จึงไม่ต้องอัปโหลดสลิปซ้ำไปที่หน้ารายงาน
+				form.enctype = 'application/x-www-form-urlencoded';
+				HTMLFormElement.prototype.submit.call(form);
+
+				if (originalAction === null) form.removeAttribute('action');
+				else form.setAttribute('action', originalAction);
+				if (originalMethod === null) form.removeAttribute('method');
+				else form.setAttribute('method', originalMethod);
+				if (originalTarget === null) form.removeAttribute('target');
+				else form.setAttribute('target', originalTarget);
+				if (originalEnctype === null) form.removeAttribute('enctype');
+				else form.setAttribute('enctype', originalEnctype);
+				previewFlag.remove();
+
+				// เอกสารใหม่ยังไม่ได้เลขจริง (create handler ออกเลขตอนบันทึก) จึงเตือนว่าเลขในพรีวิวเป็นค่าประมาณการ
+				// โหมดแก้ไขจะ action ไป register_supchange_edit1.php ซึ่งแปลว่าเลขที่อ้างอิงเป็นเลขจริงแล้ว
+				var chgIsSavedDoc = (originalAction || '').indexOf('register_supchange_edit1.php') !== -1;
+				if (!chgIsSavedDoc && typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+					Swal.fire({
+						toast: true,
+						position: 'top-end',
+						icon: 'info',
+						title: 'เลขที่อ้างอิงในพรีวิวเป็นค่าประมาณการ อาจไม่ตรงกับเลขที่บันทึกจริง',
+						showConfirmButton: false,
+						timer: 3500,
+						timerProgressBar: true
+					});
+				}
 			}
 		</script>
 
-		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo so_saved_h($so . $nextId); ?>">
+		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : so_saved_h($so . $nextId); ?>">
 		<input name="add_by" value="<?php echo so_saved_h(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')); ?>" type='hidden'>
 
 		<div class="chg-layout">
@@ -342,22 +672,15 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<div class="so-select-wrapper">
 										<select class="so-select" name="company" id="company_select" required>
 											<option value="1" selected>AWL</option>
+											<option value="2">NBM</option>
 										</select>
 									</div>
 								</div>
 
-								<!-- <div class="so-field-group" style="margin-bottom:0; flex:1; max-width:220px;">
-									<label class="so-label" for="date_change">วันที่</label>
-									<div class="calendar-wrapper" style="width:100%;">
-										<input type="date" name="date_change" id="date_change" class="so-input" value="<?php echo so_saved_h($today); ?>" required>
-									</div>
-								</div> -->
-
-								<!-- คอสเมติกล้วน: hos__change ยังไม่มีคอลัมน์รองรับ "งานด่วน" สำหรับเอกสาร Change Order
-								     (ต่างจาก que_ckk ของ hos__consig ที่ register_supbrcshos1.php เขียนจริง) จึงตั้งชื่อ
-								     field ให้ไม่ชนกับ que_ckk เพื่อไม่ให้ backend รับค่าที่ไม่มีคอลัมน์รองรับไปเงียบๆ -->
+								<!-- "งานด่วน" — hos__change.que_ckk เป็นคอลัมน์ใหม่ (sql/supchange_optional_columns.sql)
+								     register_supchange1.php เขียนผ่าน cs_update_column_if_exists จึงไม่พังถ้ายังไม่ได้รัน ALTER -->
 								<label class="so-toggle-pill so-doc-info-line-toggle">
-									<input type="checkbox" name="que_ckk_ui" id="que_ckk_ui" value="1">
+									<input type="checkbox" name="que_ckk" id="que_ckk" value="1">
 									<span>งานด่วน</span>
 								</label>
 							</div>
@@ -365,18 +688,16 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 					</div>
 
 					<?php
-					// Admin tab — placeholder visual scaffold เท่านั้น (ตามสโคปที่ยืนยันแล้วว่า
-					// register_supchange1.php ไม่เขียน iv_no/iv_date/job_no1/cancel ของเอกสารประเภทนี้ —
-					// ฟิลด์ในนี้จึงตั้งชื่อไม่ชนกับคอลัมน์จริงใดๆ และปุ่มไม่มี onclick ที่ทำงานจริง)
+					$chgIsCancelChecked = $savedChg !== null && ($savedChg['status_doc'] ?? '') === 'ยกเลิก';
 					$adminInfoTab = [
 						'tab_id' => 'tab-admin-info',
 						'title' => 'ข้อมูลเพิ่มเติม (Admin)',
 						'rows' => [
 							[
-								['type' => 'text', 'name' => 'admin_doc_no_ui', 'label' => 'เลขที่เอกสาร', 'value' => '', 'placeholder' => 'No.'],
-								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no_ui', 'variant' => 'purple', 'disabled' => true],
-								['type' => 'date_th', 'name' => 'admin_doc_date_ui', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'],
-								['type' => 'text', 'name' => 'admin_work_no_ui', 'label' => 'เลขที่ลงงาน', 'value' => '', 'icon' => 'img/icons/preview.png'],
+								['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
+								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'chgRunDocumentNo();', 'variant' => 'purple'],
+								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 							],
 							[
 								['type' => 'button_field', 'button' => [
@@ -384,16 +705,111 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									'icon' => 'img/icons/circle_x.png',
 									'label' => 'ยกเลิกเอกสาร',
 									'variant' => 'danger',
-									'disabled' => true,
-									'id' => 'btn_cancel_doc_ui',
+									'active' => $chgIsCancelChecked,
+									'id' => 'btn_cancel_doc',
+									'onclick' => 'chgToggleCancelDoc();',
 								]],
-								['type' => 'text', 'name' => 'admin_cancel_reason_ui', 'id' => 'admin_cancel_reason_ui', 'label' => 'หมายเหตุการยกเลิก', 'value' => '', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'span' => 3, 'disabled' => true],
+								['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['remark_cancel'] ?? '') : '', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3, 'disabled' => !$chgIsCancelChecked],
 							],
 						],
 					];
 					include __DIR__ . '/partials/admin_info_tab.php';
 					unset($adminInfoTab);
 					?>
+					<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo $chgIsCancelChecked ? '1' : '0'; ?>">
+					<script>
+						function chgToggleCancelDoc() {
+							var cancelInput = document.getElementById('cancel_doc');
+							var cancelBtn = document.getElementById('btn_cancel_doc');
+							var reasonInput = document.getElementById('admin_cancel_reason');
+							if (!cancelInput || !cancelBtn) return;
+
+							var newActive = !(cancelBtn.classList.contains('active') || cancelInput.value === '1');
+
+							cancelInput.value = newActive ? '1' : '0';
+							cancelBtn.classList.toggle('active', newActive);
+
+							if (reasonInput) {
+								reasonInput.disabled = !newActive;
+								if (newActive) {
+									reasonInput.focus();
+								} else {
+									reasonInput.value = '';
+								}
+							}
+						}
+
+						// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_supbrcshos.php:980-1043
+						// ต่างกันตรงที่ ajax_run_doc_no.php ใช้ doc_type='6' (EXC) และต้องส่ง ref_id
+						// ไปด้วยเพราะโหมดตารางตัวนับกลาง (tb_docbreng) insert คอลัมน์ ref_id ทุกครั้ง
+						// company_select ของหน้านี้ใช้ 1=AWL/2=NBM ต้อง map เป็น 3=AWL/4=NBM ก่อนส่ง
+						function chgRunDocumentNo() {
+							var companySelect = document.getElementById('company_select');
+							var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+							var docDateInput = document.querySelector('input[name="admin_doc_date"]');
+							var refIdInput = document.querySelector('input[name="ref_id"]');
+							var runButton = document.getElementById('btn_run_doc_no');
+
+							if (!companySelect || !docNoInput) {
+								return;
+							}
+
+							if (docNoInput.value.trim() !== '') {
+								// เลขถูกจองจริงตอนกดปุ่มนี้ (INSERT ลง tb_docbreng ทันที) การกดซ้ำจะได้เลขถัดไป
+								// และเลขเดิมจะกลายเป็นช่องว่างในตัวนับ
+								if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+									return;
+								}
+							}
+
+							var companyMapToAjax = {
+								'1': '3',
+								'2': '4'
+							};
+							var payload = new URLSearchParams();
+							payload.append('company', companyMapToAjax[companySelect.value] || companySelect.value);
+							payload.append('doc_type', '6');
+							payload.append('doc_date', docDateInput ? docDateInput.value : '');
+							payload.append('ref_id', refIdInput ? refIdInput.value : '');
+
+							if (runButton) {
+								runButton.disabled = true;
+							}
+
+							fetch('ajax_run_doc_no.php', {
+									method: 'POST',
+									credentials: 'same-origin',
+									cache: 'no-store',
+									headers: {
+										'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+									},
+									body: payload.toString()
+								})
+								.then(function(response) {
+									return response.json().then(function(data) {
+										return {
+											ok: response.ok,
+											data: data
+										};
+									});
+								})
+								.then(function(result) {
+									if (!result.ok || !result.data || !result.data.success) {
+										alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+										return;
+									}
+									docNoInput.value = result.data.doc_no;
+								})
+								.catch(function() {
+									alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+								})
+								.then(function() {
+									if (runButton) {
+										runButton.disabled = false;
+									}
+								});
+						}
+					</script>
 				</div>
 
 				<!-- ===================== Card: ข้อมูลลูกค้า ===================== -->
@@ -506,6 +922,36 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 
 					<?php $ptcIsEngDept = $chgIsEngDept;
 					include __DIR__ . '/partials/product_table_change.php'; ?>
+
+					<?php if (count($savedProducts) > 0) { ?>
+						<script>
+							document.addEventListener('DOMContentLoaded', function() {
+								var chgSavedProducts = <?php echo json_encode($savedProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+								chgSavedProducts.forEach(function(product, index) {
+									var rowIndex = index + 1;
+									if (rowIndex > 6) return;
+
+									ptcSetRowData(rowIndex, {
+										product_codet: product.tb_access_code || '',
+										product_id: product.product_id || '',
+										product_name: product.tb_sol_name || '',
+										product_name_view: product.tb_sol_name || '',
+										unit_name: product.tb_unit_name || '',
+										count_stock: product.count_stock || '',
+										count_sale: product.count_sale || '',
+										product_price: product.price || '',
+										sum_amount: product.amount || '',
+										sn: product.sn || '',
+										sale_remarkk: product.sale_remark || ''
+									});
+								});
+
+								if (typeof ptcSyncRowVisibility === 'function') ptcSyncRowVisibility();
+								if (typeof ptcRecalcSummary === 'function') ptcRecalcSummary();
+							});
+						</script>
+					<?php } ?>
 				</div>
 
 				<!-- ===================== ข้อมูลการจัดส่ง ===================== -->
@@ -520,14 +966,14 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 								'3' => 'ลูกค้ารับเอง',
 								'4' => 'บริษัทจัดส่ง',
 							]],
-							['type' => 'select', 'span' => 2, 'name' => 'transport_company_ui', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => [
+							['type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => [
 								'' => 'เลือกบริษัทขนส่ง',
 								'1' => 'Kerry',
 								'2' => 'Flash',
 								'3' => 'J&T',
 								'4' => 'ไปรษณีย์ไทย',
 							]],
-							['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันที่รับ-ส่ง', 'required' => true],
+							['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true],
 							['type' => 'select', 'span' => 1, 'name' => 'time_range_ui', 'label' => 'เลือกช่วงเวลา', 'options' => [
 								'' => 'เลือกช่วงเวลา',
 								'morning' => 'ช่วงเช้า',
@@ -542,13 +988,13 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 						'toggle_buttons' => [
 							['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 							['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)'],
-							['name' => 'send_cs_ui', 'id' => 'send_cs_ui', 'label' => 'ส่งข้อมูลลงระบบ CS'],
+							['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
 						],
 						'cost_fields' => [
-							['type' => 'date', 'name' => 'shipping_date_ui', 'label' => 'วันที่คีย์ค่าส่ง'],
-							['type' => 'text', 'name' => 'shipping_ref1_ui', 'label' => 'รหัสอ้างอิง 1'],
-							['type' => 'text', 'name' => 'shipping_ref2_ui', 'label' => 'รหัสอ้างอิง 2'],
-							['type' => 'text', 'name' => 'shipping_cost_ui', 'label' => 'ค่าจัดส่ง'],
+							['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
+							['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
+							['type' => 'text', 'name' => 'shipping_ref2', 'label' => 'รหัสอ้างอิง 2'],
+							['type' => 'text', 'name' => 'shipping_cost', 'label' => 'ค่าจัดส่ง'],
 						],
 					];
 					include __DIR__ . '/partials/delivery_info_tab.php';
@@ -779,10 +1225,10 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									</div>
 								</div>
 								<div class="so-field-group">
-									<label class="so-label" for="location_link_ui">Location Link</label>
+									<label class="so-label" for="location_link">Location Link</label>
 									<div class="so-input-wrapper">
-										<input type="text" class="so-input" name="location_link_ui" id="location_link_ui" placeholder="วางลิงก์ Google Maps หรือพิกัด">
-										<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link_ui').value='';" aria-label="ล้างค่า"></button>
+										<input type="text" class="so-input" name="location_link" id="location_link" placeholder="วางลิงก์ Google Maps หรือพิกัด">
+										<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link').value='';" aria-label="ล้างค่า"></button>
 									</div>
 								</div>
 							</div>
@@ -796,6 +1242,8 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 							$chgDepartmentShow = $chgIsEngDept ? 'ฝ่ายวิศวกรรม' : 'ฝ่ายขาย';
 							$chgDepartmentName = $chgIsEngDept ? 'วิศวกรรม' : 'Sale';
 							?>
+
+							<input type="hidden" name="status" value="ส่ง">
 							<input type="hidden" name="department_show" value="<?php echo so_saved_h($chgDepartmentShow); ?>">
 							<input type="hidden" name="department_name" value="<?php echo so_saved_h($chgDepartmentName); ?>">
 							<input type="hidden" name="employee_name" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
@@ -809,20 +1257,20 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<label class="so-label" style="color: #612989;">จอดรถหน้าบ้าน</label>
 									<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="park_front_ui" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ได้
+											<input type="radio" name="park_front" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ได้
 										</label>
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="park_front_ui" value="0" style="accent-color: #612989; width: 18px; height: 18px;"> ไม่ได้
+											<input type="radio" name="park_front" value="0" style="accent-color: #612989; width: 18px; height: 18px;"> ไม่ได้
 										</label>
 									</div>
 								</div>
 								<div class="so-field-group">
 									<label class="so-label" style="color: #612989;">สถานที่จอดรถ</label>
-									<input name="park_location_ui" type="text" class="so-input" placeholder="สถานที่จอดรถ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="park_location" type="text" class="so-input" placeholder="สถานที่จอดรถ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 								<div class="so-field-group">
 									<label style="cursor: pointer; display: block;">
-										<input type="checkbox" name="is_high_roof_ui" value="1" style="display: none;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
+										<input type="checkbox" name="is_high_roof" value="1" style="display: none;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? 'white' : '#6e6e6e';">
 										<div style="background-color: #F4F3F7; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; color: #6e6e6e; font-size: 14px; font-family: 'Prompt', sans-serif; height: 42px; transition: all 0.2s; user-select: none;">รถหลังคาสูงเข้าได้</div>
 									</label>
 								</div>
@@ -833,20 +1281,20 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<label class="so-label" style="color: #612989;">ทางเข้าบ้าน</label>
 									<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="entrance_type_ui" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ทางราบ
+											<input type="radio" name="entrance_type" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ทางราบ
 										</label>
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="entrance_type_ui" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> บันไดก่อนเข้าบ้าน
+											<input type="radio" name="entrance_type" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> บันไดก่อนเข้าบ้าน
 										</label>
 									</div>
 								</div>
 								<div class="so-field-group">
 									<label class="so-label" style="color: #612989;">จำนวนขั้นบันได</label>
-									<input name="stair_count_ui" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="stair_count" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 								<div class="so-field-group">
 									<label class="so-label" style="color: #612989;">ชั้นที่ติดตั้ง</label>
-									<input name="install_floor_ui" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="install_floor" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 							</div>
 
@@ -855,25 +1303,25 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<label class="so-label" style="color: #612989;">ห้องที่ติดตั้ง</label>
 									<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="room_type_ui" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ห้องโถง
+											<input type="radio" name="room_type" value="1" checked style="accent-color: #612989; width: 18px; height: 18px;"> ห้องโถง
 										</label>
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="room_type_ui" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> ห้องนอน
+											<input type="radio" name="room_type" value="2" style="accent-color: #612989; width: 18px; height: 18px;"> ห้องนอน
 										</label>
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
 									<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="door_width_ui" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="door_height_ui" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
 									<label class="so-label" style="color: #612989;">ขนาดบันได</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="stair_width_ui" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="stair_height_ui" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 							</div>
@@ -882,21 +1330,21 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 								<div class="so-field-group" style="min-width: 0;">
 									<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_door_width_ui" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="elev_door_height_ui" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
 									<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_width_ui" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_height_ui" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_depth_ui" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
 									<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์</label>
-									<input name="elev_capacity_ui" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 							</div>
 
@@ -905,43 +1353,37 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<label class="so-label" style="color: #612989;">การย้ายเฟอร์นิเจอร์</label>
 									<div style="display: flex; gap: 16px; height: 42px; align-items: center;">
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="move_furn_ui" value="0" checked style="accent-color: #612989; width: 18px; height: 18px;"> ไม่
+											<input type="radio" name="move_furn" value="0" checked style="accent-color: #612989; width: 18px; height: 18px;"> ไม่
 										</label>
 										<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 14px; color: #333; font-weight: 500;">
-											<input type="radio" name="move_furn_ui" value="1" style="accent-color: #612989; width: 18px; height: 18px;"> ย้าย
+											<input type="radio" name="move_furn" value="1" style="accent-color: #612989; width: 18px; height: 18px;"> ย้าย
 										</label>
 									</div>
 								</div>
 								<div class="so-field-group">
 									<label class="so-label" style="color: #612989;">จำนวนชิ้นที่ย้าย</label>
-									<input name="move_furn_count_ui" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="move_furn_count" type="text" class="so-input" placeholder="ใส่เฉพาะตัวเลข" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 								<div class="so-field-group" style="grid-column: span 1;">
 									<label class="so-label" style="color: #612989;">รายละเอียดเฟอร์นิเจอร์</label>
-									<input name="move_furn_detail_ui" type="text" class="so-input" placeholder="รายละเอียดเฟอร์นิเจอร์" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<input name="move_furn_detail" type="text" class="so-input" placeholder="รายละเอียดเฟอร์นิเจอร์" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 							</div>
 
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" style="color: #612989;">หมายเหตุเพิ่มเติม</label>
-								<input name="addr_note_ui" type="text" class="so-input" placeholder="รายละเอียดเพิ่มเติม" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+								<input name="addr_note" type="text" class="so-input" placeholder="รายละเอียดเพิ่มเติม" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 							</div>
 						</div>
 
 						<?php
-						// Full mirror จาก register_supbrcshos.php: ตัวแปรของฟีเจอร์พิมพ์ใบปะหน้าที่ต้นแบบใช้
-						// ($printCoverRefId/$coverSheetMainReports/$coverSheetExtraReports/$billDeliveryReports)
-						// ไม่มีอยู่จริงสำหรับเอกสาร Change Order — ตั้งเป็นค่าว่าง/array ว่างไว้ เพื่อให้ panel
-						// แสดงผลอย่างสุจริต (ข้อความ "ยังไม่มี ref_id" ตลอด) แทนที่จะอ้างอิงรายงานที่ไม่มีจริง
 						$chgPrintCoverRefId = '';
 						$chgCoverSheetMainReports = [];
 						$chgCoverSheetExtraReports = [];
 						$chgBillDeliveryReports = [];
 						?>
 						<div id="chg_addr_extra" class="so-addr-tab-content" style="display:none;">
-							<!-- Full mirror จาก register_supbrcshos.php's br_addr_extra (ไม่รวม br_addr_return
-							     ตามคำขอ) returns/returns_*/return_date_bet เป็นฟิลด์จริงที่ register_supchange1.php
-							     อ่านแบบไม่มี isset() guard จึงต้อง mirror เป็น hidden ค่าว่างไว้เพื่อไม่ให้ backend error -->
+
 							<input type="hidden" name="returns" value="">
 							<input type="hidden" name="returns_date" value="">
 							<input type="hidden" name="returns_time" value="">
@@ -959,21 +1401,21 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 										<div class="so-field-group">
 											<label class="so-label extra-contact-name-label" style="color: #612989;">ชื่อผู้ติดต่อ (เพิ่มเติม1)</label>
 											<div style="position: relative; display: flex; align-items: center;">
-												<input name="extra_contact_name_1_ui" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+												<input name="extra_contact_name_1" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 												<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 											</div>
 										</div>
 										<div class="so-field-group">
 											<label class="so-label extra-contact-tel-label" style="color: #612989;">เบอร์โทร (เพิ่มเติม1)</label>
 											<div style="position: relative; display: flex; align-items: center;">
-												<input name="extra_contact_tel_1_ui" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+												<input name="extra_contact_tel_1" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 												<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 											</div>
 										</div>
 										<div class="so-field-group">
 											<label class="so-label" style="color: #612989;">จังหวัด</label>
 											<div class="so-select-wrapper">
-												<select name="extra_contact_province_1_ui" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
+												<select name="extra_contact_province_1" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
 													<option value="">เลือกจังหวัด</option>
 													<?php
 													$strSQL_prov_extra = "select * from tb_province order by province_ID ";
@@ -995,7 +1437,7 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 										<div class="so-field-group" style="flex: 1; margin-bottom: 0;">
 											<label class="so-label extra-shipping-address-label" style="color: #612989;">ที่อยู่ส่งสินค้า (เพิ่มเติม1)</label>
 											<div style="position: relative; display: flex; align-items: center;">
-												<input name="extra_shipping_address_1_ui" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+												<input name="extra_shipping_address_1" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 												<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 											</div>
 										</div>
@@ -1170,16 +1612,16 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 										row.querySelector('.extra-shipping-address-label').innerHTML = 'ที่อยู่ส่งสินค้า (เพิ่มเติม' + displayIndex + ')';
 
 										const contactName = row.querySelector('input[name^="extra_contact_name"]');
-										if (contactName) contactName.name = 'extra_contact_name_' + displayIndex + '_ui';
+										if (contactName) contactName.name = 'extra_contact_name_' + displayIndex;
 
 										const contactTel = row.querySelector('input[name^="extra_contact_tel"]');
-										if (contactTel) contactTel.name = 'extra_contact_tel_' + displayIndex + '_ui';
+										if (contactTel) contactTel.name = 'extra_contact_tel_' + displayIndex;
 
 										const contactProvince = row.querySelector('select[name^="extra_contact_province"]');
-										if (contactProvince) contactProvince.name = 'extra_contact_province_' + displayIndex + '_ui';
+										if (contactProvince) contactProvince.name = 'extra_contact_province_' + displayIndex;
 
 										const shippingAddress = row.querySelector('input[name^="extra_shipping_address"]');
-										if (shippingAddress) shippingAddress.name = 'extra_shipping_address_' + displayIndex + '_ui';
+										if (shippingAddress) shippingAddress.name = 'extra_shipping_address_' + displayIndex;
 									});
 
 									chgRenderDeliveryPrintExtraGroups();
@@ -1194,21 +1636,21 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<div class="so-field-group">
 										<label class="so-label" style="color: #612989;">ชื่อผู้ติดต่อ</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="bill_extra_contact_name_2_ui" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="bill_extra_contact_name_2" type="text" class="so-input" placeholder="ชื่อผู้ติดต่อ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
 									<div class="so-field-group">
 										<label class="so-label" style="color: #612989;">เบอร์โทร</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="bill_extra_contact_tel_2_ui" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="bill_extra_contact_tel_2" type="text" class="so-input" placeholder="เบอร์โทร" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
 									<div class="so-field-group">
 										<label class="so-label" style="color: #612989;">จังหวัด</label>
 										<div class="so-select-wrapper">
-											<select name="bill_extra_contact_province_2_ui" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
+											<select name="bill_extra_contact_province_2" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
 												<option value="">เลือกจังหวัด</option>
 												<?php
 												$strSQL_prov_bill_extra = "select * from tb_province order by province_ID ";
@@ -1230,7 +1672,7 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 									<div class="so-field-group" style="flex: 1; margin-bottom: 0;">
 										<label class="so-label" style="color: #612989;">ที่อยู่ส่งสินค้า</label>
 										<div style="position: relative; display: flex; align-items: center;">
-											<input name="bill_extra_shipping_address_2_ui" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+											<input name="bill_extra_shipping_address_2" type="text" class="so-input" placeholder="ที่อยู่ส่งสินค้า" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
 											<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
 										</div>
 									</div>
@@ -1275,15 +1717,35 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 					];
 					include __DIR__ . '/partials/doc_tabs_card.php';
 					?>
+
+					<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo so_saved_h($savedChg['slip1'] ?? ''); ?>">
+					<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo so_saved_h($savedChg['slip2'] ?? ''); ?>">
+					<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo so_saved_h($savedChg['slip3'] ?? ''); ?>">
+					<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo so_saved_h($savedChg['slip4'] ?? ''); ?>">
+					<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo so_saved_h($savedChg['slip5'] ?? ''); ?>">
 				</div>
 
 			</div>
 		</div>
 	</div>
 
+	<?php
+	// แถบปุ่มล่าง — Submit หายเมื่อเอกสารถูกส่งให้หัวหน้าไปแล้ว (send_sup='1') หรือปิดแล้ว (ยกเลิก/Approve)
+	// ปุ่ม Save Draft/Update ใช้ได้จนกว่าเอกสารจะปิด — ไม่มี approve bar 2 ชั้นแบบ BR เพราะ CH ไม่มี workflow นั้น
+	$chgStatusDoc = $savedChg['status_doc'] ?? '';
+	$chgSendSup = $savedChg['send_sup'] ?? '0';
+	$chgIsClosed = in_array($chgStatusDoc, ['Approve', 'ยกเลิก'], true);
+	$chgHideSubmit = $chgIsEditMode && ((string)$chgSendSup === '1' || $chgIsClosed);
+	$chgHideUpdate = $chgIsClosed;
+	?>
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
-			<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+			<?php if (!$chgHideSubmit): ?>
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+			<?php endif; ?>
+			<?php if (!$chgHideUpdate): ?>
+				<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> <?php echo $chgIsEditMode ? 'Update' : 'Save Draft'; ?></button>
+			<?php endif; ?>
 			<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupChange();">ยกเลิก</button>
 		</div>
 	</div>
@@ -1293,7 +1755,168 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 	function goMainSupChange() {
 		window.location.href = 'status_adminchange.php';
 	}
+
+	// พอร์ตจาก brcsSaveDraft() (register_supbrcshos.php:206-283) — AJAX POST is_draft=1 ไปยัง
+	// register_supchange_draft1.php แล้ว redirect กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ
+	function chgSaveDraft() {
+		var form = document.forms['frmMain'];
+		if (!form) return;
+
+		var btn = form.querySelector('[name="save_draft"]');
+		var defaultHtml = btn ? btn.innerHTML : '';
+		var formData = new FormData(form);
+		formData.set('is_draft', '1');
+
+		if (btn) {
+			btn.disabled = true;
+			btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+		}
+
+		fetch('register_supchange_draft1.php', {
+				method: 'POST',
+				body: formData
+			})
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(data) {
+				if (data && data.success) {
+					if (typeof Swal !== 'undefined') {
+						Swal.fire({
+							title: 'Save Draft success',
+							text: 'Ref ID: ' + (data.ref_id || ''),
+							icon: 'success',
+							confirmButtonColor: '#612989'
+						}).then(function() {
+							if (data.ref_id) {
+								window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							}
+						});
+					} else {
+						alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
+						if (data.ref_id) {
+							window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+						}
+					}
+				} else {
+					var msg = (data && data.message) ? data.message : 'เกิดข้อผิดพลาดในการบันทึกร่าง';
+					if (typeof Swal !== 'undefined') {
+						Swal.fire({
+							title: 'Save Draft error',
+							text: msg,
+							icon: 'error',
+							confirmButtonColor: '#612989'
+						});
+					} else {
+						alert(msg);
+					}
+				}
+			})
+			.catch(function(err) {
+				if (typeof Swal !== 'undefined') {
+					Swal.fire({
+						title: 'Save Draft error',
+						text: String(err),
+						icon: 'error',
+						confirmButtonColor: '#612989'
+					});
+				} else {
+					alert('Save Draft error: ' + String(err));
+				}
+			})
+			.finally(function() {
+				if (btn) {
+					btn.disabled = false;
+					btn.innerHTML = defaultHtml;
+				}
+			});
+	}
 </script>
+
+<?php if (count($chgPrefill) > 0) { ?>
+	<!-- เติมค่ากลับเข้าฟอร์มใน edit mode — ตัวเดียวจบทั้งฟอร์ม พอร์ตจาก register_supbrcshos.php:2165-2213
+	     รองรับ text/hidden/textarea, select, radio และ checkbox โดยเลือกวิธี set ตามชนิดของ element -->
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var chgPrefill = <?php echo json_encode($chgPrefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+			var chgForm = document.forms['frmMain'];
+			if (!chgForm) return;
+
+			// ที่อยู่เพิ่มเติมแถวที่ 2 ขึ้นไปยังไม่มีอยู่ใน DOM จนกว่าจะกด "เพิ่มที่อยู่" (คัดลอกแถวที่ 1)
+			// ต้องเพิ่มแถวให้ครบก่อน ไม่งั้น querySelectorAll ด้านล่างจะหา extra_contact_name_2 ฯลฯ ไม่เจอ
+			var chgExtraAddrRowsNeeded = <?php echo count($savedShippingRows); ?>;
+			if (chgExtraAddrRowsNeeded > 1 && typeof chgAddExtraAddress === 'function') {
+				for (var chgI = 1; chgI < chgExtraAddrRowsNeeded; chgI++) {
+					chgAddExtraAddress();
+				}
+			}
+
+			Object.keys(chgPrefill).forEach(function(fieldName) {
+				var value = chgPrefill[fieldName];
+				if (value === null || value === undefined) return;
+				value = String(value);
+
+				var elements = chgForm.querySelectorAll('[name="' + fieldName + '"]');
+				if (!elements.length) return;
+
+				elements.forEach(function(el) {
+					if (el.type === 'radio') {
+						if (el.value === value) el.checked = true;
+					} else if (el.type === 'checkbox') {
+						el.checked = (value === '1' || value === el.value);
+					} else if (el.tagName === 'SELECT') {
+						el.value = value;
+						if (el.selectedIndex === -1 && value !== '') {
+							var opt = document.createElement('option');
+							opt.value = value;
+							opt.textContent = value;
+							opt.selected = true;
+							el.appendChild(opt);
+						}
+					} else {
+						el.value = value;
+					}
+				});
+			});
+
+			// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
+			['is_high_roof', 'call_customer', 'no_money', 'send_cs', 'que_ckk'].forEach(function(name) {
+				var el = document.querySelector('[name="' + name + '"]');
+				if (el) el.dispatchEvent(new Event('change', {
+					bubbles: true
+				}));
+			});
+		});
+	</script>
+<?php } ?>
+
+<?php if ($savedCustomer !== null) {
+	// เติมการ์ด "ข้อมูลลูกค้า" (display_bill_id ฯลฯ) ใน view/edit mode — พอร์ตจาก
+	// register_supbrcshos.php:2215-2242 ตั้งค่าตรง ๆ ทาง PHP แทนการเรียก doCallAjax1() ซ้ำ เพราะ
+	// doCallAjax1 จะเขียนทับ customer_name/customer_tel/address_name/province_name (ข้อมูลผู้ติดต่อ
+	// จัดส่ง) ด้วยที่อยู่เริ่มต้นของลูกค้า ซึ่งจะลบค่าที่ $chgPrefill เติมไว้แล้วให้หายไป
+	$savedCustomerNameParts = trim(($savedCustomer['first_name'] ?? '') . ' ' . ($savedCustomer['last_name'] ?? ''));
+	$savedCustomerDisplayName = $savedCustomerNameParts !== '' ? $savedCustomerNameParts : ($savedCustomer['customer_name'] ?? '');
+	if ($savedCustomerDisplayName === '') {
+		$savedCustomerDisplayName = $savedCustomer['bill_name'] ?? '';
+	}
+	$savedCustomerDisplayTel = ($savedCustomer['cus_tel'] ?? '') !== '' ? $savedCustomer['cus_tel'] : ($savedCustomer['bill_tel'] ?? '');
+?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			setElementText('display_bill_id', <?php echo json_encode($savedCustomer['customer_id'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_bill_tel', <?php echo json_encode($savedCustomerDisplayTel, JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_bill_name', <?php echo json_encode($savedCustomerDisplayName, JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_customer_typename', <?php echo json_encode($savedCustomer['type_name'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+			setElementText('display_mode_name', <?php echo json_encode($savedCustomer['status_cus'] ?? '', JSON_UNESCAPED_UNICODE); ?>);
+
+			var vipIcon = document.getElementById('display_vip_icon');
+			if (vipIcon) vipIcon.style.display = (<?php echo json_encode((string)($savedCustomer['vip_ckk'] ?? '')); ?> === '1') ? '' : 'none';
+
+			if (typeof syncCreditTermTriggerState === 'function') syncCreditTermTriggerState();
+		});
+	</script>
+<?php } ?>
 
 <!-- Modal รายชื่อลูกค้า: ported 1:1 จาก register_supbrcshos.php:2250-2298 (component กลาง
      js/customer-popup.js + ajax_customer_popup_search.php, ไม่มี logic ใหม่ฝั่ง backend) -->

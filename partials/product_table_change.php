@@ -271,28 +271,45 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 		});
 	}
 
-	/* จำนวนรวม แลกเข้า/แลกออก/คงเหลือ ของทั้ง 6 แถว */
+	/* มูลค่ารวมฝั่งแลกเข้า/แลกออก (จำนวน x ราคา/หน่วย) ของทั้ง 6 แถว - ใช้เทียบว่า
+	   "ราคาต้องเท่ากัน" ตาม business rule การแลกเปลี่ยนสินค้า (เรียกจาก fncSubmit() ก่อน submit ด้วย) */
+	function ptcGetValueTotals() {
+		var valueIn = 0,
+			valueOut = 0;
+		for (var i = 1; i <= 6; i++) {
+			var idEl = document.getElementById('product_id' + i);
+			if (!idEl || idEl.value === '') continue;
+			var stockEl = document.getElementById('count_stock' + i);
+			var saleEl = document.getElementById('count_sale' + i);
+			var priceEl = document.getElementById('product_price' + i);
+			var price = priceEl ? (parseFloat(priceEl.value) || 0) : 0;
+			if (stockEl) valueIn += (parseFloat(stockEl.value) || 0) * price;
+			if (saleEl) valueOut += (parseFloat(saleEl.value) || 0) * price;
+		}
+		return {
+			in: valueIn,
+			out: valueOut
+		};
+	}
+
+	/* มูลค่ารวม แลกเข้า/แลกออก/คงเหลือ ของทั้ง 6 แถว (ไม่ใช่จำนวนชิ้น) - อิงจาก
+	   ptcGetValueTotals() ตัวเดียวกับที่ fncSubmit() ใช้ตรวจก่อน submit */
 	function ptcRecalcSummary() {
 		setTimeout(function() {
-			var totalIn = 0,
-				totalOut = 0,
-				itemCount = 0;
+			var itemCount = 0;
 			for (var i = 1; i <= 6; i++) {
 				var idEl = document.getElementById('product_id' + i);
 				if (!idEl || idEl.value === '') continue;
 				itemCount++;
-				var stockEl = document.getElementById('count_stock' + i);
-				var saleEl = document.getElementById('count_sale' + i);
-				if (stockEl) totalIn += parseFloat(stockEl.value) || 0;
-				if (saleEl) totalOut += parseFloat(saleEl.value) || 0;
 			}
+			var valueTotals = ptcGetValueTotals();
 			var inOut = document.getElementById('ptc_summary_in');
 			var outOut = document.getElementById('ptc_summary_out');
 			var netOut = document.getElementById('ptc_summary_net');
 			var countOut = document.getElementById('ptc_summary_item_count');
-			if (inOut) inOut.textContent = totalIn;
-			if (outOut) outOut.textContent = totalOut;
-			if (netOut) netOut.textContent = (totalIn - totalOut);
+			if (inOut) inOut.textContent = valueTotals.in.toFixed(2);
+			if (outOut) outOut.textContent = valueTotals.out.toFixed(2);
+			if (netOut) netOut.textContent = (valueTotals.in - valueTotals.out).toFixed(2);
 			if (countOut) countOut.textContent = itemCount + ' รายการ';
 		}, 200);
 	}
@@ -453,7 +470,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 					</td>
 					<td>
 						<input type="text" name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" value=""
-							jAutoCalc='{count_sale<?php echo $i; ?>} * {product_price<?php echo $i; ?>}' readonly>
+							jAutoCalc='({count_stock<?php echo $i; ?>} + {count_sale<?php echo $i; ?>}) * {product_price<?php echo $i; ?>}' readonly>
 					</td>
 					<td>
 						<div class="cs-cell-pill">
@@ -517,7 +534,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 		keyEventsFire: false,
 		readOnlyResults: true,
 		showParseError: true,
-		emptyAsZero: false,
+		emptyAsZero: true,
 		smartIntegers: false,
 		onShowResult: null,
 		funcs: {},
