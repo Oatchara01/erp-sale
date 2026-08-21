@@ -1308,8 +1308,7 @@ if ($csPrefillSource !== null) {
 			<button type="button" class="so-tab-btn" onclick="brOpenAddrTab('br_addr_extra', this)">ที่อยู่เพิ่มเติม</button>
 			<button type="button" class="so-tab-btn" onclick="brOpenAddrTab('br_addr_return', this)">ที่อยู่การคืน</button>
 		</div>
-		<!-- padding เป็น clamp ไม่ใช่ 24px ตายตัว: inline style ไม่มี media query ไหนแก้ได้
-		     ค่าบนสุดยังเป็น 24px เท่าเดิมบน desktop แต่ยุบเหลือ 16px บนจอแคบเหมือน .so-card ใบอื่น -->
+
 		<div class="so-card" style="padding: clamp(16px, 3vw, 24px);">
 
 			<div id="br_addr_main" class="so-addr-tab-content">

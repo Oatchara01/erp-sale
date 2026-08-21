@@ -1,0 +1,65 @@
+/* Page-specific styles for register_supchange.php ("Change Order" reskin).
+   Built on top of css/so-core.css + css/register-suphos.css + css/register-supbrcshos.css
+   (see register_supbrcshos.php for the shared so- design system this page reuses). */
+
+.chg-layout {
+	max-width: 1320px;
+	margin: 0 auto;
+}
+
+.chg-content-col {
+	max-width: 1096px;
+	margin: 0 auto;
+}
+
+.chg-textarea {
+	width: 100%;
+	min-height: 64px;
+	resize: vertical;
+}
+
+/* Fix: shared .so-product-summary-bar (register-supbrcshos.css) is a fixed
+   2-column grid, written for the 2-stat-box case used by detail_brschos_so.php
+   etc. This page's product table renders 3 stat boxes (ยอดแลกสินค้าเข้า/ออก +
+   ยอดหักลบ(คงเหลือ)), so the 3rd wraps onto its own row instead of sitting
+   side-by-side with a divider. Scoped to this page's #ptc_summary_bar only,
+   since register-supbrcshos.css is shared by pages that only use 2 boxes. */
+#ptc_summary_bar {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+/* Fix: shared .so-product-table (register-supbrcshos.css) nth-child width rules
+   are calibrated for an 8-column table; this page's table has 9 (drag handle +
+   8 data columns), so those rules land on the wrong columns. Redeclare all 9
+   widths scoped to #ptc_product_table, matching the thead's own inline widths. */
+#ptc_product_table {
+	table-layout: fixed;
+}
+
+#ptc_product_table th:nth-child(1),
+#ptc_product_table td:nth-child(1) { width: 36px; }
+#ptc_product_table th:nth-child(2),
+#ptc_product_table td:nth-child(2) { width: 14%; }
+#ptc_product_table th:nth-child(3),
+#ptc_product_table td:nth-child(3) { width: 23%; }
+#ptc_product_table th:nth-child(4),
+#ptc_product_table td:nth-child(4) { width: 8%; text-align: center; }
+#ptc_product_table th:nth-child(5),
+#ptc_product_table td:nth-child(5) { width: 8%; text-align: center; }
+#ptc_product_table th:nth-child(6),
+#ptc_product_table td:nth-child(6) { width: 10%; text-align: right; }
+#ptc_product_table th:nth-child(7),
+#ptc_product_table td:nth-child(7) { width: 10%; text-align: right; }
+#ptc_product_table th:nth-child(8),
+#ptc_product_table td:nth-child(8) { width: 13%; }
+#ptc_product_table th:nth-child(9),
+#ptc_product_table td:nth-child(9) { width: 90px; }
+
+/* Row that has a product filled in but no แลกเข้า/แลกออก entered yet: numbers
+   render muted per Figma (node 599:3876, row 3) until quantities are typed. */
+#ptc_product_table .so-product-row.is-pending .cs-cell-pill,
+#ptc_product_table .so-product-row.is-pending .cs-cell-pill .so-input,
+#ptc_product_table .so-product-row.is-pending .cs-cell-pill .so-input::placeholder,
+#ptc_product_table .so-product-row.is-pending input[readonly] {
+	color: #9b9b9b;
+}
