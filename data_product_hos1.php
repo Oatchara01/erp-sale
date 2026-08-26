@@ -5,8 +5,10 @@ include "dbconnect.php";
 $sale_code = $_SESSION['code'];
 //echo $sale_code;
 $strProduct = trim($_POST["product_code"]);
+$type_company = (isset($_POST['type_company']) && $_POST['type_company'] === 'NBM') ? 'NBM' : 'AWL';
+$strProduct_escaped = mysqli_real_escape_string($conn, $strProduct);
 
-$strSQL = "SELECT * FROM tb_product WHERE access_code = '" . $strProduct . "' ";
+$strSQL = "SELECT * FROM tb_product WHERE access_code = '$strProduct_escaped' AND type_company = '$type_company'";
 $objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");
 $objResult = mysqli_fetch_array($objQuery);
 

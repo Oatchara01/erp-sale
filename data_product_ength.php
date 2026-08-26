@@ -6,11 +6,12 @@ include"dbconnect.php";
 
 //province name auto complete
 $product_code_search = urldecode($_GET["product_code_search"]);
+$type_company = (isset($_GET['type_company']) && $_GET['type_company'] === 'NBM') ? 'NBM' : 'AWL';
 
 $pagesize = 50; // จำนวนรายการที่ต้องการแสดง
 $table_db=" tb_product"; // ตารางที่ต้องการค้นหา
 $find_field="sol_name"; // ฟิลที่ต้องการค้นหา
-$sql = "select * from $table_db  where engineer_ckk ='1'  and type_company = 'AWL' and close_pro ='0' and locate('$product_code_search', $find_field) > 0 order by locate('$product_code_search', $find_field), $find_field limit $pagesize";
+$sql = "select * from $table_db  where engineer_ckk ='1'  and type_company = '$type_company' and close_pro ='0' and locate('$product_code_search', $find_field) > 0 order by locate('$product_code_search', $find_field), $find_field limit $pagesize";
 $result = mysqli_query($conn,$sql);
 while ($row = mysqli_fetch_array( $result )) {
 	$access_name = $row["sol_name"]; // ฟิลที่ต้องการส่งค่ากลับ

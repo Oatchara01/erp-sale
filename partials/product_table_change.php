@@ -1,4 +1,5 @@
 <?php
+
 /**
  * รายการสินค้า (Change Order) — 6-row product table, ported/trimmed from
  * partials/detail_brschos_so.php (10-row version) + the field layout of
@@ -52,6 +53,14 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 	   ไม่มีคอลัมน์เหล่านี้) ===== */
 	var ptcFieldNames = ['product_codet', 'product_id', 'product_name', 'product_name_view', 'unit_name', 'count_stock', 'count_sale', 'product_price', 'sum_amount', 'sn', 'sale_remarkk'];
 	var ptcDraggedRowIndex = null;
+
+	/* กรองสินค้าตามบริษัทที่เลือกใน #company_select (1=AWL/2=NBM ตามหน้านี้) - พอร์ตจาก
+	   csGetSelectedTypeCompany() ของ detail_brschos_so.php, อ่านค่าสดทุกครั้งที่เรียกใช้
+	   เผื่อผู้ใช้เปลี่ยน company หลังหน้าโหลดแล้ว */
+	function ptcGetSelectedTypeCompany() {
+		var sel = document.getElementById('company_select');
+		return (sel && sel.value === '2') ? 'NBM' : 'AWL';
+	}
 
 	/* product_codet/product_name_view เป็น <span> แสดงผลล้วน (ไม่มี .value) ที่เหลือเป็น
 	   form field จริง - อ่าน/เขียนผ่าน property ที่ element นั้นรองรับจริง */
@@ -226,7 +235,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 				}
 			}
 		};
-		req.send('product_code=' + encodeURIComponent(accessCode) + '&format=json');
+		req.send('product_code=' + encodeURIComponent(accessCode) + '&format=json&type_company=' + ptcGetSelectedTypeCompany());
 	}
 
 	function ptcClearRow(i) {
@@ -386,8 +395,10 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 				document.getElementById('ptc_product_search').value = '';
 			};
 
+			console.log(this.value.length < 1 && this.isNotClick);
+
 			if (this.value.length < 1 && this.isNotClick) return;
-			return '<?php echo $ptcSearchNameEndpoint; ?>?product_code_search=' + encodeURIComponent(this.value);
+			return '<?php echo $ptcSearchNameEndpoint; ?>?product_code_search=' + encodeURIComponent(this.value) + '&type_company=' + ptcGetSelectedTypeCompany();
 		}, {
 			select_first: 0
 		});
