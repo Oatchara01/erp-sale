@@ -286,7 +286,12 @@ $chgIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม')
 // พอร์ตจาก register_supbrcshos.php:470-564 — hos__change ใช้ ref_id เป็นคีย์ (เหมือน hos__consig)
 // ทุก query กันด้วย mysqli_num_rows เหมือนต้นแบบ ไม่มีแถวแล้วปล่อยเป็น null/[] เพื่อ fallback เป็นฟอร์มว่าง
 $savedChgRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+// คัดลอกใบเดิม: ?copy_from=... โหลดข้อมูลเอกสารเก่ามา prefill แต่ต้องไม่ตั้ง $savedChg
+// เพื่อให้ $chgIsEditMode ยังคงเป็น false (สร้างเอกสารใหม่จริง ไม่ใช่ทับเอกสารเดิม) — ดู register_supbrcshos.php:474-478
+$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+$loadRefId = $savedChgRefId !== "" ? $savedChgRefId : $copyFromRefId;
 $savedChg = null;
+$copySrcChg = null;
 $savedCustomer = null;
 $savedProducts = array();
 $savedOtherBill = null;
@@ -295,40 +300,45 @@ $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
 
-if ($savedChgRefId !== "") {
-	$savedChgQuery = mysqli_query($conn, "SELECT * FROM hos__change WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+if ($loadRefId !== "") {
+	$savedChgQuery = mysqli_query($conn, "SELECT * FROM hos__change WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 	if ($savedChgQuery && mysqli_num_rows($savedChgQuery) > 0) {
-		$savedChg = mysqli_fetch_assoc($savedChgQuery);
+		$loadedChg = mysqli_fetch_assoc($savedChgQuery);
+		if ($savedChgRefId !== "") {
+			$savedChg = $loadedChg;
+		} else {
+			$copySrcChg = $loadedChg;
+		}
 
-		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedOtherBillQuery) {
 			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
 		}
 
-		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedTransactionQuery) {
 			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 		}
 
-		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedChgRefId . "' ORDER BY id ASC");
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $loadRefId . "' ORDER BY id ASC");
 		if ($savedShippingQuery) {
 			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
 				$savedShippingRows[] = $savedShippingRow;
 			}
 		}
 
-		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedDeliveryBillQuery) {
 			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
 		}
 
-		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedChgRefId . "' LIMIT 1");
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
 		if ($savedRegisterQuery) {
 			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
 		}
 
 		// LEFT JOIN tb_product จำเป็น เพราะ hos__subchange ไม่มีคอลัมน์ product_name/unit_name/access_code ของตัวเอง
-		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subchange.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subchange LEFT JOIN tb_product ON hos__subchange.product_id = tb_product.product_ID WHERE hos__subchange.ref_idd = '" . $savedChgRefId . "' ORDER BY hos__subchange.id ASC");
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subchange.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subchange LEFT JOIN tb_product ON hos__subchange.product_id = tb_product.product_ID WHERE hos__subchange.ref_idd = '" . $loadRefId . "' ORDER BY hos__subchange.id ASC");
 		if ($savedProductsQuery) {
 			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
 				$savedProducts[] = $savedProductRow;
@@ -336,9 +346,9 @@ if ($savedChgRefId !== "") {
 		}
 
 		// การ์ด "ข้อมูลลูกค้า" (display_bill_id ฯลฯ) เป็นฟิลด์แสดงผลอย่างเดียว ไม่ได้เก็บใน hos__change
-		// view mode จึงต้อง query tb_customer เองเพื่อเติมการ์ดนี้ — query เดียวกับ register_supbrcshos.php:558
-		if (!empty($savedChg['customer_id'])) {
-			$savedCustomerId = mysqli_real_escape_string($conn, $savedChg['customer_id']);
+		// view/copy mode จึงต้อง query tb_customer เองเพื่อเติมการ์ดนี้ — query เดียวกับ register_supbrcshos.php:558
+		if (!empty($loadedChg['customer_id'])) {
+			$savedCustomerId = mysqli_real_escape_string($conn, $loadedChg['customer_id']);
 			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
 			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
 				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
@@ -349,45 +359,49 @@ if ($savedChgRefId !== "") {
 
 $chgIsEditMode = ($savedChg !== null);
 
-// ---- แผนที่ค่า prefill สำหรับ view/edit mode ----
+// ---- แผนที่ค่า prefill สำหรับ view/edit/copy mode ----
 // พอร์ตจาก register_supbrcshos.php:618-763 — รวมค่าที่ต้องเติมกลับเข้าฟอร์มไว้ที่เดียว
 // แล้วให้ JS ตัวเดียวเป็นคนเติม (ดูบล็อกก่อนปิด </form>) แทนการไล่ so_saved_h() ทีละช่อง
+// $chgSrc = ข้อมูลตั้งต้นของฟอร์ม ไม่ว่าจะ edit ($savedChg) หรือ copy ($copySrcChg) —
+// แต่ $chgIsEditMode/$savedChg เองต้องไม่แตะ เพื่อให้ฟิลด์ที่ผูกกับสถานะเอกสารเดิม (แท็บ Admin,
+// send_sup, slip ฯลฯ) ยังว่างเปล่าเหมือนเอกสารใหม่จริงๆ ตอน copy
 $chgPrefill = array();
+$chgSrc = $savedChg ?? $copySrcChg;
 
-if ($savedChg !== null) {
+if ($chgSrc !== null) {
 	$chgPrefill = array(
-		'company' => $savedChg['company'],
-		'customer' => $savedChg['customer'],
-		'customer_id' => $savedChg['customer_id'],
-		'h_customer' => $savedChg['customer'],
-		'address' => $savedChg['address'],
-		'sale_comment' => $savedChg['sale_comment'],
-		'sn_ckk' => $savedChg['sn_ckk'],
-		'sn' => $savedChg['sn'],
-		'objective' => $savedChg['objective'],
-		'objective_des' => $savedChg['objective_des'],
-		'que_ckk' => $savedChg['que_ckk'] ?? '',
-		'send_cs' => $savedChg['send_cs'] ?? '',
+		'company' => $chgSrc['company'],
+		'customer' => $chgSrc['customer'],
+		'customer_id' => $chgSrc['customer_id'],
+		'h_customer' => $chgSrc['customer'],
+		'address' => $chgSrc['address'],
+		'sale_comment' => $chgSrc['sale_comment'],
+		'sn_ckk' => $chgSrc['sn_ckk'],
+		'sn' => $chgSrc['sn'],
+		'objective' => $chgSrc['objective'],
+		'objective_des' => $chgSrc['objective_des'],
+		'que_ckk' => $chgSrc['que_ckk'] ?? '',
+		'send_cs' => $chgSrc['send_cs'] ?? '',
 		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
-		'address_name' => $savedChg['delivery_name'],
-		'address_merged_ui' => $savedChg['delivery_name'],
-		'address_1' => $savedChg['delivery_name'],
-		'address_send' => $savedChg['delivery_address'],
-		'customer_name' => $savedChg['delivery_contact'],
-		'customer_tel' => $savedChg['delivery_tel'],
-		'delivery_type' => $savedChg['delivery_type'],
-		'start_date' => $savedChg['delivery_date'],
-		'between_date' => $savedChg['date_send_key'],
+		'address_name' => $chgSrc['delivery_name'],
+		'address_merged_ui' => $chgSrc['delivery_name'],
+		'address_1' => $chgSrc['delivery_name'],
+		'address_send' => $chgSrc['delivery_address'],
+		'customer_name' => $chgSrc['delivery_contact'],
+		'customer_tel' => $chgSrc['delivery_tel'],
+		'delivery_type' => $chgSrc['delivery_type'],
+		'start_date' => $chgSrc['delivery_date'],
+		'between_date' => $chgSrc['date_send_key'],
 		// แท็บ Admin — job_no อยู่ในคอลัมน์เสริม เติมด้วย so_saved_h() ตรงจุด include admin_info_tab.php แทน
 		// ค่าจัดส่ง (แท็บ 2 ของ delivery_info_tab.php)
-		'shipping_date' => $savedChg['date_ker'],
-		'shipping_ref1' => $savedChg['order_refer_code'],
-		'shipping_ref2' => $savedChg['order_refer_code1'],
-		'shipping_cost' => $savedChg['ker_bath'],
+		'shipping_date' => $chgSrc['date_ker'],
+		'shipping_ref1' => $chgSrc['order_refer_code'],
+		'shipping_ref2' => $chgSrc['order_refer_code1'],
+		'shipping_cost' => $chgSrc['ker_bath'],
 	);
 
 	// delivery_time เก็บรวม "start_time end_time" คั่นด้วยช่องว่างเดียว (ดู register_supchange1.php)
-	$savedChgTimeParts = explode(' ', (string)($savedChg['delivery_time'] ?? ''), 2);
+	$savedChgTimeParts = explode(' ', (string)($chgSrc['delivery_time'] ?? ''), 2);
 	$chgPrefill['start_time'] = $savedChgTimeParts[0] ?? '';
 	$chgPrefill['end_time'] = $savedChgTimeParts[1] ?? '';
 
@@ -1731,15 +1745,38 @@ if ($savedChg !== null) {
 
 	<?php
 	// แถบปุ่มล่าง — Submit หายเมื่อเอกสารถูกส่งให้หัวหน้าไปแล้ว (send_sup='1') หรือปิดแล้ว (ยกเลิก/Approve)
-	// ปุ่ม Save Draft/Update ใช้ได้จนกว่าเอกสารจะปิด — ไม่มี approve bar 2 ชั้นแบบ BR เพราะ CH ไม่มี workflow นั้น
+	// ปุ่ม Save Draft/Update ใช้ได้จนกว่าเอกสารจะปิด
 	$chgStatusDoc = $savedChg['status_doc'] ?? '';
 	$chgSendSup = $savedChg['send_sup'] ?? '0';
 	$chgIsClosed = in_array($chgStatusDoc, ['Approve', 'ยกเลิก'], true);
 	$chgHideSubmit = $chgIsEditMode && ((string)$chgSendSup === '1' || $chgIsClosed);
-	$chgHideUpdate = $chgIsClosed;
+
+	// แถบอนุมัติ — ชั้นเดียว (CH ไม่มี CM/ผู้ตรวจแบบ BR) พอร์ตจาก register_supbrcshos.php:2080-2090
+	// แต่ตัดตรรกะหลายชั้นออก เหลือแค่ "ไม่ใช่ Sale + สถานะรออนุมัติ" ก็เห็นแถบนี้ได้
+	$chgIsSaleUser = (($_SESSION['type_login'] ?? '') === 'Sale');
+	$chgCanShowApproveBar = $chgIsEditMode && !$chgIsSaleUser && ($chgStatusDoc === 'Request');
+	// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่ เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองแล้ว
+	$chgHideUpdate = $chgIsClosed || $chgCanShowApproveBar;
 	?>
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
+			<?php if ($chgCanShowApproveBar): ?>
+				<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
+				     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
+				<input type="hidden" name="approve_action" id="chg_approve_action" value="">
+				<div class="so-approve-actions">
+					<button type="button" class="so-overflow-menu-trigger" id="btn_chg_approve_overflow" onclick="toggleChgApproveOverflowMenu()">
+						<i class="fas fa-ellipsis-v"></i>
+					</button>
+					<div id="chgApproveOverflowMenu" class="so-overflow-menu">
+						<button type="button" onclick="chgRunApproveAction('return', true)"><i class="fas fa-reply"></i> ส่งกลับ</button>
+						<button type="button" class="so-menu-danger" onclick="chgRunApproveAction('reject', true)"><i class="fas fa-times-circle"></i> ไม่อนุมัติ</button>
+						<button type="button" onclick="triggerCancelDocFromChgApproveMenu()"><i class="far fa-window-close"></i> ยกเลิกเอกสาร</button>
+					</div>
+					<button type="button" class="btn-so-approve" onclick="chgRunApproveAction('approve', false)"><i class="far fa-check-circle"></i> อนุมัติ</button>
+					<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> Update</button>
+				</div>
+			<?php endif; ?>
 			<?php if (!$chgHideSubmit): ?>
 				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
 			<?php endif; ?>
@@ -1752,6 +1789,45 @@ if ($savedChg !== null) {
 </form>
 
 <script language="JavaScript">
+	function toggleChgApproveOverflowMenu() {
+		var menu = document.getElementById('chgApproveOverflowMenu');
+		if (!menu) return;
+		menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+	}
+
+	document.addEventListener('click', function(e) {
+		var menu = document.getElementById('chgApproveOverflowMenu');
+		var trigger = document.getElementById('btn_chg_approve_overflow');
+		if (!menu || menu.style.display === 'none' || !menu.style.display) return;
+		if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+		if (!menu.contains(e.target)) menu.style.display = 'none';
+	});
+
+	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป register_supchange_edit1.php
+	// (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ) — พอร์ตจาก register_supbrcshos.php:2138-2152
+	// ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+	function chgRunApproveAction(action, skipValidation) {
+		var field = document.getElementById('chg_approve_action');
+		if (field) field.value = action;
+
+		if (skipValidation) {
+			if (chgSubmitting) return;
+			chgSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+			HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+			return;
+		}
+
+		fncSubmit();
+		// fncSubmit() คืนค่า false ทั้งกรณีสำเร็จและ validation ไม่ผ่าน จึงดูจากธง chgSubmitting แทน
+		if (!chgSubmitting && field) field.value = '';
+	}
+
+	// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก cancel_doc แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
+	function triggerCancelDocFromChgApproveMenu() {
+		chgToggleCancelDoc();
+		HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+	}
+
 	function goMainSupChange() {
 		window.location.href = 'status_adminchange.php';
 	}

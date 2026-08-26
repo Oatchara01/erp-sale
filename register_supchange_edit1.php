@@ -556,6 +556,28 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 	if ($saveOk) {
 		mysqli_commit($conn);
 
+		// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_supchange.php =====
+		// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
+		// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — ชั้นเดียว (ไม่มี CM/ผู้ตรวจแบบ BR)
+		// คอลัมน์ตรงกับ change_approve.php/change_rejected.php (หน้าอนุมัติเดิม) ทุกประการ
+		$chgApproveAction = $_POST['approve_action'] ?? '';
+		if ($chgApproveAction !== '') {
+			$chgApproveName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+			$chgApproveCode = mysqli_real_escape_string($conn, (string)($_SESSION['code'] ?? ''));
+			$chgApproveDate = date('Y-m-d');
+			$chgApproveTime = date('H:i:s');
+			$chgSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+
+			if ($chgApproveAction === 'return') {
+				// ส่งกลับให้ Sale แก้ไข — send_sup='0' ทำให้ปุ่ม Submit บนฟอร์มกลับมาใช้ได้อีกครั้ง
+				mysqli_query($conn, "UPDATE hos__change SET status_doc='ส่งกลับ', send_sup='0' WHERE ref_id='" . $chgSafeRefId . "'");
+			} elseif ($chgApproveAction === 'reject') {
+				mysqli_query($conn, "UPDATE hos__change SET status_doc='Rejected', approve='" . $chgApproveName . "', approve_code='" . $chgApproveCode . "', approve_date='" . $chgApproveDate . "' WHERE ref_id='" . $chgSafeRefId . "'");
+			} elseif ($chgApproveAction === 'approve') {
+				mysqli_query($conn, "UPDATE hos__change SET status_doc='Approve', approve='" . $chgApproveName . "', approve_code='" . $chgApproveCode . "', approve_date='" . $chgApproveDate . "', approve_time='" . $chgApproveTime . "', send_admin='1' WHERE ref_id='" . $chgSafeRefId . "'");
+			}
+		}
+
 		if ($isDraftRequest) {
 			if (ob_get_level() > 0) {
 				ob_end_clean();
