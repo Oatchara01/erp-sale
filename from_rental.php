@@ -212,7 +212,7 @@ $summary= number_format( $summary_1,2)."";
 
 <table style="width:100%;">
 	<tr>
-		<td style="width:30%;text-align:left;"><span align="left" style="color:red"><div align="left"><?php echo $customer_no;?></div>
+		<td style="width:30%;text-align:left;"><span align="left" style="color:red"><div align="left"><?php echo $customer_no ?? '';?></div>
 			<?php if($type_doc=='4'){ ?>
 			<img src="img/nb_logo.jpg" width="80" align="left" height="40" /> <?php } ?> </td>
 		<td style="width:40%;text-align:center;"><font size="5">ใบสั่งเช่า</font><br><font size="4">(Rental Order)</font></td>
@@ -266,7 +266,7 @@ $summary= number_format( $summary_1,2)."";
 			<span>ชื่อที่ต้องการออกบิล </span>
 		</td>
 		<td style="border-bottom: 1px solid black;width:50%;">
-			<span class="style38"><?php echo $pre_name; ?><?php echo $bill_name; ?> </span> <?php echo 'เลขผู้เสียภาษี :'; ?>  <span class="style38"><?php echo $tax_id; ?></span>
+			<span class="style38"><?php echo $pre_name ?? ''; ?><?php echo $bill_name; ?> </span> <?php echo 'เลขผู้เสียภาษี :'; ?>  <span class="style38"><?php echo $tax_no; ?></span>
 		</td>
 		<td style="width:10%;text-align:left;padding-left:15px;">
 			<span>เบอร์โทร </span>

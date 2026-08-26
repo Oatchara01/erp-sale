@@ -153,8 +153,8 @@ $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__rental";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
+$maxId = substr($rs['MAXID'] ?? '', -4);
+$maxId3 = substr($rs['MAXID'] ?? '', -8);
 
 $maxId1 = substr($maxId3,0,-4);
 $so = "RT";

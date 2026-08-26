@@ -459,7 +459,7 @@ Sales Comment :&nbsp;
 
 <input type="checkbox" name="brn_clear" value="1">&nbsp;เคลียร์ใบยืมสินค้า ติดเล่ม  :
 
-<input name="brn_no" value ="<?php echo $rs["brn_no"];?>"  class="button4" style="width:27%" placeholder="เลขที่" ></p>
+<input name="brn_no" value ="<?php echo $rs["brn_no"] ?? ''; ?>"  class="button4" style="width:27%" placeholder="เลขที่" ></p>
 
 <input type="checkbox" name="brnp_clear" value="1">&nbsp;เคลียร์ใบยืมสินค้า กระดาษต่อเนื่อง :&nbsp;
 
@@ -652,23 +652,23 @@ $sel = "";
 
 </p>
 แนบไฟล์ </p>
-<input type='hidden' name='slip1' id='slip1' value ="<?php echo $rs['slip1']; ?>"  />
-<input type='hidden' name='slip2' id='slip2' value ="<?php echo $rs['slip2']; ?>"  />
-<input type='hidden' name='slip3' id='slip3' value ="<?php echo $rs['slip3']; ?>"  />
-<input type='hidden' name='slip4' id='slip4' value ="<?php echo $rs['slip4']; ?>"  />
-<input type='hidden' name='slip5' id='slip5' value ="<?php echo $rs['slip5']; ?>"  />
+<input type='hidden' name='slip1' id='slip1' value ="<?php echo $rs['slip1'] ?? ''; ?>"  />
+<input type='hidden' name='slip2' id='slip2' value ="<?php echo $rs['slip2'] ?? ''; ?>"  />
+<input type='hidden' name='slip3' id='slip3' value ="<?php echo $rs['slip3'] ?? ''; ?>"  />
+<input type='hidden' name='slip4' id='slip4' value ="<?php echo $rs['slip4'] ?? ''; ?>"  />
+<input type='hidden' name='slip5' id='slip5' value ="<?php echo $rs['slip5'] ?? ''; ?>"  />
 
-<input name="slip1"  type="file"><a href="upload/<?php echo $rs['slip1']; ?>" target="_blank"><?php echo $rs['slip1']; ?></a>
+<input name="slip1"  type="file"><a href="upload/<?php echo $rs['slip1'] ?? ''; ?>" target="_blank"><?php echo $rs['slip1'] ?? ''; ?></a>
 
 </p>
 
-<input name="slip2"  type="file"><a href="upload/<?php echo $rs['slip2']; ?>" target="_blank"><?php echo $rs['slip2']; ?></a>
+<input name="slip2"  type="file"><a href="upload/<?php echo $rs['slip2'] ?? ''; ?>" target="_blank"><?php echo $rs['slip2'] ?? ''; ?></a>
 </p>
-<input name="slip3"  type="file"><a href="upload/<?php echo $rs['slip3']; ?>" target="_blank"><?php echo $rs['slip3']; ?></a>
+<input name="slip3"  type="file"><a href="upload/<?php echo $rs['slip3'] ?? ''; ?>" target="_blank"><?php echo $rs['slip3'] ?? ''; ?></a>
 </p>
-<input name="slip4"  type="file"><a href="upload/<?php echo $rs['slip4']; ?>" target="_blank"><?php echo $rs['slip4']; ?></a>
+<input name="slip4"  type="file"><a href="upload/<?php echo $rs['slip4'] ?? ''; ?>" target="_blank"><?php echo $rs['slip4'] ?? ''; ?></a>
 </p>
-<input name="slip5"  type="file"><a href="upload/<?php echo $rs['slip5']; ?>" target="_blank"><?php echo $rs['slip5']; ?></a>
+<input name="slip5"  type="file"><a href="upload/<?php echo $rs['slip5'] ?? ''; ?>" target="_blank"><?php echo $rs['slip5'] ?? ''; ?></a>
 </p>
 <?php
 if($_SESSION["department"]=='วิศวกรรม'){

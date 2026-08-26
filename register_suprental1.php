@@ -7,7 +7,7 @@ include ("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
 if ($_POST["submit"] = "submit") {
-$send_cs = $_POST["send_cs"];
+$send_cs = $_POST["send_cs"] ?? '';
 $type_doc = $_POST["type_doc"];
 $register_date = $_POST["register_date"];
 $rental_name = $_POST["rental_name"];
@@ -35,9 +35,11 @@ $wdff = "$count_m $unit";
 $end_promis = date("Y-m-d", strtotime($wdff, strtotime($start_promis)));
 $delivery_type = $_POST["delivery_type"];
 $delivery_date = $_POST["start_date"];
-$delivery_key = $_POST["between_date"];	
-	
+$delivery_key = $_POST["between_date"];
+$sale_code = $_POST['sale_code'];
+
 //$end_promis = $_POST["end_promis"];
+$sup_code = '';
 if( $sale_code=='S23' or $sale_code=='S24' or $sale_code=='S17' or $sale_code=='S11' or $sale_code=='S12' or $sale_code=='S13'){
 $sup_code = 'SS2';
   }else if ($sale_code=='S15' or $sale_code=='S22' or $sale_code=='S21' or $sale_code=='S51' or $sale_code=='S16' or $sale_code=='S14' ) {
@@ -54,36 +56,17 @@ $sup_code = 'CM';
   }
 	
 	
-$bank_name = $_POST["bank_name"];
-$accbank_name = $_POST["accbank_name"];	
-$bank_no = $_POST["bank_no"];	
-	
-if ($_FILES['bank_img']['size'] == 0) {
-$bank_img = "";
-}else if ($_FILES['bank_img']['size'] > 1100000) {
-echo"<script>alert('กรุณแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB');history.back();</script>";
-exit();
-}   else if ($_FILES['bank_img']['size'] != 0) {
-$temp = explode(".", $_FILES["bank_img"]["name"]);
-$bank_img = "bank_img" . "_" . $ref_id . "_" . round(microtime(true)) . '.' . end($temp);
-move_uploaded_file($_FILES["bank_img"]["tmp_name"], "credit_no/" . $bank_img);
-}	
-	
-	
-	
-	
-$sale_code = $_POST['sale_code'];
 $add_date = date('Y-m-d H:i:s');
 $name =  $_SESSION['name'];
 $surname =	$_SESSION['surname'];
 $add_by = "$name $surname";
-	
+
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__rental";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
+$maxId = substr($rs['MAXID'] ?? '', -4);
+$maxId3 = substr($rs['MAXID'] ?? '', -8);
 
 $maxId1 = substr($maxId3,0,-4);
 
@@ -94,16 +77,31 @@ $maxId1 = ($maxId + 1);
 $maxId2 = substr("00000".$maxId1, -4);
 $nextId = $yearMonth.$maxId2;
 }
-else 
+else
 {
-$maxId1 = "0001"; 
+$maxId1 = "0001";
 $nextId = $yearMonth.$maxId1;
 
 }
 
 
 $so = "RT";
-$ref_id ="$so$nextId";	
+$ref_id ="$so$nextId";
+
+$bank_name = $_POST["bank_name"];
+$accbank_name = $_POST["accbank_name"];
+$bank_no = $_POST["bank_no"];
+
+if ($_FILES['bank_img']['size'] == 0) {
+$bank_img = "";
+}else if ($_FILES['bank_img']['size'] > 1100000) {
+echo"<script>alert('กรุณแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB');history.back();</script>";
+exit();
+}   else if ($_FILES['bank_img']['size'] != 0) {
+$temp = explode(".", $_FILES["bank_img"]["name"]);
+$bank_img = "bank_img" . "_" . $ref_id . "_" . round(microtime(true)) . '.' . end($temp);
+move_uploaded_file($_FILES["bank_img"]["tmp_name"], "credit_no/" . $bank_img);
+}
 
 
 
@@ -227,7 +225,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id1."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 	
 }
@@ -246,7 +244,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id2."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -263,7 +261,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id3."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 }
 
 if($product_id4 !=''){
@@ -279,7 +277,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id4."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 	
 }
@@ -297,7 +295,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id5."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 	
 }
@@ -315,7 +313,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id6."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -332,7 +330,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id7."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -349,7 +347,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id8."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -366,7 +364,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id9."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -383,7 +381,7 @@ $strSQL91 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product
 $objQuery91 = mysqli_query($conn,$strSQL91);	
 	
 $strSQL92 = "UPDATE tb_product SET close_pro = '1' where product_ID ='".$product_id10."' ";
-$objQuery92 = mysqli_query($new,$strSQL92);	
+$objQuery92 = mysqli_query($conn,$strSQL92);
 	
 }
 
@@ -417,7 +415,7 @@ $nextId = $maxId2;
 
 $doc_no = $so.$year1.$mont.$nextId;	
 
-$save5="insert into tb_doc_rental (head_no,doc_no,year_no,month_no,run_iv,ref_id,doc_date) values ('JN','".$doc_no."','".$year1."','".$mont."','".$nextId."','".$ref_id_br."','".$doc_date."')";
+$save5="insert into tb_doc_rental (head_no,doc_no,year_no,month_no,run_iv,ref_id,doc_date) values ('JN','".$doc_no."','".$year1."','".$mont."','".$nextId."','".$ref_id."','".$doc_date."')";
 $qsave5=mysqli_query($conn,$save5);
 		
 	}else if($type_doc =='4'){
@@ -437,16 +435,16 @@ $nextId = $maxId2;
 
 $doc_no = $so.$year1.$mont.$nextId;	
 
-$save5="insert into tb_doc_rental (head_no,doc_no,year_no,month_no,run_iv,ref_id,doc_date) values ('JN/','".$doc_no."','".$year1."','".$mont."','".$nextId."','".$ref_id_br."','".$doc_date."')";
+$save5="insert into tb_doc_rental (head_no,doc_no,year_no,month_no,run_iv,ref_id,doc_date) values ('JN/','".$doc_no."','".$year1."','".$mont."','".$nextId."','".$ref_id."','".$doc_date."')";
 $qsave5=mysqli_query($conn,$save5);
 
 
 	}	
 	
-$promis_date = $start_promis;	
-$date = explode('-' , $start_promis );	
+$promis_date = $start_promis;
+$date = explode('-' , $start_promis );
 $year = $date[0];
-$mont = $date[1];
+$mont = $date[1] ?? '';
 $year1 = substr($year, 2 ,2);
 
 $sql = "SELECT MAX(run_no) AS MAXID FROM tb_promisno where month_no ='".$mont."' and year_no = '".$year1."'";
@@ -463,7 +461,8 @@ $maxId2 = substr("0000".$maxId1, -3);
 $nextId = $maxId2;
 
 
-$promis_no = $so.$year1.$mont.$nextId;	
+$promis_no = $so.$year1.$mont.$nextId;
+$date_save = date('Y-m-d H:i:s');
 
 $save5="insert into tb_promisno (promis_n,year_no,month_no,run_no,date_save,ref_id) values ('".$promis_no."','".$year1."','".$mont."','".$nextId."','".$date_save."','".$ref_id."')";
 $qsave5=mysqli_query($conn,$save5);	
@@ -488,29 +487,29 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
  $end_time=$_POST["end_time"];
  $status=$_POST["status"];
 	
- if ($_POST["start_date"]!=''){
+ if (isset($_POST["start_date"]) && $_POST["start_date"]!=''){
 		$start_date =$_POST["start_date"];
 	}else{
 		$start_date='0000-00-00';
 	}
 	
-	if ($_POST['fix_datetime']!=''){
+	if (isset($_POST['fix_datetime']) && $_POST['fix_datetime']!=''){
 		$fix_date=$_POST['fix_datetime'];
 	}else{
 		$fix_date='0';
 	}
 	
-	if ($_POST['no_money']!=''){
+	if (isset($_POST['no_money']) && $_POST['no_money']!=''){
         $no_price=$_POST['no_money'];
 	}else{
 		$no_price='0';
 	}
-	if ($_POST['call_customer']!=''){
+	if (isset($_POST['call_customer']) && $_POST['call_customer']!=''){
 		 $call_customer=$_POST['call_customer'];
 	}else{
 		$call_customer='0';
 	}
-	if ($_POST['credit_card']!=''){
+	if (isset($_POST['credit_card']) && $_POST['credit_card']!=''){
 		 $credit=$_POST['credit_card'];
 		$unit_credit=$amount;
 	}else{
@@ -518,18 +517,18 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
 		$unit_credit=$_POST["unit_credit"];
 	}
 	
-	if ($_POST['want_bus']!=''){
+	if (isset($_POST['want_bus']) && $_POST['want_bus']!=''){
 	$want_bus=$_POST['want_bus'];
 	}else{
 		$want_bus='0';
 	}
-	if ($_POST['call_back']!=''){
+	if (isset($_POST['call_back']) && $_POST['call_back']!=''){
 		 $call_employee=$_POST['call_back'];
 	}else{
 		$call_employee='0';
 	}
 	
-	if ($_POST['cash']!=''){
+	if (isset($_POST['cash']) && $_POST['cash']!=''){
 		 $chash=$_POST['cash'];
 		$price=$amount;
 	}else{
@@ -537,7 +536,7 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
 		$price=$_POST["unit_cash"];
 	}
 	
-	if ($_POST['check_paper']!=''){
+	if (isset($_POST['check_paper']) && $_POST['check_paper']!=''){
 	 $check_peper=$_POST['check_paper'];
 		$unit_check1=$amount;
 	}else{
@@ -545,7 +544,7 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
 		$unit_check1=$_POST["unit_check"];
 	}
 	
-	if ($_POST['bill']!=''){
+	if (isset($_POST['bill']) && $_POST['bill']!=''){
 		 $bill=$_POST['bill'];
 		$unit_bill1=$amount;
 	}else{
@@ -553,7 +552,7 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
 		$unit_bill1=$_POST["unit_bill"];
 	}
 	
-	if ($_POST['tran']!=''){
+	if (isset($_POST['tran']) && $_POST['tran']!=''){
 		 $tran=$_POST["tran"];
 		$unit_tran=$amount;
 	}else{
@@ -561,7 +560,7 @@ $save="Update  hos__rental set iv_no='".$doc_no."',iv_date='".$doc_date."',promi
 		$unit_tran=$_POST["unit_tran"];
 	}
 		
-	if ($_POST['dep']!=''){
+	if (isset($_POST['dep']) && $_POST['dep']!=''){
 		  $dep=$_POST["dep"];
 	}else{
 		$dep='0';
@@ -584,10 +583,10 @@ $province_name =$_POST["province_name"];
  $address_name=$_POST["address_name"];
 	 $address_1=$_POST["address_1"];
  $address_send=$_POST["address_send"];
-$customer_contact =$_POST["customer_contact"];
-	$mk_research = $_POST["mk_research"];
- $on_time = $_POST["on_time"];	
- $amphur_name=$_POST["amphur_name"];
+$customer_contact = $_POST["customer_contact"] ?? '';
+$mk_research = $_POST["mk_research"] ?? '';
+$on_time = $_POST["on_time"] ?? '';
+$amphur_name = $_POST["amphur_name"] ?? '';
  $province_name=$_POST["province_name"];
 $product_sn="เลขที่เอกสาร $doc_no เลขที่สัญญา $promis_no";
 	
@@ -597,138 +596,145 @@ $product_name3 = $_POST["product_name3"];
 $product_name4 = $_POST["product_name4"];	
 $product_name5 = $_POST["product_name5"];	
 $product_name6 = $_POST["product_name6"];	
-$product_name7 = $_POST["product_name7"];	
+$product_name7 = $_POST["product_name7"];
 
-	
+$unit_name1 = $_POST["unit_name1"] ?? '';
+$unit_name2 = $_POST["unit_name2"] ?? '';
+$unit_name3 = $_POST["unit_name3"] ?? '';
+$unit_name4 = $_POST["unit_name4"] ?? '';
+$unit_name5 = $_POST["unit_name5"] ?? '';
+$unit_name6 = $_POST["unit_name6"] ?? '';
+$unit_name7 = $_POST["unit_name7"] ?? '';
+
  $product_name = "ส่ง $product_name1 $sale_remarkk1 $sale_count1 $unit_name1 $product_name2 $sale_remarkk2 $sale_count2 $unit_name2 $product_name3 $sale_remarkk3 $sale_count3 $unit_name3 $product_name4 $sale_remarkk4 $sale_count4 $unit_name4  $product_name5 $sale_remarkk5 $sale_count5 $unit_name5  $product_name6 $sale_remarkk6 $sale_count6 $unit_name6 $product_name7 $sale_remarkk7 $sale_count7 $unit_name7 $address_name";	
 
 
  $employee_name=$_POST["employee_name"];
  $employee_tel=$_POST["employee_tel"];
  $add_by=$_POST["add_by"];
- $description=$_POST["sale_comment"];
- $havemap=$_POST['have_map'];
+ $description=$_POST["sale_comment"] ?? '';
+ $havemap=$_POST['have_map'] ?? '';
 $department_show = $_POST["department_show"];
 	
 $dept =$_POST["dept"];
 $status_comment =$_POST["status_comment"];
 	
-if ($_POST['runway']!=''){
+if (isset($_POST['runway']) && $_POST['runway']!=''){
 		$runway=$_POST["runway"];
 	}else{
 		$runway='0';
 	}
 
-if ($_POST['road']!=''){
+if (isset($_POST['road']) && $_POST['road']!=''){
 		$road=$_POST["road"];
 	}else{
 		$road='0';
 	}
 
-if ($_POST['soy']!=''){
+if (isset($_POST['soy']) && $_POST['soy']!=''){
 	$soy=$_POST["soy"];
 	}else{
 		$soy='0';
 	}
 	
-	if ($_POST['car_load']!=''){
+	if (isset($_POST['car_load']) && $_POST['car_load']!=''){
 	$car_load=$_POST["car_load"];
 	}else{
 		$car_load='0';
 	}
 
-if ($_POST['no_car_road']!=''){
+if (isset($_POST['no_car_road']) && $_POST['no_car_road']!=''){
 	$no_car_road=$_POST["no_car_road"];
 	}else{
 		$no_car_road='0';
 	}
 	
-	if ($_POST['car_road']!=''){
+	if (isset($_POST['car_road']) && $_POST['car_road']!=''){
 	$car_road=$_POST["car_road"];
 	}else{
 		$car_road='0';
 	}
-if ($_POST['car_home']!=''){
+if (isset($_POST['car_home']) && $_POST['car_home']!=''){
 	$car_home=$_POST["car_home"];
 	}else{
 		$car_home='0';
 	}
 
-	if ($_POST['slope']!=''){
+	if (isset($_POST['slope']) && $_POST['slope']!=''){
 	$slope=$_POST["slope"];	
 	}else{
 		$slope='0';
 	}
 
 	
-	if ($_POST['bundai']!=''){
+	if (isset($_POST['bundai']) && $_POST['bundai']!=''){
 	$bundai=$_POST["bundai"];
 	}else{
 		$bundai='0';
 	}
 
-	if ($_POST['bundai_install']!=''){
+	if (isset($_POST['bundai_install']) && $_POST['bundai_install']!=''){
 	$bundai_install=$_POST["bundai_install"];
 	}else{
 		$bundai_install='0';
 	}
 
-	if ($_POST['lip']!=''){
+	if (isset($_POST['lip']) && $_POST['lip']!=''){
 	$lip=$_POST["lip"];
 	}else{
 		$lip='0';
 	}
 
 	
-	if ($_POST['want_employee']!=''){
+	if (isset($_POST['want_employee']) && $_POST['want_employee']!=''){
 	$want_employee=$_POST["want_employee"];	
 	}else{
 		$want_employee='0';
 	}
 
-	if ($_POST['want_ex']!=''){
+	if (isset($_POST['want_ex']) && $_POST['want_ex']!=''){
 	$want_ex=$_POST["want_ex"];	
 	}else{
 		$want_ex='0';
 	}
 
 	
-	if ($_POST['want_credit']!=''){
+	if (isset($_POST['want_credit']) && $_POST['want_credit']!=''){
 	$want_credit=$_POST["want_credit"];
 	}else{
 		$want_credit='0';
 	}
-if ($_POST['want_prem']!=''){
+if (isset($_POST['want_prem']) && $_POST['want_prem']!=''){
 	$want_prem=$_POST["want_prem"];	
 	}else{
 		$want_prem='0';
 	}
 	
-	if ($_POST['head_bad']!=''){
+	if (isset($_POST['head_bad']) && $_POST['head_bad']!=''){
 	$head_bad=$_POST["head_bad"];	
 	}else{
 		$head_bad='0';
 	}
 
 	
-	if ($_POST['height_ltd']!=''){
+	if (isset($_POST['height_ltd']) && $_POST['height_ltd']!=''){
 	$height_ltd=$_POST["height_ltd"];	
 	}else{
 		$height_ltd='0';
 	}
-if ($_POST['up']!=''){
+if (isset($_POST['up']) && $_POST['up']!=''){
 	$up=$_POST["up"];	
 	}else{
 		$up='0';
 	}
-if ($_POST['no_up']!=''){
+if (isset($_POST['no_up']) && $_POST['no_up']!=''){
 	$no_up=$_POST["no_up"];	
 	}else{
 		$no_up='0';
 	}
 
 	
-if ($_POST['more']!=''){
+if (isset($_POST['more']) && $_POST['more']!=''){
 		 $check_detail=$_POST["more"];
 	}else{
 		$check_detail='0';
@@ -738,7 +744,7 @@ $type_bundai=$_POST["type_bundai"];
 	
 	
 	
-$soy_long = $_POST["soy_long"];
+$soy_long = $_POST["soy_long"] ?? '';
 $soy_big = $_POST["soy_big"];
 $car_park = $_POST["car_park"];
 $door_long = $_POST["door_long"];
@@ -755,7 +761,7 @@ $lip_weight = $_POST["lip_weight"];
 $employee_unit = $_POST["employee_unit"];
 $ferniger_name = $_POST["ferniger_name"];
 $ferniger_address = $_POST["ferniger_address"];
-$number = $_POST["number"];
+$number = $_POST["number"] ?? '';
 $status_comment=$_POST["status_comment"];
 
 $dept = $_POST["dept"];
@@ -771,7 +777,7 @@ $description_ja = $_POST["description_ja"];
 	
 $strSQL66 =  "insert into tb_register_data (ref_id,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,dep,dept,department_show,customer_contact,status_comment,on_time,address_1,add_code,mk_research,province_name) 
 
-values('".$ref_id."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','โรงพยาบาล','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill."','".$unit_check."','".$unit_tran."','".$tran."','".$check_detail."','".$dep."','".$dept."','".$department_show."','".$customer_contact."','".$status_comment."','".$on_time."','".$address_1."','".$em_id."','".$mk_research."','".$province_name."')";
+values('".$ref_id."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','โรงพยาบาล','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill1."','".$unit_check1."','".$unit_tran."','".$tran."','".$check_detail."','".$dep."','".$dept."','".$department_show."','".$customer_contact."','".$status_comment."','".$on_time."','".$address_1."','".$em_id."','".$mk_research."','".$province_name."')";
 
 $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 	
@@ -809,7 +815,7 @@ $nextId = $yearMonth.$maxId1;
 
 $strSQL89 =  "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,address_bus,customer_contact,ref_id,iv_date) 
 
-values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill."','".$unit_check."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$province_name."','".$customer_contact."','".$ref_id."','".$doc_release_date."')";
+values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill1."','".$unit_check1."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$province_name."','".$customer_contact."','".$ref_id."','".$doc_release_date."')";
 
 
  $objQuery89 = mysqli_query($com1,$strSQL89) or die(mysqli_error());
@@ -850,21 +856,21 @@ if($Num_Rows2 > 0){
 	
 $strSQL3 = "SELECT * FROM  tb_product_checklist  WHERE ref_id = '".$ref_id."'";
 $objQuery3 = mysqli_query($conn,$strSQL3) or die ("Error Query [".$strSQL3."]");
-$objResult3 = mysqli_fetch_array($objQuery3);
-	
+$objResult3 = mysqli_fetch_array($objQuery3) ?: [];
+
 $strSQLreb = "SELECT * FROM tb_product_rental where product_id ='".$objResult1["product_code"]."'";
 $objQueryreb = mysqli_query($conn,$strSQLreb) or die ("Error Query [".$strSQL2."]");
 $Num_Rowsreb = mysqli_num_rows($objQueryreb);
-$objResultreb = mysqli_fetch_array($objQueryreb);	
+$objResultreb = mysqli_fetch_array($objQueryreb) ?: [];
 	
 
-if($objResult3["ref_id"]!=''){ }else{
+if(($objResult3["ref_id"] ?? '')!=''){ }else{
 	
 	
 $save99="insert into tb_product_rentalref
-(ref_idrt,product_id,sn_number,list_des1,list_des2,list_des3,list_des4,list_des5,list_des6,list_des7,list_des8,list_des9,list_des11,list_des12,list_des13,list_des14,list_des15,list_des16)
+(ref_idrt,product_id,sn_number,list_des1,list_des2,list_des3,list_des4,list_des5,list_des6,list_des7,list_des8,list_des9,list_des10,list_des11,list_des12,list_des13,list_des14,list_des15,list_des16)
 values
-('".$ref_id."','".$objResult1["product_code"]."','".$objResultreb["sn_number"]."','".$objResultreb["list_des1"]."','".$objResultreb["list_des2"]."','".$objResultreb["list_des3"]."','".$objResultreb["list_des4"]."','".$objResultreb["list_des5"]."','".$objResultreb["list_des6"]."','".$objResultreb["list_des7"]."','".$objResultreb["list_des8"]."','".$objResultreb["list_des9"]."','".$objResultreb["list_des10"]."','".$objResultreb["list_des11"]."','".$objResultreb["list_des12"]."','".$objResultreb["list_des13"]."','".$objResultreb["list_des14"]."','".$objResultreb["list_des15"]."','".$objResultreb["list_des16"]."')";
+('".$ref_id."','".$objResult1["product_code"]."','".($objResultreb["sn_number"] ?? '')."','".($objResultreb["list_des1"] ?? '')."','".($objResultreb["list_des2"] ?? '')."','".($objResultreb["list_des3"] ?? '')."','".($objResultreb["list_des4"] ?? '')."','".($objResultreb["list_des5"] ?? '')."','".($objResultreb["list_des6"] ?? '')."','".($objResultreb["list_des7"] ?? '')."','".($objResultreb["list_des8"] ?? '')."','".($objResultreb["list_des9"] ?? '')."','".($objResultreb["list_des10"] ?? '')."','".($objResultreb["list_des11"] ?? '')."','".($objResultreb["list_des12"] ?? '')."','".($objResultreb["list_des13"] ?? '')."','".($objResultreb["list_des14"] ?? '')."','".($objResultreb["list_des15"] ?? '')."','".($objResultreb["list_des16"] ?? '')."')";
 $qsave99=mysqli_query($conn,$save99);
 	
 	
@@ -915,7 +921,7 @@ $ref_pc ="$so$nextId";
 $save99="insert into tb_product_checklist
 (ref_pc,doc_no,year_no,ref_id,product_id,add_date,add_by,date_create,head_pc,sn)
 values
-('".$ref_pc."','".$ref_pc."','".$strYear1."','".$ref_id."','".$product_id."','".$add_date."','".$add_by."','".$strDate."','".$so."','".$objResultreb["sn_number"]."')";
+('".$ref_pc."','".$ref_pc."','".$strYear1."','".$ref_id."','".$product_id."','".$add_date."','".$add_by."','".$strDate."','".$so."','".($objResultreb["sn_number"] ?? '')."')";
 $qsave99=mysqli_query($conn,$save99);
 
 
