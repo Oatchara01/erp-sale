@@ -522,15 +522,15 @@ if($ref_iv=='SO'){
 $strSQL15 = "SELECT iv_no FROM hos__so WHERE ref_id = '".$objResult["ref_ai"]."' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n = $objResult15["iv_no"];	
-	
+$doc__n = $objResult15 ? $objResult15["iv_no"] : '';
+
 }else{
 $strSQL15 = "SELECT doc_no FROM so__main WHERE ref_id = '".$objResult["ref_ai"]."' ";
-	
+
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n = $objResult15["doc_no"];
-	
+$doc__n = $objResult15 ? $objResult15["doc_no"] : '';
+
 }
 		
 $strSQL16 = "SELECT summary_cash FROM tb_register_data WHERE ref_id = '".$objResult["ref_ai"]."' ";
@@ -548,7 +548,7 @@ $objResult18= mysqli_fetch_array($objQuery18);
 <th width="10%"></th> 
 <th width="10%"></th>
 <th width="23%"><?php echo $doc__n; ?></th>
-<th width="22%"><?php if($Num_Rows18 > 0){ if($objResult18["date_tran"]!='0000-00-00'){ echo "คืนเงินค้ำประกันเรียบร้อย วันที่ ";  echo Datethai($objResult18["date_tran"]); }else{ echo $objResult16["summary_cash"]; } } ?></th>		
+<th width="22%"><?php if($Num_Rows18 > 0){ if($objResult18["date_tran"]!='0000-00-00'){ echo "คืนเงินค้ำประกันเรียบร้อย วันที่ ";  echo Datethai($objResult18["date_tran"]); }else{ echo $objResult16 ? $objResult16["summary_cash"] : ''; } } ?></th>		
 </tr>	
 		
 <?php
@@ -567,12 +567,12 @@ if($ref_iv=='SO'){
 $strSQL15 = "SELECT iv_no FROM hos__so WHERE ref_id = '".$objResult2["ref_idiv"]."' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n2 = $objResult15["iv_no"];		
+$doc__n2 = $objResult15 ? $objResult15["iv_no"] : '';
 }else{
 $strSQL15 = "SELECT doc_no FROM so__main WHERE ref_id = '".$objResult2["ref_idiv"]."' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n2 = $objResult15["doc_no"];	
+$doc__n2 = $objResult15 ? $objResult15["doc_no"] : '';
 }
 		
 $strSQL17 = "SELECT summary_cash FROM tb_register_data WHERE ref_id = '".$objResult2["ref_idiv"]."' ";
@@ -598,9 +598,9 @@ $objResult17 = mysqli_fetch_array($objQuery17);
     </a>
   <?php } ?>
 </th>
-<th width="22%"><?php echo $objResult17["summary_cash"]; ?></th>		
-</tr>				
-<?php 
+<th width="22%"><?php echo $objResult17 ? $objResult17["summary_cash"] : ''; ?></th>
+</tr>
+<?php
 $n--;
 }
 ?>		
@@ -612,14 +612,14 @@ if($ref_iv=='SO'){
 $strSQL15 = "SELECT iv_no FROM hos__so WHERE ref_id = '".$objResult["ref_iv"]."' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n1 = $objResult15["iv_no"];		
+$doc__n1 = $objResult15 ? $objResult15["iv_no"] : '';
 }else{
 $strSQL15 = "SELECT doc_no FROM so__main WHERE ref_id = '".$objResult["ref_iv"]."' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
-$doc__n1 = $objResult15["doc_no"];	
+$doc__n1 = $objResult15 ? $objResult15["doc_no"] : '';
 }
-		
+
 $strSQL17 = "SELECT summary_cash FROM tb_register_data WHERE ref_id = '".$objResult["ref_iv"]."' ";
 $objQuery17 = mysqli_query($code,$strSQL17);
 $objResult17 = mysqli_fetch_array($objQuery17);
@@ -641,8 +641,8 @@ $objResult17 = mysqli_fetch_array($objQuery17);
     </a>
   <?php } ?>
 	</th>
-<th width="22%"><?php echo $objResult16["summary_cash"]; ?></th>		
-</tr>				
+<th width="22%"><?php echo $objResult17 ? $objResult17["summary_cash"] : ''; ?></th>
+</tr>
 		
 
 </table>

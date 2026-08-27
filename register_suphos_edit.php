@@ -267,7 +267,7 @@
     AND (r.ref_sub = '' OR r.ref_sub IS NULL)
     AND (
       r.date_bank IS NULL
-      OR r.date_bank = '0000-00-00'
+      OR CAST(r.date_bank AS CHAR) = '0000-00-00'
       OR r.date_bank > ?
     )
 ";
@@ -779,7 +779,7 @@
 			// ดึงค่ามาให้ชัด
 			$bill_id = isset($rs['bill_id']) ? trim((string)$rs['bill_id']) : '';
 			?>
-			<?php if ($rs59['pay_in'] !== ''): ?>
+			<?php if (($rs59['pay_in'] ?? '') !== ''): ?>
 				<span class="w3-light-grey w3-right">
 					<font color="blue">เครดิต :</font>
 					<?= htmlspecialchars($rs59['pay_in']) ?>
