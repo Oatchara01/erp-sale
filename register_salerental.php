@@ -1,6 +1,12 @@
 <?php include ("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 
+<link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
+<link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
+<link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
+<link rel="stylesheet" href="css/register-suprental.css?v=<?php echo filemtime(__DIR__ . '/css/register-suprental.css'); ?>">
+<link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
+
 <script language="JavaScript">
 
 function selectByValueOrText(selectEl, raw) {

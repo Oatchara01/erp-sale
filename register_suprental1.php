@@ -125,7 +125,9 @@ $sale_remarkk1 = $_POST["sale_remarkk1"];
 $sum_amountt1 = $_POST["sum_amount1"];
 $sum_amount1= str_replace(',','', $sum_amountt1);
 $sn_number1 = $_POST["sn_number1"];
-	
+$delivery_cost1 = $_POST["delivery_cost1"];
+$free_count1 = $_POST["free_count1"];
+
 $product_id2 = $_POST["product_id2"];
 $sale_count2 = $_POST["sale_count2"];
 $product_price2 = $_POST["product_price2"];
@@ -133,6 +135,8 @@ $sale_remarkk2 = $_POST["sale_remarkk2"];
 $sum_amountt2 = $_POST["sum_amount2"];
 $sum_amount2= str_replace(',','', $sum_amountt2);
 $sn_number2 = $_POST["sn_number2"];
+$delivery_cost2 = $_POST["delivery_cost2"];
+$free_count2 = $_POST["free_count2"];
 
 $product_id3 = $_POST["product_id3"];
 $sale_count3 = $_POST["sale_count3"];
@@ -141,6 +145,8 @@ $sale_remarkk3 = $_POST["sale_remarkk3"];
 $sum_amountt3 = $_POST["sum_amount3"];
 $sum_amount3= str_replace(',','', $sum_amountt3);
 $sn_number3 = $_POST["sn_number3"];
+$delivery_cost3 = $_POST["delivery_cost3"];
+$free_count3 = $_POST["free_count3"];
 
 $product_id4 = $_POST["product_id4"];
 $sale_count4 = $_POST["sale_count4"];
@@ -149,6 +155,8 @@ $sale_remarkk4 = $_POST["sale_remarkk4"];
 $sum_amountt4 = $_POST["sum_amount4"];
 $sum_amount4= str_replace(',','', $sum_amountt4);
 $sn_number4 = $_POST["sn_number4"];
+$delivery_cost4 = $_POST["delivery_cost4"];
+$free_count4 = $_POST["free_count4"];
 
 $product_id5 = $_POST["product_id5"];
 $sale_count5 = $_POST["sale_count5"];
@@ -157,6 +165,8 @@ $sale_remarkk5 = $_POST["sale_remarkk5"];
 $sum_amountt5 = $_POST["sum_amount5"];
 $sum_amount5= str_replace(',','', $sum_amountt5);
 $sn_number5 = $_POST["sn_number5"];
+$delivery_cost5 = $_POST["delivery_cost5"];
+$free_count5 = $_POST["free_count5"];
 
 $product_id6 = $_POST["product_id6"];
 $sale_count6 = $_POST["sale_count6"];
@@ -165,6 +175,8 @@ $sale_remarkk6 = $_POST["sale_remarkk6"];
 $sum_amountt6 = $_POST["sum_amount6"];
 $sum_amount6= str_replace(',','', $sum_amountt6);
 $sn_number6 = $_POST["sn_number6"];
+$delivery_cost6 = $_POST["delivery_cost6"];
+$free_count6 = $_POST["free_count6"];
 
 $product_id7 = $_POST["product_id7"];
 $sale_count7 = $_POST["sale_count7"];
@@ -173,6 +185,8 @@ $sale_remarkk7 = $_POST["sale_remarkk7"];
 $sum_amountt7 = $_POST["sum_amount7"];
 $sum_amount7= str_replace(',','', $sum_amountt7);
 $sn_number7 = $_POST["sn_number7"];
+$delivery_cost7 = $_POST["delivery_cost7"];
+$free_count7 = $_POST["free_count7"];
 
 $product_id8 = $_POST["product_id8"];
 $sale_count8 = $_POST["sale_count8"];
@@ -181,6 +195,8 @@ $sale_remarkk8 = $_POST["sale_remarkk8"];
 $sum_amountt8 = $_POST["sum_amount8"];
 $sum_amount8= str_replace(',','', $sum_amountt8);
 $sn_number8 = $_POST["sn_number8"];
+$delivery_cost8 = $_POST["delivery_cost8"];
+$free_count8 = $_POST["free_count8"];
 
 $product_id9 = $_POST["product_id9"];
 $sale_count9 = $_POST["sale_count9"];
@@ -189,6 +205,8 @@ $sale_remarkk9 = $_POST["sale_remarkk9"];
 $sum_amountt9 = $_POST["sum_amount9"];
 $sum_amount9= str_replace(',','', $sum_amountt9);
 $sn_number9 = $_POST["sn_number9"];
+$delivery_cost9 = $_POST["delivery_cost9"];
+$free_count9 = $_POST["free_count9"];
 
 $product_id10 = $_POST["product_id10"];
 $sale_count10 = $_POST["sale_count10"];
@@ -197,8 +215,10 @@ $sale_remarkk10 = $_POST["sale_remarkk10"];
 $sum_amountt10 = $_POST["sum_amount10"];
 $sum_amount10 = str_replace(',','', $sum_amountt10);
 $sn_number10 = $_POST["sn_number10"];
+$delivery_cost10 = $_POST["delivery_cost10"];
+$free_count10 = $_POST["free_count10"];
 
-	
+
 $warranty1 = $_POST["warranty1"];
 $warranty2 = $_POST["warranty2"];
 $warranty3 = $_POST["warranty3"];
@@ -216,8 +236,8 @@ $warranty10 = $_POST["warranty10"];
 if($product_id1 !=''){
 
 $strSQL1 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id1."','".$product_id1."','".$sale_count1."','".$sn_number1."','".$product_price1."','".$sum_amount1."','".$sale_remarkk1."','".$warranty1."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id1."','".$product_id1."','".$sale_count1."','".$sn_number1."','".$product_price1."','".$sum_amount1."','".$sale_remarkk1."','".$warranty1."','".$delivery_cost1."','".$free_count1."')";
 
 $objQuery1 = mysqli_query($conn,$strSQL1);	
 	
@@ -234,8 +254,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id2 !=''){
 
 $strSQL2 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id2."','".$product_id2."','".$sale_count2."','".$sn_number2."','".$product_price2."','".$sum_amount2."','".$sale_remarkk2."','".$warranty2."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id2."','".$product_id2."','".$sale_count2."','".$sn_number2."','".$product_price2."','".$sum_amount2."','".$sale_remarkk2."','".$warranty2."','".$delivery_cost2."','".$free_count2."')";
 
 $objQuery2 = mysqli_query($conn,$strSQL2);	
 	
@@ -251,8 +271,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id3 !=''){
 
 $strSQL3 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id3."','".$product_id3."','".$sale_count3."','".$sn_number3."','".$product_price3."','".$sum_amount3."','".$sale_remarkk3."','".$warranty3."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id3."','".$product_id3."','".$sale_count3."','".$sn_number3."','".$product_price3."','".$sum_amount3."','".$sale_remarkk3."','".$warranty3."','".$delivery_cost3."','".$free_count3."')";
 
 $objQuery3 = mysqli_query($conn,$strSQL3);	
 	
@@ -267,8 +287,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id4 !=''){
 
 $strSQL4 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id4."','".$product_id4."','".$sale_count4."','".$sn_number4."','".$product_price4."','".$sum_amount4."','".$sale_remarkk4."','".$warranty4."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id4."','".$product_id4."','".$sale_count4."','".$sn_number4."','".$product_price4."','".$sum_amount4."','".$sale_remarkk4."','".$warranty4."','".$delivery_cost4."','".$free_count4."')";
 
 $objQuery4 = mysqli_query($conn,$strSQL4);	
 	
@@ -285,8 +305,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id5 !=''){
 
 $strSQL5 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id5."','".$product_id5."','".$sale_count5."','".$sn_number5."','".$product_price5."','".$sum_amount5."','".$sale_remarkk5."','".$warranty5."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id5."','".$product_id5."','".$sale_count5."','".$sn_number5."','".$product_price5."','".$sum_amount5."','".$sale_remarkk5."','".$warranty5."','".$delivery_cost5."','".$free_count5."')";
 
 $objQuery5 = mysqli_query($conn,$strSQL5);	
 
@@ -303,8 +323,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id6 !=''){
 
 $strSQL6 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id6."','".$product_id6."','".$sale_count6."','".$sn_number6."','".$product_price6."','".$sum_amount6."','".$sale_remarkk6."','".$warranty6."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id6."','".$product_id6."','".$sale_count6."','".$sn_number6."','".$product_price6."','".$sum_amount6."','".$sale_remarkk6."','".$warranty6."','".$delivery_cost6."','".$free_count6."')";
 
 $objQuery6 = mysqli_query($conn,$strSQL6);	
 	
@@ -320,8 +340,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id7 !=''){
 
 $strSQL7 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id7."','".$product_id7."','".$sale_count7."','".$sn_number7."','".$product_price7."','".$sum_amount7."','".$sale_remarkk7."','".$warranty7."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id7."','".$product_id7."','".$sale_count7."','".$sn_number7."','".$product_price7."','".$sum_amount7."','".$sale_remarkk7."','".$warranty7."','".$delivery_cost7."','".$free_count7."')";
 
 $objQuery7 = mysqli_query($conn,$strSQL7);	
 	
@@ -337,8 +357,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id8 !=''){
 
 $strSQL8 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id8."','".$product_id8."','".$sale_count8."','".$sn_number8."','".$product_price8."','".$sum_amount8."','".$sale_remarkk8."','".$warranty8."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id8."','".$product_id8."','".$sale_count8."','".$sn_number8."','".$product_price8."','".$sum_amount8."','".$sale_remarkk8."','".$warranty8."','".$delivery_cost8."','".$free_count8."')";
 
 $objQuery8 = mysqli_query($conn,$strSQL8);	
 	
@@ -354,8 +374,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id9 !=''){
 
 $strSQL9 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id9."','".$product_id9."','".$sale_count9."','".$sn_number9."','".$product_price9."','".$sum_amount9."','".$sale_remarkk9."','".$warranty9."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id9."','".$product_id9."','".$sale_count9."','".$sn_number9."','".$product_price9."','".$sum_amount9."','".$sale_remarkk9."','".$warranty9."','".$delivery_cost9."','".$free_count9."')";
 
 $objQuery9 = mysqli_query($conn,$strSQL9);	
 	
@@ -371,8 +391,8 @@ $objQuery92 = mysqli_query($conn,$strSQL92);
 if($product_id10 !=''){
 
 $strSQL10 = "insert into hos__subrental
-(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty)
-values ('".$ref_id."','".$product_id10."','".$product_id10."','".$sale_count10."','".$sn_number10."','".$product_price10."','".$sum_amount10."','".$sale_remarkk10."','".$warranty10."')";
+(ref_idd,product_id,product_code,count,sn_number,price,amount,remark_sale,warranty,delivery_cost,free_count)
+values ('".$ref_id."','".$product_id10."','".$product_id10."','".$sale_count10."','".$sn_number10."','".$product_price10."','".$sum_amount10."','".$sale_remarkk10."','".$warranty10."','".$delivery_cost10."','".$free_count10."')";
 
 $objQuery10 = mysqli_query($conn,$strSQL10);	
 	

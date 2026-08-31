@@ -123,6 +123,10 @@ $customerData = array(
     'contact_name' => '',
     'close_ckk' => '',
     'cus_fax' => '',
+    'rental_address' => '',
+    'rental_ampher' => '',
+    'rental_province' => '',
+    'rental_postcode' => '',
 );
 
 $selectedSaleCodes = array();
@@ -1321,6 +1325,47 @@ if (empty($shippingRecords)) {
                     </section>
 
                     <section class="section-block">
+                        <h2 class="section-title">ที่อยู่ผู้เช่า</h2>
+                        <div class="field-grid">
+                            <div class="field span-3">
+                                <label class="field-label" for="rental_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน</label>
+                                <div class="input-shell">
+                                    <input type="text" name="rental_address" id="rental_address" class="form-input js-clearable" value="<?php echo h($customerData['rental_address']); ?>" placeholder="ใส่รายละเอียดที่อยู่ผู้เช่า">
+                                    <button type="button" class="field-clear" data-clear-target="rental_address" aria-label="ล้างค่า">&times;</button>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field-label" for="rental_province">จังหวัด</label>
+                                <div class="select-shell">
+                                    <select name="rental_province" id="rental_province" class="form-select">
+                                        <option value="">เลือกจังหวัด</option>
+                                        <?php foreach ($provinces as $province) { ?>
+                                            <option value="<?php echo h($province['province_name']); ?>" <?php echo ($customerData['rental_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field-label" for="rental_ampher">เขต/อำเภอ</label>
+                                <div class="input-shell">
+                                    <input type="text" name="rental_ampher" id="rental_ampher" class="form-input js-clearable" value="<?php echo h($customerData['rental_ampher']); ?>" placeholder="District / Amphur">
+                                    <button type="button" class="field-clear" data-clear-target="rental_ampher" aria-label="ล้างค่า">&times;</button>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field-label" for="rental_postcode">รหัสไปรษณีย์</label>
+                                <div class="input-shell">
+                                    <input type="text" name="rental_postcode" id="rental_postcode" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['rental_postcode']); ?>" inputmode="numeric" maxlength="10" placeholder="Postcode">
+                                    <button type="button" class="field-clear" data-clear-target="rental_postcode" aria-label="ล้างค่า">&times;</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="section-block">
                         <h2 class="section-title">สิทธิ์การใช้งาน</h2>
                         <div class="field-grid">
                             <div class="field span-3">
@@ -1373,10 +1418,6 @@ if (empty($shippingRecords)) {
                         <input type="hidden" name="warranty" value="">
                         <input type="hidden" name="cus_fax" value="<?php echo h($customerData['cus_fax']); ?>">
                         <input type="hidden" name="rental_name" value="">
-                        <input type="hidden" name="rental_address" value="">
-                        <input type="hidden" name="rental_ampher" value="">
-                        <input type="hidden" name="rental_province" value="">
-                        <input type="hidden" name="rental_postcode" value="">
                         <input type="hidden" name="rental_tel" value="">
                         <input type="hidden" name="rental_emer" value="">
                         <input type="hidden" name="rental_emertel" value="">

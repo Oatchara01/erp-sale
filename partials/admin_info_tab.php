@@ -181,7 +181,7 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			background-color: #FFCDD2;
 		}
 
-		.admin-ui-btn.variant-danger.active {
+		.admin-ui-btn.active {
 			background-color: #D32F2F;
 			color: #FFFFFF;
 			border-color: #B71C1C;

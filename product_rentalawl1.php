@@ -128,6 +128,12 @@ document.getElementById(warranty).value = myArr[4];
 <td style="width:10%;">
 <textarea  name = "sale_remarkk6"  id = "sale_remarkk6"  class="w3-input" ></textarea>
 </td>
+<td style="width:6%;">
+<input type='text' name = "free_count6"  id = "free_count6"  class="w3-input" style="color:black;text-align:center" value="0"/>
+</td>
+<td style="width:8%;">
+<input type='text' name = "delivery_cost6"  id = "delivery_cost6"  class="w3-input" style="color:black;text-align:right" value="0"/>
+</td>
 
 <td style="width:2%;"><a onclick="document.getElementById('product_code6').value = '';
 document.getElementById('product_name6').value  = ''; 
@@ -179,6 +185,12 @@ document.getElementById('warranty6').value  = '';
 </td>	
 <td style="width:10%;">
 <textarea name = "sale_remarkk7"  id = "sale_remarkk7"  class="w3-input" ></textarea>
+</td>
+<td style="width:6%;">
+<input type='text' name = "free_count7"  id = "free_count7"  class="w3-input" style="color:black;text-align:center" value="0"/>
+</td>
+<td style="width:8%;">
+<input type='text' name = "delivery_cost7"  id = "delivery_cost7"  class="w3-input" style="color:black;text-align:right" value="0"/>
 </td>
 
 <td style="width:2%;"><a onclick="document.getElementById('product_code7').value = '';
@@ -233,6 +245,12 @@ document.getElementById('warranty7').value  = '';
 <td>
 <textarea  name = "sale_remarkk8"  id = "sale_remarkk8"  class="w3-input" ></textarea>
 </td>
+<td>
+<input type='text' name = "free_count8"  id = "free_count8"  class="w3-input" style="color:black;text-align:center" value="0"/>
+</td>
+<td>
+<input type='text' name = "delivery_cost8"  id = "delivery_cost8"  class="w3-input" style="color:black;text-align:right" value="0"/>
+</td>
 
 <td><a onclick="document.getElementById('product_code8').value = '';
 document.getElementById('product_name8').value  = ''; 
@@ -286,6 +304,12 @@ document.getElementById('warranty8').value  = '';
 <td>
 <textarea  name = "sale_remarkk9"  id = "sale_remarkk9"  class="w3-input" ></textarea>
 </td>
+<td>
+<input type='text' name = "free_count9"  id = "free_count9"  class="w3-input" style="color:black;text-align:center" value="0"/>
+</td>
+<td>
+<input type='text' name = "delivery_cost9"  id = "delivery_cost9"  class="w3-input" style="color:black;text-align:right" value="0"/>
+</td>
 
 <td><a onclick="document.getElementById('product_code9').value = '';
 document.getElementById('product_name9').value  = ''; 
@@ -338,6 +362,12 @@ document.getElementById('warranty9').value  = '';
 </td>	
 <td>
 <textarea  name = "sale_remarkk10"  id = "sale_remarkk10"  class="w3-input" ></textarea>
+</td>
+<td>
+<input type='text' name = "free_count10"  id = "free_count10"  class="w3-input" style="color:black;text-align:center" value="0"/>
+</td>
+<td>
+<input type='text' name = "delivery_cost10"  id = "delivery_cost10"  class="w3-input" style="color:black;text-align:right" value="0"/>
 </td>
 
 <td><a onclick="document.getElementById('product_code10').value = '';

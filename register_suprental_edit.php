@@ -760,6 +760,8 @@ $fetch3 = mysqli_fetch_array($query3);
 	<th>หมายเลขเครื่อง</th>
 	<th>รับประกัน</th>
 	<th>หมายเหตุ</th>
+	<th>ของแถม</th>
+	<th>ค่าจัดส่ง</th>
 
 </tbody>
 <?php 	
@@ -909,6 +911,12 @@ $objQuery = mysqli_query($conn,$strSQL);
 </td>
 <td style="width:8%;">
 <textarea name = "sale_remarkk[]<?php echo $objResult1["id_sub"];?>"  id = "sale_remarkk[]<?php echo $objResult1["id_sub"];?>"  class="w3-input" ><?php echo $objResult1["remark_sale"]; ?></textarea>
+</td>
+<td style="width:6%;">
+<input type='text' name = "free_count[]<?php echo $objResult1["id_sub"];?>" id = "free_count[]<?php echo $objResult1["id_sub"];?>" value="<?php echo $objResult1["free_count"]; ?>"  class="w3-input" style="color:black;text-align:center" />
+</td>
+<td style="width:8%;">
+<input type='text' name = "delivery_cost[]<?php echo $objResult1["id_sub"];?>" id = "delivery_cost[]<?php echo $objResult1["id_sub"];?>" value="<?php echo $objResult1["delivery_cost"]; ?>"  class="w3-input" style="color:black;text-align:right" />
 </td>
 <?php if($objResult["send_admin"]=='0'){ ?>
 <td style="width:2%;"><a href="product_choadelete.php?ref_id=<?php echo $objResult["ref_id"];?>&id_sub=<?php echo $objResult1["id_sub"];?>"><img src="img/false.png" width="16" height="16" border="0" /></a></td>
