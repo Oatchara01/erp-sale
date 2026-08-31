@@ -148,25 +148,6 @@
 }
 
 /* ===== Responsive Media Queries ===== */
-.so-tabs-container {
-	display: flex;
-	gap: 12px;
-	margin-bottom: 24px;
-	overflow-x: auto;
-	white-space: nowrap;
-	-webkit-overflow-scrolling: touch;
-	padding-bottom: 4px;
-}
-
-.so-tabs-container::-webkit-scrollbar {
-	height: 4px;
-}
-
-.so-tabs-container::-webkit-scrollbar-thumb {
-	background: var(--so-border);
-	border-radius: 4px;
-}
-
 @media (max-width: 992px) {
 	.so-grid-3 {
 		grid-template-columns: repeat(2, 1fr);

@@ -850,7 +850,7 @@
 							<div class="so-field-group" style="margin-bottom: 0;">
 								<label class="so-label" for="rental_name">ชื่อผู้เช่า<span style="color: #dc3545;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type='text' name="rental_name" id="rental_name" class="so-input" style="padding-right: 32px;">
+									<input type='text' name="rental_name" id="rental_name" class="so-input" placeholder="ระบุชื่อผู้เช่า" style="padding-right: 32px;">
 									<i class="fas fa-times so-clear-icon" onclick="document.getElementById('rental_name').value='';" aria-label="ล้างชื่อผู้เช่า"></i>
 								</div>
 							</div>
@@ -923,14 +923,14 @@
 						<div class="so-field-group" style="margin-bottom: 0;">
 							<label class="so-label" for="rental_tel">เบอร์โทรศัพท์<span style="color: #dc3545;">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="rental_tel" id="rental_tel" class="so-input" style="padding-right: 32px;">
+								<input type='text' name="rental_tel" id="rental_tel" class="so-input" placeholder="ระบุเบอร์โทรศัพท์" style="padding-right: 32px;">
 								<i class="fas fa-times so-clear-icon" onclick="document.getElementById('rental_tel').value='';" aria-label="ล้างเบอร์โทรศัพท์"></i>
 							</div>
 						</div>
 						<div class="so-field-group" style="margin-bottom: 0;">
 							<label class="so-label" for="rental_addr_detail">ที่อยู่ผู้เช่า<span style="color: #dc3545;">*</span></label>
 							<div class="so-input-wrapper">
-								<input type="text" name="rental_addr_detail" id="rental_addr_detail" class="so-input" style="padding-right: 32px;">
+								<input type="text" name="rental_addr_detail" id="rental_addr_detail" class="so-input" placeholder="ระบุที่อยู่ผู้เช่า" style="padding-right: 32px;">
 								<i class="fas fa-times so-clear-icon" onclick="document.getElementById('rental_addr_detail').value='';" aria-label="ล้างที่อยู่ผู้เช่า"></i>
 							</div>
 						</div>
@@ -975,7 +975,7 @@
 						<div class="so-field-group" style="margin-bottom: 0;">
 							<label class="so-label" for="rental_referrer">ผู้แนะนำ</label>
 							<div class="so-input-wrapper">
-								<input type="text" name="rental_referrer" id="rental_referrer" class="so-input" style="padding-right: 32px;">
+								<input type="text" name="rental_referrer" id="rental_referrer" class="so-input" placeholder="ระบุชื่อผู้แนะนำ" style="padding-right: 32px;">
 								<i class="fas fa-times so-clear-icon" onclick="document.getElementById('rental_referrer').value='';" aria-label="ล้างผู้แนะนำ"></i>
 							</div>
 						</div>
@@ -1417,7 +1417,7 @@
 				</script>
 
 				<!-- ===================== แท็บข้อมูลการเงิน & ประวัติงาน ===================== -->
-				<div class="so-tabs-container">
+				<div class="so-tabs-container" style="margin-top: 24px;">
 					<button type="button" class="so-tab-btn active" onclick="rtOpenFinTab('rt-fin-1', this)">ข้อมูลการคืนเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-2', this)">รายละเอียดการชำระเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-3', this)">ข้อมูลการรับส่งสินค้า</button>
