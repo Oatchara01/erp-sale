@@ -842,6 +842,11 @@ body {
 	width: 16px;
 }
 
+.so-overflow-menu button img {
+	vertical-align: middle;
+	margin-right: 4px;
+}
+
 .so-overflow-menu .so-menu-danger {
 	color: #DC3545;
 }

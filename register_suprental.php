@@ -601,19 +601,29 @@
 	// mirror register_supchange.php:285-358 — ทุก query กันด้วย mysqli_num_rows/query truthiness
 	// ไม่มีแถวก็ปล่อยเป็น null เพื่อ fallback เป็นฟอร์มว่างเหมือนสร้างใหม่
 	$savedRentalRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+	// คัดลอกใบเดิม: ?copy_from=... โหลดข้อมูลเอกสารเก่ามา prefill แต่ต้องไม่ตั้ง $savedRental
+	// เพื่อให้ $rentalIsEditMode ยังคงเป็น false (สร้างเอกสารใหม่จริง ไม่ใช่ทับเอกสารเดิม) — ดู register_supchange.php:289-292
+	$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+	$loadRentalRefId = $savedRentalRefId !== "" ? $savedRentalRefId : $copyFromRefId;
 	$savedRental = null;
+	$copySrcRental = null;
 	$savedRegister = null;
 	$savedTransaction = null;
 	$savedRentalProducts = array();
 	$savedRentalCustomerDisplay = null;
 
-	if ($savedRentalRefId !== "") {
-		$savedRentalQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+	if ($loadRentalRefId !== "") {
+		$savedRentalQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $loadRentalRefId . "' LIMIT 1");
 		if ($savedRentalQuery && mysqli_num_rows($savedRentalQuery) > 0) {
-			$savedRental = mysqli_fetch_assoc($savedRentalQuery);
+			$loadedRental = mysqli_fetch_assoc($savedRentalQuery);
+			if ($savedRentalRefId !== "") {
+				$savedRental = $loadedRental;
+			} else {
+				$copySrcRental = $loadedRental;
+			}
 
-			if (!empty($savedRental['rental_id'])) {
-				$savedRentalCustIdEsc = mysqli_real_escape_string($conn, $savedRental['rental_id']);
+			if (!empty($loadedRental['rental_id'])) {
+				$savedRentalCustIdEsc = mysqli_real_escape_string($conn, $loadedRental['rental_id']);
 				$savedRentalCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel,
 					c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
 					FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id
@@ -623,18 +633,18 @@
 				}
 			}
 
-			$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+			$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $loadRentalRefId . "' LIMIT 1");
 			if ($savedRegisterQuery) {
 				$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
 			}
 
-			$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+			$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $loadRentalRefId . "' LIMIT 1");
 			if ($savedTransactionQuery) {
 				$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 			}
 
 			// LEFT JOIN tb_product เพราะ hos__subrental ไม่มีคอลัมน์ product_name/unit_name ของตัวเอง
-			$savedRentalProductsQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $savedRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
+			$savedRentalProductsQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $loadRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
 			if ($savedRentalProductsQuery) {
 				while ($savedRentalProductRow = mysqli_fetch_assoc($savedRentalProductsQuery)) {
 					$savedRentalProducts[] = $savedRentalProductRow;
@@ -645,47 +655,55 @@
 
 	$rentalIsEditMode = ($savedRental !== null);
 	$rentalIsCancelChecked = $rentalIsEditMode && (($savedRental['cancel_flag'] ?? '0') == '1');
+	$rentalSrc = $savedRental ?? $copySrcRental;
 
-	// ---- แผนที่ค่า prefill สำหรับ edit mode ----
+	// ---- แผนที่ค่า prefill สำหรับ edit mode / คัดลอกใบเดิม (copy_from) ----
 	// พอร์ต pattern เดียวกับ register_supchange.php:362-483 — เติมค่าที่เดียว แล้วให้ JS ตัวเดียว
-	// เติมกลับเข้าฟอร์ม (ดู script ก่อนปิด </form>)
+	// เติมกลับเข้าฟอร์ม (ดู script ก่อนปิด </form>) — ใช้ $rentalSrc (edit หรือ copy) ไม่ใช่ $savedRental ตรงๆ
+	// เพราะฟิลด์ที่ผูกกับสถานะเอกสารเดิม (ref_id, promis_no, bank_img) ยังต้องอ้าง $savedRental/$rentalIsEditMode ตรงๆ ต่อไป
 	$rentalPrefill = array();
-	if ($savedRental !== null) {
+	if ($rentalSrc !== null) {
 		$rentalTypeProductMap = array('1' => 'สินค้าเตียง', '2' => 'สินค้าที่นอน', '3' => 'สินค้าอื่นๆ');
 		$rentalPrefill = array(
-			'type_doc' => $savedRental['type_doc'],
-			'sale_code' => $savedRental['sale_code'],
-			'product_type_rental' => $rentalTypeProductMap[$savedRental['type_product'] ?? ''] ?? '',
-			'start_promis' => so_saved_iso_date_input($savedRental['start_promis'] ?? ''),
-			'count_m' => $savedRental['count_m'],
-			'rental_item_name' => $savedRental['des_productunit'],
-			'have_order' => $savedRental['have_order'],
-			'register_date' => so_saved_iso_date_input($savedRental['register_date'] ?? ''),
-			'rental_address' => $savedRental['rental_address'],
-			'rental_name' => $savedRental['rental_name'],
-			'rental_id' => $savedRental['rental_id'],
-			'h_rental_id' => $savedRental['rental_id'],
-			'rental_tel' => $savedRental['rental_tel'],
-			'rental_addr_detail' => $savedRental['rental_addr_detail'],
-			'rental_province' => $savedRental['rental_province'],
-			'rental_district' => $savedRental['rental_district'],
-			'rental_zipcode' => $savedRental['rental_zipcode'],
-			'rental_referrer' => $savedRental['rental_referrer'],
-			'rental_repeat_cus' => $savedRental['rental_repeat_cus'],
-			'payment' => $savedRental['payment'],
-			'des_sale' => $savedRental['des_sale'],
-			'delivery_type' => $savedRental['delivery_type'],
-			'start_date' => so_saved_iso_date_input($savedRental['delivery_date'] ?? ''),
-			'between_date' => $savedRental['delivery_key'],
-			'shipping_date' => so_saved_iso_date_input($savedRental['date_ker'] ?? ''),
-			'shipping_ref1' => $savedRental['order_refer_code'],
-			'shipping_ref2' => $savedRental['order_refer_code1'],
-			'shipping_cost' => $savedRental['ker_bath'],
-			'bank_name' => $savedRental['bank_name'],
-			'bank_no' => $savedRental['bank_no'],
-			'accbank_name' => $savedRental['accbank_name'],
-			'send_cs' => (($savedRental['send_cs'] ?? '') === '2') ? '1' : '0',
+			'type_doc' => $rentalSrc['type_doc'],
+			'sale_code' => $rentalSrc['sale_code'],
+			'product_type_rental' => $rentalTypeProductMap[$rentalSrc['type_product'] ?? ''] ?? '',
+			'start_promis' => so_saved_iso_date_input($rentalSrc['start_promis'] ?? ''),
+			'count_m' => $rentalSrc['count_m'],
+			'rental_item_name' => $rentalSrc['des_productunit'],
+			'have_order' => $rentalSrc['have_order'],
+			'register_date' => so_saved_iso_date_input($rentalSrc['register_date'] ?? ''),
+			'rental_address' => $rentalSrc['rental_address'],
+			'rental_name' => $rentalSrc['rental_name'],
+			'rental_id' => $rentalSrc['rental_id'],
+			'h_rental_id' => $rentalSrc['rental_id'],
+			'rental_tel' => $rentalSrc['rental_tel'],
+			'rental_addr_detail' => $rentalSrc['rental_addr_detail'],
+			'rental_province' => $rentalSrc['rental_province'],
+			'rental_district' => $rentalSrc['rental_district'],
+			'rental_zipcode' => $rentalSrc['rental_zipcode'],
+			'rental_referrer' => $rentalSrc['rental_referrer'],
+			'rental_repeat_cus' => $rentalSrc['rental_repeat_cus'],
+			'payment' => $rentalSrc['payment'],
+			'des_sale' => $rentalSrc['des_sale'],
+			'delivery_type' => $rentalSrc['delivery_type'],
+			'start_date' => so_saved_iso_date_input($rentalSrc['delivery_date'] ?? ''),
+			'between_date' => $rentalSrc['delivery_key'],
+			'shipping_date' => so_saved_iso_date_input($rentalSrc['date_ker'] ?? ''),
+			'shipping_ref1' => $rentalSrc['order_refer_code'],
+			'shipping_ref2' => $rentalSrc['order_refer_code1'],
+			'shipping_cost' => $rentalSrc['ker_bath'],
+			'bank_name' => $rentalSrc['bank_name'],
+			'bank_no' => $rentalSrc['bank_no'],
+			'accbank_name' => $rentalSrc['accbank_name'],
+			'send_cs' => (($rentalSrc['send_cs'] ?? '') === '2') ? '1' : '0',
 		);
+
+		// คัดลอกใบเดิม (copy_from): เอกสารใหม่ต้องใช้วันที่ลงทะเบียนปัจจุบัน ($today ที่ hidden input
+		// register_date default ไว้อยู่แล้ว) ไม่ใช่วันที่ของเอกสารต้นฉบับ
+		if ($savedRental === null && $copySrcRental !== null) {
+			unset($rentalPrefill['register_date']);
+		}
 
 		if ($savedRegister !== null) {
 			$rentalAddress1OrName = ($savedRegister['address_1'] ?? '') !== '' ? $savedRegister['address_1'] : ($savedRegister['address_name'] ?? '');
@@ -837,20 +855,80 @@
 				return false;
 			}
 
-			// บันทึกร่าง: ใช้ submit จริงเส้นทางเดียวกับปุ่ม Submit แต่ข้าม client-side validation
-			// (register_suprental1.php เป็นสคริปต์เก่าไม่มี is_draft/status_doc แบบ register_supchange1.php
-			// จึงบันทึกเป็นเอกสารจริงเหมือน Submit ปกติ ต่างกันแค่ไม่บังคับกรอกครบก่อน)
+			// บันทึกร่าง: AJAX POST is_draft=1 ไปยัง register_suprental_draft1.php แล้ว redirect
+			// กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ — พอร์ตจาก register_supchange.php: chgSaveDraft
 			function rtSaveDraft() {
-				if (rtSubmitting) return;
-				rtSubmitting = true;
+				var form = document.forms['frmMain'];
+				if (!form) return;
 
-				var rtDraftBtn = document.getElementById('btn_save_draft');
-				if (rtDraftBtn) {
-					rtDraftBtn.disabled = true;
-					rtDraftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				var btn = form.querySelector('[name="save_draft"]');
+				var defaultHtml = btn ? btn.innerHTML : '';
+				var formData = new FormData(form);
+				formData.set('is_draft', '1');
+
+				if (btn) {
+					btn.disabled = true;
+					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
 				}
 
-				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+				fetch('register_suprental_draft1.php', {
+						method: 'POST',
+						body: formData
+					})
+					.then(function(res) {
+						return res.json();
+					})
+					.then(function(data) {
+						if (data && data.success) {
+							if (typeof Swal !== 'undefined') {
+								Swal.fire({
+									title: 'Save Draft success',
+									text: 'Ref ID: ' + (data.ref_id || ''),
+									icon: 'success',
+									confirmButtonColor: '#612989'
+								}).then(function() {
+									if (data.ref_id) {
+										window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+									}
+								});
+							} else {
+								alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
+								if (data.ref_id) {
+									window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+								}
+							}
+						} else {
+							var msg = (data && data.message) ? data.message : 'เกิดข้อผิดพลาดในการบันทึกร่าง';
+							if (typeof Swal !== 'undefined') {
+								Swal.fire({
+									title: 'Save Draft error',
+									text: msg,
+									icon: 'error',
+									confirmButtonColor: '#612989'
+								});
+							} else {
+								alert(msg);
+							}
+						}
+					})
+					.catch(function(err) {
+						if (typeof Swal !== 'undefined') {
+							Swal.fire({
+								title: 'Save Draft error',
+								text: String(err),
+								icon: 'error',
+								confirmButtonColor: '#612989'
+							});
+						} else {
+							alert('Save Draft error: ' + String(err));
+						}
+					})
+					.finally(function() {
+						if (btn) {
+							btn.disabled = false;
+							btn.innerHTML = defaultHtml;
+						}
+					});
 			}
 
 			// เปิดพรีวิวใบสั่งเช่าในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ from_rental.php
@@ -2358,14 +2436,92 @@
 			</div>
 		</div>
 
+		<?php
+		// แถบปุ่มล่าง — พอร์ต business flow เดียวกับ register_supchange.php:1746-1789
+		// (Draft -> Request รออนุมัติ -> Approve/ส่งกลับ/ไม่อนุมัติ) มาใช้กับคอลัมน์ status_doc/send_sup
+		// ที่มีอยู่แล้วใน hos__rental (status_suprental.php filter/แสดง badge จากคอลัมน์นี้อยู่แล้ว
+		// แต่ยังไม่เคยมีหน้าไหนเขียน/action บนค่านี้จริงมาก่อน)
+		$rtStatusDoc = $savedRental['status_doc'] ?? '';
+		$rtSendSup = $savedRental['send_sup'] ?? '0';
+		$rtIsClosed = in_array($rtStatusDoc, ['Approve', 'ยกเลิก'], true);
+		$rtHideSubmit = $rentalIsEditMode && ((string)$rtSendSup === '1' || $rtIsClosed);
+		$rtIsSaleUser = (($_SESSION['type_login'] ?? '') === 'Sale');
+		$rtCanShowApproveBar = $rentalIsEditMode && !$rtIsSaleUser && ($rtStatusDoc === 'Request');
+		$rtHideUpdate = $rtIsClosed || $rtCanShowApproveBar;
+		?>
 		<div class="so-sticky-actions">
 			<div class="so-sticky-actions-inner">
-				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-				<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
+				<?php if ($rtCanShowApproveBar): ?>
+					<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
+					     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
+					<input type="hidden" name="approve_action" id="rt_approve_action" value="">
+					<div class="so-approve-actions">
+						<button type="button" class="so-overflow-menu-trigger" id="btn_rt_approve_overflow" onclick="toggleRtApproveOverflowMenu()">
+							<i class="fas fa-ellipsis-v"></i>
+						</button>
+						<div id="rtApproveOverflowMenu" class="so-overflow-menu">
+							<button type="button" onclick="rtRunApproveAction('return', true)"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+							<button type="button" class="so-menu-danger" onclick="rtRunApproveAction('reject', true)"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+							<button type="button" onclick="triggerCancelDocFromRtApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+						</div>
+						<button type="button" class="btn-so-approve" onclick="rtRunApproveAction('approve', false)"><img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ</button>
+						<button type="button" name="save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update</button>
+					</div>
+				<?php endif; ?>
+				<?php if (!$rtHideSubmit): ?>
+					<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+				<?php endif; ?>
+				<?php if (!$rtHideUpdate): ?>
+					<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> <?php echo $rentalIsEditMode ? 'Update' : 'Save Draft'; ?></button>
+				<?php endif; ?>
 				<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupRental();">ยกเลิก</button>
 			</div>
 		</div>
 	</form>
+
+	<script>
+		function toggleRtApproveOverflowMenu() {
+			var menu = document.getElementById('rtApproveOverflowMenu');
+			if (!menu) return;
+			menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+		}
+
+		document.addEventListener('click', function(e) {
+			var menu = document.getElementById('rtApproveOverflowMenu');
+			var trigger = document.getElementById('btn_rt_approve_overflow');
+			if (!menu || menu.style.display === 'none' || !menu.style.display) return;
+			if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+			if (!menu.contains(e.target)) menu.style.display = 'none';
+		});
+
+		// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป register_suprental_edit1.php
+		// พอร์ตจาก register_supchange.php: chgRunApproveAction — ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้
+		// ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+		function rtRunApproveAction(action, skipValidation) {
+			var field = document.getElementById('rt_approve_action');
+			if (field) field.value = action;
+
+			if (skipValidation) {
+				if (rtSubmitting) return;
+				rtSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+				return;
+			}
+
+			fncSubmit();
+			// fncSubmit() คืนค่า false ทั้งกรณีสำเร็จและ validation ไม่ผ่าน จึงดูจากธง rtSubmitting แทน
+			if (!rtSubmitting && field) field.value = '';
+		}
+
+		// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก rt_admin_cancel_doc (คนละกลไกกับ status_doc โดยตั้งใจ
+		// ดู sql/suprental_optional_columns.sql:4-7) แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
+		function triggerCancelDocFromRtApproveMenu() {
+			rtToggleCancelDoc();
+			if (rtSubmitting) return;
+			rtSubmitting = true;
+			HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+		}
+	</script>
 
 	<?php if (count($rentalPrefill) > 0) { ?>
 		<!-- เติมค่ากลับเข้าฟอร์มใน edit mode — ตัวเดียวจบทั้งฟอร์ม (pattern เดียวกับ register_supchange.php) -->

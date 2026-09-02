@@ -3,7 +3,13 @@
 // เพื่อให้เรียก header('Location: ...') ได้จริงตอนบันทึกสำเร็จ (true POST-Redirect-GET)
 // (pattern เดียวกับ register_suprental1.php ที่แก้ไว้แล้ว / register_supchange_edit1.php)
 ob_start();
-include ("head.php"); ?>
+$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+if (!$isDraftRequest) {
+	include ("head.php");
+} else {
+	header('Content-Type: application/json; charset=utf-8');
+}
+?>
 
 
 <?php
@@ -13,10 +19,14 @@ include ("error_page.php");
 date_default_timezone_set("Asia/Bangkok");
 
 if (!function_exists('rt_abort_with_alert')) {
-	function rt_abort_with_alert($message)
+	function rt_abort_with_alert($message, $isDraftRequest = false)
 	{
 		if (ob_get_level() > 0) {
 			ob_end_clean();
+		}
+		if ($isDraftRequest) {
+			echo json_encode(array('success' => false, 'message' => $message));
+			exit();
 		}
 		$safeMessage = str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $message);
 		echo "<script>alert('" . $safeMessage . "');history.back();</script>";
@@ -25,17 +35,17 @@ if (!function_exists('rt_abort_with_alert')) {
 }
 
 if (!isset($_POST["submit"]) || $_POST["submit"] !== "submit") {
-	rt_abort_with_alert('ไม่พบข้อมูลที่จะบันทึก');
+	rt_abort_with_alert('ไม่พบข้อมูลที่จะบันทึก', $isDraftRequest);
 }
 
 $ref_id = mysqli_real_escape_string($conn, $_POST["ref_id"] ?? '');
 if ($ref_id === '') {
-	rt_abort_with_alert('ไม่พบเลขที่อ้างอิง (ref_id)');
+	rt_abort_with_alert('ไม่พบเลขที่อ้างอิง (ref_id)', $isDraftRequest);
 }
 
 $rentalExistsQuery = mysqli_query($conn, "SELECT ref_id FROM hos__rental WHERE ref_id = '" . $ref_id . "' LIMIT 1");
 if (!$rentalExistsQuery || mysqli_num_rows($rentalExistsQuery) === 0) {
-	rt_abort_with_alert('ไม่พบเอกสารนี้ในระบบ (ref_id: ' . $ref_id . ')');
+	rt_abort_with_alert('ไม่พบเอกสารนี้ในระบบ (ref_id: ' . $ref_id . ')', $isDraftRequest);
 }
 
 // ===== $_POST -> ตัวแปร (เหมือน register_suprental1.php ทุกประการ ยกเว้นไม่มีการ generate ref_id ใหม่) =====
@@ -121,11 +131,25 @@ $bank_img_existing = mysqli_real_escape_string($conn, $_POST['bank_img_existing'
 if (!isset($_FILES['bank_img']) || $_FILES['bank_img']['size'] == 0) {
 	$bank_img = $bank_img_existing;
 } else if ($_FILES['bank_img']['size'] > 1100000) {
-	rt_abort_with_alert('กรุณาแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB');
+	rt_abort_with_alert('กรุณาแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB', $isDraftRequest);
 } else {
 	$temp = explode(".", $_FILES["bank_img"]["name"]);
 	$bank_img = "bank_img" . "_" . $ref_id . "_" . round(microtime(true)) . '.' . end($temp);
 	move_uploaded_file($_FILES["bank_img"]["tmp_name"], "credit_no/" . $bank_img);
+}
+
+// สถานะเอกสาร/ส่งหัวหน้า — พอร์ตจาก register_supchange_edit1.php:185,232-239,309-317 (ไม่มีสาขา "ยกเลิก"
+// เพราะ rental ใช้ cancel_flag/remark_cancel แยกจาก status_doc อยู่แล้ว ดู sql/suprental_optional_columns.sql:4-7)
+$status_doc = $isDraftRequest ? "Draft" : "Request";
+$rtName = trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''));
+$rtNowDateTime = date('Y-m-d H:i:s');
+// Save Draft/Update ธรรมดาต้องไม่แตะสถานะ/ส่งหัวหน้าเลย ไม่งั้นเอกสารที่ส่งไปแล้ว (Request) จะถูกดึงกลับ
+// เป็น Draft เพียงเพราะผู้ใช้กดปุ่ม Update — ตั้งค่าเฉพาะตอน Submit จริงเท่านั้น
+$rtSetStatusColumns = !$isDraftRequest;
+if ($rtSetStatusColumns) {
+	$send_sup_val = "1";
+	$sup_name_val = mysqli_real_escape_string($conn, $rtName);
+	$sup_date_val = $rtNowDateTime;
 }
 
 $saveOk = true;
@@ -134,7 +158,11 @@ mysqli_begin_transaction($conn);
 try {
 
 	// ===== ตารางหลัก (hos__rental) — UPDATE ไม่แตะ ref_id/add_date/add_by/sale_code (คงผู้สร้างเอกสารเดิมไว้) =====
-	$save = "Update hos__rental set
+	$save = "Update hos__rental set" . ($rtSetStatusColumns ? "
+	status_doc='" . $status_doc . "',
+	send_sup='" . $send_sup_val . "',
+	sup_name='" . $sup_name_val . "',
+	sup_date='" . $sup_date_val . "'," : "") . "
 	type_doc='" . $type_doc . "',
 	register_date='" . $register_date . "',
 	rental_name='" . $rental_name . "',
@@ -474,12 +502,36 @@ try {
 
 if ($saveOk) {
 	mysqli_commit($conn);
+
+	// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_suprental.php =====
+	// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
+	// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — พอร์ตจาก register_supchange_edit1.php:559-579
+	// ไม่มีคอลัมน์ approve/approve_code/approve_date/approve_time ใน hos__rental เหมือน hos__change
+	// จึงใช้เท่าที่มี (send_admin สำหรับกรณีอนุมัติ)
+	$rtApproveAction = $_POST['approve_action'] ?? '';
+	if ($rtApproveAction !== '') {
+		$rtSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+
+		if ($rtApproveAction === 'return') {
+			// ส่งกลับให้ Sale แก้ไข — send_sup='0' ทำให้ปุ่ม Submit บนฟอร์มกลับมาใช้ได้อีกครั้ง
+			mysqli_query($conn, "UPDATE hos__rental SET status_doc='ส่งกลับ', send_sup='0' WHERE ref_id='" . $rtSafeRefId . "'");
+		} elseif ($rtApproveAction === 'reject') {
+			mysqli_query($conn, "UPDATE hos__rental SET status_doc='Rejected' WHERE ref_id='" . $rtSafeRefId . "'");
+		} elseif ($rtApproveAction === 'approve') {
+			mysqli_query($conn, "UPDATE hos__rental SET status_doc='Approve', send_admin='1' WHERE ref_id='" . $rtSafeRefId . "'");
+		}
+	}
+
 	if (ob_get_level() > 0) {
 		ob_end_clean();
+	}
+	if ($isDraftRequest) {
+		echo json_encode(array('success' => true, 'ref_id' => $ref_id));
+		exit();
 	}
 	header('Location: register_suprental.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
 	exit();
 } else {
 	mysqli_rollback($conn);
-	rt_abort_with_alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $saveError);
+	rt_abort_with_alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $saveError, $isDraftRequest);
 }

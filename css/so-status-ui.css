@@ -514,6 +514,163 @@ body.has-sidebar.sidebar-collapsed {
 	/* override .so-table's 1120px — this table has only 3 columns */
 }
 
+
+/* Figma parity: rental status filter modal, node 646:2284 */
+.so-figma-filter-modal {
+	padding-top: 0 !important;
+	background: rgba(0, 0, 0, 0.35) !important;
+}
+
+.so-figma-filter-content {
+	width: min(728px, calc(100vw - 32px)) !important;
+	min-height: 665px;
+	margin: max(16px, calc((100vh - 665px) / 2)) auto 16px !important;
+	padding: 0 !important;
+	border-radius: 24px !important;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12) !important;
+	overflow: hidden;
+}
+
+.so-figma-filter-body {
+	min-height: 665px;
+	padding: 36px 40px 40px 40px !important;
+	display: flex;
+	flex-direction: column;
+}
+
+.so-figma-filter-content .so-modal-header {
+	min-height: 38px;
+	margin-bottom: 28px;
+	padding: 0 0 18px 0;
+	border-bottom: 1px solid #EDE9F0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.so-figma-modal-close {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: #8E8B94;
+	cursor: pointer;
+	font-size: 26px;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.2s ease;
+}
+
+.so-figma-modal-close:hover {
+	color: #3B3B3B;
+}
+
+.so-figma-filter-content .so-form-row {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 24px;
+	margin-bottom: 24px;
+}
+
+.so-figma-filter-content .so-form-row-single {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+}
+
+.so-figma-filter-content .so-label {
+	color: #612989;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.35;
+	margin-bottom: 8px;
+	display: block;
+}
+
+.so-figma-filter-content .so-select,
+.so-figma-filter-content .so-input {
+	height: 48px;
+	border-radius: 14px;
+	background-color: #F5F6F8;
+	border: 1px solid transparent;
+	color: #3B3B3B;
+	font-size: 14px;
+	font-weight: 400;
+	padding: 0 18px;
+	width: 100%;
+	box-sizing: border-box;
+	transition: all 0.2s ease;
+}
+
+.so-figma-filter-content select.so-select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233B3B3B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 18px center;
+	padding-right: 44px;
+	cursor: pointer;
+}
+
+.so-figma-filter-content .so-modal-footer {
+	margin-top: auto;
+	padding-top: 32px;
+	display: flex;
+	gap: 16px;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+.so-figma-filter-content .btn-filter-submit {
+	min-width: 140px;
+	height: 46px;
+	padding: 0 32px;
+	border-radius: 9999px;
+	font-size: 14px;
+	font-weight: 500;
+	background: #612989;
+	color: #FFFFFF;
+	border: none;
+	cursor: pointer;
+	box-shadow: 0 2px 6px rgba(97, 41, 137, 0.25);
+	transition: all 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.so-figma-filter-content .btn-filter-submit:hover {
+	background: #502173;
+	box-shadow: 0 4px 10px rgba(97, 41, 137, 0.35);
+}
+
+.so-figma-filter-content .btn-filter-reset {
+	min-width: 140px;
+	height: 46px;
+	padding: 0 32px;
+	border-radius: 9999px;
+	font-size: 14px;
+	font-weight: 500;
+	background: #FFFFFF;
+	color: #3B3B3B;
+	border: 1px solid #D1D5DB;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	transition: all 0.2s ease;
+}
+
+.so-figma-filter-content .btn-filter-reset:hover {
+	background: #F8FAFC;
+	border-color: #CBD5E1;
+}
 @media (max-width: 600px) {
 	.cbr-summary-grid {
 		grid-template-columns: 1fr;
@@ -854,6 +1011,27 @@ body.has-sidebar.sidebar-collapsed {
 	.so-dropdown-trigger {
 		min-width: 44px;
 		min-height: 44px;
+	}
+
+	.so-figma-filter-content {
+		min-height: auto;
+		margin: 16px auto !important;
+	}
+
+	.so-figma-filter-body {
+		min-height: auto;
+		padding: 20px !important;
+	}
+
+	.so-figma-filter-content .so-form-row,
+	.so-figma-filter-content .so-form-row-single {
+		grid-template-columns: 1fr;
+		gap: 16px;
+		margin-bottom: 16px;
+	}
+
+	.so-figma-filter-content .so-modal-footer {
+		gap: 12px;
 	}
 }
 

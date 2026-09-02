@@ -4,7 +4,13 @@
 // กัน "Confirm Form Resubmission" เมื่อผู้ใช้กด reload ค้างอยู่ที่หน้า response ของ POST
 // (pattern เดียวกับ register_supchange1.php)
 ob_start();
-include ("head.php"); ?>
+$isDraftRequest = isset($_POST["is_draft"]) && $_POST["is_draft"] === "1";
+if (!$isDraftRequest) {
+	include ("head.php");
+} else {
+	header('Content-Type: application/json; charset=utf-8');
+}
+?>
 
 
 <?php
@@ -14,10 +20,14 @@ include ("error_page.php");
 date_default_timezone_set("Asia/Bangkok");
 
 if (!function_exists('rt_abort_with_alert')) {
-	function rt_abort_with_alert($message)
+	function rt_abort_with_alert($message, $isDraftRequest = false)
 	{
 		if (ob_get_level() > 0) {
 			ob_end_clean();
+		}
+		if ($isDraftRequest) {
+			echo json_encode(array('success' => false, 'message' => $message));
+			exit();
 		}
 		$safeMessage = str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $message);
 		echo "<script>alert('" . $safeMessage . "');history.back();</script>";
@@ -30,27 +40,29 @@ if (!function_exists('rt_abort_with_alert')) {
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 // ตรวจฟิลด์บังคับฝั่ง server ให้ตรงกับ rtRequiredFields ใน register_suprental.php:fncSubmit()
-// กันกรณี submit ตรงมาที่ไฟล์นี้โดยข้าม validation ฝั่ง JS
-$rtRequiredFields = [
-	'start_promis' => 'กรุณาระบุวันเริ่มสัญญา',
-	'count_m' => 'กรุณาระบุระยะเวลาเช่า',
-	'rental_name' => 'กรุณาใส่ชื่อผู้เช่า',
-	'rental_tel' => 'กรุณาใส่เบอร์โทรศัพท์ผู้เช่า',
-	'rental_addr_detail' => 'กรุณาใส่ที่อยู่ผู้เช่า',
-	'rental_province' => 'กรุณาเลือกจังหวัดผู้เช่า',
-	'rental_district' => 'กรุณาเลือกเขต/อำเภอผู้เช่า',
-	'rental_zipcode' => 'กรุณาใส่รหัสไปรษณีย์ผู้เช่า',
-	'customer_name' => 'กรุณาใส่ชื่อผู้ติดต่อ',
-	'customer_tel' => 'กรุณาใส่เบอร์โทรศัพท์ผู้ติดต่อ',
-	'province_name' => 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง',
-	'address_send' => 'กรุณาใส่สถานที่ติดตั้งเครื่อง',
-	'bank_name' => 'กรุณาเลือกวิธีชำระเงินคืน',
-	'bank_no' => 'กรุณาใส่เบอร์โทรศัพท์/เลขที่บัญชี',
-	'accbank_name' => 'กรุณาใส่ชื่อบัญชี',
-];
-foreach ($rtRequiredFields as $rtFieldName => $rtFieldMessage) {
-	if (trim((string)($_POST[$rtFieldName] ?? '')) === '') {
-		rt_abort_with_alert($rtFieldMessage);
+// กันกรณี submit ตรงมาที่ไฟล์นี้โดยข้าม validation ฝั่ง JS — ข้ามเมื่อเป็น Draft (มิเรอร์ register_supchange_edit1.php:127-128)
+if (!$isDraftRequest) {
+	$rtRequiredFields = [
+		'start_promis' => 'กรุณาระบุวันเริ่มสัญญา',
+		'count_m' => 'กรุณาระบุระยะเวลาเช่า',
+		'rental_name' => 'กรุณาใส่ชื่อผู้เช่า',
+		'rental_tel' => 'กรุณาใส่เบอร์โทรศัพท์ผู้เช่า',
+		'rental_addr_detail' => 'กรุณาใส่ที่อยู่ผู้เช่า',
+		'rental_province' => 'กรุณาเลือกจังหวัดผู้เช่า',
+		'rental_district' => 'กรุณาเลือกเขต/อำเภอผู้เช่า',
+		'rental_zipcode' => 'กรุณาใส่รหัสไปรษณีย์ผู้เช่า',
+		'customer_name' => 'กรุณาใส่ชื่อผู้ติดต่อ',
+		'customer_tel' => 'กรุณาใส่เบอร์โทรศัพท์ผู้ติดต่อ',
+		'province_name' => 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง',
+		'address_send' => 'กรุณาใส่สถานที่ติดตั้งเครื่อง',
+		'bank_name' => 'กรุณาเลือกวิธีชำระเงินคืน',
+		'bank_no' => 'กรุณาใส่เบอร์โทรศัพท์/เลขที่บัญชี',
+		'accbank_name' => 'กรุณาใส่ชื่อบัญชี',
+	];
+	foreach ($rtRequiredFields as $rtFieldName => $rtFieldMessage) {
+		if (trim((string)($_POST[$rtFieldName] ?? '')) === '') {
+			rt_abort_with_alert($rtFieldMessage);
+		}
 	}
 }
 
@@ -145,6 +157,13 @@ $surname =	$_SESSION['surname'];
 $add_by = "$name $surname";
 $em_id = mysqli_real_escape_string($conn, (string)($_SESSION['emid'] ?? ''));
 
+// สถานะเอกสาร/ส่งหัวหน้า — พอร์ตจาก register_supchange1.php:185,241-243 (ไม่มีสาขา "ยกเลิก" ที่นี่
+// เพราะ rental ใช้ cancel_flag/remark_cancel แยกจาก status_doc อยู่แล้ว ดู sql/suprental_optional_columns.sql:4-7)
+$status_doc = $isDraftRequest ? "Draft" : "Request";
+$send_sup_val = $isDraftRequest ? "0" : "1";
+$sup_name_val = ($send_sup_val === "1") ? $add_by : "";
+$sup_date_val = ($send_sup_val === "1") ? $add_date : "0000-00-00 00:00:00";
+
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__rental";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
@@ -180,12 +199,12 @@ $bank_img_allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
 if ($_FILES['bank_img']['size'] == 0) {
 $bank_img = "";
 }else if ($_FILES['bank_img']['size'] > 1100000) {
-rt_abort_with_alert('กรุณาแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB');
+rt_abort_with_alert('กรุณาแนบไฟล์ที่มีขนาด น้อยกว่าหรือเท่ากับ 1 MB', $isDraftRequest);
 }   else if ($_FILES['bank_img']['size'] != 0) {
 $temp = explode(".", $_FILES["bank_img"]["name"]);
 $bank_img_ext = strtolower(end($temp));
 if (!in_array($bank_img_ext, $bank_img_allowed_ext, true)) {
-	rt_abort_with_alert('ชนิดไฟล์ไม่ถูกต้อง กรุณาแนบไฟล์ .jpg .jpeg .png หรือ .pdf');
+	rt_abort_with_alert('ชนิดไฟล์ไม่ถูกต้อง กรุณาแนบไฟล์ .jpg .jpeg .png หรือ .pdf', $isDraftRequest);
 }
 $bank_img = "bank_img" . "_" . $ref_id . "_" . round(microtime(true)) . '.' . $bank_img_ext;
 move_uploaded_file($_FILES["bank_img"]["tmp_name"], "credit_no/" . $bank_img);
@@ -197,9 +216,9 @@ mysqli_begin_transaction($conn);
 try {
 
 $save="insert into hos__rental
-(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,have_order,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,rental_addr_detail,rental_province,rental_district,rental_zipcode,rental_referrer,rental_repeat_cus)
+(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,have_order,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,rental_addr_detail,rental_province,rental_district,rental_zipcode,rental_referrer,rental_repeat_cus,status_doc,send_sup,sup_name,sup_date)
 values
-('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$have_order."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$rental_referrer."','".$rental_repeat_cus."')";
+('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$have_order."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$rental_referrer."','".$rental_repeat_cus."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
 
 $qsave=mysqli_query($conn,$save);
 	
@@ -1048,11 +1067,15 @@ if ($saveOk) {
 	if (ob_get_level() > 0) {
 		ob_end_clean();
 	}
+	if ($isDraftRequest) {
+		echo json_encode(array('success' => true, 'ref_id' => $ref_id));
+		exit();
+	}
 	header('Location: register_suprental.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
 	exit();
 } else {
 	mysqli_rollback($conn);
-	rt_abort_with_alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $saveError);
+	rt_abort_with_alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $saveError, $isDraftRequest);
 }
 	}
 

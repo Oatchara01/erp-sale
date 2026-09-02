@@ -520,7 +520,9 @@ $summary = number_format($summary_1, 2) . "";
 				$access_name  = $objResult1["sol_name"];
 				$count  = $objResult1["count"];
 				$unit  = $objResult1["unit_name"];
-				$sale_remark = $objResult1["sale_remark"];
+				// hos__subrental (query จริง) เก็บคอลัมน์ชื่อ remark_sale ส่วน preview helper (ยังไม่บันทึก)
+				// ใช้ key sale_remark — รองรับทั้งสองแหล่งที่มา
+				$sale_remark = $objResult1["remark_sale"] ?? ($objResult1["sale_remark"] ?? '');
 
 			?>
 				<tr>
