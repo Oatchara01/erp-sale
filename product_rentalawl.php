@@ -241,7 +241,6 @@
 		});
 	}
 
-	/* ===== ป๊อปอัปข้อมูลเพิ่มเติม (Figma node 994-5934: ค่ามัดจำ + หมายเหตุสินค้า + ชื่อที่แสดงในใบส่งสินค้า) ===== */
 	function rtOpenEditModal(rowIndex) {
 		rtActiveEditRowIndex = rowIndex;
 		var priceEl = document.getElementById('product_price' + rowIndex);
@@ -577,7 +576,6 @@
 	</table>
 </div>
 
-<!-- Modal "ข้อมูลรายการสินค้าเพิ่มเติม" (Figma node 994-5934) — ค่ามัดจำ + หมายเหตุสินค้า + ชื่อที่แสดงในใบส่งสินค้า -->
 <div id="rt_edit_modal" class="cs-modal-overlay" style="display:none;">
 	<div class="cs-modal-card">
 		<div class="cs-modal-header">

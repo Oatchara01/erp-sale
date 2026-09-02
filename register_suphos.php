@@ -910,6 +910,11 @@ include("head.php"); ?>
 	// เพื่อให้ทุกจุดที่เช็ค $savedSo !== null (form action, เลขที่เอกสาร, สถานะ ฯลฯ) ยังคง
 	// เป็นโหมด create ตามปกติ ไม่ใช่ edit ทับเอกสารเดิม
 	$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+	// ออกใบสั่งขายจากเอกสารเช่า: ?from_rental=<hos__rental.ref_id>&type=IV|AI (ว่าง=รอบบิลประจำเดือน)
+	// พารามิเตอร์นี้แยกจาก ref_id/copy_from โดยตั้งใจ เพราะ ref_id ในหน้านี้หมายถึงเลขที่ SO ที่มีอยู่แล้ว
+	// ไม่ใช่เลขที่เอกสารเช่า จึงต้องใช้ชื่อพารามิเตอร์ใหม่เพื่อไม่ให้ชนกับความหมายเดิม
+	$fromRentalRefId = isset($_GET["from_rental"]) ? mysqli_real_escape_string($conn, $_GET["from_rental"]) : "";
+	$rentalConversionType = isset($_GET["type"]) ? mysqli_real_escape_string($conn, $_GET["type"]) : "";
 	$loadRefId = $savedRefId !== "" ? $savedRefId : $copyFromRefId;
 	$savedSo = null;
 	$copySrcSo = null;
@@ -989,6 +994,89 @@ include("head.php"); ?>
 		if ($savedProductQuery) {
 			while ($savedProduct = mysqli_fetch_assoc($savedProductQuery)) {
 				$savedProducts[] = $savedProduct;
+			}
+		}
+	}
+
+	// ออกใบสั่งขายจากเอกสารเช่า (from_rental): prefill ข้อมูลลูกค้า/บิลจาก tb_customer (ผูกผ่าน hos__rental.rental_id)
+	// ส่วนข้อมูลผู้ติดต่อ/ที่อยู่จัดส่ง/รายละเอียดที่อยู่ (จอดรถ/บันได/ลิฟต์) มาจาก tb_register_data/tb_transaction
+	// คีย์ด้วย ref_id ของเอกสารเช่าเอง (ตารางเดียวกับที่ register_suphos.php ใช้เก็บข้อมูลชุดนี้ของฝั่ง SO อยู่แล้ว)
+	// เหตุผลที่ไม่ใช้ hos__rental.bill_name/connect_name/connect_tel/install_address ตรงๆ: field เหล่านี้ไม่มี
+	// input จริงในฟอร์ม register_suprental.php ปัจจุบัน (เป็น column ที่ไม่เคยถูกกรอกค่า)
+	// รายการสินค้า: auto-copy จาก hos__subrental มา prefill ตาราง SO ให้ (enhancement เหนือกว่า open_rentaliv_sup.php เดิม
+	// ที่ไม่เคย copy เลย) ผู้ใช้ยังแก้ไข/ลบ/เพิ่มแถวได้ก่อน submit ตามปกติ ไม่กระทบ hos__subrental ต้นฉบับ
+	$rentalPrefill = null;
+	if ($loadRefId === "" && $fromRentalRefId !== "") {
+		$rentalSourceQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
+		$rentalSourceRow = $rentalSourceQuery ? mysqli_fetch_assoc($rentalSourceQuery) : null;
+
+		if ($rentalSourceRow) {
+			$rentalSourceCustomer = null;
+			if (!empty($rentalSourceRow["rental_id"])) {
+				$rentalCustomerQuery = mysqli_query($conn, "SELECT * FROM tb_customer WHERE customer_id = '" . mysqli_real_escape_string($conn, $rentalSourceRow["rental_id"]) . "' LIMIT 1");
+				$rentalSourceCustomer = $rentalCustomerQuery ? mysqli_fetch_assoc($rentalCustomerQuery) : null;
+			}
+
+			$rentalBillAddressParts = array_filter(array(
+				trim((string)($rentalSourceCustomer["bill_address"] ?? '')),
+				trim((string)($rentalSourceCustomer["bill_ampher"] ?? '')),
+				trim((string)($rentalSourceCustomer["billl_province"] ?? '')),
+				trim((string)($rentalSourceCustomer["bill_postcode"] ?? '')),
+			), function ($part) {
+				return $part !== '';
+			});
+
+			$rentalPrefill = array(
+				'bill_id' => $rentalSourceRow["rental_id"] ?? '',
+				'pre_name' => $rentalSourceCustomer["preface_name"] ?? '',
+				'bill_name' => $rentalSourceCustomer["bill_name"] ?? '',
+				'bill_address' => implode(' ', $rentalBillAddressParts),
+				'bill_tel' => $rentalSourceCustomer["bill_tel"] ?? '',
+				'tax_id' => $rentalSourceCustomer["tax_id"] ?? '',
+				'sale_code' => $rentalSourceRow["sale_code"] ?? '',
+				'payment' => $rentalSourceRow["payment"] ?? '',
+				'delivery_type' => $rentalSourceRow["delivery_type"] ?? '',
+				'delivery_date' => $rentalSourceRow["delivery_date"] ?? '',
+				'suggest' => $rentalSourceRow["rental_referrer"] ?? '',
+			);
+
+			$rentalRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
+			if ($rentalRegisterQuery) {
+				$savedRegister = mysqli_fetch_assoc($rentalRegisterQuery);
+			}
+
+			$rentalTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
+			if ($rentalTransactionQuery) {
+				$savedTransaction = mysqli_fetch_assoc($rentalTransactionQuery);
+			}
+
+			$rentalProductQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name, tb_product.remark_hc AS tb_remark_hc FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $fromRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
+			if ($rentalProductQuery) {
+				while ($rentalProductRow = mysqli_fetch_assoc($rentalProductQuery)) {
+					$savedProductsForForm[] = array(
+						'product_id' => (string)($rentalProductRow["product_id"] ?? ""),
+						'product_code' => (string)($rentalProductRow["product_code"] ?? ""),
+						'product_name' => (string)($rentalProductRow["tb_sol_name"] ?? ""),
+						'product_sn' => (string)($rentalProductRow["sn_number"] ?? ""),
+						'unit_name' => (string)($rentalProductRow["tb_unit_name"] ?? ""),
+						'sale_count' => (string)($rentalProductRow["count"] ?? ""),
+						'product_price' => (string)($rentalProductRow["price"] ?? ""),
+						'discount_unit' => "",
+						'sum_amount' => (string)($rentalProductRow["amount"] ?? ""),
+						'warranty' => (string)($rentalProductRow["warranty"] ?? ""),
+						'cal' => "",
+						'pm_year' => "",
+						'pm' => "",
+						'sale_remarkk' => (string)($rentalProductRow["remark_sale"] ?? ""),
+						'clear_br' => "",
+						'clear_ivno' => "",
+						'jong_ckk' => "",
+						'jong_no' => "",
+						'display_name' => (string)($rentalProductRow["display_name"] ?? ""),
+						'subso_db_id' => "",
+						'remark_hc' => (string)($rentalProductRow["tb_remark_hc"] ?? ""),
+					);
+				}
 			}
 		}
 	}
@@ -1682,6 +1770,8 @@ include("head.php"); ?>
 			</div>
 
 			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
+			<input type="hidden" name="ref_ren" value="<?php echo so_saved_h($fromRentalRefId); ?>">
+			<input type="hidden" name="type" value="<?php echo so_saved_h($rentalConversionType); ?>">
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
 			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
@@ -6384,8 +6474,11 @@ include("head.php"); ?>
 			'stock_print' => '', 'ref_idst' => '',
 		));
 	}
+	if ($soJsPrefillSource === null && $rentalPrefill !== null) {
+		$soJsPrefillSource = $rentalPrefill;
+	}
 	?>
-	<?php if ($savedSo !== null || $copySrcSo !== null): ?>
+	<?php if ($savedSo !== null || $copySrcSo !== null || $rentalPrefill !== null): ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				var savedSo = <?php echo json_encode($soJsPrefillSource); ?>;

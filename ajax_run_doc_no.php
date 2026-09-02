@@ -65,6 +65,7 @@ $docTypePrefix = [
 	'4' => 'IE', // ใบกำกับอิเล็กทรอนิกส์ - Admin เท่านั้น
 	'5' => 'BRSC', // ใบยืม/หนี้ฝากขาย (register_supbrcshos.php) - เอกสารประเภทเดียวของหน้านั้น
 	'6' => 'EXC', // ใบเปลี่ยนสินค้า (register_supchange.php) - เอกสารประเภทเดียวของหน้านั้น
+	'7' => 'JN', // ใบเช่า (register_suprental.php) - เอกสารประเภทเดียวของหน้านั้น
 ];
 $adminOnlyPrefix = ['IE'];
 
@@ -87,6 +88,13 @@ $docRouting = [
 $docSourceTable = [
 	'BRSC' => [
 		'table'     => 'hos__consig',
+		'column'    => 'iv_no',
+		'companies' => ['3', '4'],
+		'separator' => '',
+		'pad'       => 3,
+	],
+	'JN' => [
+		'table'     => 'hos__rental',
 		'column'    => 'iv_no',
 		'companies' => ['3', '4'],
 		'separator' => '',

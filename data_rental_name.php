@@ -5,9 +5,12 @@ include"dbconnect.php";
 
 $strProduct = trim($_POST["rental_id"]);
 
-$strSQL = "SELECT * FROM tb_customer WHERE customer_id = '".$strProduct."' ";
+$strSQL = "SELECT * FROM tb_customer WHERE customer_id = ? ";
 
-$objQuery = mysqli_query($conn,$strSQL) or die ("Error Query [".$strSQL."]");
+$stmt = mysqli_prepare($conn, $strSQL);
+mysqli_stmt_bind_param($stmt, "s", $strProduct);
+mysqli_stmt_execute($stmt);
+$objQuery = mysqli_stmt_get_result($stmt);
 $objResult = mysqli_fetch_array($objQuery);
 if($objResult)
 {

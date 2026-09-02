@@ -4294,6 +4294,34 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 
 			mysqli_query($conn, $strDeliveryBillInsert) or die(mysqli_error($conn));
 		}
+
+		// ออกใบสั่งขายจากเอกสารเช่า: back-link เลขที่ SO ใหม่กลับไปที่ hos__rental (มาจาก register_suphos.php?from_rental=...&type=IV|AI)
+		// ตรงตามพฤติกรรมของ open_rentaliv_sup1.php เดิม แต่แก้บั๊กเดิมที่ใช้ตัวแปร $ref_rentel ที่ไม่เคยมีค่า
+		// (ของเดิมจึงไม่เคย back-link ได้จริง) โดยใช้ $ref_ren จาก POST ซึ่งมีค่าจริงแทน
+		$refRenFromPost = isset($_POST["ref_ren"]) ? trim((string)$_POST["ref_ren"]) : "";
+		$rentalConversionTypeFromPost = isset($_POST["type"]) ? trim((string)$_POST["type"]) : "";
+
+		if ($refRenFromPost !== "") {
+			$safeRefRen = mysqli_real_escape_string($conn, $refRenFromPost);
+
+			if ($rentalConversionTypeFromPost === "IV") {
+				mysqli_query($conn, "UPDATE hos__rental SET ref_iv = '" . mysqli_real_escape_string($conn, $ref_id) . "' WHERE ref_id = '" . $safeRefRen . "'")
+					or die(mysqli_error($conn));
+			} elseif ($rentalConversionTypeFromPost === "AI") {
+				mysqli_query($conn, "UPDATE hos__rental SET ref_ai = '" . mysqli_real_escape_string($conn, $ref_id) . "' WHERE ref_id = '" . $safeRefRen . "'")
+					or die(mysqli_error($conn));
+			} else {
+				$runivQuery = mysqli_query($conn, "SELECT date_runiv FROM hos__rental_runiv WHERE ref_idren = '" . $safeRefRen . "' AND ckk_open = '0'");
+				$runivRow = $runivQuery ? mysqli_fetch_assoc($runivQuery) : null;
+				if ($runivRow) {
+					$nextDateRuniv = date('Y-m-d', strtotime($runivRow["date_runiv"] . " +1 months"));
+					mysqli_query($conn, "UPDATE hos__rental_runiv SET ref_idiv = '" . mysqli_real_escape_string($conn, $ref_id) . "', date_opiv = '" . mysqli_real_escape_string($conn, $add_date) . "', add_by = '" . mysqli_real_escape_string($conn, $add_by) . "', ckk_open = '1' WHERE ref_idren = '" . $safeRefRen . "' AND ckk_open = '0'")
+						or die(mysqli_error($conn));
+					mysqli_query($conn, "INSERT INTO hos__rental_runiv (ref_idren, date_runiv, sale_area) VALUES ('" . $safeRefRen . "', '" . mysqli_real_escape_string($conn, $nextDateRuniv) . "', '" . mysqli_real_escape_string($conn, $sale_code) . "')")
+						or die(mysqli_error($conn));
+				}
+			}
+		}
 	} catch (mysqli_sql_exception $e) {
 		$saveOk = false;
 		$saveFailures[] = $e->getMessage();

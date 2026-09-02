@@ -8,8 +8,32 @@
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-suprental.css?v=<?php echo filemtime(__DIR__ . '/css/register-suprental.css'); ?>">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
+
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete('saved');
+			window.history.replaceState({}, document.title, cleanUrl);
+
+			if (typeof Swal === 'undefined') {
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				return;
+			}
+
+			Swal.fire({
+				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: 'success',
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+		});
+	</script>
+<?php } ?>
 
 <script language="JavaScript">
 	function selectByValueOrText(selectEl, raw) {
@@ -97,7 +121,7 @@
 					setElementValue(patient_name, myArr[13]);
 					setElementValue(address_1, myArr[14]);
 					setElementValue(address_name, myArr[14]);
-					setElementValue(address_send, myArr[14]);
+					setElementValue('address_merged_ui', myArr[14]);
 					setElementValue(customer_name, myArr[11]);
 					setElementValue(customer_tel, myArr[12]);
 					selectByValueOrText(document.getElementById(province_name), myArr[15]);
@@ -162,6 +186,45 @@
 		trigger.classList.toggle('is-empty', !hasCreditTerm);
 		trigger.disabled = !hasCreditTerm;
 		trigger.setAttribute('aria-disabled', hasCreditTerm ? 'false' : 'true');
+	}
+
+	// ===== toggle "เพิ่มลงฐานลูกค้า" — ported จาก register_supbrcshos.php:316-352 =====
+	function getCurrentRentalCustomerId() {
+		var rentalIdInput = document.getElementById('rental_id');
+		var hRentalId = document.getElementById('h_rental_id');
+		var billId = document.getElementById('bill_id');
+		var hBillId = document.getElementById('h_bill_id');
+		return String(
+			(rentalIdInput && rentalIdInput.value) ||
+			(hRentalId && hRentalId.value) ||
+			(billId && billId.value) ||
+			(hBillId && hBillId.value) ||
+			''
+		).trim();
+	}
+
+	function toggleSaveToCustomerDb(btn) {
+		var customerId = getCurrentRentalCustomerId();
+		if (!customerId) {
+			alert('เลือกลูกค้าก่อน');
+			return;
+		}
+		var hiddenInput = document.getElementById('save_to_customer_db');
+		if (!hiddenInput) return;
+
+		if (hiddenInput.value === '1') {
+			hiddenInput.value = '0';
+			btn.style.backgroundColor = '#FFFFFF';
+			btn.style.color = '#612989';
+			btn.style.borderColor = '#EBEBEB';
+			btn.innerHTML = '<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า';
+		} else {
+			hiddenInput.value = '1';
+			btn.style.backgroundColor = '#612989';
+			btn.style.color = '#FFFFFF';
+			btn.style.borderColor = '#612989';
+			btn.innerHTML = '<i class="fas fa-check"></i> เพิ่มลงฐานลูกค้า (เลือกแล้ว)';
+		}
 	}
 
 	window.customerPopupOnConfirm = function(selectedCustomer) {
@@ -534,17 +597,260 @@
 		$nextId = $yearMonth . $maxId1;
 	}
 
+	// ===== โหลดเอกสารเดิม (view/edit mode) เมื่อมี ?ref_id=... =====
+	// mirror register_supchange.php:285-358 — ทุก query กันด้วย mysqli_num_rows/query truthiness
+	// ไม่มีแถวก็ปล่อยเป็น null เพื่อ fallback เป็นฟอร์มว่างเหมือนสร้างใหม่
+	$savedRentalRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
+	$savedRental = null;
+	$savedRegister = null;
+	$savedTransaction = null;
+	$savedRentalProducts = array();
+	$savedRentalCustomerDisplay = null;
+
+	if ($savedRentalRefId !== "") {
+		$savedRentalQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+		if ($savedRentalQuery && mysqli_num_rows($savedRentalQuery) > 0) {
+			$savedRental = mysqli_fetch_assoc($savedRentalQuery);
+
+			if (!empty($savedRental['rental_id'])) {
+				$savedRentalCustIdEsc = mysqli_real_escape_string($conn, $savedRental['rental_id']);
+				$savedRentalCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel,
+					c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
+					FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id
+					WHERE c.customer_id = '" . $savedRentalCustIdEsc . "' LIMIT 1");
+				if ($savedRentalCustomerQuery && mysqli_num_rows($savedRentalCustomerQuery) > 0) {
+					$savedRentalCustomerDisplay = mysqli_fetch_assoc($savedRentalCustomerQuery);
+				}
+			}
+
+			$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+			if ($savedRegisterQuery) {
+				$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
+			}
+
+			$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRentalRefId . "' LIMIT 1");
+			if ($savedTransactionQuery) {
+				$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
+			}
+
+			// LEFT JOIN tb_product เพราะ hos__subrental ไม่มีคอลัมน์ product_name/unit_name ของตัวเอง
+			$savedRentalProductsQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $savedRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
+			if ($savedRentalProductsQuery) {
+				while ($savedRentalProductRow = mysqli_fetch_assoc($savedRentalProductsQuery)) {
+					$savedRentalProducts[] = $savedRentalProductRow;
+				}
+			}
+		}
+	}
+
+	$rentalIsEditMode = ($savedRental !== null);
+	$rentalIsCancelChecked = $rentalIsEditMode && (($savedRental['cancel_flag'] ?? '0') == '1');
+
+	// ---- แผนที่ค่า prefill สำหรับ edit mode ----
+	// พอร์ต pattern เดียวกับ register_supchange.php:362-483 — เติมค่าที่เดียว แล้วให้ JS ตัวเดียว
+	// เติมกลับเข้าฟอร์ม (ดู script ก่อนปิด </form>)
+	$rentalPrefill = array();
+	if ($savedRental !== null) {
+		$rentalTypeProductMap = array('1' => 'สินค้าเตียง', '2' => 'สินค้าที่นอน', '3' => 'สินค้าอื่นๆ');
+		$rentalPrefill = array(
+			'type_doc' => $savedRental['type_doc'],
+			'sale_code' => $savedRental['sale_code'],
+			'product_type_rental' => $rentalTypeProductMap[$savedRental['type_product'] ?? ''] ?? '',
+			'start_promis' => so_saved_iso_date_input($savedRental['start_promis'] ?? ''),
+			'count_m' => $savedRental['count_m'],
+			'rental_item_name' => $savedRental['des_productunit'],
+			'have_order' => $savedRental['have_order'],
+			'register_date' => so_saved_iso_date_input($savedRental['register_date'] ?? ''),
+			'rental_address' => $savedRental['rental_address'],
+			'rental_name' => $savedRental['rental_name'],
+			'rental_id' => $savedRental['rental_id'],
+			'h_rental_id' => $savedRental['rental_id'],
+			'rental_tel' => $savedRental['rental_tel'],
+			'rental_addr_detail' => $savedRental['rental_addr_detail'],
+			'rental_province' => $savedRental['rental_province'],
+			'rental_district' => $savedRental['rental_district'],
+			'rental_zipcode' => $savedRental['rental_zipcode'],
+			'rental_referrer' => $savedRental['rental_referrer'],
+			'rental_repeat_cus' => $savedRental['rental_repeat_cus'],
+			'payment' => $savedRental['payment'],
+			'des_sale' => $savedRental['des_sale'],
+			'delivery_type' => $savedRental['delivery_type'],
+			'start_date' => so_saved_iso_date_input($savedRental['delivery_date'] ?? ''),
+			'between_date' => $savedRental['delivery_key'],
+			'shipping_date' => so_saved_iso_date_input($savedRental['date_ker'] ?? ''),
+			'shipping_ref1' => $savedRental['order_refer_code'],
+			'shipping_ref2' => $savedRental['order_refer_code1'],
+			'shipping_cost' => $savedRental['ker_bath'],
+			'bank_name' => $savedRental['bank_name'],
+			'bank_no' => $savedRental['bank_no'],
+			'accbank_name' => $savedRental['accbank_name'],
+			'send_cs' => (($savedRental['send_cs'] ?? '') === '2') ? '1' : '0',
+		);
+
+		if ($savedRegister !== null) {
+			$rentalAddress1OrName = ($savedRegister['address_1'] ?? '') !== '' ? $savedRegister['address_1'] : ($savedRegister['address_name'] ?? '');
+			$rentalPrefill['customer_name'] = $savedRegister['customer_name'];
+			$rentalPrefill['customer_tel'] = $savedRegister['customer_tel'];
+			$rentalPrefill['province_name'] = $savedRegister['province_name'];
+			$rentalPrefill['address_1'] = $rentalAddress1OrName;
+			$rentalPrefill['address_name'] = $rentalAddress1OrName;
+			$rentalPrefill['address_merged_ui'] = $rentalAddress1OrName;
+			$rentalPrefill['address_send'] = $savedRegister['address_send'];
+			$rentalPrefill['location_link'] = $savedRegister['location_link'];
+			$rentalPrefill['transport_company'] = $savedRegister['transport_company'];
+			$rentalPrefill['status_comment'] = $savedRegister['status_comment'];
+			$rentalPrefill['call_customer'] = $savedRegister['call_customer'];
+			$rentalPrefill['no_money'] = $savedRegister['no_price'];
+		}
+
+		// tb_transaction ('แท็บ รายละเอียดที่อยู่') — ผูกกลับด้านของ mapping ใน register_suprental1.php
+		if ($savedTransaction !== null) {
+			$rentalPrefill['park_front'] = (($savedTransaction['car_home'] ?? '') === '1') ? '1' : '0';
+			$rentalPrefill['park_location'] = $savedTransaction['car_park'];
+			$rentalPrefill['is_high_roof'] = $savedTransaction['height_ltd'];
+			$rentalPrefill['entrance_type'] = (($savedTransaction['bundai'] ?? '') === '1') ? '2' : '1';
+			$rentalPrefill['stair_count'] = $savedTransaction['unit_bundai'];
+			$rentalPrefill['install_floor'] = $savedTransaction['install'];
+			$rentalPrefill['room_type'] = $savedTransaction['install_room'];
+			$rentalPrefill['door_width'] = $savedTransaction['room_bigger'];
+			$rentalPrefill['door_height'] = $savedTransaction['room_longer'];
+
+			$savedRentalStairSize = explode(' x ', (string)($savedTransaction['bundai_big'] ?? ''), 2);
+			$rentalPrefill['stair_width'] = $savedRentalStairSize[0] ?? '';
+			$rentalPrefill['stair_height'] = $savedRentalStairSize[1] ?? '';
+
+			$savedRentalElevDoorSize = explode(' x ', (string)($savedTransaction['lip_big'] ?? ''), 2);
+			$rentalPrefill['elev_door_width'] = $savedRentalElevDoorSize[0] ?? '';
+			$rentalPrefill['elev_door_height'] = $savedRentalElevDoorSize[1] ?? '';
+
+			$savedRentalElevSize = explode(' x ', (string)($savedTransaction['lip_long'] ?? ''), 3);
+			$rentalPrefill['elev_width'] = $savedRentalElevSize[0] ?? '';
+			$rentalPrefill['elev_height'] = $savedRentalElevSize[1] ?? '';
+			$rentalPrefill['elev_depth'] = $savedRentalElevSize[2] ?? '';
+
+			$rentalPrefill['elev_capacity'] = $savedTransaction['lip_weight'];
+			$rentalPrefill['move_furn'] = $savedTransaction['want_employee'];
+			$rentalPrefill['move_furn_count'] = $savedTransaction['employee_unit'];
+			$rentalPrefill['move_furn_detail'] = $savedTransaction['ferniger_name'];
+			$rentalPrefill['addr_note'] = $savedTransaction['description'];
+		}
+	}
+
 	?>
 
 	<!--action="register_office1.php"-->
-	<form action='register_suprental1.php' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action="<?php echo $rentalIsEditMode ? 'register_suprental_edit1.php' : 'register_suprental1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
+			var rtSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+
+			// สลับแท็บที่ field ซ่อนอยู่ให้ขึ้นมาก่อน focus (รองรับทั้ง 3 ระบบแท็บของหน้านี้:
+			// so-tab-content/rtOpenDocTab, so-addr-tab-content/rtOpenAddrTab, rt-fin-tab-content/rtOpenFinTab)
+			function rtFocusField(field) {
+				if (!field) return;
+				var hiddenParent = field.closest('.so-tab-content:not(.active)') ||
+					field.closest('.so-addr-tab-content[style*="display:none"], .so-addr-tab-content[style*="display: none"]') ||
+					field.closest('.rt-fin-tab-content:not(.active)');
+				if (hiddenParent && hiddenParent.id) {
+					var tabBtn = document.querySelector(".so-tab-btn[onclick*=\"'" + hiddenParent.id + "'\"]");
+					if (tabBtn) tabBtn.click();
+				}
+				field.focus();
+			}
+
+			// form.submit() แบบ programmatic ไม่ส่งค่าปุ่ม <button name="submit"> มาด้วย (ต่างจากคลิกปุ่มจริง)
+			// จึงต้องสร้าง hidden input name="submit" เอง ไม่งั้น register_suprental1.php จะไม่เห็นว่ากดบันทึก
+			// (pattern เดียวกับ register_supchange.php: chgEnsureSubmitMarker)
+			function rtEnsureSubmitMarker() {
+				var rtForm = document.forms['frmMain'];
+				var rtSubmitValue = rtForm.querySelector('input[type="hidden"][name="submit"]');
+				if (!rtSubmitValue) {
+					rtSubmitValue = document.createElement('input');
+					rtSubmitValue.type = 'hidden';
+					rtSubmitValue.name = 'submit';
+					rtForm.appendChild(rtSubmitValue);
+				}
+				rtSubmitValue.value = 'submit';
+				return rtForm;
+			}
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
+				if (rtSubmitting) return false;
 
+				var rtRequiredFields = [
+					['start_promis', 'กรุณาระบุวันเริ่มสัญญา'],
+					['count_m', 'กรุณาระบุระยะเวลาเช่า'],
+					['rental_name', 'กรุณาใส่ชื่อผู้เช่า'],
+					['rental_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้เช่า'],
+					['rental_addr_detail', 'กรุณาใส่ที่อยู่ผู้เช่า'],
+					['rental_province', 'กรุณาเลือกจังหวัดผู้เช่า'],
+					['rental_district', 'กรุณาเลือกเขต/อำเภอผู้เช่า'],
+					['rental_zipcode', 'กรุณาใส่รหัสไปรษณีย์ผู้เช่า'],
+					['customer_name', 'กรุณาใส่ชื่อผู้ติดต่อ'],
+					['customer_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้ติดต่อ'],
+					['province_name', 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง'],
+					['address_send', 'กรุณาใส่สถานที่ติดตั้งเครื่อง'],
+					['bank_name', 'กรุณาเลือกวิธีชำระเงินคืน'],
+					['bank_no', 'กรุณาใส่เบอร์โทรศัพท์/เลขที่บัญชี'],
+					['accbank_name', 'กรุณาใส่ชื่อบัญชี']
+				];
 
-				document.frmMain.submit();
+				for (var i = 0; i < rtRequiredFields.length; i++) {
+					var fieldName = rtRequiredFields[i][0];
+					var field = document.frmMain[fieldName];
+					if (field && String(field.value).trim() === '') {
+						alert(rtRequiredFields[i][1]);
+						rtFocusField(field);
+						return false;
+					}
+				}
+
+				var addressMergedInput = document.getElementById('address_merged_ui');
+				if (addressMergedInput && addressMergedInput.value.trim() === '') {
+					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
+					rtFocusField(addressMergedInput);
+					return false;
+				}
+
+				var bankImgInput = document.frmMain['bank_img'];
+				var bankImgExistingInput = document.frmMain['bank_img_existing'];
+				var bankImgHasExisting = bankImgExistingInput && bankImgExistingInput.value.trim() !== '';
+				if (bankImgInput && !bankImgHasExisting && (!bankImgInput.files || bankImgInput.files.length === 0)) {
+					alert('กรุณาแนบไฟล์รูป Book Bank');
+					rtFocusField(bankImgInput);
+					return false;
+				}
+
+				// ผ่าน validation ครบแล้ว กำลังจะ submit จริง -> disable ปุ่มกันกดซ้ำ
+				// ไม่ต้อง re-enable เพราะหน้าจะ navigate ออกไปอยู่แล้วเมื่อสำเร็จ
+				rtSubmitting = true;
+				var rtSubmitBtn = document.getElementById('btn_submit_form');
+				if (rtSubmitBtn) {
+					rtSubmitBtn.disabled = true;
+					rtSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				}
+
+				// ปุ่ม <button type="submit" name="submit"> ทับเมธอด form.submit() (DOM clobbering)
+				// จึงต้องเรียกผ่าน prototype โดยตรง (pattern เดียวกับ register_supchange.php)
+				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+				return false;
+			}
+
+			// บันทึกร่าง: ใช้ submit จริงเส้นทางเดียวกับปุ่ม Submit แต่ข้าม client-side validation
+			// (register_suprental1.php เป็นสคริปต์เก่าไม่มี is_draft/status_doc แบบ register_supchange1.php
+			// จึงบันทึกเป็นเอกสารจริงเหมือน Submit ปกติ ต่างกันแค่ไม่บังคับกรอกครบก่อน)
+			function rtSaveDraft() {
+				if (rtSubmitting) return;
+				rtSubmitting = true;
+
+				var rtDraftBtn = document.getElementById('btn_save_draft');
+				if (rtDraftBtn) {
+					rtDraftBtn.disabled = true;
+					rtDraftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+				}
+
+				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
 			}
 		</script>
 
@@ -556,15 +862,14 @@
 						<h1 class="so-title">ใบสั่งเช่า (Rental Order)</h1>
 						<div class="so-ref-info">
 							<span class="so-ref-label">เลขที่อ้างอิง</span>
-							<span class="so-ref-value"><?php echo $so;
-														echo $nextId; ?></span>
+							<span class="so-ref-value"><?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?></span>
 						</div>
 					</div>
 					<div class="so-header-right">
 						<button type="button" class="btn-preview-so" onclick="alert('กรุณาบันทึกเอกสารก่อน ฟังก์ชัน Preview ใช้งานได้หลังบันทึกใบสั่งเช่าแล้ว');"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
 					</div>
 				</div>
-				<input type="hidden" name="ref_id" class="w3-input" value="1">
+				<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?>">
 
 				<?php
 				date_default_timezone_set("Asia/Bangkok");
@@ -591,9 +896,9 @@
 							<div class="so-field-group">
 								<label class="so-label">บริษัท<span style="color: #dc3545;">*</span></label>
 								<div class="so-select-wrapper">
-									<select name="type_doc" class="so-select">
-										<option value="3" selected>AWL</option>
-										<option value="4">NBM</option>
+									<select name="type_doc" id="rt_type_doc_select" class="so-select">
+										<option value="3" <?php echo (($savedRental['type_doc'] ?? '3') != '4') ? 'selected' : ''; ?>>AWL</option>
+										<option value="4" <?php echo (($savedRental['type_doc'] ?? '3') == '4') ? 'selected' : ''; ?>>NBM</option>
 									</select>
 								</div>
 							</div>
@@ -730,8 +1035,13 @@
 						</div>
 
 						<div class="so-field-group" style="flex-direction:row; gap:16px; margin-top:4px;">
-							<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบสั่งขายได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></button>
-							<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบเงินประกันสินค้าได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></button>
+							<?php if ($rentalIsEditMode && !empty($savedRental['ref_id'])) { ?>
+								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=IV" class="so-toggle-pill-outline-custom"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></a>
+								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=AI" class="so-toggle-pill-outline-custom"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></a>
+							<?php } else { ?>
+								<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบสั่งขายได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></button>
+								<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบเงินประกันสินค้าได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></button>
+							<?php } ?>
 						</div>
 
 						<div class="so-section-title-container" style="margin-top:20px;">
@@ -751,7 +1061,10 @@
 
 							<div class="so-field-group">
 								<label class="so-label">เลขที่สัญญา</label>
-								<input type="text" class="so-input" readonly placeholder="จะออกให้อัตโนมัติหลังบันทึกเอกสาร">
+								<input type="text" id="promis_no" class="so-input"
+									value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['promis_no'] ?? '') : ''; ?>"
+									placeholder="<?php echo $rentalIsEditMode ? '' : 'ออกอัตโนมัติหลังบันทึก'; ?>"
+									readonly disabled>
 							</div>
 						</div>
 
@@ -777,23 +1090,23 @@
 					'rows' => [
 						[
 							['type' => 'inline_group', 'fields' => [
-								['type' => 'text', 'name' => 'rt_admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.'],
-								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_rt_run_doc_no', 'onclick' => "alert('กรุณาบันทึกเอกสารก่อน จึงจะออกเลขที่เอกสารได้');", 'variant' => 'purple'],
+								['type' => 'text', 'name' => 'rt_admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => ($savedRental !== null) ? ($savedRental['iv_no'] ?? '') : ''],
+								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_rt_run_doc_no', 'onclick' => 'rtRunDocumentNo();', 'variant' => 'purple'],
 							]],
-							['type' => 'date_th', 'name' => 'rt_admin_doc_date', 'label' => 'วันที่ออกเอกสาร'],
-							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'icon' => 'img/icons/search.png'],
+							['type' => 'date_th', 'name' => 'rt_admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['iv_date'] ?? '') : ''],
+							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'rtRunJobNo();', 'icon_id' => 'btn_rt_run_job_no', 'value' => ($savedRental !== null) ? ($savedRental['job_no'] ?? '') : ''],
 						],
 						[
-							['type' => 'text', 'name' => 'rt_admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'icon' => 'img/icons/search.png'],
-							['type' => 'text', 'name' => 'rt_admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'icon' => 'img/icons/search.png'],
+							['type' => 'text', 'name' => 'rt_admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'icon' => 'img/icons/preview.png', 'value' => ($savedRental !== null) ? ($savedRental['sr_no'] ?? '') : ''],
+							['type' => 'text', 'name' => 'rt_admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'icon' => 'img/icons/preview.png', 'value' => ($savedRental !== null) ? ($savedRental['order_no'] ?? '') : ''],
 							['type' => 'sub_grid', 'fields' => [
-								['type' => 'text', 'name' => 'rt_admin_box_count', 'label' => 'จำนวนกล่อง', 'placeholder' => 'เฉพาะตัวเลข'],
-								['type' => 'text', 'name' => 'rt_admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'placeholder' => 'ใส่เฉพาะตัวเลข'],
+								['type' => 'text', 'name' => 'rt_admin_box_count', 'label' => 'จำนวนกล่อง', 'placeholder' => 'เฉพาะตัวเลข', 'value' => ($savedRegister !== null) ? ($savedRegister['count_box'] ?? '') : ''],
+								['type' => 'text', 'name' => 'rt_admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'placeholder' => 'ใส่เฉพาะตัวเลข', 'value' => ($savedRental !== null) ? ($savedRental['new_bill'] ?? '') : ''],
 							]],
 						],
 						[
-							['type' => 'date_th', 'name' => 'rt_admin_doc_date_old', 'label' => 'วันที่ออกเอกสาร (เดิม)'],
-							['type' => 'text', 'name' => 'rt_admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'placeholder' => 'ระบุสาเหตุการแก้ไขบิล', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
+							['type' => 'date_th', 'name' => 'rt_admin_doc_date_old', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['date_oldbill'] ?? '') : ''],
+							['type' => 'text', 'name' => 'rt_admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'placeholder' => 'ระบุสาเหตุการแก้ไขบิล', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'value' => ($savedRental !== null) ? ($savedRental['desnew_bill'] ?? '') : ''],
 						],
 						[
 							['type' => 'button_field', 'button' => [
@@ -802,15 +1115,16 @@
 								'label' => 'ยกเลิกเอกสาร',
 								'id' => 'btn_rt_cancel_doc',
 								'onclick' => 'rtToggleCancelDoc();',
+								'active' => $rentalIsCancelChecked,
 							]],
-							['type' => 'text', 'name' => 'rt_admin_cancel_reason', 'id' => 'rt_admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => true],
+							['type' => 'text', 'name' => 'rt_admin_cancel_reason', 'id' => 'rt_admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => !$rentalIsCancelChecked, 'value' => ($savedRental !== null) ? ($savedRental['remark_cancel'] ?? '') : ''],
 						],
 					],
 				];
 				include __DIR__ . '/partials/admin_info_tab.php';
 				unset($adminInfoTab);
 				?>
-				<input type="hidden" name="rt_admin_cancel_doc" id="rt_admin_cancel_doc" value="0">
+				<input type="hidden" name="rt_admin_cancel_doc" id="rt_admin_cancel_doc" value="<?php echo $rentalIsCancelChecked ? '1' : '0'; ?>">
 				<script>
 					function rtToggleCancelDoc() {
 						var cancelInput = document.getElementById('rt_admin_cancel_doc');
@@ -831,6 +1145,138 @@
 								reasonInput.value = '';
 							}
 						}
+					}
+
+					// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_supchange.php:760-825
+					// ต่างกันตรงที่ใช้ doc_type='7' (JN) และ company_select ของหน้านี้เป็น 3=AWL/4=NBM
+					// อยู่แล้ว (เหมือน register_suphos.php) จึงไม่ต้อง map ค่าเหมือน supchange.php
+					function rtRunDocumentNo() {
+						var companySelect = document.getElementById('rt_type_doc_select');
+						var docNoInput = document.querySelector('input[name="rt_admin_doc_no"]');
+						var docDateInput = document.querySelector('input[name="rt_admin_doc_date"]');
+						var runButton = document.getElementById('btn_rt_run_doc_no');
+
+						if (!companySelect || !docNoInput) {
+							return;
+						}
+
+						if (docNoInput.value.trim() !== '') {
+							if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+								return;
+							}
+						}
+
+						var payload = new URLSearchParams();
+						payload.append('company', companySelect.value);
+						payload.append('doc_type', '7');
+						payload.append('doc_date', docDateInput ? docDateInput.value : '');
+
+						if (runButton) {
+							runButton.disabled = true;
+						}
+
+						fetch('ajax_run_doc_no.php', {
+								method: 'POST',
+								credentials: 'same-origin',
+								cache: 'no-store',
+								headers: {
+									'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+								},
+								body: payload.toString()
+							})
+							.then(function(response) {
+								return response.json().then(function(data) {
+									return {
+										ok: response.ok,
+										data: data
+									};
+								});
+							})
+							.then(function(result) {
+								if (!result.ok || !result.data || !result.data.success) {
+									alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+									return;
+								}
+								docNoInput.value = result.data.doc_no;
+							})
+							.catch(function() {
+								alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+							})
+							.then(function() {
+								if (runButton) {
+									runButton.disabled = false;
+								}
+							});
+					}
+
+					// ไอคอน Run ของ "เลขที่ลงงาน" — พอร์ตจาก register_suphos.php:5015-5077 (runJobNo())
+					// ใช้ ajax_run_job_no.php เดิมทุกอย่าง (ตัวนับ tb_register_data.running ใช้ร่วมกับทุกหน้าจอ
+					// เพื่อไม่ให้เลขที่ลงงานซ้ำกัน) ต่างกันแค่วันที่อ้างอิงปี/เดือนของเลขใช้ start_promis
+					// (วันเริ่มสัญญาเช่า) แทน start_date (วันจัดส่งของ suphos)
+					function rtRunJobNo() {
+						var jobNoInput = document.querySelector('input[name="rt_admin_work_no"]');
+						var refIdInput = document.querySelector('input[name="ref_id"]');
+						var startPromisInput = document.querySelector('input[name="start_promis"]');
+						var runIcon = document.getElementById('btn_rt_run_job_no');
+
+						if (!jobNoInput) {
+							return;
+						}
+
+						if (runIcon && runIcon.dataset.loading === '1') {
+							return;
+						}
+
+						if (jobNoInput.value.trim() !== '') {
+							if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+								return;
+							}
+						}
+
+						var payload = new URLSearchParams();
+						payload.append('ref_id', refIdInput ? refIdInput.value : '');
+						payload.append('job_date', startPromisInput ? startPromisInput.value : '');
+
+						if (runIcon) {
+							runIcon.dataset.loading = '1';
+							runIcon.style.pointerEvents = 'none';
+							runIcon.style.opacity = '0.4';
+						}
+
+						fetch('ajax_run_job_no.php', {
+								method: 'POST',
+								credentials: 'same-origin',
+								cache: 'no-store',
+								headers: {
+									'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+								},
+								body: payload.toString()
+							})
+							.then(function(response) {
+								return response.json().then(function(data) {
+									return {
+										ok: response.ok,
+										data: data
+									};
+								});
+							})
+							.then(function(result) {
+								if (!result.ok || !result.data || !result.data.success) {
+									alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
+									return;
+								}
+								jobNoInput.value = result.data.job_no;
+							})
+							.catch(function() {
+								alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
+							})
+							.then(function() {
+								if (runIcon) {
+									runIcon.dataset.loading = '0';
+									runIcon.style.pointerEvents = '';
+									runIcon.style.opacity = '';
+								}
+							});
 					}
 				</script>
 
@@ -1203,9 +1649,10 @@
 								<button type="button" class="so-address-action-btn so-address-action-btn-primary" style="background-color: #F4E8FF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="openCustomerPopup();">
 									<i class="fas fa-search"></i> ค้นหาที่อยู่
 								</button>
-								<button type="button" class="so-address-action-btn so-address-action-btn-secondary" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="doCallAjax1('rental_id', 'rental_name', 'rental_tel', 'emergency_name', 'emergency_tel', 'rental_address', 'install_address', 'bill_name', 'bill_address', 'bill_tel', 'tax_no', 'connect_name', 'connect_tel', 'patient_name', 'install_address', 'address_1', 'address_name', 'address_send', 'customer_name', 'customer_tel', 'province_name', 'rental_addr_detail', 'rental_district', 'rental_province', 'rental_zipcode');">
-									<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มจากฐานลูกค้า
+								<button type="button" class="so-address-action-btn so-address-action-btn-secondary" style="background-color: #FFFFFF; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;" onclick="toggleSaveToCustomerDb(this)">
+									<img src="img/icons/database.png" alt="database" style="width: 16px; height: 16px;"> เพิ่มลงฐานลูกค้า
 								</button>
+								<input type="hidden" name="save_to_customer_db" id="save_to_customer_db" value="0">
 							</div>
 
 							<div class="so-grid-3">
@@ -1487,10 +1934,12 @@
 							<div class="so-field-group">
 								<label class="so-label" for="bank_img">แนบไฟล์รูป Book Bank <span style="color:red;">*</span></label>
 								<label class="so-file-picker" for="bank_img">
-									<span class="so-file-picker-text" id="bank_img_text">Choose File</span>
+									<span class="so-file-picker-text" id="bank_img_text"><?php echo ($rentalIsEditMode && !empty($savedRental['bank_img'])) ? 'ไฟล์ที่แนบไว้: ' . so_saved_h($savedRental['bank_img']) : 'Choose File'; ?></span>
 									<i class="far fa-image so-file-picker-icon"></i>
-									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" required onchange="showRentalBankImgName(this)">
+									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" <?php echo $rentalIsEditMode ? '' : 'required'; ?> onchange="showRentalBankImgName(this)">
 								</label>
+								<!-- edit mode: ไม่อัปโหลดไฟล์ใหม่ = คงไฟล์เดิม (register_suprental_edit1.php อ่านค่านี้เมื่อ $_FILES['bank_img'] ว่าง) -->
+								<input type="hidden" name="bank_img_existing" value="<?php echo ($savedRental !== null) ? so_saved_h($savedRental['bank_img'] ?? '') : ''; ?>">
 							</div>
 						</div>
 					</div>
@@ -1529,9 +1978,191 @@
 									</tr>
 								</thead>
 								<tbody>
-									<tr class="rt-status-empty">
-										<td colspan="6">ยังไม่มีรายการชำระเงิน</td>
-									</tr>
+									<?php
+									if (!function_exists('renderRentalPaymentStatusIcon')) {
+										function renderRentalPaymentStatusIcon($summaryCash)
+										{
+											$status = trim((string)$summaryCash);
+											if ($status === 'สมบูรณ์') {
+												return '<img src="img/icons/checkmark.png" alt="สมบูรณ์" title="สมบูรณ์" style="width:20px;height:20px;">';
+											}
+											if ($status === '') {
+												return '<img src="img/icons/clock_delay.png" alt="รอดำเนินการ" title="รอดำเนินการ" style="width:20px;height:20px;">';
+											}
+											return so_saved_h($status);
+										}
+									}
+
+									$rtFinRowsRendered = false;
+
+									if ($savedRental !== null) {
+										// แถว "0.เงินประกัน" — mirrors register_adminrental_edit.php:377-422
+										$rtFinDepositRefAi = substr($savedRental['ref_ai'], 0, 2);
+										if ($rtFinDepositRefAi === 'SO') {
+											$rtFinDepositDocQuery = mysqli_query($conn, "SELECT iv_no FROM hos__so WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+											$rtFinDepositDocRow = $rtFinDepositDocQuery ? mysqli_fetch_assoc($rtFinDepositDocQuery) : null;
+											$rtFinDepositDocNo = $rtFinDepositDocRow['iv_no'] ?? '';
+
+											$rtFinDepositAmtQuery = mysqli_query($conn, "SELECT SUM(amount) AS amount FROM hos__subso WHERE ref_idd = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+											$rtFinDepositAmtRow = $rtFinDepositAmtQuery ? mysqli_fetch_assoc($rtFinDepositAmtQuery) : null;
+											$rtFinDepositAmount = $rtFinDepositAmtRow['amount'] ?? 0;
+										} else {
+											$rtFinDepositDocQuery = mysqli_query($conn, "SELECT doc_no FROM so__main WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+											$rtFinDepositDocRow = $rtFinDepositDocQuery ? mysqli_fetch_assoc($rtFinDepositDocQuery) : null;
+											$rtFinDepositDocNo = $rtFinDepositDocRow['doc_no'] ?? '';
+
+											$rtFinDepositAmtQuery = mysqli_query($conn, "SELECT SUM(sum_amount) AS amount FROM so__submain WHERE ref_idd = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+											$rtFinDepositAmtRow = $rtFinDepositAmtQuery ? mysqli_fetch_assoc($rtFinDepositAmtQuery) : null;
+											$rtFinDepositAmount = $rtFinDepositAmtRow['amount'] ?? 0;
+										}
+
+										$rtFinDepositRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+										$rtFinDepositRegisterRow = $rtFinDepositRegisterQuery ? mysqli_fetch_assoc($rtFinDepositRegisterQuery) : null;
+
+										$rtFinDepositCreditQuery = mysqli_query($conn, "SELECT date_tran FROM tb_credit_note WHERE iv_no_ref LIKE '" . mysqli_real_escape_string($conn, $rtFinDepositDocNo) . "' AND status_doc = 'Approve'");
+										$rtFinDepositCreditRows = $rtFinDepositCreditQuery ? mysqli_num_rows($rtFinDepositCreditQuery) : 0;
+										$rtFinDepositCreditRow = $rtFinDepositCreditRows > 0 ? mysqli_fetch_assoc($rtFinDepositCreditQuery) : null;
+
+										$rtFinRowsRendered = true;
+									?>
+										<tr>
+											<td>0.เงินประกัน</td>
+											<td></td>
+											<td></td>
+											<td><?php echo so_saved_h($rtFinDepositDocNo); ?></td>
+											<td><?php echo number_format((float)$rtFinDepositAmount, 2); ?></td>
+											<td><?php
+												if ($rtFinDepositCreditRows > 0 && $rtFinDepositCreditRow['date_tran'] !== '0000-00-00') {
+													echo 'คืนเงินค้ำประกันเรียบร้อย วันที่ ' . so_saved_h(DateThai($rtFinDepositCreditRow['date_tran']));
+												} else {
+													echo renderRentalPaymentStatusIcon($rtFinDepositRegisterRow['summary_cash'] ?? '');
+												}
+												?></td>
+										</tr>
+										<?php
+
+										// แถว "0.ลดหนี้" — mirrors register_adminrental_edit.php:424-460
+										$rtFinRefAiTrimmed = str_replace(' ', '', $savedRental['ref_ai']);
+										if ($rtFinRefAiTrimmed !== '') {
+											$rtFinCreditNoteQuery = mysqli_query($conn, "SELECT * FROM tb_credit_note WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinRefAiTrimmed) . "'");
+											$rtFinCreditNoteRows = $rtFinCreditNoteQuery ? mysqli_num_rows($rtFinCreditNoteQuery) : 0;
+											$rtFinCreditNoteRow = $rtFinCreditNoteRows > 0 ? mysqli_fetch_assoc($rtFinCreditNoteQuery) : null;
+
+											if ($rtFinCreditNoteRows > 0) {
+												$rtFinSubCreditQuery = mysqli_query($conn, "SELECT SUM(sum_amount) AS sum_amount FROM tb_subcredit WHERE ref_creditt = '" . mysqli_real_escape_string($conn, $rtFinCreditNoteRow['ref_credit']) . "'");
+												$rtFinSubCreditRow = $rtFinSubCreditQuery ? mysqli_fetch_assoc($rtFinSubCreditQuery) : null;
+												$rtFinSubCreditAmount = $rtFinSubCreditRow['sum_amount'] ?? 0;
+										?>
+												<tr>
+													<td>0.ลดหนี้</td>
+													<td><?php echo so_saved_h(DateThai($rtFinCreditNoteRow['date_credit'])); ?></td>
+													<td></td>
+													<td>
+														<a href="register_credit_adm.php?ref_credit=<?php echo urlencode($rtFinCreditNoteRow['ref_credit']); ?>" target="_blank"><?php echo so_saved_h($rtFinCreditNoteRow['credit_no']); ?></a>
+													</td>
+													<td><?php echo number_format((float)$rtFinSubCreditAmount, 2); ?></td>
+													<td><?php
+														if ($rtFinDepositCreditRows > 0 && $rtFinDepositCreditRow['date_tran'] !== '0000-00-00') {
+															echo 'คืนเงินค้ำประกันเรียบร้อย วันที่ ' . so_saved_h(DateThai($rtFinDepositCreditRow['date_tran']));
+														}
+														?></td>
+												</tr>
+											<?php
+											}
+										}
+
+										// รายการชำระตามรอบ — mirrors register_adminrental_edit.php:462-530
+										$rtFinInstallmentQuery = mysqli_query($conn, "SELECT * FROM hos__rental_runiv WHERE ref_idren = '" . mysqli_real_escape_string($conn, $savedRental['ref_id']) . "' AND ref_idiv != '' ORDER BY date_runiv DESC");
+										$rtFinInstallmentCount = $rtFinInstallmentQuery ? mysqli_num_rows($rtFinInstallmentQuery) : 0;
+										$rtFinInstallmentNo = $rtFinInstallmentCount + 1;
+
+										if ($rtFinInstallmentQuery) {
+											while ($rtFinInstallmentRow = mysqli_fetch_assoc($rtFinInstallmentQuery)) {
+												$rtFinInstallmentRefIv = substr($rtFinInstallmentRow['ref_idiv'], 0, 2);
+												if ($rtFinInstallmentRefIv === 'SO') {
+													$rtFinInstDocQuery = mysqli_query($conn, "SELECT iv_no FROM hos__so WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+													$rtFinInstDocRow = $rtFinInstDocQuery ? mysqli_fetch_assoc($rtFinInstDocQuery) : null;
+													$rtFinInstDocNo = $rtFinInstDocRow['iv_no'] ?? '';
+
+													$rtFinInstAmtQuery = mysqli_query($conn, "SELECT SUM(amount) AS amount FROM hos__subso WHERE ref_idd = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+													$rtFinInstAmtRow = $rtFinInstAmtQuery ? mysqli_fetch_assoc($rtFinInstAmtQuery) : null;
+													$rtFinInstAmount = $rtFinInstAmtRow['amount'] ?? 0;
+
+													$rtFinInstLink = 'register_adminhos_edit.php?ref_id=' . urlencode($rtFinInstallmentRow['ref_idiv']);
+												} else {
+													$rtFinInstDocQuery = mysqli_query($conn, "SELECT doc_no FROM so__main WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+													$rtFinInstDocRow = $rtFinInstDocQuery ? mysqli_fetch_assoc($rtFinInstDocQuery) : null;
+													$rtFinInstDocNo = $rtFinInstDocRow['doc_no'] ?? '';
+
+													$rtFinInstAmtQuery = mysqli_query($conn, "SELECT SUM(sum_amount) AS amount FROM so__submain WHERE ref_idd = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+													$rtFinInstAmtRow = $rtFinInstAmtQuery ? mysqli_fetch_assoc($rtFinInstAmtQuery) : null;
+													$rtFinInstAmount = $rtFinInstAmtRow['amount'] ?? 0;
+
+													$rtFinInstLink = 'register_admin_edit.php?ref_id=' . urlencode($rtFinInstallmentRow['ref_idiv']);
+												}
+
+												$rtFinInstRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+												$rtFinInstRegisterRow = $rtFinInstRegisterQuery ? mysqli_fetch_assoc($rtFinInstRegisterQuery) : null;
+											?>
+												<tr>
+													<td>ชำระครั้งที่ <?php echo (int)$rtFinInstallmentNo; ?></td>
+													<td><?php echo so_saved_h(DateThai($rtFinInstallmentRow['date_runiv'])); ?></td>
+													<td><?php echo so_saved_h(DateThai($rtFinInstallmentRow['end_date'])); ?></td>
+													<td><a href="<?php echo $rtFinInstLink; ?>" target="_blank"><?php echo so_saved_h($rtFinInstDocNo); ?></a></td>
+													<td><?php echo number_format((float)$rtFinInstAmount, 2); ?></td>
+													<td><?php echo renderRentalPaymentStatusIcon($rtFinInstRegisterRow['summary_cash'] ?? ''); ?></td>
+												</tr>
+										<?php
+												$rtFinInstallmentNo--;
+											}
+										}
+
+										// แถว "ชำระครั้งที่ 1" จาก ref_iv/start_promis/end_promis ของสัญญาหลัก — mirrors register_adminrental_edit.php:532-586
+										$rtFinFinalRefIv = substr($savedRental['ref_iv'], 0, 2);
+										if ($rtFinFinalRefIv === 'SO') {
+											$rtFinFinalDocQuery = mysqli_query($conn, "SELECT iv_no FROM hos__so WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+											$rtFinFinalDocRow = $rtFinFinalDocQuery ? mysqli_fetch_assoc($rtFinFinalDocQuery) : null;
+											$rtFinFinalDocNo = $rtFinFinalDocRow['iv_no'] ?? '';
+
+											$rtFinFinalAmtQuery = mysqli_query($conn, "SELECT SUM(amount) AS amount FROM hos__subso WHERE ref_idd = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+											$rtFinFinalAmtRow = $rtFinFinalAmtQuery ? mysqli_fetch_assoc($rtFinFinalAmtQuery) : null;
+											$rtFinFinalAmount = $rtFinFinalAmtRow['amount'] ?? 0;
+
+											$rtFinFinalLink = 'register_adminhos_edit.php?ref_id=' . urlencode($savedRental['ref_iv']);
+										} else {
+											$rtFinFinalDocQuery = mysqli_query($conn, "SELECT doc_no FROM so__main WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+											$rtFinFinalDocRow = $rtFinFinalDocQuery ? mysqli_fetch_assoc($rtFinFinalDocQuery) : null;
+											$rtFinFinalDocNo = $rtFinFinalDocRow['doc_no'] ?? '';
+
+											$rtFinFinalAmtQuery = mysqli_query($conn, "SELECT SUM(sum_amount) AS amount FROM so__submain WHERE ref_idd = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+											$rtFinFinalAmtRow = $rtFinFinalAmtQuery ? mysqli_fetch_assoc($rtFinFinalAmtQuery) : null;
+											$rtFinFinalAmount = $rtFinFinalAmtRow['amount'] ?? 0;
+
+											$rtFinFinalLink = 'register_admin_edit.php?ref_id=' . urlencode($savedRental['ref_iv']);
+										}
+
+										$rtFinFinalRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+										$rtFinFinalRegisterRow = $rtFinFinalRegisterQuery ? mysqli_fetch_assoc($rtFinFinalRegisterQuery) : null;
+										?>
+										<tr>
+											<td>ชำระครั้งที่ 1</td>
+											<td><?php echo so_saved_h(DateThai($savedRental['start_promis'])); ?></td>
+											<td><?php echo so_saved_h(DateThai($savedRental['end_promis'])); ?></td>
+											<td><a href="<?php echo $rtFinFinalLink; ?>" target="_blank"><?php echo so_saved_h($rtFinFinalDocNo); ?></a></td>
+											<td><?php echo number_format((float)$rtFinFinalAmount, 2); ?></td>
+											<td><?php echo renderRentalPaymentStatusIcon($rtFinFinalRegisterRow['summary_cash'] ?? ''); ?></td>
+										</tr>
+									<?php
+									}
+
+									if (!$rtFinRowsRendered) {
+									?>
+										<tr class="rt-status-empty">
+											<td colspan="6">ยังไม่มีรายการชำระเงิน</td>
+										</tr>
+									<?php
+									}
+									?>
 								</tbody>
 							</table>
 						</div>
@@ -1539,10 +2170,6 @@
 				</div>
 
 				<?php
-				/**
-				 * ฟังก์ชัน Helper สำหรับแสดงสถานะของคอลัมน์ "สรุปงาน" (ตามแบบ Figma node 683:3549)
-				 * รองรับทุกสถานะ: สมบูรณ์ (เขียว), รอช่าง/รอการส่งมอบ (ส้ม/เหลือง), กำลังดำเนินงาน (ฟ้า), ไม่สำเร็จ/ยกเลิก (แดง)
-				 */
 				if (!function_exists('renderJobSummaryStatusPill')) {
 					function renderJobSummaryStatusPill($statusText)
 					{
@@ -1552,7 +2179,10 @@
 						$icon = '';
 						$class = 'is-muted';
 
-						if (preg_match('/(สมบูรณ์|สำเร็จ|เรียบร้อย|ผ่าน)/u', $status)) {
+						if (preg_match('/(ไม่สมบูรณ์|ไม่สำเร็จ|ยกเลิก|ตีกลับ|ปฏิเสธ|มีปัญหา|ผิดพลาด)/u', $status)) {
+							$class = 'is-danger';
+							$icon = '<i class="fas fa-times-circle" style="font-size: 11px; margin-right: 4px;"></i>';
+						} elseif (preg_match('/(สมบูรณ์|สำเร็จ|เรียบร้อย|ผ่าน)/u', $status)) {
 							$class = 'is-success';
 							$icon = '<i class="fas fa-check-circle" style="font-size: 11px; margin-right: 4px;"></i>';
 						} elseif (preg_match('/(รอ|รอช่าง|รอดำเนินการ|รอชำระ|รอนัดหมาย)/u', $status)) {
@@ -1561,9 +2191,6 @@
 						} elseif (preg_match('/(กำลัง|ระหว่าง|ดำเนินงาน|กำลังส่ง|จัดส่ง)/u', $status)) {
 							$class = 'is-info';
 							$icon = '<i class="fas fa-spinner fa-spin" style="font-size: 11px; margin-right: 4px;"></i>';
-						} elseif (preg_match('/(ไม่สำเร็จ|ยกเลิก|ตีกลับ|ปฏิเสธ|มีปัญหา)/u', $status)) {
-							$class = 'is-danger';
-							$icon = '<i class="fas fa-times-circle" style="font-size: 11px; margin-right: 4px;"></i>';
 						}
 
 						return '<span class="so-status-pill ' . $class . '">' . $icon . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</span>';
@@ -1590,9 +2217,83 @@
 									</tr>
 								</thead>
 								<tbody>
-									<tr class="rt-status-empty">
-										<td colspan="6">ยังไม่มีรายการรับส่งสินค้า</td>
-									</tr>
+									<?php
+									if (!function_exists('renderRentalStockCompleteText')) {
+										function renderRentalStockCompleteText($stockComplete)
+										{
+											$status = trim((string)$stockComplete);
+											if ($status === '1') return 'สมบูรณ์';
+											if ($status === '2') return 'ไม่สมบูรณ์';
+											return 'รอสต็อกตรวจสอบ';
+										}
+									}
+
+									$rtShipRowsRendered = false;
+
+									if ($savedRental !== null) {
+										if (!empty($savedRental['job_no'])) {
+											$rtShipQuery = mysqli_query($com1, "SELECT * FROM tb_register_data WHERE running = '" . mysqli_real_escape_string($conn, $savedRental['job_no']) . "'");
+											$rtShipRow = $rtShipQuery ? mysqli_fetch_assoc($rtShipQuery) : null;
+											if ($rtShipRow) {
+												$rtShipRowsRendered = true;
+									?>
+												<tr>
+													<td><a href="https://cs.allwellcenter.com/7112018.php?running=<?php echo urlencode($rtShipRow['running']); ?>" target="_blank"><?php echo so_saved_h($rtShipRow['running']); ?></a></td>
+													<td>ส่งสินค้า</td>
+													<td><?php echo so_saved_h(DateThai($rtShipRow['start_date'])); ?></td>
+													<td><?php echo so_saved_h($rtShipRow['employee_send']); ?></td>
+													<td><?php echo renderJobSummaryStatusPill($rtShipRow['summary_cs']); ?></td>
+													<td><?php echo so_saved_h($rtShipRow['description_cs']); ?></td>
+												</tr>
+											<?php
+											}
+										}
+
+										if (!empty($savedRental['job_idreturn'])) {
+											$rtReceiveQuery = mysqli_query($com1, "SELECT * FROM tb_register_data WHERE running = '" . mysqli_real_escape_string($conn, $savedRental['job_idreturn']) . "'");
+											$rtReceiveRow = $rtReceiveQuery ? mysqli_fetch_assoc($rtReceiveQuery) : null;
+											if ($rtReceiveRow) {
+												$rtShipRowsRendered = true;
+											?>
+												<tr>
+													<td><a href="https://cs.allwellcenter.com/7112018.php?running=<?php echo urlencode($rtReceiveRow['running']); ?>" target="_blank"><?php echo so_saved_h($rtReceiveRow['running']); ?></a></td>
+													<td>รับสินค้า</td>
+													<td><?php echo so_saved_h(DateThai($rtReceiveRow['start_date'])); ?></td>
+													<td><?php echo so_saved_h($rtReceiveRow['employee_send']); ?></td>
+													<td><?php echo renderJobSummaryStatusPill($rtReceiveRow['summary_cs']); ?></td>
+													<td><?php echo so_saved_h($rtReceiveRow['description_cs']); ?></td>
+												</tr>
+											<?php
+											}
+										}
+
+										if (!empty($savedRental['ref_rt'])) {
+											$rtReturnQuery = mysqli_query($conn, "SELECT * FROM hos__receive WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_rt']) . "'");
+											$rtReturnRow = $rtReturnQuery ? mysqli_fetch_assoc($rtReturnQuery) : null;
+											if ($rtReturnRow) {
+												$rtShipRowsRendered = true;
+											?>
+												<tr>
+													<td><a href="rister_clearbrpn_stedit.php?ref_id=<?php echo urlencode($rtReturnRow['ref_id']); ?>" target="_blank"><?php echo so_saved_h($rtReturnRow['ref_id']); ?></a></td>
+													<td>คืนสินค้า</td>
+													<td><?php echo so_saved_h(DateThai($rtReturnRow['stock_date'])); ?></td>
+													<td><?php echo so_saved_h($rtReturnRow['stock_name']); ?></td>
+													<td><?php echo renderJobSummaryStatusPill(renderRentalStockCompleteText($rtReturnRow['stock_complete'])); ?></td>
+													<td><?php echo so_saved_h($rtReturnRow['edit_des']); ?></td>
+												</tr>
+										<?php
+											}
+										}
+									}
+
+									if (!$rtShipRowsRendered) {
+										?>
+										<tr class="rt-status-empty">
+											<td colspan="6">ยังไม่มีรายการรับส่งสินค้า</td>
+										</tr>
+									<?php
+									}
+									?>
 								</tbody>
 							</table>
 						</div>
@@ -1607,11 +2308,133 @@
 		<div class="so-sticky-actions">
 			<div class="so-sticky-actions-inner">
 				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-				<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft"><i class="far fa-save"></i> Save Draft</button>
+				<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
 				<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupRental();">ยกเลิก</button>
 			</div>
 		</div>
 	</form>
+
+	<?php if (count($rentalPrefill) > 0) { ?>
+		<!-- เติมค่ากลับเข้าฟอร์มใน edit mode — ตัวเดียวจบทั้งฟอร์ม (pattern เดียวกับ register_supchange.php) -->
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var rentalPrefill = <?php echo json_encode($rentalPrefill, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+				var rentalForm = document.forms['frmMain'];
+				if (!rentalForm) return;
+
+				Object.keys(rentalPrefill).forEach(function(fieldName) {
+					var value = rentalPrefill[fieldName];
+					if (value === null || value === undefined) return;
+					value = String(value);
+
+					var elements = rentalForm.querySelectorAll('[name="' + fieldName + '"]');
+					if (!elements.length) return;
+
+					elements.forEach(function(el) {
+						if (el.type === 'radio') {
+							if (el.value === value) el.checked = true;
+						} else if (el.type === 'checkbox') {
+							el.checked = (value === '1' || value === el.value);
+						} else if (el.tagName === 'SELECT') {
+							el.value = value;
+							if (el.selectedIndex === -1 && value !== '') {
+								var opt = document.createElement('option');
+								opt.value = value;
+								opt.textContent = value;
+								opt.selected = true;
+								el.appendChild(opt);
+							}
+						} else {
+							el.value = value;
+						}
+					});
+				});
+
+				// address_merged_ui ไม่มี name= (id-only, JS-mirror ไปยัง address_1/address_name) จึง generic loop ข้างบนไม่จับ
+				var addressMergedEl = document.getElementById('address_merged_ui');
+				if (addressMergedEl && rentalPrefill.address_merged_ui !== undefined) {
+					addressMergedEl.value = rentalPrefill.address_merged_ui || '';
+				}
+
+				// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
+				['is_high_roof', 'call_customer', 'no_money', 'send_cs', 'have_order', 'rental_repeat_cus'].forEach(function(name) {
+					var el = document.querySelector('[name="' + name + '"]');
+					if (el) el.dispatchEvent(new Event('change', {
+						bubbles: true
+					}));
+				});
+			});
+		</script>
+	<?php } ?>
+
+	<?php if ($savedRentalCustomerDisplay !== null) { ?>
+		<!-- restore customer-info-display-card (name/tel/type/status/credit/VIP) หลัง submit/reload — tb_customer ไม่ได้อยู่ใน $rentalPrefill loop -->
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var savedCustomerDisplay = <?php echo json_encode($savedRentalCustomerDisplay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+				var billIdInput = document.getElementById('bill_id');
+				if (billIdInput) billIdInput.value = savedCustomerDisplay.customer_id || '';
+				var hBillIdInput = document.getElementById('h_bill_id');
+				if (hBillIdInput) hBillIdInput.value = savedCustomerDisplay.customer_id || '';
+
+				setElementText('display_rental_name', savedCustomerDisplay.customer_name || savedCustomerDisplay.bill_name);
+				setElementText('display_rental_tel', savedCustomerDisplay.cus_tel || savedCustomerDisplay.bill_tel);
+				setElementText('display_customer_typename', savedCustomerDisplay.type_name);
+				setElementText('display_mode_name', savedCustomerDisplay.status_cus);
+				setCreditThbDisplay(savedCustomerDisplay.credit_thb);
+
+				var vipIcon = document.getElementById('display_vip_icon');
+				if (vipIcon) vipIcon.style.display = (String(savedCustomerDisplay.vip_ckk) === '1') ? '' : 'none';
+
+				var cusCkk = String(savedCustomerDisplay.credit_ckk || '').trim();
+				var hCreditCkk = document.getElementById('h_credit_ckk_value');
+				if (hCreditCkk) hCreditCkk.value = cusCkk;
+
+				if (typeof resolveBankPaymentMode === 'function') {
+					resolveBankPaymentMode(cusCkk, function(resolvedMode) {
+						var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
+						if (customerPaymentModeInput) customerPaymentModeInput.value = resolvedMode;
+						if (typeof switchPaymentMode === 'function') switchPaymentMode(resolvedMode);
+					});
+				}
+			});
+		</script>
+	<?php } ?>
+
+	<?php if (count($savedRentalProducts) > 0) { ?>
+		<!-- เติมแถวสินค้าใน edit mode — พอร์ต pattern เดียวกับ register_supchange.php:940-968 -->
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var rtSavedProducts = <?php echo json_encode($savedRentalProducts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+				rtSavedProducts.forEach(function(product, index) {
+					var rowIndex = index + 1;
+					if (rowIndex > 10) return;
+
+					rtSetRowData(rowIndex, {
+						product_id: product.product_id || '',
+						product_name: product.tb_sol_name || '',
+						unit_name: product.tb_unit_name || '',
+						sale_count: product.count || '',
+						product_price: product.price || '',
+						sum_amount: product.amount || '',
+						sn_number: product.sn_number || '',
+						warranty: product.warranty || '',
+						sale_remarkk: product.remark_sale || '',
+						free_count: product.free_count || '',
+						delivery_cost: product.delivery_cost || '',
+						display_name: product.display_name || '',
+						product_name_label: product.tb_sol_name || '',
+						product_codet: product.product_code || '',
+						display: ''
+					});
+				});
+
+				if (typeof rtCalculateSummary === 'function') rtCalculateSummary();
+			});
+		</script>
+	<?php } ?>
 
 	<script language="JavaScript">
 		function goMainSupRental() {
