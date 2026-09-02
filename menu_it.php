@@ -192,18 +192,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 					<a href="status_spr.php">รายการใบเบิกเครื่องและอะไหล่</a>
 				<?php } ?>
 
-				<div class="sidebar-subgroup">
-					<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">ใบสั่งเช่า</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
-					<div class="sidebar-submenu">
-						<a href="status_suprental.php">Status ใบสั่งเช่า(Sup)</a>
-						<a href="status_adminrental.php">Status ใบสั่งเช่า(Admin)</a>
-						<a href="status_kangrental.php">Status ใบสั่งเช่ารอเปิดใบสั่งขาย</a>
-						<?php if ($_SESSION['name'] == 'เฉลิมศักดิ์') { ?>
-							<a href="rental_200_main.php">Status ใบสั่งเช่า(Md)</a>
-						<?php } ?>
-						<a href="status_adminrental_iv.php">Status ใบสั่งเช่าออกใบสั่งขาย</a>
-					</div>
-				</div>
+				<a href="status_suprental.php">ใบสั่งเช่า</a>
 
 				<div class="sidebar-subgroup">
 					<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">ใบลดหนี้</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
@@ -266,9 +255,9 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 				<a href="register_supchange.php">ใบแลกเปลี่ยนสินค้า</a>
 				<a href="main_receivepro.php">ใบรับสินค้า</a>
 				<a href="register_creditnot_create.php">ใบสั่งลดหนี้</a>
-				<a href="main_sup_rental.php">ใบสั่งเช่า</a>
+				<a href="register_suprental.php">ใบสั่งเช่า</a>
 
-				<?php if ($_SESSION['name'] == 'อัจฉรา') { ?>
+				<?php if (false && $_SESSION['name'] == 'อัจฉรา') { ?>
 					<div class="sidebar-subgroup">
 						<button type="button" class="sidebar-subgroup-btn"><span class="sidebar-label">ใบสั่งเช่า</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 						<div class="sidebar-submenu">
