@@ -852,6 +852,56 @@
 
 				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
 			}
+
+			// เปิดพรีวิวใบสั่งเช่าในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ from_rental.php
+			// (from_rental.php มี preview path อ่านจาก POST อยู่ใน from_rental_preview_helper.php)
+			// พอร์ตจาก register_supchange.php:605-650 (chgOpenPreview)
+			function rtOpenPreview() {
+				var form = document.forms.frmMain;
+				var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
+				var refId = refInput ? refInput.value.trim() : '';
+
+				if (!form || !refId) {
+					Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id)', 'warning');
+					return;
+				}
+
+				var previewTarget = 'rental_preview_' + Date.now();
+				var previewWindow = window.open('', previewTarget);
+				if (!previewWindow) {
+					Swal.fire('แจ้งเตือน', 'เบราว์เซอร์บล็อกหน้าต่าง Preview กรุณาอนุญาต Pop-up แล้วลองใหม่', 'warning');
+					return;
+				}
+
+				var previewFlag = document.createElement('input');
+				previewFlag.type = 'hidden';
+				previewFlag.name = '_report_preview';
+				previewFlag.value = '1';
+				form.appendChild(previewFlag);
+
+				var originalAction = form.getAttribute('action');
+				var originalMethod = form.getAttribute('method');
+				var originalTarget = form.getAttribute('target');
+				var originalEnctype = form.getAttribute('enctype');
+
+				form.action = 'from_rental.php';
+				form.method = 'post';
+				form.target = previewTarget;
+				// พรีวิวไม่ใช้ไฟล์แนบ จึงไม่ต้องอัปโหลด Book Bank ซ้ำไปที่หน้ารายงาน
+				form.enctype = 'application/x-www-form-urlencoded';
+				HTMLFormElement.prototype.submit.call(form);
+
+				if (originalAction === null) form.removeAttribute('action');
+				else form.setAttribute('action', originalAction);
+				if (originalMethod === null) form.removeAttribute('method');
+				else form.setAttribute('method', originalMethod);
+				if (originalTarget === null) form.removeAttribute('target');
+				else form.setAttribute('target', originalTarget);
+				if (originalEnctype === null) form.removeAttribute('enctype');
+				else form.setAttribute('enctype', originalEnctype);
+
+				form.removeChild(previewFlag);
+			}
 		</script>
 
 		<div class="rt-layout">
@@ -866,7 +916,7 @@
 						</div>
 					</div>
 					<div class="so-header-right">
-						<button type="button" class="btn-preview-so" onclick="alert('กรุณาบันทึกเอกสารก่อน ฟังก์ชัน Preview ใช้งานได้หลังบันทึกใบสั่งเช่าแล้ว');"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
+						<button type="button" class="btn-preview-so" onclick="rtOpenPreview();"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
 					</div>
 				</div>
 				<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?>">
@@ -1065,6 +1115,9 @@
 									value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['promis_no'] ?? '') : ''; ?>"
 									placeholder="<?php echo $rentalIsEditMode ? '' : 'ออกอัตโนมัติหลังบันทึก'; ?>"
 									readonly disabled>
+								<!-- input ด้านบนมี disabled จึงไม่ถูกส่งไปกับ POST เลย มิเรอร์ค่าไว้ที่ hidden
+								     input นี้เพื่อให้พรีวิว (from_rental.php) อ่านเลขที่สัญญาได้ในโหมดแก้ไข -->
+								<input type="hidden" name="promis_no" value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['promis_no'] ?? '') : ''; ?>">
 							</div>
 						</div>
 

@@ -43,19 +43,24 @@ $send_cs = $_POST["send_cs"] ?? '';
 $type_doc = $_POST["type_doc"];
 $register_date = $_POST["register_date"];
 $rental_name = $_POST["rental_name"];
-$connect_name = $_POST["connect_name"] ?? '';
+// connect_name/connect_tel ไม่มี input แยกสำหรับ hos__rental ในฟอร์มใหม่ ใช้ผู้ติดต่อจัดส่ง
+// (customer_name/customer_tel ในแท็บที่อยู่จัดส่ง) แทน ใกล้เคียงความหมายที่สุด
+// (mapping เดียวกับ register_suprental1.php)
+$connect_name = $_POST["customer_name"] ?? '';
 $start_promis = $_POST["start_promis"];
 $install_date = $_POST["install_date"] ?? '';
 $rental_address = $_POST["rental_address"];
 $rental_id = $_POST["rental_id"];
 $rental_tel = $_POST["rental_tel"];
-$connect_tel = $_POST["connect_tel"] ?? '';
+$connect_tel = $_POST["customer_tel"] ?? '';
 $bill_vat = $_POST["bill_vat"] ?? '';
 $des_sale = $_POST["des_sale"];
-$install_address = $_POST["install_address"] ?? '';
-$bill_name = $_POST["bill_name"] ?? '';
-$bill_tel = $_POST["bill_tel"] ?? '';
-$bill_address = $_POST["bill_address"] ?? '';
+// install_address ไม่มี input แยก ใช้สถานที่ติดตั้งเครื่อง (address_send) ที่ความหมายตรงกัน
+$install_address = $_POST["address_send"] ?? '';
+// bill_name/bill_tel/bill_address ไม่มีช่อง "ชื่อออกบิล" แยกในฟอร์มใหม่ ใช้ข้อมูลผู้เช่าแทน
+$bill_name = $rental_name;
+$bill_tel = $rental_tel;
+$bill_address = $rental_address;
 $tax_no = $_POST["tax_no"] ?? '';
 $payment = $_POST["payment"];
 $patient_name = $_POST["patient_name"] ?? '';
