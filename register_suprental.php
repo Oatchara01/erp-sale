@@ -585,6 +585,7 @@
 	$savedTransaction = null;
 	$savedRentalProducts = array();
 	$savedRentalCustomerDisplay = null;
+	$latestRentalDocumentReason = null;
 
 	if ($loadRentalRefId !== "") {
 		$savedRentalQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $loadRentalRefId . "' LIMIT 1");
@@ -617,6 +618,17 @@
 				$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 			}
 
+			if ($savedRentalRefId !== "") {
+				$latestRentalDocumentReasonQuery = mysqli_query($conn, "SELECT status_doc, reason
+					FROM tb_document_status_log
+					WHERE ref_id = '" . $loadRentalRefId . "'
+						AND status_doc IN ('ส่งกลับ', 'Rejected', 'Cancelled')
+					ORDER BY created_at DESC, id DESC
+					LIMIT 1");
+				if ($latestRentalDocumentReasonQuery && mysqli_num_rows($latestRentalDocumentReasonQuery) > 0) {
+					$latestRentalDocumentReason = mysqli_fetch_assoc($latestRentalDocumentReasonQuery);
+				}
+			}
 			// LEFT JOIN tb_product เพราะ hos__subrental ไม่มีคอลัมน์ product_name/unit_name ของตัวเอง
 			$savedRentalProductsQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $loadRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
 			if ($savedRentalProductsQuery) {
@@ -971,6 +983,29 @@
 						<button type="button" class="btn-preview-so" onclick="rtOpenPreview();"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
 					</div>
 				</div>
+				<?php
+				$latestRentalDocumentReasonTitleMap = array(
+					'ส่งกลับ' => 'เหตุผลในการส่งกลับ',
+					'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+					'Cancelled' => 'เหตุผลในการยกเลิก'
+				);
+				$latestRentalDocumentReasonClassMap = array(
+					'ส่งกลับ' => 'is-returned',
+					'Rejected' => 'is-rejected',
+					'Cancelled' => 'is-cancelled'
+				);
+				$latestRentalDocumentReasonStatus = trim((string)($latestRentalDocumentReason['status_doc'] ?? ''));
+				$latestRentalDocumentReasonText = trim((string)($latestRentalDocumentReason['reason'] ?? ''));
+				$latestRentalDocumentReasonTitle = $latestRentalDocumentReasonTitleMap[$latestRentalDocumentReasonStatus] ?? '';
+				$latestRentalDocumentReasonClass = $latestRentalDocumentReasonClassMap[$latestRentalDocumentReasonStatus] ?? '';
+				?>
+				<?php if ($rentalIsEditMode && $latestRentalDocumentReasonTitle !== '' && $latestRentalDocumentReasonText !== '') { ?>
+					<div class="rt-latest-reason-banner <?php echo so_saved_h($latestRentalDocumentReasonClass); ?>" role="status">
+						<button type="button" class="rt-latest-reason-close" aria-label="ปิด" onclick="this.closest('.rt-latest-reason-banner').style.display='none';">&times;</button>
+						<div class="rt-latest-reason-title"><?php echo so_saved_h($latestRentalDocumentReasonTitle); ?></div>
+						<div class="rt-latest-reason-text"><?php echo nl2br(so_saved_h($latestRentalDocumentReasonText)); ?></div>
+					</div>
+				<?php } ?>
 				<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?>">
 
 				<?php
