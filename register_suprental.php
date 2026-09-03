@@ -1965,6 +1965,7 @@
 					<button type="button" class="so-tab-btn active" onclick="rtOpenFinTab('rt-fin-1', this)">ข้อมูลการคืนเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-2', this)">รายละเอียดการชำระเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-3', this)">ข้อมูลการรับส่งสินค้า</button>
+					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-4', this)">การส่งกลับเอกสาร</button>
 				</div>
 
 				<div id="rt-fin-1" class="rt-fin-tab-content active">
@@ -2397,6 +2398,109 @@
 					</div>
 				</div>
 
+
+				<?php
+				if (!function_exists('renderRentalDocumentReturnStatus')) {
+					function renderRentalDocumentReturnStatus($statusDoc)
+					{
+						$statusMap = [
+							'ส่งกลับ' => 'ส่งกลับ',
+							'Rejected' => 'ไม่อนุมัติ',
+							'Cancelled' => 'ยกเลิกเอกสาร',
+						];
+
+						return $statusMap[$statusDoc] ?? $statusDoc;
+					}
+				}
+
+				if (!function_exists('renderRentalDocumentReturnStatusClass')) {
+					function renderRentalDocumentReturnStatusClass($statusDoc)
+					{
+						$statusClassMap = [
+							'ส่งกลับ' => 'is-returned',
+							'Rejected' => 'is-rejected',
+							'Cancelled' => 'is-cancelled',
+						];
+
+						return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+					}
+				}
+
+				if (!function_exists('formatRentalDocumentLogDateTime')) {
+					function formatRentalDocumentLogDateTime($createdAt)
+					{
+						$createdAt = trim((string)$createdAt);
+						if ($createdAt === '') return '';
+
+						$timestamp = strtotime($createdAt);
+						if ($timestamp === false) return '';
+
+						return date('d-m-Y H:i', $timestamp);
+					}
+				}
+				?>
+
+				<div id="rt-fin-4" class="rt-fin-tab-content">
+					<div class="so-card">
+						<div style="overflow-x:auto;">
+							<table class="rt-status-table rt-document-log-table">
+								<thead>
+									<tr>
+										<th>สถานะ</th>
+										<th>เหตุผลการส่งกลับ</th>
+										<th>ผู้ส่งกลับ</th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php
+									$rtDocumentLogRowsRendered = false;
+
+									if ($rentalIsEditMode && !empty($savedRental['ref_id'])) {
+										$rtDocumentLogRefId = mysqli_real_escape_string($conn, $savedRental['ref_id']);
+										$rtDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at
+											FROM tb_document_status_log
+											WHERE ref_id = '" . $rtDocumentLogRefId . "'
+												AND status_doc IN ('ส่งกลับ', 'Rejected', 'Cancelled')
+											ORDER BY created_at DESC, id DESC");
+
+										if ($rtDocumentLogQuery) {
+											while ($rtDocumentLogRow = mysqli_fetch_assoc($rtDocumentLogQuery)) {
+												$rtDocumentLogRowsRendered = true;
+												$rtDocumentLogUserName = trim((string)($rtDocumentLogRow['user_name'] ?? ''));
+												$rtDocumentLogDateTime = formatRentalDocumentLogDateTime($rtDocumentLogRow['created_at'] ?? '');
+									?>
+												<tr>
+													<td class="rt-document-log-status-cell">
+														<span class="rt-document-status-pill <?php echo so_saved_h(renderRentalDocumentReturnStatusClass($rtDocumentLogRow['status_doc'] ?? '')); ?>">
+															<?php echo so_saved_h(renderRentalDocumentReturnStatus($rtDocumentLogRow['status_doc'] ?? '')); ?>
+														</span>
+													</td>
+													<td class="rt-document-log-reason-cell"><?php echo so_saved_h($rtDocumentLogRow['reason'] ?? ''); ?></td>
+													<td class="rt-document-log-user-cell">
+														<div><?php echo so_saved_h($rtDocumentLogUserName !== '' ? $rtDocumentLogUserName : '-'); ?></div>
+														<?php if ($rtDocumentLogDateTime !== '') { ?>
+															<div class="rt-document-log-time"><?php echo so_saved_h($rtDocumentLogDateTime); ?></div>
+														<?php } ?>
+													</td>
+												</tr>
+										<?php
+											}
+										}
+									}
+
+									if (!$rtDocumentLogRowsRendered) {
+										?>
+										<tr class="rt-status-empty">
+											<td colspan="3">ยังไม่มีรายการส่งกลับเอกสาร</td>
+										</tr>
+									<?php
+									}
+									?>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
 
 
 			</div>

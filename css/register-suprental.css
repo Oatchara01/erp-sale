@@ -107,6 +107,84 @@
 	white-space: normal;
 }
 
+/* ===== ตารางประวัติการส่งกลับเอกสาร (Figma: สถานะเป็น pastel pill) ===== */
+.rt-document-log-table {
+	table-layout: fixed;
+}
+
+.rt-document-log-table th:nth-child(1),
+.rt-document-log-table td:nth-child(1) {
+	width: 118px;
+}
+
+.rt-document-log-table th:nth-child(2) {
+	padding-left: 28px !important;
+}
+
+.rt-document-log-table th:nth-child(3),
+.rt-document-log-table td:nth-child(3) {
+	width: 180px;
+}
+
+.rt-document-log-table th,
+.rt-document-log-table td {
+	vertical-align: top;
+}
+
+.rt-document-log-status-cell {
+	padding-left: 24px !important;
+}
+
+.rt-document-log-table .rt-document-log-reason-cell {
+	white-space: normal !important;
+	line-height: 1.45;
+	font-weight: 400;
+	color: #3D3A42;
+	padding-left: 28px !important;
+}
+
+.rt-document-log-table .rt-document-log-user-cell {
+	white-space: normal !important;
+	line-height: 1.45;
+	font-weight: 400;
+	color: #5D5963;
+}
+
+.rt-document-log-time {
+	color: #5D5963;
+	font-size: 15px;
+	font-weight: 300;
+}
+
+.rt-document-status-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 88px;
+	height: 26px;
+	padding: 0 16px;
+	border-radius: 999px;
+	box-sizing: border-box;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.rt-document-status-pill.is-returned {
+	background-color: #FFE3C2;
+	color: #F58220;
+}
+
+.rt-document-status-pill.is-rejected {
+	background-color: #FFE6E8;
+	color: #FF1F1F;
+}
+
+.rt-document-status-pill.is-cancelled {
+	background-color: #F1F2F4;
+	color: #5D5963;
+}
 /* pill สถานะสีเขียว/เหลือง/ฟ้า/แดง (Figma 686:2412 ไอคอนสำเร็จ/รอ, 686:2413 "สมบูรณ์"/"รอช่าง", 683:3549 สรุปงาน)
    สร้างตามโทนสีดีไซน์ซิสเต็มของ ERPSALE */
 .so-status-pill {
