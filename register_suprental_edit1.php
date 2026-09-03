@@ -138,8 +138,8 @@ if (!isset($_FILES['bank_img']) || $_FILES['bank_img']['size'] == 0) {
 	move_uploaded_file($_FILES["bank_img"]["tmp_name"], "credit_no/" . $bank_img);
 }
 
-// สถานะเอกสาร/ส่งหัวหน้า — พอร์ตจาก register_supchange_edit1.php:185,232-239,309-317 (ไม่มีสาขา "ยกเลิก"
-// เพราะ rental ใช้ cancel_flag/remark_cancel แยกจาก status_doc อยู่แล้ว ดู sql/suprental_optional_columns.sql:4-7)
+// สถานะเอกสาร/ส่งหัวหน้า — พอร์ตจาก register_supchange_edit1.php:185,232-239,309-317
+// (ค่า "ยกเลิก" ไม่ได้ set ตรงนี้ แต่เขียนทับท้ายไฟล์เมื่อ cancel_flag=1 เหมือนแพทเทิร์น return/reject/approve)
 $status_doc = $isDraftRequest ? "Draft" : "Request";
 $rtName = trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''));
 $rtNowDateTime = date('Y-m-d H:i:s');
@@ -511,6 +511,7 @@ if ($saveOk) {
 	$rtApproveAction = $_POST['approve_action'] ?? '';
 	if ($rtApproveAction !== '') {
 		$rtSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+		$rtApproveStatusMap = ['return' => 'ส่งกลับ', 'reject' => 'Rejected'];
 
 		if ($rtApproveAction === 'return') {
 			// ส่งกลับให้ Sale แก้ไข — send_sup='0' ทำให้ปุ่ม Submit บนฟอร์มกลับมาใช้ได้อีกครั้ง
@@ -520,6 +521,34 @@ if ($saveOk) {
 		} elseif ($rtApproveAction === 'approve') {
 			mysqli_query($conn, "UPDATE hos__rental SET status_doc='Approve', send_admin='1' WHERE ref_id='" . $rtSafeRefId . "'");
 		}
+
+		// เหตุผลที่กรอกใน popup ตอนกด ส่งกลับ/ไม่อนุมัติ — เก็บลง log แยก บันทึกได้หลายรอบต่อเอกสาร
+		// (ตาม sql/document_status_log.sql) เพราะ hos__rental ไม่มีคอลัมน์ประวัติ
+		$rtApproveReason = trim($_POST['rt_approve_reason'] ?? '');
+		if (isset($rtApproveStatusMap[$rtApproveAction]) && $rtApproveReason !== '') {
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $rtSafeRefId . "', '" . $rtApproveStatusMap[$rtApproveAction] . "', '"
+				. mysqli_real_escape_string($conn, $rtApproveReason) . "', '"
+				. mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '') . "', '"
+				. mysqli_real_escape_string($conn, $rtName) . "')");
+		}
+	}
+
+	// เขียนทับสถานะเป็น 'ยกเลิก' เมื่อ cancel_flag=1 (ทำหลัง block approve_action ด้านบน
+	// เพื่อให้ยกเลิกมีผลเป็นสถานะสุดท้ายเสมอ แม้จะมี approve_action ส่งมาพร้อมกัน) — ครอบคลุมทั้งเส้นทาง
+	// popup ยกเลิกและการติ๊ก checkbox ตรงในแท็บ Admin โดยไม่บังคับต้องมีเหตุผล
+	if ($cancel_flag === 1) {
+		mysqli_query($conn, "UPDATE hos__rental SET status_doc='ยกเลิก' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
+	}
+
+	// เหตุผลยกเลิกเอกสาร (cancel_flag/remark_cancel ถูก UPDATE ไปแล้วในบล็อกหลักด้านบน) — เก็บ log
+	// เพิ่มควบคู่กันทุกครั้งที่ติ๊กยกเลิกพร้อมเหตุผล เพื่อดูประวัติการยกเลิกย้อนหลังได้หลายรอบ
+	if ($cancel_flag === 1 && $remark_cancel !== '') {
+		mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+			VALUES ('" . mysqli_real_escape_string($conn, $ref_id) . "', 'Cancelled', '"
+			. $remark_cancel . "', '"
+			. mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '') . "', '"
+			. mysqli_real_escape_string($conn, $rtName) . "')");
 	}
 
 	if (ob_get_level() > 0) {

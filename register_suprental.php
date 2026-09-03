@@ -269,32 +269,6 @@
 		});
 	};
 
-	function clearFieldValue(id) {
-		var el = document.getElementById(id);
-		if (el) el.value = '';
-	}
-
-	function clearCustomerSelection() {
-		['rental_id', 'h_rental_id', 'rental_name', 'rental_tel', 'rental_address',
-			'bill_id', 'h_bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_no',
-			'connect_name', 'connect_tel', 'patient_name', 'emergency_name', 'emergency_tel',
-			'install_address', 'rental_addr_detail', 'rental_district', 'rental_zipcode'
-		].forEach(clearFieldValue);
-		clearFieldValue('rental_province');
-
-		setElementText('display_rental_name', '');
-		setElementText('display_rental_tel', '');
-		setElementText('display_mode_name', '');
-		setElementText('display_customer_typename', '');
-		setCreditThbDisplay('');
-		clearFieldValue('h_credit_ckk_value');
-		clearFieldValue('h_customer_payment_mode');
-		switchPaymentMode('credit');
-
-		var vipIcon = document.getElementById('display_vip_icon');
-		if (vipIcon) vipIcon.style.display = 'none';
-	}
-
 	function hasSelectedCustomerForPaymentMode() {
 		var hBillId = document.getElementById('h_bill_id');
 		return !!(hBillId && String(hBillId.value || '').trim() !== '');
@@ -1278,9 +1252,6 @@
 						}
 					}
 
-					// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_supchange.php:760-825
-					// ต่างกันตรงที่ใช้ doc_type='7' (JN) และ company_select ของหน้านี้เป็น 3=AWL/4=NBM
-					// อยู่แล้ว (เหมือน register_suphos.php) จึงไม่ต้อง map ค่าเหมือน supchange.php
 					function rtRunDocumentNo() {
 						var companySelect = document.getElementById('rt_type_doc_select');
 						var docNoInput = document.querySelector('input[name="rt_admin_doc_no"]');
@@ -1340,10 +1311,6 @@
 							});
 					}
 
-					// ไอคอน Run ของ "เลขที่ลงงาน" — พอร์ตจาก register_suphos.php:5015-5077 (runJobNo())
-					// ใช้ ajax_run_job_no.php เดิมทุกอย่าง (ตัวนับ tb_register_data.running ใช้ร่วมกับทุกหน้าจอ
-					// เพื่อไม่ให้เลขที่ลงงานซ้ำกัน) ต่างกันแค่วันที่อ้างอิงปี/เดือนของเลขใช้ start_promis
-					// (วันเริ่มสัญญาเช่า) แทน start_date (วันจัดส่งของ suphos)
 					function rtRunJobNo() {
 						var jobNoInput = document.querySelector('input[name="rt_admin_work_no"]');
 						var refIdInput = document.querySelector('input[name="ref_id"]');
@@ -1444,7 +1411,6 @@
 											<div class="cidc-label">รหัสลูกค้า</div>
 											<div class="cidc-value">
 												<input type='text' name="rental_id" id="rental_id" class="cidc-value-input" readonly>
-												<i class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างการเลือกลูกค้า"></i>
 												<input type='hidden' name="h_rental_id" id="h_rental_id" readonly>
 												<input type="hidden" id="bill_id">
 												<input type="hidden" id="h_bill_id">
@@ -2437,13 +2403,9 @@
 		</div>
 
 		<?php
-		// แถบปุ่มล่าง — พอร์ต business flow เดียวกับ register_supchange.php:1746-1789
-		// (Draft -> Request รออนุมัติ -> Approve/ส่งกลับ/ไม่อนุมัติ) มาใช้กับคอลัมน์ status_doc/send_sup
-		// ที่มีอยู่แล้วใน hos__rental (status_suprental.php filter/แสดง badge จากคอลัมน์นี้อยู่แล้ว
-		// แต่ยังไม่เคยมีหน้าไหนเขียน/action บนค่านี้จริงมาก่อน)
 		$rtStatusDoc = $savedRental['status_doc'] ?? '';
 		$rtSendSup = $savedRental['send_sup'] ?? '0';
-		$rtIsClosed = in_array($rtStatusDoc, ['Approve', 'ยกเลิก'], true);
+		$rtIsClosed = in_array($rtStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
 		$rtHideSubmit = $rentalIsEditMode && ((string)$rtSendSup === '1' || $rtIsClosed);
 		$rtIsSaleUser = (($_SESSION['type_login'] ?? '') === 'Sale');
 		$rtCanShowApproveBar = $rentalIsEditMode && !$rtIsSaleUser && ($rtStatusDoc === 'Request');
@@ -2452,9 +2414,8 @@
 		<div class="so-sticky-actions">
 			<div class="so-sticky-actions-inner">
 				<?php if ($rtCanShowApproveBar): ?>
-					<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
-					     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
 					<input type="hidden" name="approve_action" id="rt_approve_action" value="">
+					<input type="hidden" name="rt_approve_reason" id="rt_approve_reason" value="">
 					<div class="so-approve-actions">
 						<button type="button" class="so-overflow-menu-trigger" id="btn_rt_approve_overflow" onclick="toggleRtApproveOverflowMenu()">
 							<i class="fas fa-ellipsis-v"></i>
@@ -2474,7 +2435,7 @@
 				<?php if (!$rtHideUpdate): ?>
 					<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> <?php echo $rentalIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php endif; ?>
-				<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupRental();">ยกเลิก</button>
+				<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupRental();">ย้อนกลับ</button>
 			</div>
 		</div>
 	</form>
@@ -2494,17 +2455,82 @@
 			if (!menu.contains(e.target)) menu.style.display = 'none';
 		});
 
-		// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป register_suprental_edit1.php
-		// พอร์ตจาก register_supchange.php: chgRunApproveAction — ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้
-		// ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+		function rtOpenReasonPopup(opts) {
+			var refInput = document.querySelector('input[name="ref_id"]');
+			var refId = refInput ? refInput.value.trim() : '';
+
+			Swal.fire({
+				title: opts.title,
+				html: '<p class="rt-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+					'<label class="rt-reason-label">' + opts.label + '<span class="rt-reason-required">*</span></label>',
+				input: 'textarea',
+				inputPlaceholder: opts.placeholder || '',
+				iconHtml: '<div class="rt-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+				showCancelButton: true,
+				showCloseButton: true,
+				reverseButtons: false,
+				confirmButtonText: 'ตกลง',
+				cancelButtonText: 'ยกเลิก',
+				buttonsStyling: false,
+				customClass: {
+					popup: 'figma-delete-popup rt-reason-popup',
+					title: 'figma-delete-title rt-reason-title',
+					htmlContainer: 'figma-delete-html rt-reason-html',
+					confirmButton: 'figma-delete-confirm-btn rt-reason-confirm-btn ' + (opts.confirmBtnClass || ''),
+					cancelButton: 'figma-delete-cancel-btn rt-reason-cancel-btn',
+					actions: 'figma-delete-actions rt-reason-actions',
+					icon: 'figma-delete-icon rt-reason-icon',
+					input: 'rt-reason-textarea',
+					closeButton: 'rt-reason-close-btn'
+				},
+				preConfirm: function(value) {
+					var trimmed = (value || '').trim();
+					if (trimmed === '') {
+						Swal.showValidationMessage('กรุณาระบุเหตุผล');
+						return false;
+					}
+					return trimmed;
+				}
+			}).then(function(result) {
+				if (result.isConfirmed) opts.onConfirm(result.value);
+			});
+		}
+
 		function rtRunApproveAction(action, skipValidation) {
 			var field = document.getElementById('rt_approve_action');
 			if (field) field.value = action;
 
 			if (skipValidation) {
 				if (rtSubmitting) return;
-				rtSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
-				HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+
+				var reasonConfig = {
+					return: {
+						title: 'ส่งกลับเอกสารนี้ ?',
+						subtitleText: 'ส่งกลับเอกสารเลขที่',
+						label: 'ระบุเหตุผลการส่งกลับ',
+						placeholder: 'ระบุเหตุผลการส่งกลับ',
+						iconBg: '#FFF4E5',
+						iconSrc: 'img/icons/send_back.png'
+					},
+					reject: {
+						title: 'ไม่อนุมัติเอกสารนี้ ?',
+						subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+						label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+						placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+						iconBg: '#FEECEB',
+						iconSrc: 'img/icons/reject.png'
+					}
+				} [action];
+				if (!reasonConfig) return;
+
+				rtOpenReasonPopup(Object.assign({}, reasonConfig, {
+					onConfirm: function(reason) {
+						var reasonField = document.getElementById('rt_approve_reason');
+						if (reasonField) reasonField.value = reason;
+						rtSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+						HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+					}
+				}));
 				return;
 			}
 
@@ -2513,13 +2539,33 @@
 			if (!rtSubmitting && field) field.value = '';
 		}
 
-		// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก rt_admin_cancel_doc (คนละกลไกกับ status_doc โดยตั้งใจ
-		// ดู sql/suprental_optional_columns.sql:4-7) แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
 		function triggerCancelDocFromRtApproveMenu() {
-			rtToggleCancelDoc();
 			if (rtSubmitting) return;
-			rtSubmitting = true;
-			HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+
+			rtOpenReasonPopup({
+				title: 'ยกเลิกเอกสารนี้ ?',
+				subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+				label: 'ระบุเหตุผลในการยกเลิก',
+				placeholder: 'ระบุเหตุผลในการยกเลิก',
+				iconBg: '#F4F5F7',
+				iconSrc: 'img/icons/cancel_document.png',
+				onConfirm: function(reason) {
+					var cancelInput = document.getElementById('rt_admin_cancel_doc');
+					var cancelBtn = document.getElementById('btn_rt_cancel_doc');
+					if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
+						rtToggleCancelDoc();
+					}
+
+					var reasonInput = document.getElementById('rt_admin_cancel_reason');
+					if (reasonInput) reasonInput.value = reason; // sync ค่าเข้าแท็บ admin ให้ตรงกับ popup
+
+					var reasonField = document.getElementById('rt_approve_reason');
+					if (reasonField) reasonField.value = reason;
+
+					rtSubmitting = true;
+					HTMLFormElement.prototype.submit.call(rtEnsureSubmitMarker());
+				}
+			});
 		}
 	</script>
 
