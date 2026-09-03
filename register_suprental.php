@@ -2000,7 +2000,7 @@
 					<button type="button" class="so-tab-btn active" onclick="rtOpenFinTab('rt-fin-1', this)">ข้อมูลการคืนเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-2', this)">รายละเอียดการชำระเงิน</button>
 					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-3', this)">ข้อมูลการรับส่งสินค้า</button>
-					<button type="button" class="so-tab-btn" onclick="rtOpenFinTab('rt-fin-4', this)">การส่งกลับเอกสาร</button>
+					<button type="button" class="so-tab-btn rt-return-doc-tab-btn" onclick="rtOpenFinTab('rt-fin-4', this)">การส่งกลับเอกสาร</button>
 				</div>
 
 				<div id="rt-fin-1" class="rt-fin-tab-content active">

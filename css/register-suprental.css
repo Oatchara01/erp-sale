@@ -151,6 +151,22 @@
 	display: block;
 }
 
+.rt-return-doc-tab-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.rt-return-doc-tab-btn::before {
+	content: "";
+	display: inline-block;
+	flex: 0 0 8px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #FF0000;
+}
+
 /* ขนาดตัวอักษร/สีตาม Figma node 686:2412 (รายละเอียดการชำระเงิน): หัวตาราง 16px/500
    สีม่วง, ค่าในตาราง 16px/300(Light) สีเทาเข้ม — ใหญ่กว่า .so-label ปกติ (14px) เพราะ
    เป็นตารางแสดงผลอย่างเดียว ไม่ใช่ form field */
