@@ -910,6 +910,7 @@ include("head.php"); ?>
 	// เพื่อให้ทุกจุดที่เช็ค $savedSo !== null (form action, เลขที่เอกสาร, สถานะ ฯลฯ) ยังคง
 	// เป็นโหมด create ตามปกติ ไม่ใช่ edit ทับเอกสารเดิม
 	$copyFromRefId = isset($_GET["copy_from"]) ? mysqli_real_escape_string($conn, $_GET["copy_from"]) : "";
+
 	// ออกใบสั่งขายจากเอกสารเช่า: ?from_rental=<hos__rental.ref_id>&type=IV|AI (ว่าง=รอบบิลประจำเดือน)
 	// พารามิเตอร์นี้แยกจาก ref_id/copy_from โดยตั้งใจ เพราะ ref_id ในหน้านี้หมายถึงเลขที่ SO ที่มีอยู่แล้ว
 	// ไม่ใช่เลขที่เอกสารเช่า จึงต้องใช้ชื่อพารามิเตอร์ใหม่เพื่อไม่ให้ชนกับความหมายเดิม
@@ -928,6 +929,7 @@ include("head.php"); ?>
 	$savedDeliveryPrint = null;
 	$savedDeliveryBill = null;
 	$savedShippingAddresses = array();
+	$soDocumentLogRows = array();
 
 	if ($loadRefId !== "") {
 		$savedSoQuery = mysqli_query($conn, "SELECT * FROM hos__so WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
@@ -998,6 +1000,17 @@ include("head.php"); ?>
 		}
 	}
 
+	if ($savedRefId !== "") {
+		$documentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+		if ($documentStatusLogTableQuery && mysqli_num_rows($documentStatusLogTableQuery) > 0) {
+			$soDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $loadRefId . "' AND status_doc IN ('Returned', 'Rejected', 'Cancelled', 'ยกเลิก') ORDER BY created_at DESC, id DESC");
+			if ($soDocumentLogQuery) {
+				while ($soDocumentLogRow = mysqli_fetch_assoc($soDocumentLogQuery)) {
+					$soDocumentLogRows[] = $soDocumentLogRow;
+				}
+			}
+		}
+	}
 	// ออกใบสั่งขายจากเอกสารเช่า (from_rental): prefill ข้อมูลลูกค้า/บิลจาก tb_customer (ผูกผ่าน hos__rental.rental_id)
 	// ส่วนข้อมูลผู้ติดต่อ/ที่อยู่จัดส่ง/รายละเอียดที่อยู่ (จอดรถ/บันได/ลิฟต์) มาจาก tb_register_data/tb_transaction
 	// คีย์ด้วย ref_id ของเอกสารเช่าเอง (ตารางเดียวกับที่ register_suphos.php ใช้เก็บข้อมูลชุดนี้ของฝั่ง SO อยู่แล้ว)
@@ -1226,6 +1239,40 @@ include("head.php"); ?>
 	}
 
 
+	function renderSoDocumentReturnStatus($statusDoc)
+	{
+		$statusMap = array(
+			'Returned' => 'ส่งกลับ',
+			'Rejected' => 'ไม่อนุมัติ',
+			'Cancelled' => 'ยกเลิกเอกสาร',
+			'ยกเลิก' => 'ยกเลิกเอกสาร'
+		);
+
+		return $statusMap[$statusDoc] ?? $statusDoc;
+	}
+
+	function renderSoDocumentReturnStatusClass($statusDoc)
+	{
+		$statusClassMap = array(
+			'Returned' => 'is-returned',
+			'Rejected' => 'is-rejected',
+			'Cancelled' => 'is-cancelled',
+			'ยกเลิก' => 'is-cancelled'
+		);
+
+		return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+	}
+
+	function formatSoDocumentLogDateTime($createdAt)
+	{
+		$createdAt = trim((string)$createdAt);
+		if ($createdAt === '') return '';
+
+		$timestamp = strtotime($createdAt);
+		if ($timestamp === false) return '';
+
+		return date('d-m-Y H:i', $timestamp);
+	}
 
 
 
@@ -1563,7 +1610,13 @@ include("head.php"); ?>
 				}
 
 				if (typeof Swal === 'undefined') {
-					return confirm('ยืนยันการบันทึกข้อมูลใช่หรือไม่?');
+					var confirmed = confirm('ยืนยันการบันทึกข้อมูลใช่หรือไม่?');
+					if (confirmed) {
+						soApplyPendingApproveAction();
+					} else {
+						soClearApproveAction();
+					}
+					return confirmed;
 				}
 
 				Swal.fire({
@@ -1577,6 +1630,7 @@ include("head.php"); ?>
 					cancelButtonText: 'ยกเลิก'
 				}).then(function(result) {
 					if (!result.isConfirmed) {
+						soClearApproveAction();
 						return;
 					}
 
@@ -1589,6 +1643,7 @@ include("head.php"); ?>
 						form.appendChild(submitValue);
 					}
 					submitValue.value = 'submit';
+					soApplyPendingApproveAction();
 					window.soSubmitConfirmed = true;
 					HTMLFormElement.prototype.submit.call(form);
 				});
@@ -1597,6 +1652,7 @@ include("head.php"); ?>
 			}
 
 			function saveDraft() {
+				soClearApproveAction();
 				syncFormCompatibilityFields();
 				if (typeof syncDeptComments === 'function') {
 					syncDeptComments();
@@ -1762,6 +1818,33 @@ include("head.php"); ?>
 					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
 			</div>
+
+			<?php
+			$latestSoDocumentReason = $soDocumentLogRows[0] ?? null;
+			$latestSoDocumentReasonTitleMap = array(
+				'Returned' => 'เหตุผลในการส่งกลับ',
+				'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+				'Cancelled' => 'เหตุผลในการยกเลิก',
+				'ยกเลิก' => 'เหตุผลในการยกเลิก'
+			);
+			$latestSoDocumentReasonClassMap = array(
+				'Returned' => 'is-returned',
+				'Rejected' => 'is-rejected',
+				'Cancelled' => 'is-cancelled',
+				'ยกเลิก' => 'is-cancelled'
+			);
+			$latestSoDocumentReasonStatus = trim((string)($latestSoDocumentReason['status_doc'] ?? ''));
+			$latestSoDocumentReasonText = trim((string)($latestSoDocumentReason['reason'] ?? ''));
+			$latestSoDocumentReasonTitle = $latestSoDocumentReasonTitleMap[$latestSoDocumentReasonStatus] ?? '';
+			$latestSoDocumentReasonClass = $latestSoDocumentReasonClassMap[$latestSoDocumentReasonStatus] ?? '';
+			?>
+			<?php if ($savedSo !== null && $latestSoDocumentReasonTitle !== '' && $latestSoDocumentReasonText !== '') { ?>
+				<div class="so-latest-reason-banner <?php echo so_saved_h($latestSoDocumentReasonClass); ?>" role="status">
+					<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+					<div class="so-latest-reason-title"><?php echo so_saved_h($latestSoDocumentReasonTitle); ?></div>
+					<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($latestSoDocumentReasonText)); ?></div>
+				</div>
+			<?php } ?>
 
 			<!-- Tab buttons -->
 			<div class="so-tabs-container">
@@ -2988,6 +3071,17 @@ include("head.php"); ?>
 
 				<!-- NEW DOCUMENT TABS CARD -->
 				<?php
+				$soDocumentLogRowsForTabs = array();
+				foreach ($soDocumentLogRows as $soDocumentLogRow) {
+					$soDocumentLogRowsForTabs[] = array(
+						'status_label' => renderSoDocumentReturnStatus($soDocumentLogRow['status_doc'] ?? ''),
+						'status_class' => renderSoDocumentReturnStatusClass($soDocumentLogRow['status_doc'] ?? ''),
+						'reason' => $soDocumentLogRow['reason'] ?? '',
+						'user_name' => $soDocumentLogRow['user_name'] ?? '',
+						'created_at' => formatSoDocumentLogDateTime($soDocumentLogRow['created_at'] ?? '')
+					);
+				}
+
 				$docTabsCard = [
 					'open_fn' => 'open3Tab',
 					'doc_extra' => [
@@ -3020,6 +3114,11 @@ include("head.php"); ?>
 					],
 					'attach_file' => ['enabled' => true],
 					'related_docs' => ['enabled' => true],
+					'document_return_log' => [
+						'enabled' => true,
+						'rows' => $soDocumentLogRowsForTabs,
+						'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+					],
 				];
 				include __DIR__ . '/partials/doc_tabs_card.php';
 				?>
@@ -3384,25 +3483,27 @@ include("head.php"); ?>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
 				<?php if ($soCanShowApproveBar): ?>
+					<input type="hidden" name="approve_action" id="so_approve_action" value="">
+					<input type="hidden" name="so_approve_reason" id="so_approve_reason" value="">
 					<div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
 						<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
 							<i class="fas fa-ellipsis-v"></i>
 						</button>
 						<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
-							<button type="submit" name="approve_action" value="return" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
-							<button type="submit" name="approve_action" value="reject" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
-							<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="far fa-window-close" style="width:16px;"></i> ยกเลิกเอกสาร</button>
+							<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+							<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+							<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 						</div>
-						<button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-							<i class="far fa-check-circle"></i> อนุมัติ
+						<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+							<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
 						</button>
 						<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-							<i class="far fa-save"></i> Update
+							<img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update
 						</button>
 					</div>
 				<?php endif; ?>
 				<?php if (!$soHideSubmit): ?>
-					<button type="submit" name="submit" id="btn_submit_form" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
+					<button type="submit" name="submit" id="btn_submit_form" value="submit" onclick="soClearApproveAction();" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
 						<i class="far fa-paper-plane"></i> Submit
 					</button>
 				<?php endif; ?>
@@ -3417,6 +3518,125 @@ include("head.php"); ?>
 			</div>
 		</div>
 		<script>
+			function soEnsureSubmitMarker() {
+				var form = document.forms['frmMain'];
+				if (!form) return null;
+
+				var submitValue = form.querySelector('input[type="hidden"][name="submit"]');
+				if (!submitValue) {
+					submitValue = document.createElement('input');
+					submitValue.type = 'hidden';
+					submitValue.name = 'submit';
+					form.appendChild(submitValue);
+				}
+				submitValue.value = 'submit';
+
+				return form;
+			}
+
+			function soClearApproveAction() {
+				window.soPendingApproveAction = '';
+				var actionField = document.getElementById('so_approve_action');
+				var reasonField = document.getElementById('so_approve_reason');
+				if (actionField) actionField.value = '';
+				if (reasonField) reasonField.value = '';
+			}
+
+			function soApplyPendingApproveAction() {
+				var actionField = document.getElementById('so_approve_action');
+				if (actionField && window.soPendingApproveAction) {
+					actionField.value = window.soPendingApproveAction;
+				}
+			}
+
+			function soOpenReasonPopup(opts) {
+				var refInput = document.querySelector('input[name="ref_id"]');
+				var refId = refInput ? refInput.value.trim() : '';
+
+				if (typeof Swal === 'undefined') {
+					var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+					fallbackReason = (fallbackReason || '').trim();
+					if (fallbackReason !== '') opts.onConfirm(fallbackReason);
+					return;
+				}
+
+				Swal.fire({
+					title: opts.title,
+					html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+						'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+					input: 'textarea',
+					inputPlaceholder: opts.placeholder || '',
+					iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+					showCancelButton: true,
+					showCloseButton: true,
+					reverseButtons: false,
+					confirmButtonText: 'ตกลง',
+					cancelButtonText: 'ยกเลิก',
+					buttonsStyling: false,
+					customClass: {
+						popup: 'figma-delete-popup so-reason-popup',
+						title: 'figma-delete-title so-reason-title',
+						htmlContainer: 'figma-delete-html so-reason-html',
+						confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn ' + (opts.confirmBtnClass || ''),
+						cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+						actions: 'figma-delete-actions so-reason-actions',
+						icon: 'figma-delete-icon so-reason-icon',
+						input: 'so-reason-textarea',
+						closeButton: 'so-reason-close-btn'
+					},
+					preConfirm: function(value) {
+						var trimmed = (value || '').trim();
+						if (trimmed === '') {
+							Swal.showValidationMessage('กรุณาระบุเหตุผล');
+							return false;
+						}
+						return trimmed;
+					}
+				}).then(function(result) {
+					if (result.isConfirmed) opts.onConfirm(result.value);
+				});
+			}
+
+			function soRunApproveAction(action, skipValidation) {
+				if (skipValidation) {
+					var reasonConfig = {
+						return: {
+							title: 'ส่งกลับเอกสารนี้ ?',
+							subtitleText: 'ส่งกลับเอกสารเลขที่',
+							label: 'ระบุเหตุผลการส่งกลับ',
+							placeholder: 'ระบุเหตุผลการส่งกลับ',
+							iconBg: '#FFF4E5',
+							iconSrc: 'img/icons/send_back.png'
+						},
+						reject: {
+							title: 'ไม่อนุมัติเอกสารนี้ ?',
+							subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+							label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+							placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+							iconBg: '#FEECEB',
+							iconSrc: 'img/icons/reject.png'
+						}
+					}[action];
+					if (!reasonConfig) return;
+
+					soOpenReasonPopup(Object.assign({}, reasonConfig, {
+						onConfirm: function(reason) {
+							var actionField = document.getElementById('so_approve_action');
+							var reasonField = document.getElementById('so_approve_reason');
+							if (actionField) actionField.value = action;
+							if (reasonField) reasonField.value = reason;
+							window.soSkipValidation = true;
+							var form = soEnsureSubmitMarker();
+							if (form) HTMLFormElement.prototype.submit.call(form);
+						}
+					}));
+					return;
+				}
+
+				window.soPendingApproveAction = action;
+				fncSubmit();
+			}
+
 			function toggleApproveOverflowMenu() {
 				var menu = document.getElementById('approveOverflowMenu');
 				if (!menu) return;
@@ -3431,9 +3651,31 @@ include("head.php"); ?>
 			});
 
 			function triggerCancelDocFromApproveMenu() {
-				toggleCancelDoc();
-				var form = document.forms['frmMain'];
-				if (form) HTMLFormElement.prototype.submit.call(form);
+				soOpenReasonPopup({
+					title: 'ยกเลิกเอกสารนี้ ?',
+					subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+					label: 'ระบุเหตุผลในการยกเลิก',
+					placeholder: 'ระบุเหตุผลในการยกเลิก',
+					iconBg: '#F4F5F7',
+					iconSrc: 'img/icons/cancel_document.png',
+					onConfirm: function(reason) {
+						var cancelInput = document.getElementById('cancel_doc');
+						var cancelBtn = document.getElementById('btn_cancel_doc');
+						if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
+							toggleCancelDoc();
+						}
+
+						var reasonInput = document.getElementById('admin_cancel_reason');
+						var reasonField = document.getElementById('so_approve_reason');
+						var actionField = document.getElementById('so_approve_action');
+						if (reasonInput) reasonInput.value = reason;
+						if (reasonField) reasonField.value = reason;
+						if (actionField) actionField.value = '';
+						window.soSkipValidation = true;
+						var form = soEnsureSubmitMarker();
+						if (form) HTMLFormElement.prototype.submit.call(form);
+					}
+				});
 			}
 		</script>
 		<!-- hidden fields กลุ่มนี้ยังคงส่งค่าไปกับ form แม้ไม่มี input ให้ผู้ใช้แก้บนหน้า -->

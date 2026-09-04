@@ -4116,6 +4116,36 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		}
 	}
 
+	if ($qsave && tableExists($conn, 'tb_document_status_log')) {
+		$soSafeLogRefId = mysqli_real_escape_string($conn, $ref_id);
+		$soLogUserId = mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '');
+		$soLogUserName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+		$soApproveReason = trim((string)($_POST['so_approve_reason'] ?? ''));
+		$soApproveStatusMap = array(
+			'return' => 'Returned',
+			'reject' => 'Rejected'
+		);
+
+		if (isset($soApproveStatusMap[$soApproveAction]) && $soApproveReason !== '') {
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $soSafeLogRefId . "', '" . $soApproveStatusMap[$soApproveAction] . "', '"
+				. mysqli_real_escape_string($conn, $soApproveReason) . "', '"
+				. $soLogUserId . "', '"
+				. $soLogUserName . "')");
+		}
+
+		$soCancelReason = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+		if ($soCancelReason === '') {
+			$soCancelReason = $soApproveReason;
+		}
+		if ($cancelDocPost === '1' && $soCancelReason !== '') {
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $soSafeLogRefId . "', 'Cancelled', '"
+				. mysqli_real_escape_string($conn, $soCancelReason) . "', '"
+				. $soLogUserId . "', '"
+				. $soLogUserName . "')");
+		}
+	}
 	if ($qsave) {
 		if (($_POST['is_draft'] ?? '') === '1') {
 			header('Content-Type: application/json; charset=utf-8');

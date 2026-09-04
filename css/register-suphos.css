@@ -2083,3 +2083,90 @@ body,
 #overLimitModal * {
   font-family: "Prompt", sans-serif;
 }
+
+/* ===== Latest status-log reason banner (edit mode) ===== */
+.so-latest-reason-banner {
+	position: relative;
+	max-width: 1096px;
+	margin: 12px auto 20px auto;
+	padding: 12px 44px 12px 16px;
+	box-sizing: border-box;
+	border-radius: 8px;
+	background: #FFE1C5;
+	color: #2D2533;
+	font-family: 'Prompt', sans-serif;
+	box-shadow: 0 4px 12px rgba(97, 41, 137, 0.04);
+}
+
+.so-latest-reason-banner.is-returned {
+	background: #FFE1C5;
+}
+
+.so-latest-reason-banner.is-rejected {
+	background: #FFE6E6;
+}
+
+.so-latest-reason-banner.is-cancelled {
+	background: #696969;
+}
+
+.so-latest-reason-title {
+	margin-bottom: 6px;
+	color: #FF7B0F;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.35;
+}
+
+.so-latest-reason-banner.is-returned .so-latest-reason-title {
+	color: #FF7B0F;
+}
+
+.so-latest-reason-banner.is-rejected .so-latest-reason-title {
+	color: #FF0000;
+}
+
+.so-latest-reason-banner.is-cancelled .so-latest-reason-title {
+	color: #FFFFFF;
+}
+
+.so-latest-reason-text {
+	color: #2D2533;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 1.5;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.so-latest-reason-banner.is-cancelled .so-latest-reason-text {
+	color: #FFFFFF;
+}
+
+.so-latest-reason-close {
+	position: absolute;
+	top: 10px;
+	right: 12px;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #6F6475;
+	font-size: 24px;
+	font-weight: 300;
+	line-height: 22px;
+	cursor: pointer;
+}
+
+.so-latest-reason-banner.is-cancelled .so-latest-reason-close {
+	color: #FFFFFF;
+}
+
+.so-latest-reason-close:hover {
+	color: #2D2533;
+}
+
+.so-latest-reason-banner.is-cancelled .so-latest-reason-close:hover {
+	color: #F2F2F2;
+}

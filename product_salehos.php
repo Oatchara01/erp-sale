@@ -44,7 +44,6 @@
         .figma-delete-html {
             font-size: 15px !important;
             color: #8E8B94 !important;
-            margin: 0 0 28px 0 !important;
             line-height: 1.5 !important;
         }
 
