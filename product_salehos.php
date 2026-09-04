@@ -585,9 +585,9 @@
             padding: 0;
         }
 
-        .so-modal-grid-5 {
+        .so-modal-grid-6 {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1.15fr 2.2fr;
+            grid-template-columns: 1fr 1fr 1fr 1.15fr 1.3fr 1.3fr;
             gap: 16px 24px;
             margin-bottom: 18px;
         }
@@ -788,7 +788,7 @@
                 padding: 22px 20px;
             }
 
-            .so-modal-grid-5 {
+            .so-modal-grid-6 {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
@@ -798,7 +798,7 @@
                 padding: 14px;
             }
 
-            .so-modal-grid-5,
+            .so-modal-grid-6,
             .so-modal-grid-2 {
                 grid-template-columns: 1fr;
                 gap: 14px;
@@ -987,7 +987,7 @@
             <input type="hidden" id="current_editing_row">
             <input type="hidden" id="modal_row_number">
 
-            <div class="so-modal-grid-5">
+            <div class="so-modal-grid-6">
                 <div class="so-modal-field">
                     <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
                     <div class="so-modal-input-wrap">
@@ -1017,27 +1017,31 @@
                     </div>
                 </div>
                 <div class="so-modal-field">
-                    <label id="modal_clear_ivno_label">เลขที่ของ/ใบยืม</label>
+                    <label>เลขที่ใบจอง</label>
                     <div class="so-modal-input-wrap">
-                        <input type="text" id="m_clear_ivno" placeholder="กรอกข้อมูล" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_clear_ivno" aria-label="ล้างข้อมูล">&times;</button>
+                        <input type="text" id="m_jong_no" data-clearable="true" readonly>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>เลขที่ใบยืม</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_clear_ivno" data-clearable="true" readonly>
                     </div>
                 </div>
             </div>
 
             <div class="so-modal-grid-2">
                 <div class="so-modal-field">
+                    <label>เลขที่ SN</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_product_sn" data-clearable="true" readonly>
+                    </div>
+                </div>
+                <div class="so-modal-field">
                     <label>หมายเหตุสินค้า</label>
                     <div class="so-modal-input-wrap">
                         <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
                         <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-                <div class="so-modal-field">
-                    <label>ชื่อที่แสดงในใบส่งสินค้า</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_display_name" placeholder="กรอกข้อมูล" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_display_name" aria-label="ล้างข้อมูล">&times;</button>
                     </div>
                 </div>
             </div>
@@ -1416,22 +1420,9 @@
             document.getElementById('m_pm_year').value = document.getElementById('pm_year' + rowIndex).value;
             document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
             document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
-
-            // ต้องคำนวณ isReserveRow ก่อน แล้วค่อยเลือกฟิลด์ที่จะอ่าน เพราะแถวใบจองเก็บเลขที่ไว้ใน jong_no{i}
-            // ไม่ใช่ clear_ivno{i} (ดู populateClearLoanRow() ที่ register_suphos.php:5547-5560)
-            var isReserveRow = document.getElementById('jong_ckk' + rowIndex).value === '1' &&
-                document.getElementById('clear_br' + rowIndex).value !== '1';
-            document.getElementById('m_clear_ivno').value = isReserveRow ?
-                document.getElementById('jong_no' + rowIndex).value :
-                document.getElementById('clear_ivno' + rowIndex).value;
-
-            // สลับ label ตามประเภทเอกสารต้นทางของแถว (ใบจอง = jong, ใบยืม/ปกติ = ยืม)
-            var clearIvnoLabel = document.getElementById('modal_clear_ivno_label');
-            if (clearIvnoLabel) {
-                clearIvnoLabel.textContent = isReserveRow ? 'เลขที่ของ/ใบจอง' : 'เลขที่ของ/ใบยืม';
-            }
-
-            document.getElementById('m_display_name').value = document.getElementById('display_name' + rowIndex).value;
+            document.getElementById('m_jong_no').value = document.getElementById('jong_no' + rowIndex).value;
+            document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
+            document.getElementById('m_product_sn').value = document.getElementById('product_sn' + rowIndex).value;
 
             syncModalClearButtons();
             document.getElementById('productEditModal').style.display = 'flex';
@@ -1450,17 +1441,9 @@
             document.getElementById('pm_year' + rowIndex).value = document.getElementById('m_pm_year').value;
             document.getElementById('pm' + rowIndex).value = document.getElementById('m_pm').value;
             document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('m_sale_remarkk').value;
-
-            // เขียนกลับให้ตรงฟิลด์ตามประเภทแถวเช่นเดียวกับตอนอ่าน (สอดคล้องกับ openEditModal ด้านบน)
-            var isReserveRowSave = document.getElementById('jong_ckk' + rowIndex).value === '1' &&
-                document.getElementById('clear_br' + rowIndex).value !== '1';
-            if (isReserveRowSave) {
-                document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_clear_ivno').value;
-            } else {
-                document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
-            }
-
-            document.getElementById('display_name' + rowIndex).value = document.getElementById('m_display_name').value;
+            document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_jong_no').value;
+            document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
+            document.getElementById('product_sn' + rowIndex).value = document.getElementById('m_product_sn').value;
 
             closeEditModal();
         }
