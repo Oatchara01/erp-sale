@@ -69,6 +69,16 @@ function clearLoanClampLimit($limit)
     return $limit;
 }
 
+function clearLoanNormalizeCompany($company)
+{
+    return ((string)$company === '4') ? '4' : '3';
+}
+
+function clearLoanCompanyFilter($company)
+{
+    $company = clearLoanNormalizeCompany($company);
+    return $company === '4' ? "h.company IN ('2','4')" : "h.company IN ('1','3')";
+}
 function clearLoanSplitSnLines($sn)
 {
     $sn = str_replace("\r", "\n", (string)$sn);
@@ -260,12 +270,13 @@ function clearLoanBuildLoanDocumentEntry($row)
 }
 
 
-function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit)
+function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit, $company)
 {
     $filters = array(
         "h.close_jong = '0'",
         "h.cancel_ckk = '0'",
         "h.status_doc = 'Approve'",
+        clearLoanCompanyFilter($company),
         clearLoanReserveSaleFilter($conn)
     );
 
@@ -373,12 +384,12 @@ function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit)
     );
 }
 
-function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
+function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit, $company)
 {
     $filters = array(
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
-        "h.company = '1'",
+        clearLoanCompanyFilter($company),
         clearLoanLoanSaleFilter(),
         "EXISTS (
             SELECT 1
@@ -472,7 +483,7 @@ function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
     );
 }
 
-function clearLoanFetchReserveDocumentItems($conn, $documentId)
+function clearLoanFetchReserveDocumentItems($conn, $documentId, $company)
 {
     $documentId = (int)$documentId;
     if ($documentId <= 0) {
@@ -486,6 +497,7 @@ function clearLoanFetchReserveDocumentItems($conn, $documentId)
         "h.close_jong = '0'",
         "h.cancel_ckk = '0'",
         "h.status_doc = 'Approve'",
+        clearLoanCompanyFilter($company),
         clearLoanReserveSaleFilter($conn),
         "h.id_jong = {$documentId}"
     );
@@ -507,7 +519,7 @@ function clearLoanFetchReserveDocumentItems($conn, $documentId)
     return clearLoanBuildReserveItems($conn, $row['ref_id'], $row['iv_no']);
 }
 
-function clearLoanFetchLoanDocumentItems($conn, $documentId)
+function clearLoanFetchLoanDocumentItems($conn, $documentId, $company)
 {
     $documentId = (int)$documentId;
     if ($documentId <= 0) {
@@ -520,7 +532,7 @@ function clearLoanFetchLoanDocumentItems($conn, $documentId)
     $filters = array(
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
-        "h.company = '1'",
+        clearLoanCompanyFilter($company),
         clearLoanLoanSaleFilter(),
         "EXISTS (
             SELECT 1
@@ -552,6 +564,7 @@ function clearLoanFetchLoanDocumentItems($conn, $documentId)
 $action = isset($_GET['action']) ? strtolower(trim((string)$_GET['action'])) : 'list';
 $type = isset($_GET['type']) ? strtolower(trim((string)$_GET['type'])) : 'reserve';
 $keyword = isset($_GET['keyword']) ? trim((string)$_GET['keyword']) : '';
+$company = clearLoanNormalizeCompany(isset($_GET['company']) ? $_GET['company'] : '3');
 $limit = clearLoanClampLimit(isset($_GET['limit']) ? $_GET['limit'] : 50);
 $lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
 $documentId = isset($_GET['document_id']) ? (int)$_GET['document_id'] : 0;
@@ -565,8 +578,8 @@ if ($type !== 'reserve' && $type !== 'loan') {
 
 if ($action === 'items') {
     $items = $type === 'loan'
-        ? clearLoanFetchLoanDocumentItems($conn, $documentId)
-        : clearLoanFetchReserveDocumentItems($conn, $documentId);
+        ? clearLoanFetchLoanDocumentItems($conn, $documentId, $company)
+        : clearLoanFetchReserveDocumentItems($conn, $documentId, $company);
 
     clearLoanJsonResponse(array(
         'success' => true,
@@ -575,8 +588,8 @@ if ($action === 'items') {
 }
 
 $result = $type === 'loan'
-    ? clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit)
-    : clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit);
+    ? clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit, $company)
+    : clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit, $company);
 
 clearLoanJsonResponse(array(
     'success' => true,

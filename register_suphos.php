@@ -1866,45 +1866,10 @@ include("head.php"); ?>
 
 					<!-- เคลียร์ยืม/จอง Section (hidden by default) -->
 					<div class="so-card">
-						<!-- book_no/book_clear: เดิมเป็นส่วนหนึ่งของการ์ด "เคลียร์ยืม/จอง" ด้านล่างที่ถูกคอมเมนต์ปิดไว้
-						ตอนนี้ popup เคลียร์จอง/ยืม (#clearLoanModal) เขียนค่าเข้าฟิลด์นี้แทน (ดู mapClearLoanDocumentHeader())
-						เพื่อให้ register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit ได้ถูกต้อง
-						จึงต้องคงฟิลด์นี้ไว้เป็น DOM node จริง (ซ่อนด้วย CSS แทนการคอมเมนต์ HTML ซึ่งจะไม่ถูกสร้างเป็น DOM เลย) -->
 						<label class="so-checkbox-label" style="display:none">
 							<input type="checkbox" name="book_clear" id="book_clear" value="1"> เคลียร์ใบจอง :
 						</label>
 						<input name="book_no" id="book_no" class="so-input" placeholder="เลขที่..." style="display:none">
-						<!-- <div id="clear_loan_reserve_section" class="collapsible-clear-section">
-							<div style="background-color: #FAF9FC; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px dashed #D3C9FC;">
-								<h3 class="so-section-sub-title" style="color: #612989; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">เคลียร์ยืม/จอง</h3>
-								<div class="so-grid-3">
-									<div class="so-field-group">
-										<div class="so-input-with-checkbox">
-											<label class="so-checkbox-label">
-												<input type="checkbox" name="book_clear" value="1"> เคลียร์ใบจอง :
-											</label>
-											<input name="book_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
-										</div>
-									</div>
-									<div class="so-field-group">
-										<div class="so-input-with-checkbox">
-											<label class="so-checkbox-label">
-												<input type="checkbox" name="brn_clear" value="1"> เคลียร์ใบยืมสินค้า ติดเล่ม :
-											</label>
-											<input name="brn_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
-										</div>
-									</div>
-									<div class="so-field-group">
-										<div class="so-input-with-checkbox">
-											<label class="so-checkbox-label">
-												<input type="checkbox" name="brnp_clear" value="1"> เคลียร์ใบยืมสินค้า กระดาษต่อเนื่อง :
-											</label>
-											<input name="brnp_no" class="so-input" placeholder="เลขที่..." style="flex: 1;">
-										</div>
-									</div>
-								</div>
-							</div>
-						</div> -->
 
 						<div class="so-grid-3">
 							<!-- บริษัท* -->
@@ -5960,6 +5925,11 @@ include("head.php"); ?>
 			return companyMap[String(company || '')] || company;
 		}
 
+		function getCurrentClearLoanCompany() {
+			var typeDocSelect = document.getElementById('type_doc_select');
+			var company = typeDocSelect ? String(typeDocSelect.value || '').trim() : '';
+			return company === '4' ? '4' : '3';
+		}
 		function isClearLoanSameCompany(documentRow) {
 			var typeDocSelect = document.getElementById('type_doc_select');
 			var currentCompanyValue = typeDocSelect ? String(typeDocSelect.value || '').trim() : '';
@@ -6115,6 +6085,7 @@ include("head.php"); ?>
 				data: {
 					action: 'items',
 					type: documentRow.doc_type || clearLoanPopupType,
+					company: getCurrentClearLoanCompany(),
 					document_id: documentRow.internal_id
 				}
 			}).done(function(response) {
@@ -6169,6 +6140,7 @@ include("head.php"); ?>
 			var requestData = {
 				action: 'list',
 				type: selectedType,
+				company: getCurrentClearLoanCompany(),
 				keyword: keyword,
 				limit: 50
 			};
