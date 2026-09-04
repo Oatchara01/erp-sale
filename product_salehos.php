@@ -186,7 +186,9 @@
             return false;
         }
         var url = 'data_product_hos1.php';
-        var pmeters = "product_code=" + encodeURIComponent(document.getElementById(product_code).value) + "&format=json";
+        var pmeters = "product_code=" + encodeURIComponent(document.getElementById(product_code).value) +
+            "&type_company=" + encodeURIComponent(getSelectedTypeCompany()) +
+            "&format=json";
         HttPRequest.open('POST', url, true);
 
         HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
