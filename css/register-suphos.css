@@ -220,6 +220,10 @@
   padding-bottom: 92px;
 }
 
+.clear-loan-swal-front {
+  z-index: 100000 !important;
+}
+
 .clear-loan-title {
   margin: 0;
   padding-bottom: 14px;

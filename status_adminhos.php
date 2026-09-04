@@ -362,9 +362,8 @@ include "dbconnect_sale.php";
 
 							// Determine bill name display based on have_order
 							$bill_name_display = '';
-							if ($objResult["have_order"] == '0') {
-								$bill_name_display = $objResult["bill_name"];
-							}
+							$bill_name_display = $objResult["bill_name"];
+
 
 							// Map status_doc to class and display text
 							$status_class = '';

@@ -3513,7 +3513,7 @@ include("head.php"); ?>
 					</button>
 				<?php endif; ?>
 				<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
-					ยกเลิก
+					ย้อนกลับ
 				</button>
 			</div>
 		</div>
@@ -3616,7 +3616,7 @@ include("head.php"); ?>
 							iconBg: '#FEECEB',
 							iconSrc: 'img/icons/reject.png'
 						}
-					}[action];
+					} [action];
 					if (!reasonConfig) return;
 
 					soOpenReasonPopup(Object.assign({}, reasonConfig, {
@@ -5599,7 +5599,7 @@ include("head.php"); ?>
 
 
 		function getClearLoanTableColumnCount(docType) {
-			return docType === 'loan' ? 10 : 9;
+			return 9;
 		}
 
 		function renderClearLoanTableState(message) {
@@ -5614,14 +5614,13 @@ include("head.php"); ?>
 
 		function updateClearLoanTableHeaders(docType) {
 			var labels = docType === 'loan' ? {
-				clearLoanHeaderReference: 'วันที่ลงทะเบียน',
-				clearLoanHeaderRegisteredDate: 'เลขที่เอกสาร',
-				clearLoanHeaderDocumentNo: 'รายการสินค้า',
-				clearLoanHeaderRequiredDate: 'จำนวน',
-				clearLoanHeaderCustomerName: 'หมายเลข SN',
-				clearLoanHeaderSaleZone: 'ชื่อลูกค้า',
-				clearLoanHeaderStatus: 'เขตการขาย',
-				clearLoanHeaderExtra: 'สถานะ'
+				clearLoanHeaderReference: 'เลขที่อ้างอิง',
+				clearLoanHeaderRegisteredDate: 'วันที่ลงทะเบียน',
+				clearLoanHeaderDocumentNo: 'เลขที่ใบยืม',
+				clearLoanHeaderRequiredDate: 'วันที่ต้องการสินค้า',
+				clearLoanHeaderCustomerName: 'ชื่อลูกค้า',
+				clearLoanHeaderSaleZone: 'เขตการขาย',
+				clearLoanHeaderStatus: 'สถานะ'
 			} : {
 				clearLoanHeaderReference: 'เลขที่อ้างอิง',
 				clearLoanHeaderRegisteredDate: 'วันที่ลงทะเบียน',
@@ -5629,8 +5628,7 @@ include("head.php"); ?>
 				clearLoanHeaderRequiredDate: 'วันที่ต้องการสินค้า',
 				clearLoanHeaderCustomerName: 'ชื่อลูกค้า',
 				clearLoanHeaderSaleZone: 'เขตการขาย',
-				clearLoanHeaderStatus: 'สถานะ',
-				clearLoanHeaderExtra: ''
+				clearLoanHeaderStatus: 'สถานะ'
 			};
 			var headerIds = Object.keys(labels);
 			for (var index = 0; index < headerIds.length; index++) {
@@ -5639,10 +5637,6 @@ include("head.php"); ?>
 				if (headerElement) {
 					headerElement.textContent = labels[headerId];
 				}
-			}
-			var extraHeader = document.getElementById('clearLoanHeaderExtra');
-			if (extraHeader) {
-				extraHeader.style.display = docType === 'loan' ? '' : 'none';
 			}
 		}
 
@@ -5724,29 +5718,7 @@ include("head.php"); ?>
 			return rows;
 		}
 
-		function buildLoanClearLoanDocumentRows(documentRow, docIndex) {
-			var rows = [];
-			var documentKey = escapeClearLoanHtml(documentRow.document_key || ('doc-' + docIndex));
-			var documentChecked = isClearLoanSelectionChecked(documentRow.document_key);
-			rows.push('<tr>');
-			rows.push('<td><label class="clear-loan-item-option"><input type="checkbox" class="clear-loan-check-input" value="' + documentKey + '" data-entry-type="document" data-doc-index="' + docIndex + '"' + (documentChecked ? ' checked' : '') + '><span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>');
-			rows.push('<td></td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no_display || documentRow.reference_no || documentRow.document_no || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_product_code || documentRow.loan_product_name || documentRow.loan_product_id || '-') + '</td>');
-			rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(documentRow.loan_quantity || '0') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_sn || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.sale_zone || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.status || '-') + '</td>');
-			rows.push('</tr>');
-			return rows;
-		}
-
 		function buildClearLoanDocumentRows(documentRow, docIndex) {
-			if ((documentRow.doc_type || clearLoanPopupType) === 'loan') {
-				return buildLoanClearLoanDocumentRows(documentRow, docIndex);
-			}
 			return buildReserveClearLoanDocumentRows(documentRow, docIndex);
 		}
 
@@ -5820,6 +5792,16 @@ include("head.php"); ?>
 			return rows;
 		}
 
+		function hasClearLoanExistingProductRows() {
+			var MAX_CLEAR_LOAN_ROW = 30;
+			for (var rowIndex = 1; rowIndex <= MAX_CLEAR_LOAN_ROW; rowIndex++) {
+				if (!isClearLoanRowEmpty(rowIndex)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		function buildClearLoanImportItems() {
 			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
 			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
@@ -5846,7 +5828,8 @@ include("head.php"); ?>
 						importItems.push({
 							document_no: documentRow.document_no || '',
 							doc_type: documentRow.doc_type || clearLoanPopupType,
-							item: documentItem
+							item: documentItem,
+							entry_type: 'document'
 						});
 					}
 					continue;
@@ -5860,7 +5843,8 @@ include("head.php"); ?>
 					importItems.push({
 						document_no: documentRow.document_no || '',
 						doc_type: documentRow.doc_type || clearLoanPopupType,
-						item: items[itemIndex]
+						item: items[itemIndex],
+						entry_type: 'item'
 					});
 				}
 			}
@@ -5892,6 +5876,33 @@ include("head.php"); ?>
 			return false;
 		}
 
+		// เคลียร์เฉพาะรายการสินค้า (item-level) ไม่บล็อกด้วยเลขที่เอกสารอย่างเดียว เพราะเอกสารเดียวกัน
+		// อาจมีหลายรายการสินค้า ต้องเทียบ product_id + SN ด้วยจึงจะถือว่าซ้ำจริง
+		function isClearLoanItemAlreadyImported(docType, documentNo, item) {
+			var normalizedDocumentNo = String(documentNo || '').trim();
+			if (normalizedDocumentNo === '') {
+				return false;
+			}
+			var productId = String((item && item.product_id) || '').trim();
+			var productSn = String((item && item.sn) || '').trim();
+			var MAX_CLEAR_LOAN_ROW = 30;
+			for (var rowIndex = 1; rowIndex <= MAX_CLEAR_LOAN_ROW; rowIndex++) {
+				if (isClearLoanRowEmpty(rowIndex)) {
+					continue;
+				}
+				var referenceMatches = docType === 'loan' ?
+					(getClearLoanRowValue('clear_br', rowIndex) === '1' && getClearLoanRowValue('clear_ivno', rowIndex) === normalizedDocumentNo) :
+					(getClearLoanRowValue('jong_ckk', rowIndex) === '1' && getClearLoanRowValue('jong_no', rowIndex) === normalizedDocumentNo);
+				if (!referenceMatches) {
+					continue;
+				}
+				if (getClearLoanRowValue('product_id', rowIndex) === productId && getClearLoanRowValue('product_sn', rowIndex) === productSn) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		function getClearLoanPrimaryDocument() {
 			var selectedInputs = document.querySelectorAll('#clearLoanModal .clear-loan-check-input:checked');
 			var documents = Array.isArray(clearLoanPopupDocuments) ? clearLoanPopupDocuments : [];
@@ -5910,10 +5921,15 @@ include("head.php"); ?>
 			var normalizedValue = value == null ? '' : String(value);
 			for (var index = 0; index < select.options.length; index++) {
 				if (select.options[index].value === normalizedValue) {
+					var valueChanged = select.value !== normalizedValue;
 					select.value = normalizedValue;
-					select.dispatchEvent(new Event('change', {
-						bubbles: true
-					}));
+					if (valueChanged) {
+						select.dispatchEvent(new Event('change', {
+							bubbles: true
+						}));
+					} else {
+						select.setAttribute('data-prev', normalizedValue);
+					}
 					return;
 				}
 			}
@@ -5922,21 +5938,37 @@ include("head.php"); ?>
 				option.value = normalizedValue;
 				option.textContent = normalizedValue;
 				select.appendChild(option);
+				var valueChangedNew = select.value !== normalizedValue;
 				select.value = normalizedValue;
-				select.dispatchEvent(new Event('change', {
-					bubbles: true
-				}));
+				if (valueChangedNew) {
+					select.dispatchEvent(new Event('change', {
+						bubbles: true
+					}));
+				} else {
+					select.setAttribute('data-prev', normalizedValue);
+				}
 			}
 		}
 
-		function mapClearLoanDocumentHeader(documentRow) {
+		function mapClearLoanCompanyToDocType(company) {
 			var companyMap = {
 				'1': '3',
 				'2': '4',
 				'3': '3',
 				'4': '4'
 			};
-			setClearLoanSelectValue('type_doc_select', companyMap[String(documentRow.company || '')] || documentRow.company);
+			return companyMap[String(company || '')] || company;
+		}
+
+		function isClearLoanSameCompany(documentRow) {
+			var typeDocSelect = document.getElementById('type_doc_select');
+			var currentCompanyValue = typeDocSelect ? String(typeDocSelect.value || '').trim() : '';
+			var sourceCompanyValue = String(mapClearLoanCompanyToDocType(documentRow && documentRow.company) || '').trim();
+			return currentCompanyValue !== '' && sourceCompanyValue !== '' && currentCompanyValue === sourceCompanyValue;
+		}
+
+		function mapClearLoanDocumentHeader(documentRow) {
+			setClearLoanSelectValue('type_doc_select', mapClearLoanCompanyToDocType(documentRow.company));
 			setClearLoanSelectValue('sale_code', documentRow.sale_code || '', true);
 			// เดิมบังคับ doc_type_select กลับเป็น '1' (ใบสั่งขาย) ทุกครั้งที่ import เอกสารเคลียร์ยืม/จอง
 			// ซึ่งยิง onchange ของ doc_type_select (บรรทัด 1663-1668) ไปเคลียร์ ic_ckk/et_ckk ที่ผู้ใช้เลือกไว้ก่อนหน้าทิ้งโดยไม่มีการแจ้งเตือน
@@ -6322,6 +6354,9 @@ include("head.php"); ?>
 					return;
 				}
 
+				// ติ๊กเอกสารหลัก (document) = นำเข้า header + รายการสินค้าทั้งหมด
+				// ติ๊กเฉพาะรายการสินค้า (item) = นำเข้าเฉพาะแถวสินค้า ไม่แตะ header เดิม
+				var hasDocumentSelection = document.querySelectorAll('#clearLoanModal .clear-loan-check-input[data-entry-type="document"]:checked').length > 0;
 				var selectedDocuments = getSelectedClearLoanDocuments();
 				var importItems = buildClearLoanImportItems();
 				var primaryDocument = selectedDocuments.length ? selectedDocuments[0] : getClearLoanPrimaryDocument();
@@ -6330,26 +6365,33 @@ include("head.php"); ?>
 					return;
 				}
 
-				// กันนำเข้าเอกสารเดิมซ้ำ ถ้าเลขที่เอกสารนี้ถูกเคลียร์เข้าแถวสินค้าอยู่แล้วในฟอร์ม
+				// กันนำเข้าเอกสารเดิมซ้ำ: เอกสารหลักบล็อกด้วยเลขที่เอกสาร ส่วนรายการสินค้า
+				// ต้องเทียบ product_id + SN ด้วย เพราะเอกสารเดียวกันมีได้หลายรายการสินค้า
 				var duplicateDocumentNos = {};
 				importItems = importItems.filter(function(importItem) {
-					var isDuplicate = isClearLoanDocumentAlreadyImported(importItem.doc_type, importItem.document_no);
+					var isDuplicate = importItem.entry_type === 'document' ?
+						isClearLoanDocumentAlreadyImported(importItem.doc_type, importItem.document_no) :
+						isClearLoanItemAlreadyImported(importItem.doc_type, importItem.document_no, importItem.item);
 					if (isDuplicate) {
 						duplicateDocumentNos[importItem.document_no] = true;
 					}
 					return !isDuplicate;
 				});
 				if (!importItems.length) {
-					alert('เอกสารที่เลือกถูกนำเข้าไปในรายการสินค้าแล้ว');
+					Swal.fire({
+						title: 'แจ้งเตือน',
+						text: 'เอกสารที่เลือกถูกนำเข้าไปในรายการสินค้าแล้ว',
+						icon: 'warning',
+						confirmButtonColor: '#612989',
+						customClass: {
+							container: 'clear-loan-swal-front'
+						}
+					});
 					return;
 				}
 				var duplicateDocumentNoList = Object.keys(duplicateDocumentNos);
 				if (duplicateDocumentNoList.length) {
 					alert('ข้ามเอกสารที่นำเข้าไปแล้ว: ' + duplicateDocumentNoList.join(', '));
-				}
-				if (!primaryDocument || !String(primaryDocument.customer_id || '').trim()) {
-					alert('ไม่พบรหัสลูกค้าในเอกสารต้นทาง');
-					return;
 				}
 				var compatibility = validateClearLoanDocumentCompatibility(selectedDocuments);
 				if (!compatibility.valid) {
@@ -6361,13 +6403,8 @@ include("head.php"); ?>
 					alert('แถวสินค้าว่างไม่เพียงพอ กรุณาเคลียร์หรือเพิ่มแถวก่อน');
 					return;
 				}
-				loadClearLoanCustomer(primaryDocument, function(success, missingFields) {
-					if (!success) {
-						var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'โหลดข้อมูลลูกค้าไม่สำเร็จ';
-						alert('ไม่สามารถนำเข้าข้อมูลได้: ' + missingMessage);
-						return;
-					}
-					mapClearLoanDocumentHeader(primaryDocument);
+
+				function populateItemsAndFinish() {
 					for (var index = 0; index < importItems.length; index++) {
 						populateClearLoanRow(availableRows[index], importItems[index]);
 					}
@@ -6375,7 +6412,32 @@ include("head.php"); ?>
 					if (typeof calculateSummary === 'function') calculateSummary();
 					if (typeof renderRelatedDocuments === 'function') renderRelatedDocuments();
 					closeClearLoanPopup();
-				});
+				}
+
+				if (hasDocumentSelection) {
+					if (!primaryDocument || !String(primaryDocument.customer_id || '').trim()) {
+						alert('ไม่พบรหัสลูกค้าในเอกสารต้นทาง');
+						return;
+					}
+					// เอกสารเดียวกัน (บริษัทเดียวกับ SO ปัจจุบัน) และ SO มีรายการสินค้าอยู่แล้ว
+					// = ต่อรายการสินค้าเข้าไปอย่างเดียว ไม่แตะ header/ลูกค้า/บริษัทเดิม
+					var isSameCompanyAppend = hasClearLoanExistingProductRows() && isClearLoanSameCompany(primaryDocument);
+					if (isSameCompanyAppend) {
+						populateItemsAndFinish();
+						return;
+					}
+					loadClearLoanCustomer(primaryDocument, function(success, missingFields) {
+						if (!success) {
+							var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'โหลดข้อมูลลูกค้าไม่สำเร็จ';
+							alert('ไม่สามารถนำเข้าข้อมูลได้: ' + missingMessage);
+							return;
+						}
+						mapClearLoanDocumentHeader(primaryDocument);
+						populateItemsAndFinish();
+					});
+				} else {
+					populateItemsAndFinish();
+				}
 			});
 		}
 
@@ -6705,11 +6767,25 @@ include("head.php"); ?>
 	$soJsPrefillSource = $savedSo;
 	if ($soJsPrefillSource === null && $copySrcSo !== null) {
 		$soJsPrefillSource = array_merge($copySrcSo, array(
-			'iv_no' => '', 'job_no' => '', 'sr_no' => '', 'order_no' => '',
-			'iv_date' => '', 'new_bill' => '', 'date_oldbill' => '', 'desnew_bill' => '',
-			'remark_cancel' => '', 'status_doc' => '', 'send_sup' => '0', 'send_cm' => '',
-			'slip1' => '', 'slip2' => '', 'slip3' => '', 'slip4' => '', 'slip5' => '',
-			'stock_print' => '', 'ref_idst' => '',
+			'iv_no' => '',
+			'job_no' => '',
+			'sr_no' => '',
+			'order_no' => '',
+			'iv_date' => '',
+			'new_bill' => '',
+			'date_oldbill' => '',
+			'desnew_bill' => '',
+			'remark_cancel' => '',
+			'status_doc' => '',
+			'send_sup' => '0',
+			'send_cm' => '',
+			'slip1' => '',
+			'slip2' => '',
+			'slip3' => '',
+			'slip4' => '',
+			'slip5' => '',
+			'stock_print' => '',
+			'ref_idst' => '',
 		));
 	}
 	if ($soJsPrefillSource === null && $rentalPrefill !== null) {
