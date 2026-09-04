@@ -5559,11 +5559,7 @@ include("head.php"); ?>
 		}
 
 		function getClearLoanAvailableRows() {
-			// จำกัดแค่แถว 1-15 เพราะ register_suphos1.php/register_suphos_edit1.php
-			// อ่านค่า clear_br/clear_ivno/jong_ckk/jong_no จาก POST เฉพาะ index 1-15 เท่านั้น
-			// (ดูบล็อก insert ของแถว 16-30 ที่ไม่มีคอลัมน์เหล่านี้) ถ้าเติมแถว 16-30
-			// ข้อมูลเชื่อมโยงใบจอง/ยืมจะหายเงียบ ๆ ตอนบันทึก
-			var MAX_CLEAR_LOAN_ROW = 15;
+			var MAX_CLEAR_LOAN_ROW = 30;
 			var rows = [];
 			var productRows = document.querySelectorAll('.so-product-row[id^="product_row_"]');
 			for (var i = 0; i < productRows.length; i++) {
@@ -5630,13 +5626,13 @@ include("head.php"); ?>
 		}
 
 		// กันการนำเข้าเอกสารเดิมซ้ำ (กด "เคลียร์จอง/ยืม" เลือกเอกสารเดียวกันสองรอบ) โดยเทียบกับ
-		// ค่า clear_ivno/jong_no ที่มีอยู่แล้วในแถวสินค้าของฟอร์ม (แถว 1-15 เท่านั้น ตาม getClearLoanAvailableRows)
+		// Check existing clear loan/reserve references across product rows 1-30.
 		function isClearLoanDocumentAlreadyImported(docType, documentNo) {
 			var normalizedDocumentNo = String(documentNo || '').trim();
 			if (normalizedDocumentNo === '') {
 				return false;
 			}
-			var MAX_CLEAR_LOAN_ROW = 15;
+			var MAX_CLEAR_LOAN_ROW = 30;
 			for (var rowIndex = 1; rowIndex <= MAX_CLEAR_LOAN_ROW; rowIndex++) {
 				if (isClearLoanRowEmpty(rowIndex)) {
 					continue;

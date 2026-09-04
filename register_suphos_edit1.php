@@ -1077,6 +1077,12 @@ $qsave=mysqli_query($conn,$save);
 	$jong_ckk13 = $_POST["jong_ckk13"] ?? '';
 	$jong_ckk14 = $_POST["jong_ckk14"] ?? '';
 	$jong_ckk15 = $_POST["jong_ckk15"] ?? '';
+	for ($clearLoanIndex = 16; $clearLoanIndex <= 30; $clearLoanIndex++) {
+		${'clear_br' . $clearLoanIndex} = $_POST['clear_br' . $clearLoanIndex] ?? '';
+		${'clear_ivno' . $clearLoanIndex} = $_POST['clear_ivno' . $clearLoanIndex] ?? '';
+		${'jong_ckk' . $clearLoanIndex} = $_POST['jong_ckk' . $clearLoanIndex] ?? '';
+		${'jong_no' . $clearLoanIndex} = $_POST['jong_no' . $clearLoanIndex] ?? '';
+	}
 
 	$sn6 = $_POST["sn6"] ?? '';
 	$sn7 = $_POST["sn7"] ?? '';
@@ -3332,8 +3338,8 @@ values ('" . $ref_id . "','" . $sale_count15 . "','" . $sale_count15 . "','" . $
 	if ($product_id16 !== '' && ($_POST["subso_db_id16"] ?? '') === '') {
 
 		$strSQL16 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count16 . "','" . $sale_count16 . "','" . $product_price16 . "','" . $product_price16 . "','" . $sum_amount16 . "','" . $sale_remarkk16 . "','" . $discount_unit16 . "','" . $warranty16 . "','" . $cal16 . "','" . $pm16 . "','" . $product_id16 . "','" . $product_id16 . "','16')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count16 . "','" . $sale_count16 . "','" . $product_price16 . "','" . $product_price16 . "','" . $sum_amount16 . "','" . $sale_remarkk16 . "','" . $discount_unit16 . "','" . $warranty16 . "','" . $cal16 . "','" . $pm16 . "','" . $product_id16 . "','" . $product_id16 . "','" . $have_order . "','" . $clear_br16 . "','" . $clear_ivno16 . "','" . $jong_no16 . "','" . $jong_ckk16 . "','16')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3347,8 +3353,8 @@ values ('" . $ref_id . "','" . $sale_count16 . "','" . $sale_count16 . "','" . $
 	if ($product_id17 !== '' && ($_POST["subso_db_id17"] ?? '') === '') {
 
 		$strSQL17 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count17 . "','" . $sale_count17 . "','" . $product_price17 . "','" . $product_price17 . "','" . $sum_amount17 . "','" . $sale_remarkk17 . "','" . $discount_unit17 . "','" . $warranty17 . "','" . $cal17 . "','" . $pm17 . "','" . $product_id17 . "','" . $product_id17 . "','17')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count17 . "','" . $sale_count17 . "','" . $product_price17 . "','" . $product_price17 . "','" . $sum_amount17 . "','" . $sale_remarkk17 . "','" . $discount_unit17 . "','" . $warranty17 . "','" . $cal17 . "','" . $pm17 . "','" . $product_id17 . "','" . $product_id17 . "','" . $have_order . "','" . $clear_br17 . "','" . $clear_ivno17 . "','" . $jong_no17 . "','" . $jong_ckk17 . "','17')";
 		//echo $strSQL2;
 		//exit();
 
@@ -3362,8 +3368,8 @@ values ('" . $ref_id . "','" . $sale_count17 . "','" . $sale_count17 . "','" . $
 	if ($product_id18 !== '' && ($_POST["subso_db_id18"] ?? '') === '') {
 
 		$strSQL18 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count18 . "','" . $sale_count18 . "','" . $product_price18 . "','" . $product_price18 . "','" . $sum_amount18 . "','" . $sale_remarkk18 . "','" . $discount_unit18 . "','" . $warranty18 . "','" . $cal18 . "','" . $pm18 . "','" . $product_id18 . "','" . $product_id18 . "','18')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count18 . "','" . $sale_count18 . "','" . $product_price18 . "','" . $product_price18 . "','" . $sum_amount18 . "','" . $sale_remarkk18 . "','" . $discount_unit18 . "','" . $warranty18 . "','" . $cal18 . "','" . $pm18 . "','" . $product_id18 . "','" . $product_id18 . "','" . $have_order . "','" . $clear_br18 . "','" . $clear_ivno18 . "','" . $jong_no18 . "','" . $jong_ckk18 . "','18')";
 		//echo $strSQL3;
 		//exit();
 
@@ -3377,8 +3383,8 @@ values ('" . $ref_id . "','" . $sale_count18 . "','" . $sale_count18 . "','" . $
 	if ($product_id19 !== '' && ($_POST["subso_db_id19"] ?? '') === '') {
 
 		$strSQL19 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count19 . "','" . $sale_count19 . "','" . $product_price19 . "','" . $product_price19 . "','" . $sum_amount19 . "','" . $sale_remarkk19 . "','" . $discount_unit19 . "','" . $warranty19 . "','" . $cal19 . "','" . $pm19 . "','" . $product_id19 . "','" . $product_id19 . "','19')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count19 . "','" . $sale_count19 . "','" . $product_price19 . "','" . $product_price19 . "','" . $sum_amount19 . "','" . $sale_remarkk19 . "','" . $discount_unit19 . "','" . $warranty19 . "','" . $cal19 . "','" . $pm19 . "','" . $product_id19 . "','" . $product_id19 . "','" . $have_order . "','" . $clear_br19 . "','" . $clear_ivno19 . "','" . $jong_no19 . "','" . $jong_ckk19 . "','19')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3392,8 +3398,8 @@ values ('" . $ref_id . "','" . $sale_count19 . "','" . $sale_count19 . "','" . $
 	if ($product_id20 !== '' && ($_POST["subso_db_id20"] ?? '') === '') {
 
 		$strSQL20 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count20 . "','" . $sale_count20 . "','" . $product_price20 . "','" . $product_price20 . "','" . $sum_amount20 . "','" . $sale_remarkk20 . "','" . $discount_unit20 . "','" . $warranty20 . "','" . $cal20 . "','" . $pm20 . "','" . $product_id20 . "','" . $product_id20 . "','20')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count20 . "','" . $sale_count20 . "','" . $product_price20 . "','" . $product_price20 . "','" . $sum_amount20 . "','" . $sale_remarkk20 . "','" . $discount_unit20 . "','" . $warranty20 . "','" . $cal20 . "','" . $pm20 . "','" . $product_id20 . "','" . $product_id20 . "','" . $have_order . "','" . $clear_br20 . "','" . $clear_ivno20 . "','" . $jong_no20 . "','" . $jong_ckk20 . "','20')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3407,8 +3413,8 @@ values ('" . $ref_id . "','" . $sale_count20 . "','" . $sale_count20 . "','" . $
 	if ($product_id21 !== '' && ($_POST["subso_db_id21"] ?? '') === '') {
 
 		$strSQL21 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count21 . "','" . $sale_count21 . "','" . $product_price21 . "','" . $product_price21 . "','" . $sum_amount21 . "','" . $sale_remarkk21 . "','" . $discount_unit21 . "','" . $warranty21 . "','" . $cal21 . "','" . $pm21 . "','" . $product_id21 . "','" . $product_id21 . "','21')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count21 . "','" . $sale_count21 . "','" . $product_price21 . "','" . $product_price21 . "','" . $sum_amount21 . "','" . $sale_remarkk21 . "','" . $discount_unit21 . "','" . $warranty21 . "','" . $cal21 . "','" . $pm21 . "','" . $product_id21 . "','" . $product_id21 . "','" . $have_order . "','" . $clear_br21 . "','" . $clear_ivno21 . "','" . $jong_no21 . "','" . $jong_ckk21 . "','21')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3422,8 +3428,8 @@ values ('" . $ref_id . "','" . $sale_count21 . "','" . $sale_count21 . "','" . $
 	if ($product_id22 !== '' && ($_POST["subso_db_id22"] ?? '') === '') {
 
 		$strSQL22 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count22 . "','" . $sale_count22 . "','" . $product_price22 . "','" . $product_price22 . "','" . $sum_amount22 . "','" . $sale_remarkk22 . "','" . $discount_unit22 . "','" . $warranty22 . "','" . $cal22 . "','" . $pm22 . "','" . $product_id22 . "','" . $product_id22 . "','22')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count22 . "','" . $sale_count22 . "','" . $product_price22 . "','" . $product_price22 . "','" . $sum_amount22 . "','" . $sale_remarkk22 . "','" . $discount_unit22 . "','" . $warranty22 . "','" . $cal22 . "','" . $pm22 . "','" . $product_id22 . "','" . $product_id22 . "','" . $have_order . "','" . $clear_br22 . "','" . $clear_ivno22 . "','" . $jong_no22 . "','" . $jong_ckk22 . "','22')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3437,8 +3443,8 @@ values ('" . $ref_id . "','" . $sale_count22 . "','" . $sale_count22 . "','" . $
 	if ($product_id23 !== '' && ($_POST["subso_db_id23"] ?? '') === '') {
 
 		$strSQL23 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count23 . "','" . $sale_count23 . "','" . $product_price23 . "','" . $product_price23 . "','" . $sum_amount23 . "','" . $sale_remarkk23 . "','" . $discount_unit23 . "','" . $warranty23 . "','" . $cal23 . "','" . $pm23 . "','" . $product_id23 . "','" . $product_id23 . "','23')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count23 . "','" . $sale_count23 . "','" . $product_price23 . "','" . $product_price23 . "','" . $sum_amount23 . "','" . $sale_remarkk23 . "','" . $discount_unit23 . "','" . $warranty23 . "','" . $cal23 . "','" . $pm23 . "','" . $product_id23 . "','" . $product_id23 . "','" . $have_order . "','" . $clear_br23 . "','" . $clear_ivno23 . "','" . $jong_no23 . "','" . $jong_ckk23 . "','23')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3452,8 +3458,8 @@ values ('" . $ref_id . "','" . $sale_count23 . "','" . $sale_count23 . "','" . $
 	if ($product_id24 !== '' && ($_POST["subso_db_id24"] ?? '') === '') {
 
 		$strSQL24 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count24 . "','" . $sale_count24 . "','" . $product_price24 . "','" . $product_price24 . "','" . $sum_amount24 . "','" . $sale_remarkk24 . "','" . $discount_unit24 . "','" . $warranty24 . "','" . $cal24 . "','" . $pm24 . "','" . $product_id24 . "','" . $product_id24 . "','24')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count24 . "','" . $sale_count24 . "','" . $product_price24 . "','" . $product_price24 . "','" . $sum_amount24 . "','" . $sale_remarkk24 . "','" . $discount_unit24 . "','" . $warranty24 . "','" . $cal24 . "','" . $pm24 . "','" . $product_id24 . "','" . $product_id24 . "','" . $have_order . "','" . $clear_br24 . "','" . $clear_ivno24 . "','" . $jong_no24 . "','" . $jong_ckk24 . "','24')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3467,8 +3473,8 @@ values ('" . $ref_id . "','" . $sale_count24 . "','" . $sale_count24 . "','" . $
 	if ($product_id25 !== '' && ($_POST["subso_db_id25"] ?? '') === '') {
 
 		$strSQL25 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count25 . "','" . $sale_count25 . "','" . $product_price25 . "','" . $product_price25 . "','" . $sum_amount25 . "','" . $sale_remarkk25 . "','" . $discount_unit25 . "','" . $warranty25 . "','" . $cal25 . "','" . $pm25 . "','" . $product_id25 . "','" . $product_id25 . "','25')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count25 . "','" . $sale_count25 . "','" . $product_price25 . "','" . $product_price25 . "','" . $sum_amount25 . "','" . $sale_remarkk25 . "','" . $discount_unit25 . "','" . $warranty25 . "','" . $cal25 . "','" . $pm25 . "','" . $product_id25 . "','" . $product_id25 . "','" . $have_order . "','" . $clear_br25 . "','" . $clear_ivno25 . "','" . $jong_no25 . "','" . $jong_ckk25 . "','25')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3484,8 +3490,8 @@ values ('" . $ref_id . "','" . $sale_count25 . "','" . $sale_count25 . "','" . $
 	if ($product_id26 !== '' && ($_POST["subso_db_id26"] ?? '') === '') {
 
 		$strSQL26 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count26 . "','" . $sale_count26 . "','" . $product_price26 . "','" . $product_price26 . "','" . $sum_amount26 . "','" . $sale_remarkk26 . "','" . $discount_unit26 . "','" . $warranty26 . "','" . $cal26 . "','" . $pm26 . "','" . $product_id26 . "','" . $product_id26 . "','26')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count26 . "','" . $sale_count26 . "','" . $product_price26 . "','" . $product_price26 . "','" . $sum_amount26 . "','" . $sale_remarkk26 . "','" . $discount_unit26 . "','" . $warranty26 . "','" . $cal26 . "','" . $pm26 . "','" . $product_id26 . "','" . $product_id26 . "','" . $have_order . "','" . $clear_br26 . "','" . $clear_ivno26 . "','" . $jong_no26 . "','" . $jong_ckk26 . "','26')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3498,8 +3504,8 @@ values ('" . $ref_id . "','" . $sale_count26 . "','" . $sale_count26 . "','" . $
 	if ($product_id27 !== '' && ($_POST["subso_db_id27"] ?? '') === '') {
 
 		$strSQL27 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count27 . "','" . $sale_count27 . "','" . $product_price27 . "','" . $product_price27 . "','" . $sum_amount27 . "','" . $sale_remarkk27 . "','" . $discount_unit27 . "','" . $warranty27 . "','" . $cal27 . "','" . $pm27 . "','" . $product_id27 . "','" . $product_id27 . "','27')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count27 . "','" . $sale_count27 . "','" . $product_price27 . "','" . $product_price27 . "','" . $sum_amount27 . "','" . $sale_remarkk27 . "','" . $discount_unit27 . "','" . $warranty27 . "','" . $cal27 . "','" . $pm27 . "','" . $product_id27 . "','" . $product_id27 . "','" . $have_order . "','" . $clear_br27 . "','" . $clear_ivno27 . "','" . $jong_no27 . "','" . $jong_ckk27 . "','27')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3512,8 +3518,8 @@ values ('" . $ref_id . "','" . $sale_count27 . "','" . $sale_count27 . "','" . $
 	if ($product_id28 !== '' && ($_POST["subso_db_id28"] ?? '') === '') {
 
 		$strSQL28 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count28 . "','" . $sale_count28 . "','" . $product_price28 . "','" . $product_price28 . "','" . $sum_amount28 . "','" . $sale_remarkk28 . "','" . $discount_unit28 . "','" . $warranty28 . "','" . $cal28 . "','" . $pm28 . "','" . $product_id28 . "','" . $product_id28 . "','28')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count28 . "','" . $sale_count28 . "','" . $product_price28 . "','" . $product_price28 . "','" . $sum_amount28 . "','" . $sale_remarkk28 . "','" . $discount_unit28 . "','" . $warranty28 . "','" . $cal28 . "','" . $pm28 . "','" . $product_id28 . "','" . $product_id28 . "','" . $have_order . "','" . $clear_br28 . "','" . $clear_ivno28 . "','" . $jong_no28 . "','" . $jong_ckk28 . "','28')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3526,8 +3532,8 @@ values ('" . $ref_id . "','" . $sale_count28 . "','" . $sale_count28 . "','" . $
 	if ($product_id29 !== '' && ($_POST["subso_db_id29"] ?? '') === '') {
 
 		$strSQL29 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count29 . "','" . $sale_count29 . "','" . $product_price29 . "','" . $product_price29 . "','" . $sum_amount29 . "','" . $sale_remarkk29 . "','" . $discount_unit29 . "','" . $warranty29 . "','" . $cal29 . "','" . $pm29 . "','" . $product_id29 . "','" . $product_id29 . "','29')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count29 . "','" . $sale_count29 . "','" . $product_price29 . "','" . $product_price29 . "','" . $sum_amount29 . "','" . $sale_remarkk29 . "','" . $discount_unit29 . "','" . $warranty29 . "','" . $cal29 . "','" . $pm29 . "','" . $product_id29 . "','" . $product_id29 . "','" . $have_order . "','" . $clear_br29 . "','" . $clear_ivno29 . "','" . $jong_no29 . "','" . $jong_ckk29 . "','29')";
 		//echo $strSQL1;
 		//exit();
 
@@ -3540,8 +3546,8 @@ values ('" . $ref_id . "','" . $sale_count29 . "','" . $sale_count29 . "','" . $
 	if ($product_id30 !== '' && ($_POST["subso_db_id30"] ?? '') === '') {
 
 		$strSQL30 = "insert into hos__subso
-(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,sort_order)
-values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $product_price30 . "','" . $product_price30 . "','" . $sum_amount30 . "','" . $sale_remarkk30 . "','" . $discount_unit30 . "','" . $warranty30 . "','" . $cal30 . "','" . $pm30 . "','" . $product_id30 . "','" . $product_id30 . "','30')";
+(ref_idd,count,countref,price,price_ref,amount,sale_remark,discount,warranty,cal,pm,product_id,product_code,ckk_order,clear_br,clear_ivno,jong_no,jong_ckk,sort_order)
+values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $product_price30 . "','" . $product_price30 . "','" . $sum_amount30 . "','" . $sale_remarkk30 . "','" . $discount_unit30 . "','" . $warranty30 . "','" . $cal30 . "','" . $pm30 . "','" . $product_id30 . "','" . $product_id30 . "','" . $have_order . "','" . $clear_br30 . "','" . $clear_ivno30 . "','" . $jong_no30 . "','" . $jong_ckk30 . "','30')";
 		//echo $strSQL1;
 		//exit();
 
