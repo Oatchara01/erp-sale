@@ -5457,13 +5457,13 @@ include("head.php"); ?>
 
 			for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
 				var item = items[itemIndex] || {};
-				var productLabel = escapeClearLoanHtml(item.product_id || '-');
+				var productLabel = escapeClearLoanHtml(item.product_code || item.product_id || '-');
 				var productName = escapeClearLoanHtml(item.product_name || '');
 				var productCode = escapeClearLoanHtml(item.product_code || '');
 				var snText = escapeClearLoanHtml(item.sn || '');
 				var metaParts = [];
 				if (productName) {
-					metaParts.push(productName + (productCode ? ' (' + productCode + ')' : ''));
+					metaParts.push(productName);
 				}
 				if (snText) {
 					metaParts.push('SN: ' + snText);
@@ -5491,7 +5491,7 @@ include("head.php"); ?>
 			rows.push('<td></td>');
 			rows.push('<td>' + escapeClearLoanHtml(documentRow.registered_date || '-') + '</td>');
 			rows.push('<td>' + escapeClearLoanHtml(documentRow.document_no_display || documentRow.reference_no || documentRow.document_no || '-') + '</td>');
-			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_product_name || documentRow.loan_product_id || '-') + '</td>');
+			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_product_code || documentRow.loan_product_name || documentRow.loan_product_id || '-') + '</td>');
 			rows.push('<td style="text-align: center;">' + escapeClearLoanHtml(documentRow.loan_quantity || '0') + '</td>');
 			rows.push('<td>' + escapeClearLoanHtml(documentRow.loan_sn || '-') + '</td>');
 			rows.push('<td>' + escapeClearLoanHtml(documentRow.customer_name || '-') + '</td>');

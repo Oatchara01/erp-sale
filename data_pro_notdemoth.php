@@ -18,11 +18,11 @@ $search_escaped = mysqli_real_escape_string($conn, trim($product_code_search));
 $type_company_escaped = mysqli_real_escape_string($conn, $type_company);
 
 if ($search_escaped === '') {
-	$sql = "SELECT access_code, sol_name FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' ORDER BY sol_name LIMIT $pagesize";
-	$count_sql = "SELECT COUNT(*) as total FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0'";
+	$sql = "SELECT access_code, sol_name FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND group1 NOT IN (8002,8001) ORDER BY sol_name LIMIT $pagesize";
+	$count_sql = "SELECT COUNT(*) as total FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND group1 NOT IN (8002,8001)";
 } else {
-	$sql = "SELECT access_code, sol_name FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND (LOCATE('$search_escaped', sol_name) > 0 OR LOCATE('$search_escaped', access_code) > 0) ORDER BY LOCATE('$search_escaped', sol_name), sol_name LIMIT $pagesize";
-	$count_sql = "SELECT COUNT(*) as total FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND (LOCATE('$search_escaped', sol_name) > 0 OR LOCATE('$search_escaped', access_code) > 0)";
+	$sql = "SELECT access_code, sol_name FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND group1 NOT IN (8002,8001) AND (LOCATE('$search_escaped', sol_name) > 0 OR LOCATE('$search_escaped', access_code) > 0) ORDER BY LOCATE('$search_escaped', sol_name), sol_name LIMIT $pagesize";
+	$count_sql = "SELECT COUNT(*) as total FROM tb_product WHERE sale_ckk='1' AND demo_ckk='0' AND type_company = '$type_company_escaped' AND close_pro ='0' AND group1 NOT IN (8002,8001) AND (LOCATE('$search_escaped', sol_name) > 0 OR LOCATE('$search_escaped', access_code) > 0)";
 }
 
 $result = mysqli_query($conn, $sql);
