@@ -2382,7 +2382,7 @@ include("head.php"); ?>
 					<!-- เอกสารแนบบิล HIDDEN -->
 				</div>
 
-				<!-- NEW DELIVERY CARD -->
+				<!-- ข้อมูลการจัดส่ง -->
 				<?php
 				$deliveryTab = [
 					'open_fn' => 'openDelTab',
@@ -2415,6 +2415,7 @@ include("head.php"); ?>
 					'toggle_buttons' => [
 						['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => so_saved_checked($savedRegister, 'call_customer')],
 						['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)', 'checked' => so_saved_checked($savedOtherBill, 'ref_12')],
+						['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS', 'checked' => in_array((string)($savedSo['send_cs'] ?? ''), ['1', '2'], true)],
 					],
 					'cost_fields' => [
 						['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
@@ -5930,6 +5931,7 @@ include("head.php"); ?>
 			var company = typeDocSelect ? String(typeDocSelect.value || '').trim() : '';
 			return company === '4' ? '4' : '3';
 		}
+
 		function isClearLoanSameCompany(documentRow) {
 			var typeDocSelect = document.getElementById('type_doc_select');
 			var currentCompanyValue = typeDocSelect ? String(typeDocSelect.value || '').trim() : '';

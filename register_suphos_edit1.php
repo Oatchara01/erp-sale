@@ -564,6 +564,8 @@ bill_name ='" . $bill_name . "',bill_tel ='" . $bill_tel . "',bill_address  ='" 
 		}
 	}
 
+	updateHosSoColumnIfExists($conn, $ref_id, 'send_cs', (($_POST['send_cs'] ?? '') === '1') ? '1' : '0');
+
 	// Upsert tb_other_bill: ถ้ายังไม่มีเรคคอร์ดให้ INSERT, ถ้ามีแล้วให้ UPDATE
 	$checkOtherBill = mysqli_query($conn, "SELECT id FROM tb_other_bill WHERE ref_id = '" . $ref_id . "' LIMIT 1");
 	if ($checkOtherBill && mysqli_num_rows($checkOtherBill) > 0) {
@@ -1502,29 +1504,29 @@ $qsave=mysqli_query($conn,$save);
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count1 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 				$strSQL104 = "insert into hos__subso
@@ -1605,29 +1607,29 @@ values ('" . $ref_id . "','" . $sale_count1 . "','" . $sale_count1 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count2 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 				$strSQL104 = "insert into hos__subso
@@ -1708,29 +1710,29 @@ values ('" . $ref_id . "','" . $sale_count2 . "','" . $sale_count2 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count3 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 				$strSQL104 = "insert into hos__subso
@@ -1811,29 +1813,29 @@ values ('" . $ref_id . "','" . $sale_count3 . "','" . $sale_count3 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count4 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 				$strSQL104 = "insert into hos__subso
@@ -1914,29 +1916,29 @@ values ('" . $ref_id . "','" . $sale_count4 . "','" . $sale_count4 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count5 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 				$strSQL104 = "insert into hos__subso
@@ -2017,29 +2019,29 @@ values ('" . $ref_id . "','" . $sale_count5 . "','" . $sale_count5 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count6 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2149,29 +2151,29 @@ values ('" . $ref_id . "','" . $sale_count6 . "','" . $sale_count6 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count7 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2281,29 +2283,29 @@ values ('" . $ref_id . "','" . $sale_count7 . "','" . $sale_count7 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count8 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2414,29 +2416,29 @@ values ('" . $ref_id . "','" . $sale_count8 . "','" . $sale_count8 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count9 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2547,29 +2549,29 @@ values ('" . $ref_id . "','" . $sale_count9 . "','" . $sale_count9 . "','" . $pr
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count10 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2682,29 +2684,29 @@ values ('" . $ref_id . "','" . $sale_count10 . "','" . $sale_count10 . "','" . $
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count11 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2813,29 +2815,29 @@ values ('" . $ref_id . "','" . $sale_count11 . "','" . $sale_count11 . "','" . $
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count12 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -2944,29 +2946,29 @@ values ('" . $ref_id . "','" . $sale_count12 . "','" . $sale_count12 . "','" . $
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count13 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -3075,29 +3077,29 @@ values ('" . $ref_id . "','" . $sale_count13 . "','" . $sale_count13 . "','" . $
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count14 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
@@ -3206,29 +3208,29 @@ values ('" . $ref_id . "','" . $sale_count14 . "','" . $sale_count14 . "','" . $
 		$Num_Rows31 = mysqli_num_rows($objQuery31);
 		if ($Num_Rows31 > 0) {
 
-				$objResult31 = mysqli_fetch_array($objQuery31);
+			$objResult31 = mysqli_fetch_array($objQuery31);
 
-				$product_idb1 = $objResult31["product_id1"] ?? '';
-				$product_idb2 = $objResult31["product_id2"] ?? '';
-				$product_idb3 = $objResult31["product_id3"] ?? '';
-				$product_idb4 = $objResult31["product_id4"] ?? '';
-				$product_idb5 = $objResult31["product_id5"] ?? '';
-				$product_idb6 = $objResult31["product_id6"] ?? '';
-				$product_idb7 = $objResult31["product_id7"] ?? '';
-				$product_idb8 = $objResult31["product_id8"] ?? '';
-				$product_idb9 = $objResult31["product_id9"] ?? '';
-				$product_idb10 = $objResult31["product_id10"] ?? '';
+			$product_idb1 = $objResult31["product_id1"] ?? '';
+			$product_idb2 = $objResult31["product_id2"] ?? '';
+			$product_idb3 = $objResult31["product_id3"] ?? '';
+			$product_idb4 = $objResult31["product_id4"] ?? '';
+			$product_idb5 = $objResult31["product_id5"] ?? '';
+			$product_idb6 = $objResult31["product_id6"] ?? '';
+			$product_idb7 = $objResult31["product_id7"] ?? '';
+			$product_idb8 = $objResult31["product_id8"] ?? '';
+			$product_idb9 = $objResult31["product_id9"] ?? '';
+			$product_idb10 = $objResult31["product_id10"] ?? '';
 
-				$unit1 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit1"] ?? 0);
-				$unit2 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit2"] ?? 0);
-				$unit3 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit3"] ?? 0);
-				$unit4 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit4"] ?? 0);
-				$unit5 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit5"] ?? 0);
-				$unit6 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit6"] ?? 0);
-				$unit7 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit7"] ?? 0);
-				$unit8 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit8"] ?? 0);
-				$unit9 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit9"] ?? 0);
-				$unit10 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit10"] ?? 0);
+			$unit1 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit1"] ?? 0);
+			$unit2 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit2"] ?? 0);
+			$unit3 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit3"] ?? 0);
+			$unit4 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit4"] ?? 0);
+			$unit5 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit5"] ?? 0);
+			$unit6 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit6"] ?? 0);
+			$unit7 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit7"] ?? 0);
+			$unit8 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit8"] ?? 0);
+			$unit9 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit9"] ?? 0);
+			$unit10 = (float)($sale_count15 ?? 0) * (float)($objResult31["unit10"] ?? 0);
 
 			if ($product_idb1 != '') {
 
