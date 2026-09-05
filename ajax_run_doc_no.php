@@ -173,14 +173,16 @@ if (!$tableCheck || mysqli_num_rows($tableCheck) === 0) {
 	run_doc_no_fail('ยังไม่ได้ติดตั้งตารางเลขที่เอกสาร (' . $table . ') กรุณาติดต่อผู้ดูแลระบบ', 500);
 }
 
-// ปี/เดือนของเลขอิงวันที่ออกเอกสารถ้าผู้ใช้กรอกไว้ ไม่งั้นใช้วันที่ปัจจุบัน
+// วันที่ออกเอกสารต้องกรอกมาก่อนเสมอ (เดิม fallback เป็นวันที่ปัจจุบันถ้าไม่กรอก/parse ไม่ได้
+// ทำให้เลขที่ออกไปอิงเดือน/ปีผิดจากที่ผู้ใช้ตั้งใจ) — validate ซ้ำฝั่ง server เพราะ client
+// เรียก endpoint นี้ตรง ๆ ได้โดยไม่ผ่านปุ่ม
+if ($docDate === '') {
+	run_doc_no_fail('กรุณาใส่วันที่ออกเอกสารก่อนออกเลขที่เอกสาร');
+}
 date_default_timezone_set('Asia/Bangkok');
-$timestamp = time();
-if ($docDate !== '') {
-	$parsed = strtotime($docDate);
-	if ($parsed !== false) {
-		$timestamp = $parsed;
-	}
+$timestamp = strtotime($docDate);
+if ($timestamp === false) {
+	run_doc_no_fail('กรุณาใส่วันที่ออกเอกสารก่อนออกเลขที่เอกสาร');
 }
 $yearNo  = substr((string)((int)date('Y', $timestamp) + 543), -2);
 $monthNo = date('m', $timestamp);

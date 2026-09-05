@@ -1743,6 +1743,59 @@ include("head.php"); ?>
 					});
 			}
 
+			// เอกสารจบแล้ว (Approve/ยกเลิก/Rejected): Admin กดปุ่ม Update ตัวจำกัดสิทธิ์นี้เพื่อบันทึก
+			// เฉพาะเลขที่/วันที่เอกสาร (และเลขงาน/SR/มัดจำ ถ้ามี) ที่เพิ่ง Run ค้างไว้บนฟอร์ม — ไม่แตะ
+			// สถานะ/ยอดขาย/ลูกค้า/สินค้าใด ๆ ของเอกสารที่ปิดแล้ว จึงตั้ง flag แยกจาก saveDraft() ปกติ
+			function saveAdminLimitedUpdate() {
+				var form = document.forms['frmMain'];
+				if (!form) {
+					return;
+				}
+
+				var btn = form.querySelector('[name="admin_limited_update_btn"]');
+				var defaultHtml = btn ? btn.innerHTML : '';
+				var formData = new FormData(form);
+				formData.set('is_draft', '1');
+				formData.set('admin_limited_update', '1');
+
+				if (btn) {
+					btn.disabled = true;
+					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+				}
+
+				fetch('register_suphos_draft1.php', {
+						method: 'POST',
+						body: formData
+					})
+					.then(function(res) {
+						return res.json();
+					})
+					.then(function(data) {
+						if (data && data.success) {
+							return Swal.fire({
+								title: 'Save Draft success',
+								text: 'Ref ID: ' + data.ref_id,
+								icon: 'success',
+								confirmButtonColor: '#612989'
+							}).then(function() {
+								window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							});
+						}
+
+						var message = data && data.message ? data.message : 'Unable to save draft';
+						return Swal.fire('Error', message, 'error');
+					})
+					.catch(function() {
+						return Swal.fire('Error', 'Unable to save draft', 'error');
+					})
+					.finally(function() {
+						if (btn) {
+							btn.disabled = false;
+							btn.innerHTML = defaultHtml;
+						}
+					});
+			}
+
 			function openPrintReport() {
 				var form = document.forms.frmMain;
 				var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
@@ -3473,6 +3526,10 @@ include("head.php"); ?>
 		// Update ยังใช้แก้ไขต่อได้จนกว่าเอกสารจะจบ (ไม่ผูกกับ send_sup และไม่ผูกกับ send_cm)
 		// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่แล้ว เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองอยู่แล้ว กันไม่ให้เห็นปุ่ม Update ซ้ำสองปุ่ม
 		$soHideUpdate = $soIsClosed || $soCanShowApproveBar;
+		// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารที่ Run ค้างไว้ได้ (ไม่งั้นรีหน้าแล้วเลขหาย)
+		// แต่ห้ามแก้ข้อมูลอื่นของเอกสารที่จบแล้ว จึงเปิดปุ่ม Update แบบจำกัดเฉพาะ Admin แทนปุ่ม Update ปกติ
+		$soIsAdminUser = (($_SESSION['type_login'] ?? '') === 'Admin');
+		$soShowAdminLimitedUpdate = $soIsClosed && $soIsAdminUser && $soIsEditMode;
 		?>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
@@ -3504,6 +3561,13 @@ include("head.php"); ?>
 				<?php if (!$soHideUpdate): ?>
 					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
 						<i class="far fa-save"></i> <?php echo $soIsEditMode ? 'Update' : 'Save Draft'; ?>
+					</button>
+				<?php endif; ?>
+				<?php if ($soShowAdminLimitedUpdate): ?>
+					<!-- เอกสารจบแล้ว: Admin แก้ได้เฉพาะเลขที่/วันที่เอกสารผ่าน admin_limited_update=1
+						 ไม่ใช่ปุ่ม Update ปกติ ป้องกันไม่ให้แก้ข้อมูลอื่นของเอกสารที่จบแล้ว -->
+					<button type="button" name="admin_limited_update_btn" onclick="saveAdminLimitedUpdate();" title="แก้ไขได้เฉพาะเลขที่/วันที่เอกสาร" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+						<i class="far fa-save"></i> Update
 					</button>
 				<?php endif; ?>
 				<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
@@ -5281,8 +5345,15 @@ include("head.php"); ?>
 			var docNoInput = document.querySelector('input[name="admin_doc_no"]');
 			var docDateInput = document.querySelector('input[name="admin_doc_date"]');
 			var runButton = document.getElementById('btn_run_doc_no');
+			var refIdInput = document.querySelector('input[name="ref_id"]');
 
 			if (!companySelect || !docTypeSelect || !docNoInput) {
+				return;
+			}
+
+			if (!docDateInput || docDateInput.value.trim() === '') {
+				Swal.fire('แจ้งเตือน', 'กรุณาใส่วันที่ออกเอกสารก่อนออกเลขที่เอกสาร', 'warning');
+				if (docDateInput) docDateInput.focus();
 				return;
 			}
 
@@ -5297,6 +5368,7 @@ include("head.php"); ?>
 			payload.append('company', companySelect.value);
 			payload.append('doc_type', docTypeSelect.value);
 			payload.append('doc_date', docDateInput ? docDateInput.value : '');
+			payload.append('ref_id', refIdInput ? refIdInput.value : '');
 
 			if (runButton) {
 				runButton.disabled = true;
