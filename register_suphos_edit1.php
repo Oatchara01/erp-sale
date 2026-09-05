@@ -4048,11 +4048,17 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 			mysqli_query($conn, "UPDATE hos__so SET status_doc='Rejected', approve='" . mysqli_real_escape_string($conn, $approve_name) . "', approve_code='" . mysqli_real_escape_string($conn, $approve_code) . "', approve_date='" . $approve_date_val . "' WHERE ref_id='" . mysqli_real_escape_string($conn, $ref_id) . "'");
 		} elseif ($soApproveAction === 'approve') {
 			// เช็คเคลียร์ยืม/เคลียร์จองต่อแถวสินค้า (พอร์ตจาก salehos_approve.php)
-			foreach ($id as $key => $value) {
-				$clear_ivno_new = trim($clear_ivno[$key] ?? '');
-				$product_id_new = $product_id[$key] ?? '';
-				$sale_count_new = $sale_count[$key] ?? 0;
-				$jong_no_new = $jong_no[$key] ?? '';
+			// อ่านจาก hos__subso ตรง ๆ (ไม่ใช้ $id ที่มาจากฟอร์ม) เพราะ ณ จุดนี้แถวใหม่ที่เพิ่งเพิ่มระหว่างแก้ไข
+			// (เช่น import จากใบยืมแล้วกดอนุมัติทันทีโดยไม่ผ่านการบันทึกก่อน) ถูก insert ไปแล้วก่อนหน้านี้ในไฟล์
+			// แต่ subso_db_id ของแถวนั้นจะว่างในฟอร์ม ทำให้ไม่ถูกแม็พเข้า $id เลย
+			$approveRowsResult = mysqli_query($conn, "SELECT id, product_id, clear_br, clear_ivno, sn, count AS sale_count, jong_no FROM hos__subso WHERE ref_idd = '" . mysqli_real_escape_string($conn, $ref_id) . "' AND COALESCE(bom_ckk,'0') <> '1'");
+			while ($approveRow = mysqli_fetch_assoc($approveRowsResult)) {
+				$id_new = $approveRow['id'];
+				$product_id_new = $approveRow['product_id'];
+				$sn_new = trim($approveRow['sn'] ?? '');
+				$clear_ivno_new = trim($approveRow['clear_ivno'] ?? '');
+				$sale_count_new = $approveRow['sale_count'] ?? 0;
+				$jong_no_new = trim($approveRow['jong_no'] ?? '');
 
 				if (substr($clear_ivno_new, 0, 4) === 'BREG') {
 					// เอกสารใบยืม BREG ไม่ต้องเช็คเคลียร์ยืม (ตามพฤติกรรมเดิม)
@@ -4081,6 +4087,30 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 					$count5 = $rs12['count3'] ?? 0;
 					$count2 = (($rs2['sale_count'] ?? 0) + ($rs22['sale_count'] ?? 0) + ($rse2['sale_count'] ?? 0) + ($rssc2['sale_count'] ?? 0)) - ($count3 + $count4 + $count5 + $count13 + $sale_count_new);
 
+					if ($sn_new !== '') {
+						$rsSn3 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM hos__subspr WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND sn = '" . mysqli_real_escape_string($conn, $sn_new) . "' AND clear_br = '1' AND clear_ivno = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_spr = 'Approve'"));
+						$rsSn13 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS count3 FROM hos__subso WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND sn = '" . mysqli_real_escape_string($conn, $sn_new) . "' AND clear_br = '1' AND clear_ivno = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_so = 'Approve' AND id <> '" . mysqli_real_escape_string($conn, $id_new) . "'"));
+						$rsSn41 = mysqli_fetch_array(mysqli_query($conn, "SELECT ref_id FROM hos__receive WHERE iv_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "'"));
+						$rsSn4 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(count) AS count4 FROM hos__subreceive WHERE ref_idd = '" . ($rsSn41['ref_id'] ?? '') . "' AND sn = '" . mysqli_real_escape_string($conn, $sn_new) . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
+						$rsSn12 = mysqli_fetch_array(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM hos__subsmp WHERE product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "' AND sn = '" . mysqli_real_escape_string($conn, $sn_new) . "' AND clear_br = '1' AND br_no = '" . mysqli_real_escape_string($conn, $clear_ivno_new) . "' AND status_smp = 'Approve'"));
+
+						$countSn = number_format(($rsSn3['count3'] ?? 0) + ($rsSn4['count4'] ?? 0) + ($rsSn12['count3'] ?? 0) + ($rsSn13['count3'] ?? 0), 0) . "";
+
+						if ($countSn !== '0') {
+							echo "<script language=\"JavaScript\">";
+							echo "alert('หมายเลขเครื่อง : $sn_new มีการเคลียร์ยืมไปแล้วค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
+							echo "</script>";
+							exit();
+						}
+					}
+
+					if ($count2 < 0) {
+						echo "<script language=\"JavaScript\">";
+						echo "alert('สินค้าในใบยืมนี้มีไม่พอในการเคลียร์ยืมครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
+						echo "</script>";
+						exit();
+					}
+
 					if ($count2 <= 0) {
 						mysqli_query($conn, "UPDATE hos__subbr SET clear_ckk='1' WHERE ref_idd_br='" . ($rs1['ref_id_br'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
 						mysqli_query($conn, "UPDATE hos__subconsig SET clear_ckk='1' WHERE ref_idd='" . ($rssc1['ref_id'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
@@ -4095,6 +4125,14 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 					$rsj13 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(count) AS count3 FROM hos__subso WHERE product_id = '" . ($objResultj1['product_id'] ?? '') . "' AND jong_ckk='1' AND jong_no='" . ($objResultj['iv_no'] ?? '') . "' AND status_so='Approve'"));
 
 					$countj2 = ($objResultj1['count'] ?? 0) - (($rsj3['count3'] ?? 0) + ($rsj13['count3'] ?? 0));
+
+					if ($countj2 < 0) {
+						echo "<script language=\"JavaScript\">";
+						echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
+						echo "</script>";
+						exit();
+					}
+
 					if ((float)$countj2 == 0.0) {
 						mysqli_query($conn, "UPDATE hos__subjongpro SET close_ckk='1' WHERE ref_idd='" . ($objResultj['ref_id'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
 					}

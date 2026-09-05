@@ -18,9 +18,7 @@ try {
 		$draftQuery = mysqli_query($conn, "SELECT status_doc, send_cm FROM hos__so WHERE ref_id = '" . $safeRefId . "' LIMIT 1");
 		if ($draftQuery && ($draftRow = mysqli_fetch_assoc($draftQuery))) {
 			$draftStatusDoc = $draftRow["status_doc"] ?? "";
-			$draftSendCm = $draftRow["send_cm"] ?? "";
-			$isFinalState = in_array($draftStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true)
-				|| ($draftSendCm === '1' && $draftStatusDoc === 'Request');
+			$isFinalState = in_array($draftStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
 
 			if (!$isFinalState) {
 				include("register_suphos_edit1.php");
@@ -29,7 +27,7 @@ try {
 
 			echo json_encode(array(
 				'success' => false,
-				'message' => 'Only Draft documents can be updated with Save Draft'
+				'message' => 'Closed documents cannot be updated'
 			));
 			exit();
 		}

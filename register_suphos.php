@@ -97,6 +97,16 @@ include("head.php"); ?>
 		}
 	}
 
+	function getMainFormField(name) {
+		var form = document.forms['frmMain'];
+		return form && form.elements ? form.elements[name] : null;
+	}
+
+	function getMainFormFieldValue(name) {
+		var field = getMainFormField(name);
+		return field ? String(field.value || '') : '';
+	}
+
 	function updateDeliveryContractRequirement() {
 		var haveOrderCheckbox = document.getElementById('have_order');
 		var deliveryContractInput = document.getElementById('delivery_contract');
@@ -214,8 +224,25 @@ include("head.php"); ?>
 		setLegacyFieldValue('description_ja', valueOf('input[name="addr_note"]'));
 	}
 
+	function syncPaymentSelectionToHidden() {
+		var paymentSelect = document.getElementById('payment');
+		if (!paymentSelect) {
+			return;
+		}
+
+		var cashMode = document.getElementById('pay_mode_cash');
+		var cashPaymentSelect = document.getElementById('payment_cash_select');
+		var isCashMode = cashMode && cashMode.checked;
+
+		if (isCashMode && cashPaymentSelect) {
+			paymentSelect.value = cashPaymentSelect.value || '';
+		}
+	}
+
 	function syncFormCompatibilityFields() {
 		ensureHiddenField('customer_typename', 'customer_typename');
+		ensureHiddenField('h_employee_name', 'h_employee_name');
+		syncPaymentSelectionToHidden();
 		syncShippingFieldsToLegacy();
 		syncExtraAddressFieldsToLegacy();
 		syncAddressDetailFieldsToLegacy();
@@ -484,7 +511,10 @@ include("head.php"); ?>
 					}
 
 					if (isCustomerMode) {
-						setElementValue(payment, customerData.credit_ckk);
+						var isInitialSavedDocumentLoad = !!window.isInitialDraftLoad;
+						if (!isInitialSavedDocumentLoad) {
+							setElementValue(payment, customerData.credit_ckk);
+						}
 						setElementValue(credit_thb, customerData.credit_thb);
 						var defaultShipping = {
 							customer_name: customerData.bill_name,
@@ -494,24 +524,25 @@ include("head.php"); ?>
 							shipping_full_address: customerData.delivery_full_address || customerData.delivery_address || ''
 						};
 						window.originalShippingData = defaultShipping;
-						if (window.isInitialDraftLoad) {
+						if (isInitialSavedDocumentLoad) {
 							window.isInitialDraftLoad = false;
 						} else {
 							applyShippingSelection(defaultShipping);
 						}
 
-						// เก็บ bank id ของลูกค้าไว้ใน hidden เพื่อ restore dropdown ภายหลัง
 						var cusCkk = customerData.credit_ckk.trim();
 						var hCreditCkk = document.getElementById('h_credit_ckk_value');
-						if (hCreditCkk) hCreditCkk.value = cusCkk;
+						if (hCreditCkk && !isInitialSavedDocumentLoad) hCreditCkk.value = cusCkk;
 
-						resolveBankPaymentMode(cusCkk, function(resolvedMode) {
-							var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
-							if (customerPaymentModeInput) {
-								customerPaymentModeInput.value = resolvedMode;
-							}
-							switchPaymentMode(resolvedMode);
-						});
+						if (!isInitialSavedDocumentLoad) {
+							resolveBankPaymentMode(cusCkk, function(resolvedMode) {
+								var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
+								if (customerPaymentModeInput) {
+									customerPaymentModeInput.value = resolvedMode;
+								}
+								switchPaymentMode(resolvedMode);
+							});
+						}
 					}
 
 					if (typeof onComplete === 'function') {
@@ -685,7 +716,8 @@ include("head.php"); ?>
 	});
 
 	// สลับโหมดการชำระเงิน (เครดิต / เงินสด)
-	function switchPaymentMode(mode) {
+	function switchPaymentMode(mode, selectedPayment) {
+		var targetPayment = selectedPayment !== undefined && selectedPayment !== null ? String(selectedPayment) : null;
 		var isCredit = (mode === 'credit');
 
 		var radCredit = document.getElementById('pay_mode_credit');
@@ -706,9 +738,10 @@ include("head.php"); ?>
 
 			loadBankOptions(false, function() {
 				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
+				var paymentToSelect = targetPayment !== null ? targetPayment : savedCusCkk;
 				var sel = document.getElementById('payment');
-				if (savedCusCkk && savedCusCkk !== '0') {
-					sel.value = savedCusCkk;
+				if (paymentToSelect && paymentToSelect !== '0') {
+					sel.value = paymentToSelect;
 				} else {
 					sel.value = '';
 				}
@@ -731,12 +764,11 @@ include("head.php"); ?>
 			loadBankOptions(true, function() {
 				var sel = document.getElementById('payment');
 				var savedCusCkk = document.getElementById('h_credit_ckk_value').value || '';
-				if (savedCusCkk && [...sel.options].some(function(option) {
-						return option.value === savedCusCkk;
+				var paymentToSelect = targetPayment !== null ? targetPayment : savedCusCkk;
+				if (paymentToSelect && [...sel.options].some(function(option) {
+						return option.value === paymentToSelect;
 					})) {
-					sel.value = savedCusCkk;
-				} else if (savedCusCkk === '0' || !savedCusCkk) {
-					sel.value = '';
+					sel.value = paymentToSelect;
 				} else {
 					sel.value = '';
 				}
@@ -1502,7 +1534,7 @@ include("head.php"); ?>
 					document.frmMain.sale_code.focus();
 					return false;
 				}
-				if (document.frmMain.payment.value == "") {
+				if (getMainFormFieldValue('payment') == "") {
 					alert('กรุณาเลือกช่องทางการชำระเงิน');
 					var visiblePayment = document.getElementById('payment_cash_select') || document.getElementById('payment_method') || document.getElementById('pay_mode_cash');
 					if (visiblePayment) {
@@ -1511,8 +1543,8 @@ include("head.php"); ?>
 					return false;
 				}
 
-				if (document.frmMain.payment.value != "") {
-					if (document.frmMain.payment.value == "7") {
+				if (getMainFormFieldValue('payment') != "") {
+					if (getMainFormFieldValue('payment') == "7") {
 
 
 						if (document.frmMain.date_tranfer && document.frmMain.date_tranfer.type !== "hidden" && document.frmMain.date_tranfer.value == "") {
@@ -1524,58 +1556,54 @@ include("head.php"); ?>
 					}
 				}
 
-				if (document.frmMain.start_time.value == "") {
+				if (getMainFormFieldValue('start_time') == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
-					document.frmMain.start_time.focus();
+					var startTimeField = getMainFormField('start_time');
+					if (startTimeField) startTimeField.focus();
 					return false;
 				}
 
-				if (document.frmMain.customer_name.value == "") {
+				if (getMainFormFieldValue('customer_name') == "") {
 					alert('กรุณาใส่ชื่อลูกค้า');
-					document.frmMain.customer_name.focus();
+					var customerNameField = getMainFormField('customer_name');
+					if (customerNameField) customerNameField.focus();
 					return false;
 				}
 
-				if (document.frmMain.customer_tel.value == "") {
+				if (getMainFormFieldValue('customer_tel') == "") {
 					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					document.frmMain.customer_tel.focus();
+					var customerTelField = getMainFormField('customer_tel');
+					if (customerTelField) customerTelField.focus();
 					return false;
 				}
-				if (document.frmMain.address_1.value == "") {
+				if (getMainFormFieldValue('address_1') == "") {
 					alert('กรุณาใส่สถานที่ส่งสินค้า');
-					document.frmMain.address_1.focus();
+					var address1Field = getMainFormField('address_1');
+					if (address1Field) address1Field.focus();
 					return false;
 				}
 
-				if (document.frmMain.address_name.value == "") {
+				if (getMainFormFieldValue('address_name') == "") {
 					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					document.frmMain.address_name.focus();
+					var addressNameField = getMainFormField('address_name');
+					if (addressNameField) addressNameField.focus();
 					return false;
 				}
 
-				if (document.frmMain.address_send.value == "") {
+				if (getMainFormFieldValue('address_send') == "") {
 					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					document.frmMain.address_send.focus();
+					var addressSendField = getMainFormField('address_send');
+					if (addressSendField) addressSendField.focus();
 					return false;
 				}
-
-				if (document.frmMain.h_employee_name.value == "") {
-					alert('กรุณาเลือกชื่อพนักงาน');
-					document.frmMain.employee_name.focus();
-					return false;
-				}
-
-				if (document.frmMain.province_name.value == "") {
+				if (getMainFormFieldValue('province_name') == "") {
 					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					document.frmMain.province_name.focus();
+					var provinceNameField = getMainFormField('province_name');
+					if (provinceNameField) provinceNameField.focus();
 					return false;
 				}
 
-				// ตรวจสอบว่าทุกแถวสินค้าที่มี product_id มีจำนวนและราคาต่อหน่วยครบ
-				// (เดิมไม่มีการตรวจสอบนี้ กรณีนำเข้าจากเคลียร์ยืม/จอง populateClearLoanRow จะล้าง
-				// product_price/sale_count เป็นค่าว่างไว้ และ readonly input ไม่ trigger onchange
-				// เพื่อดึงราคาอัตโนมัติ ทำให้บันทึกด้วยราคา/จำนวนว่างได้โดยไม่มี error ใด ๆ)
 				for (var soRowIndex = 1; soRowIndex <= 30; soRowIndex++) {
 					var soRowEl = document.getElementById('product_row_' + soRowIndex);
 					if (!soRowEl || soRowEl.style.display === 'none') {
@@ -6966,29 +6994,19 @@ include("head.php"); ?>
 								}
 							}
 
-							var isCreditPayment = (savedSo.payment !== '0' && savedSo.payment !== '');
-							if (isCreditPayment) {
-								switchPaymentMode('credit');
-								setTimeout(function() {
-									var sel = document.getElementById('payment');
-									if (sel) {
-										sel.value = savedSo.payment;
-										updateCreditDisplay();
+							var savedPaymentValue = savedSo.payment !== undefined && savedSo.payment !== null ? String(savedSo.payment) : '';
+							if (savedPaymentValue !== '') {
+								resolveBankPaymentMode(savedPaymentValue, function(resolvedMode) {
+									var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
+									if (customerPaymentModeInput) {
+										customerPaymentModeInput.value = resolvedMode;
 									}
-								}, 500);
+									switchPaymentMode(resolvedMode, savedPaymentValue);
+								});
 							} else {
-								switchPaymentMode('cash');
-								setTimeout(function() {
-									var sel = document.getElementById('payment');
-									if (sel) {
-										sel.value = savedSo.payment;
-										var cashSel = document.getElementById('payment_cash_select');
-										if (cashSel) cashSel.value = savedSo.payment;
-									}
-								}, 500);
+								switchPaymentMode('cash', '');
 							}
 
-							// เช็ควงเงินเครดิตทันทีตอนโหลดเอกสาร (ทั้งโหมดแก้ไข ref_id และ
 							// โหมดคัดลอกใบเดิม copy_from) ไม่ใช่รอจนกว่าจะเปิด popup เลือกลูกค้าเอง
 							var restoredCustomerName = savedSo.bill_name || '';
 							if (!restoredCustomerName) {
