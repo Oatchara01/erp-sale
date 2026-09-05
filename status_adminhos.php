@@ -509,8 +509,15 @@ include "dbconnect_sale.php";
 														while ($subResult = mysqli_fetch_array($qrySub)) {
 															$item_name = $subResult['sol_name'] ?? '-';
 															$clear_status = '-';
+															$clear_values = [];
 															if (trim($subResult['clear_ivno']) != '') {
-																$clear_status = '<i class="fas fa-check-circle" style="color:#389E0D; margin-right: 6px;"></i><span style="color:#3B3B3B;">' . htmlspecialchars($subResult['clear_ivno']) . '</span>';
+																$clear_values[] = htmlspecialchars($subResult['clear_ivno']);
+															}
+															if (trim($subResult['jong_no']) != '') {
+																$clear_values[] = htmlspecialchars($subResult['jong_no']);
+															}
+															if (!empty($clear_values)) {
+																$clear_status = '<i class="fas fa-check-circle" style="color:#389E0D; margin-right: 6px;"></i><span style="color:#3B3B3B;">' . implode(' / ', $clear_values) . '</span>';
 															}
 													?>
 															<tr>
