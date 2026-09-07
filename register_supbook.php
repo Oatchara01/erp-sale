@@ -545,14 +545,14 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 						<i class="fas fa-ellipsis-v"></i>
 					</button>
 					<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
-						<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
-						<button type="button" name="approve_action" value="reject" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+						<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #FF830F; cursor: pointer;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+						<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
 					</div>
 					<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-						<i class="far fa-check-circle"></i> อนุมัติ
+						<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
 					</button>
 					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-						<i class="far fa-save"></i> Update
+						<img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update
 					</button>
 				</div>
 			<?php endif; ?>
@@ -620,7 +620,7 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 					'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
 				input: 'textarea',
 				inputPlaceholder: opts.placeholder || '',
-				iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><i class="' + opts.iconClass + '" style="font-size: 32px; color: ' + opts.iconColor + ';"></i></div>',
+				iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
 				showCancelButton: true,
 				showCloseButton: true,
 				reverseButtons: false,
@@ -660,8 +660,7 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 						label: 'ระบุเหตุผลการส่งกลับ',
 						placeholder: 'ระบุเหตุผลการส่งกลับ',
 						iconBg: '#FFF4E5',
-						iconClass: 'fas fa-reply',
-						iconColor: '#F0A23A'
+						iconSrc: 'img/icons/send_back.png'
 					},
 					reject: {
 						title: 'ไม่อนุมัติเอกสารนี้ ?',
@@ -669,8 +668,7 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 						label: 'ระบุเหตุผลที่ไม่อนุมัติ',
 						placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
 						iconBg: '#FEECEB',
-						iconClass: 'fas fa-times-circle',
-						iconColor: '#DC3545'
+						iconSrc: 'img/icons/reject.png'
 					}
 				} [action];
 				if (!reasonConfig) return;
@@ -1269,6 +1267,22 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 
 		var productInput = document.getElementById('productSearchInput');
 		var productResults = document.getElementById('productSearchResults');
+
+		var companySelectEl = document.getElementById('company_select');
+		if (companySelectEl) {
+			companySelectEl.addEventListener('change', function() {
+				productRows = [];
+				renderProductTable();
+				if (productInput) {
+					productInput.value = '';
+				}
+				if (productResults) {
+					productResults.style.display = 'none';
+					productResults.innerHTML = '';
+				}
+			});
+		}
+
 		if (productInput && productResults) {
 			productInput.addEventListener('input', function() {
 				clearTimeout(productSearchTimer);
@@ -1279,7 +1293,9 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 					return;
 				}
 				productSearchTimer = setTimeout(function() {
-					fetch('ajax_product_popup_search.php?dept=' + PRODUCT_SEARCH_DEPT + '&q=' + encodeURIComponent(keyword))
+					var companySelect = document.getElementById('company_select');
+					var companyValue = companySelect ? companySelect.value : '';
+					fetch('ajax_product_popup_search.php?dept=' + PRODUCT_SEARCH_DEPT + '&company=' + encodeURIComponent(companyValue) + '&q=' + encodeURIComponent(keyword))
 						.then(function(res) {
 							return res.json();
 						})

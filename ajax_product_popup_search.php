@@ -15,6 +15,9 @@ $keywordLike = '%' . $keyword . '%';
 $dept = isset($_GET['dept']) && $_GET['dept'] === 'eng' ? 'eng' : 'sale';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
 
+$companyMap = array('1' => 'AWL', '2' => 'NBM');
+$company = isset($_GET['company']) && isset($companyMap[$_GET['company']]) ? $companyMap[$_GET['company']] : 'AWL';
+
 if ($limit <= 0) {
     $limit = 20;
 }
@@ -28,10 +31,10 @@ $sql = "SELECT product_ID, access_code, access_name, sol_name, unit_name
         FROM tb_product
         WHERE $deptCondition
           AND demo_ckk = '0'
-          AND type_company = 'AWL'
+          AND type_company = ?
           AND close_pro = '0'";
-$types = '';
-$params = array();
+$types = 's';
+$params = array($company);
 
 if ($keyword !== '') {
     $sql .= " AND (access_code LIKE ? OR access_name LIKE ? OR sol_name LIKE ?)";
