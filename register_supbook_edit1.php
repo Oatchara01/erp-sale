@@ -7,6 +7,23 @@ if (!$isDraftRequest) {
 include("dbconnect.php");
 include("error_page.php");
 
+if (!function_exists('tableExists')) {
+	function tableExists($conn, $tableName)
+	{
+		static $tables = null;
+		if ($tables === null) {
+			$tables = array();
+			$res = mysqli_query($conn, "SHOW TABLES");
+			if ($res) {
+				while ($row = mysqli_fetch_array($res)) {
+					$tables[strtolower($row[0])] = true;
+				}
+			}
+		}
+		return isset($tables[strtolower($tableName)]);
+	}
+}
+
 date_default_timezone_set("Asia/Bangkok");
 if (($_POST["submit"] ?? '') == "submit" || isset($_POST['approve_action'])) {
 
@@ -125,6 +142,25 @@ values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc
 		} elseif ($soApproveAction === 'approve') {
 			mysqli_query($conn, "UPDATE hos__jongproduct SET status_doc='Approve', send_stock='1', date_approve='" . $approve_date_val . "', approve_name='" . $approve_name . "' WHERE ref_id='" . $ref_id . "'");
 			mysqli_query($conn, "UPDATE hos__subjongpro SET status_sub='Approve' WHERE ref_idd='" . $ref_id . "'");
+		}
+	}
+
+	if ($qsave && tableExists($conn, 'tb_document_status_log')) {
+		$soApproveReason = trim((string)($_POST['so_approve_reason'] ?? ''));
+		$soApproveStatusMap = array(
+			'return' => 'Returned',
+			'reject' => 'Rejected'
+		);
+
+		if (isset($soApproveStatusMap[$soApproveAction]) && $soApproveReason !== '') {
+			$soSafeLogRefId = mysqli_real_escape_string($conn, $ref_id);
+			$soLogUserId = mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '');
+			$soLogUserName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $soSafeLogRefId . "', '" . $soApproveStatusMap[$soApproveAction] . "', '"
+				. mysqli_real_escape_string($conn, $soApproveReason) . "', '"
+				. $soLogUserId . "', '"
+				. $soLogUserName . "')");
 		}
 	}
 

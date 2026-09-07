@@ -3,10 +3,46 @@ include('dbconnect.php');
 include('dbconnect_sale.php');
 require_once __DIR__ . '/includes/so_saved_helpers.php';
 
+function renderSoDocumentReturnStatus($statusDoc)
+{
+	$statusMap = array(
+		'Returned' => 'ส่งกลับ',
+		'Rejected' => 'ไม่อนุมัติ',
+		'Cancelled' => 'ยกเลิกเอกสาร',
+		'ยกเลิก' => 'ยกเลิกเอกสาร'
+	);
+
+	return $statusMap[$statusDoc] ?? $statusDoc;
+}
+
+function renderSoDocumentReturnStatusClass($statusDoc)
+{
+	$statusClassMap = array(
+		'Returned' => 'is-returned',
+		'Rejected' => 'is-rejected',
+		'Cancelled' => 'is-cancelled',
+		'ยกเลิก' => 'is-cancelled'
+	);
+
+	return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+}
+
+function formatSoDocumentLogDateTime($createdAt)
+{
+	$createdAt = trim((string)$createdAt);
+	if ($createdAt === '') return '';
+
+	$timestamp = strtotime($createdAt);
+	if ($timestamp === false) return '';
+
+	return date('d-m-Y H:i', $timestamp);
+}
+
 $savedRefId = isset($_GET["ref_id"]) ? mysqli_real_escape_string($conn, $_GET["ref_id"]) : "";
 $isCopy = isset($_GET["copy"]) && $_GET["copy"] == "1";
 $savedJong = null;
 $savedProducts = [];
+$soDocumentLogRows = [];
 
 if ($savedRefId !== "") {
 	$savedJongQuery = mysqli_query($conn, "SELECT * FROM hos__jongproduct WHERE ref_id = '" . $savedRefId . "' LIMIT 1");
@@ -28,6 +64,16 @@ if ($savedRefId !== "") {
 				'showRemark' => !empty($row['sale_remark']),
 				'id' => $row['id']
 			];
+		}
+	}
+
+	$documentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+	if ($documentStatusLogTableQuery && mysqli_num_rows($documentStatusLogTableQuery) > 0) {
+		$soDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $savedRefId . "' AND status_doc IN ('Returned', 'Rejected') ORDER BY created_at DESC, id DESC");
+		if ($soDocumentLogQuery) {
+			while ($soDocumentLogRow = mysqli_fetch_assoc($soDocumentLogQuery)) {
+				$soDocumentLogRows[] = $soDocumentLogRow;
+			}
 		}
 	}
 }
@@ -91,6 +137,29 @@ if ($savedRefId !== "") {
 			</button>
 		</div>
 	</div>
+
+	<?php
+	$latestSoDocumentReason = $soDocumentLogRows[0] ?? null;
+	$latestSoDocumentReasonTitleMap = array(
+		'Returned' => 'เหตุผลในการส่งกลับ',
+		'Rejected' => 'เหตุผลที่ไม่อนุมัติ'
+	);
+	$latestSoDocumentReasonClassMap = array(
+		'Returned' => 'is-returned',
+		'Rejected' => 'is-rejected'
+	);
+	$latestSoDocumentReasonStatus = trim((string)($latestSoDocumentReason['status_doc'] ?? ''));
+	$latestSoDocumentReasonText = trim((string)($latestSoDocumentReason['reason'] ?? ''));
+	$latestSoDocumentReasonTitle = $latestSoDocumentReasonTitleMap[$latestSoDocumentReasonStatus] ?? '';
+	$latestSoDocumentReasonClass = $latestSoDocumentReasonClassMap[$latestSoDocumentReasonStatus] ?? '';
+	?>
+	<?php if ($savedJong !== null && !$isCopy && $latestSoDocumentReasonTitle !== '' && $latestSoDocumentReasonText !== '') { ?>
+		<div class="so-latest-reason-banner <?php echo so_saved_h($latestSoDocumentReasonClass); ?>" role="status">
+			<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+			<div class="so-latest-reason-title"><?php echo so_saved_h($latestSoDocumentReasonTitle); ?></div>
+			<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($latestSoDocumentReasonText)); ?></div>
+		</div>
+	<?php } ?>
 
 	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return lockSubmitForm(this);">
 		<?php if ($savedJong !== null && !$isCopy) { ?>
@@ -396,6 +465,60 @@ if ($savedRefId !== "") {
 
 			<div id="productHiddenInputs"></div>
 		</div>
+
+		<!-- NEW DOCUMENT TABS CARD -->
+		<?php
+		$soDocumentLogRowsForTabs = array();
+		foreach ($soDocumentLogRows as $soDocumentLogRow) {
+			$soDocumentLogRowsForTabs[] = array(
+				'status_label' => renderSoDocumentReturnStatus($soDocumentLogRow['status_doc'] ?? ''),
+				'status_class' => renderSoDocumentReturnStatusClass($soDocumentLogRow['status_doc'] ?? ''),
+				'reason' => $soDocumentLogRow['reason'] ?? '',
+				'user_name' => $soDocumentLogRow['user_name'] ?? '',
+				'created_at' => formatSoDocumentLogDateTime($soDocumentLogRow['created_at'] ?? '')
+			);
+		}
+		?>
+		<div class="so-tabs-container so-document-return-tabs-container" style="margin-top: 24px;">
+			<button type="button" class="so-tab-btn so-document-return-tab-btn active">การส่งเอกสารกลับ</button>
+		</div>
+		<div class="so-card so-document-return-card" style="padding: 24px;">
+			<div style="overflow-x:auto;">
+				<table class="so-document-status-table">
+					<thead>
+						<tr>
+							<th>สถานะ</th>
+							<th>เหตุผลการส่งกลับ</th>
+							<th>ผู้ส่งกลับ</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php if (!empty($soDocumentLogRowsForTabs)) { ?>
+							<?php foreach ($soDocumentLogRowsForTabs as $documentReturnLogRow) { ?>
+								<tr>
+									<td class="so-document-log-status-cell">
+										<span class="so-document-status-pill <?php echo so_saved_h($documentReturnLogRow['status_class'] ?? 'is-cancelled'); ?>">
+											<?php echo so_saved_h($documentReturnLogRow['status_label'] ?? ''); ?>
+										</span>
+									</td>
+									<td class="so-document-log-reason-cell"><?php echo so_saved_h($documentReturnLogRow['reason'] ?? ''); ?></td>
+									<td class="so-document-log-user-cell">
+										<div><?php echo so_saved_h(($documentReturnLogRow['user_name'] ?? '') !== '' ? $documentReturnLogRow['user_name'] : '-'); ?></div>
+										<?php if (!empty($documentReturnLogRow['created_at'])) { ?>
+											<div class="so-document-log-time"><?php echo so_saved_h($documentReturnLogRow['created_at']); ?></div>
+										<?php } ?>
+									</td>
+								</tr>
+							<?php } ?>
+						<?php } else { ?>
+							<tr class="so-document-status-empty">
+								<td colspan="3">ยังไม่มีรายการส่งกลับเอกสาร</td>
+							</tr>
+						<?php } ?>
+					</tbody>
+				</table>
+			</div>
+		</div>
 </div>
 
 <?php
@@ -409,21 +532,23 @@ $soHideAllActions = $soIsApproved && !$soIsSupApprover;
 // Submit หายเมื่อส่งรออนุมัติแล้ว (Request) หรือเอกสารอนุมัติแล้ว
 $soHideSubmit = $soIsEditMode && (($soStatusDoc === 'Request') || $soIsApproved);
 // ปุ่ม Update หลักซ้ำกับปุ่ม Update ที่อยู่ในแถบอนุมัติแล้ว
-$soHideUpdate = $soCanShowApproveBar;
+$soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 ?>
 <?php if (!$soHideAllActions): ?>
 	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 		<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
 			<?php if ($soCanShowApproveBar): ?>
+				<input type="hidden" name="approve_action" id="so_approve_action" value="">
+				<input type="hidden" name="so_approve_reason" id="so_approve_reason" value="">
 				<div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
 					<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
 						<i class="fas fa-ellipsis-v"></i>
 					</button>
 					<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
-						<button type="submit" name="approve_action" value="return" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
-						<button type="submit" name="approve_action" value="reject" onclick="window.soSkipValidation = true;" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+						<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
+						<button type="button" name="approve_action" value="reject" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
 					</div>
-					<button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+					<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
 						<i class="far fa-check-circle"></i> อนุมัติ
 					</button>
 					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
@@ -447,6 +572,132 @@ $soHideUpdate = $soCanShowApproveBar;
 		</div>
 	</div>
 	<script>
+		function soEnsureSubmitMarker() {
+			var form = document.forms['frmMain'];
+			if (!form) return null;
+
+			var submitValue = form.querySelector('input[type="hidden"][name="submit"]');
+			if (!submitValue) {
+				submitValue = document.createElement('input');
+				submitValue.type = 'hidden';
+				submitValue.name = 'submit';
+				form.appendChild(submitValue);
+			}
+			submitValue.value = 'submit';
+
+			return form;
+		}
+
+		function soClearApproveAction() {
+			window.soPendingApproveAction = '';
+			var actionField = document.getElementById('so_approve_action');
+			var reasonField = document.getElementById('so_approve_reason');
+			if (actionField) actionField.value = '';
+			if (reasonField) reasonField.value = '';
+		}
+
+		function soApplyPendingApproveAction() {
+			var actionField = document.getElementById('so_approve_action');
+			if (actionField && window.soPendingApproveAction) {
+				actionField.value = window.soPendingApproveAction;
+			}
+		}
+
+		function soOpenReasonPopup(opts) {
+			var refInput = document.querySelector('input[name="ref_id"]');
+			var refId = refInput ? refInput.value.trim() : '';
+
+			if (typeof Swal === 'undefined') {
+				var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+				fallbackReason = (fallbackReason || '').trim();
+				if (fallbackReason !== '') opts.onConfirm(fallbackReason);
+				return;
+			}
+
+			Swal.fire({
+				title: opts.title,
+				html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+					'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+				input: 'textarea',
+				inputPlaceholder: opts.placeholder || '',
+				iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><i class="' + opts.iconClass + '" style="font-size: 32px; color: ' + opts.iconColor + ';"></i></div>',
+				showCancelButton: true,
+				showCloseButton: true,
+				reverseButtons: false,
+				confirmButtonText: 'ตกลง',
+				cancelButtonText: 'ยกเลิก',
+				buttonsStyling: false,
+				customClass: {
+					popup: 'figma-delete-popup so-reason-popup',
+					title: 'figma-delete-title so-reason-title',
+					htmlContainer: 'figma-delete-html so-reason-html',
+					confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn ' + (opts.confirmBtnClass || ''),
+					cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+					actions: 'figma-delete-actions so-reason-actions',
+					icon: 'figma-delete-icon so-reason-icon',
+					input: 'so-reason-textarea',
+					closeButton: 'so-reason-close-btn'
+				},
+				preConfirm: function(value) {
+					var trimmed = (value || '').trim();
+					if (trimmed === '') {
+						Swal.showValidationMessage('กรุณาระบุเหตุผล');
+						return false;
+					}
+					return trimmed;
+				}
+			}).then(function(result) {
+				if (result.isConfirmed) opts.onConfirm(result.value);
+			});
+		}
+
+		function soRunApproveAction(action, skipValidation) {
+			if (skipValidation) {
+				var reasonConfig = {
+					return: {
+						title: 'ส่งกลับเอกสารนี้ ?',
+						subtitleText: 'ส่งกลับเอกสารเลขที่',
+						label: 'ระบุเหตุผลการส่งกลับ',
+						placeholder: 'ระบุเหตุผลการส่งกลับ',
+						iconBg: '#FFF4E5',
+						iconClass: 'fas fa-reply',
+						iconColor: '#F0A23A'
+					},
+					reject: {
+						title: 'ไม่อนุมัติเอกสารนี้ ?',
+						subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+						label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+						placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+						iconBg: '#FEECEB',
+						iconClass: 'fas fa-times-circle',
+						iconColor: '#DC3545'
+					}
+				} [action];
+				if (!reasonConfig) return;
+
+				soOpenReasonPopup(Object.assign({}, reasonConfig, {
+					onConfirm: function(reason) {
+						var actionField = document.getElementById('so_approve_action');
+						var reasonField = document.getElementById('so_approve_reason');
+						if (actionField) actionField.value = action;
+						if (reasonField) reasonField.value = reason;
+						window.soSkipValidation = true;
+						var form = soEnsureSubmitMarker();
+						if (form) HTMLFormElement.prototype.submit.call(form);
+					}
+				}));
+				return;
+			}
+
+			window.soPendingApproveAction = action;
+			var form = soEnsureSubmitMarker();
+			if (!form) return;
+			if (fncSubmit(form)) {
+				soApplyPendingApproveAction();
+				HTMLFormElement.prototype.submit.call(form);
+			}
+		}
+
 		function toggleApproveOverflowMenu() {
 			var menu = document.getElementById('approveOverflowMenu');
 			if (!menu) return;
