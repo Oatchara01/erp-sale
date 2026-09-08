@@ -14,6 +14,7 @@ function responseJson($payload, $statusCode = 200)
 $keyword = isset($_GET['q']) ? trim($_GET['q']) : '';
 $keywordLike = '%' . $keyword . '%';
 $dept = isset($_GET['dept']) && $_GET['dept'] === 'eng' ? 'eng' : 'sale';
+$typeCompany = (isset($_GET['type_company']) && $_GET['type_company'] === 'NBM') ? 'NBM' : 'AWL';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
 
 if ($limit <= 0) {
@@ -31,10 +32,10 @@ $deptCondition = $dept === 'eng' ? "engineer_ckk = '1'" : "sale_ckk = '1'";
 $sql = "SELECT product_ID, access_code, access_name, sol_name, unit_name
         FROM tb_product
         WHERE $deptCondition
-          AND type_company = 'AWL'
+          AND type_company = ?
           AND close_pro = '0'";
-$types = '';
-$params = array();
+$types = 's';
+$params = array($typeCompany);
 
 if ($keyword !== '') {
     $sql .= " AND (access_code LIKE ? OR access_name LIKE ? OR sol_name LIKE ?)";

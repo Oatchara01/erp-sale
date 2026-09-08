@@ -168,6 +168,11 @@ function br_product_row_hos($i)
 		return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 	}
 
+	function brGetSelectedCompanyType() {
+		var companySelect = document.getElementById('company_select');
+		return (companySelect && companySelect.value === '2') ? 'NBM' : 'AWL';
+	}
+
 	/* ===== แถวสินค้า: อ่าน/เขียนค่าทั้งแถว (ใช้ตอนลาก-สลับตำแหน่ง) ===== */
 	function brGetRowData(i) {
 		var data = {};
@@ -345,6 +350,29 @@ function br_product_row_hos($i)
 		brSyncSelectAllState();
 	}
 
+	function brHasProductRows() {
+		for (var i = 1; i <= BR_ROW_COUNT; i++) {
+			var codeEl = document.getElementById('product_code' + i);
+			var idEl = document.getElementById('product_id' + i);
+			if ((codeEl && codeEl.value.trim() !== '') || (idEl && idEl.value.trim() !== '')) return true;
+		}
+		return false;
+	}
+
+	function brClearAllProductRows() {
+		for (var i = 1; i <= BR_ROW_COUNT; i++) brExecuteClearRow(i);
+		var master = document.getElementById('br_select_all');
+		if (master) master.checked = false;
+		var search = document.getElementById('br_global_search');
+		if (search) search.value = '';
+		document.querySelectorAll('.br-product-search-dropdown').forEach(function(dd) {
+			dd.style.display = 'none';
+			dd.innerHTML = '';
+		});
+		brCalculateSummary();
+		brUpdateDeleteButtonVisibility();
+	}
+
 	function brClearRow(rowIndex) {
 		var code = document.getElementById('product_code' + rowIndex).value;
 		var productId = document.getElementById('product_id' + rowIndex).value;
@@ -414,7 +442,7 @@ function br_product_row_hos($i)
 	}
 
 	function brFetchProduct(rowIndex, productCode) {
-		var pmeters = 'product_code=' + encodeURIComponent(productCode) + '&format=json';
+		var pmeters = 'product_code=' + encodeURIComponent(productCode) + '&format=json&type_company=' + encodeURIComponent(brGetSelectedCompanyType());
 		fetch('data_product_hos1.php', {
 				method: 'POST',
 				headers: {
@@ -477,7 +505,7 @@ function br_product_row_hos($i)
 		}
 
 		brGlobalSearchTimer = setTimeout(function() {
-			fetch('ajax_product_search_br.php?dept=' + brSearchDept + '&q=' + encodeURIComponent(q))
+			fetch('ajax_product_search_br.php?dept=' + brSearchDept + '&type_company=' + encodeURIComponent(brGetSelectedCompanyType()) + '&q=' + encodeURIComponent(q))
 				.then(function(res) {
 					return res.json();
 				})

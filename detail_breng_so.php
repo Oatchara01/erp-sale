@@ -16,6 +16,12 @@
 
 <script language="JavaScript">
 	var HttPRequest = false;
+
+	function brGetSelectedCompanyType() {
+		var companySelect = document.getElementById('company_select');
+		return (companySelect && companySelect.value === '2') ? 'NBM' : 'AWL';
+	}
+
 	function doCallAjax(product_code, product_id, product_name, unit_name, product_price) {
 		HttPRequest = false;
 		if (window.XMLHttpRequest) { // Mozilla, Safari,...
@@ -38,7 +44,7 @@
 			return false;
 		}
 		var url = 'data_product_hos1.php';
-		var pmeters = "product_code=" + encodeURI(document.getElementById(product_code).value);
+		var pmeters = "product_code=" + encodeURI(document.getElementById(product_code).value) + "&type_company=" + encodeURIComponent(brGetSelectedCompanyType());
 		HttPRequest.open('POST', url, true);
 
 		HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -93,7 +99,7 @@
 		}
 
 		brProductSearchTimer = setTimeout(function() {
-			fetch('ajax_product_search_br.php?dept=' + brProductSearchDept + '&q=' + encodeURIComponent(q))
+			fetch('ajax_product_search_br.php?dept=' + brProductSearchDept + '&type_company=' + encodeURIComponent(brGetSelectedCompanyType()) + '&q=' + encodeURIComponent(q))
 				.then(function(res) { return res.json(); })
 				.then(function(data) {
 					dropdown.innerHTML = '';
@@ -126,6 +132,29 @@
 			});
 		}
 	});
+
+	function brHasProductRows() {
+		for (var i = 1; i <= BR_ROW_COUNT; i++) {
+			var codeEl = document.getElementById('product_code' + i);
+			var idEl = document.getElementById('product_id' + i);
+			if ((codeEl && codeEl.value.trim() !== '') || (idEl && idEl.value.trim() !== '')) return true;
+		}
+		return false;
+	}
+
+	function brClearAllProductRows() {
+		for (var i = 1; i <= BR_ROW_COUNT; i++) {
+			brRowFields.forEach(function(f) {
+				var el = document.getElementById(f + i);
+				if (el) el.value = '';
+			});
+		}
+		document.querySelectorAll('.br-product-search-dropdown').forEach(function(dd) {
+			dd.style.display = 'none';
+			dd.innerHTML = '';
+		});
+		if (typeof brUpdateProductSummary === 'function') brUpdateProductSummary();
+	}
 </script>
 
 <script src="dist/jautocalc.js"></script>
