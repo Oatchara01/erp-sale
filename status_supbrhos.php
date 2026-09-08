@@ -4,8 +4,37 @@ include "dbconnect.php";
 include "dbconnect_sale.php";
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="sweetalert2/dist/sweetalert2.min.css">
+<script src="sweetalert2/dist/sweetalert2.min.js"></script>
 
 <script>
+	function confirmCopyBrDocument(event, url) {
+		if (event) event.preventDefault();
+
+		if (typeof Swal === 'undefined') {
+			if (window.confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')) {
+				window.location.href = url;
+			}
+			return false;
+		}
+
+		Swal.fire({
+			title: 'ยืนยันการคัดลอกใบเดิม',
+			text: '!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่',
+			icon: 'question',
+			showCancelButton: true,
+			confirmButtonText: 'ยืนยัน',
+			cancelButtonText: 'ยกเลิก',
+			confirmButtonColor: '#612989'
+		}).then(function(result) {
+			if (result.isConfirmed) {
+				window.location.href = url;
+			}
+		});
+
+		return false;
+	}
+
 	function toggleRow(rowId, triggerEl) {
 		const row = document.getElementById(rowId);
 		if (!row) return;
@@ -649,7 +678,8 @@ include "dbconnect_sale.php";
 
 								// Edit link routing according to role
 								$edit_target = ($emid == 'SUP_EN') ? 'register_supbreng_edit.php' : 'register_supbrhos.php';
-								$create_target = ($emid == 'SUP_EN') ? 'register_supbreng_createnew.php' : 'register_supbrhos_createnew.php';
+								$create_target = ($emid == 'SUP_EN') ? 'register_supbreng_createnew.php' : 'register_supbrhos.php';
+								$create_ref_param = ($emid == 'SUP_EN') ? 'ref_id_br' : 'copy_from_ref_id_br';
 
 								// Map status_doc to class and display text
 								$status_class = 'draft';
@@ -720,7 +750,7 @@ include "dbconnect_sale.php";
 												</a>
 
 												<!-- คัดลอกใบเดิม -->
-												<a href="<?php echo $create_target; ?>?ref_id_br=<?php echo $ref_id_url; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" onclick="return confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
+												<a href="<?php echo $create_target; ?>?<?php echo $create_ref_param; ?>=<?php echo $ref_id_url; ?>&start_date=<?php echo urlencode($start_date); ?>&end_date=<?php echo urlencode($end_date); ?>" onclick="return confirmCopyBrDocument(event, this.href);" class="so-dropdown-item">
 													<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 												</a>
 

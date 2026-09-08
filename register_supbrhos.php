@@ -1184,6 +1184,9 @@ if ($maxId1 == $yearMonth) {
 //   มี  ?ref_id_br    -> prefill จาก DB, action = register_supbrhos_edit1.php (UPDATE)
 // ตารางที่อ่านกลับมาคือชุดเดียวกับที่ register_supbrhos1.php เขียนตอนบันทึก
 $savedRefIdBr = isset($_GET["ref_id_br"]) ? mysqli_real_escape_string($conn, $_GET["ref_id_br"]) : "";
+$copyFromRefIdBr = isset($_GET["copy_from_ref_id_br"]) ? mysqli_real_escape_string($conn, $_GET["copy_from_ref_id_br"]) : "";
+$brIsCopyMode = ($copyFromRefIdBr !== "");
+$loadRefIdBr = $brIsCopyMode ? $copyFromRefIdBr : $savedRefIdBr;
 $savedBr = null;
 $savedProducts = array();
 $savedOtherBill = null;
@@ -1194,22 +1197,22 @@ $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
 
-if ($savedRefIdBr !== "") {
-	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__br WHERE ref_id_br = '" . $savedRefIdBr . "' LIMIT 1");
+if ($loadRefIdBr !== "") {
+	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__br WHERE ref_id_br = '" . $loadRefIdBr . "' LIMIT 1");
 	if ($savedBrQuery && mysqli_num_rows($savedBrQuery) > 0) {
 		$savedBr = mysqli_fetch_assoc($savedBrQuery);
 
-		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		$savedOtherBillQuery = mysqli_query($conn, "SELECT * FROM tb_other_bill WHERE ref_id = '" . $loadRefIdBr . "' LIMIT 1");
 		if ($savedOtherBillQuery && mysqli_num_rows($savedOtherBillQuery) > 0) {
 			$savedOtherBill = mysqli_fetch_assoc($savedOtherBillQuery);
 		}
 
-		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		$savedCommentQuery = mysqli_query($conn, "SELECT * FROM tb_comment_so WHERE ref_id = '" . $loadRefIdBr . "' LIMIT 1");
 		if ($savedCommentQuery && mysqli_num_rows($savedCommentQuery) > 0) {
 			$savedComment = mysqli_fetch_assoc($savedCommentQuery);
 		}
 
-		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $savedRefIdBr . "' ORDER BY sort_order ASC, id ASC");
+		$savedCommentItemsQuery = mysqli_query($conn, "SELECT department_id, message, sort_order FROM tb_comment_so_item WHERE ref_id = '" . $loadRefIdBr . "' ORDER BY sort_order ASC, id ASC");
 		if ($savedCommentItemsQuery) {
 			while ($savedCommentItemRow = mysqli_fetch_assoc($savedCommentItemsQuery)) {
 				$savedCommentItems[] = array(
@@ -1220,24 +1223,24 @@ if ($savedRefIdBr !== "") {
 			}
 		}
 
-		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		$savedTransactionQuery = mysqli_query($conn, "SELECT * FROM tb_transaction WHERE ref_id = '" . $loadRefIdBr . "' LIMIT 1");
 		if ($savedTransactionQuery && mysqli_num_rows($savedTransactionQuery) > 0) {
 			$savedTransaction = mysqli_fetch_assoc($savedTransactionQuery);
 		}
 
-		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $savedRefIdBr . "' ORDER BY id ASC");
+		$savedShippingQuery = mysqli_query($conn, "SELECT * FROM tb_shipping_address WHERE ref_id = '" . $loadRefIdBr . "' ORDER BY id ASC");
 		if ($savedShippingQuery) {
 			while ($savedShippingRow = mysqli_fetch_assoc($savedShippingQuery)) {
 				$savedShippingRows[] = $savedShippingRow;
 			}
 		}
 
-		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		$savedDeliveryBillQuery = mysqli_query($conn, "SELECT * FROM tb_delivery_bill WHERE ref_id = '" . $loadRefIdBr . "' LIMIT 1");
 		if ($savedDeliveryBillQuery && mysqli_num_rows($savedDeliveryBillQuery) > 0) {
 			$savedDeliveryBillRow = mysqli_fetch_assoc($savedDeliveryBillQuery);
 		}
 
-		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $savedRefIdBr . "' LIMIT 1");
+		$savedRegisterQuery = mysqli_query($conn, "SELECT * FROM tb_register_data WHERE ref_id = '" . $loadRefIdBr . "' LIMIT 1");
 		if ($savedRegisterQuery && mysqli_num_rows($savedRegisterQuery) > 0) {
 			$savedRegister = mysqli_fetch_assoc($savedRegisterQuery);
 		}
@@ -1246,7 +1249,7 @@ if ($savedRefIdBr !== "") {
 		// tb_product ไม่มีคอลัมน์ product_code/product_name จริง: ฟอร์มใช้ access_code เป็นรหัส
 		// และ sol_name เป็นชื่อ (ดู mapping ตอนเลือกสินค้าใน detail_brhos_so.php:420-426)
 		// ส่วน hos__subbr.product_code เก็บค่า product_id ไว้ จึงเชื่อถือไม่ได้ ต้องดึงจาก tb_product
-		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subbr.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subbr LEFT JOIN tb_product ON hos__subbr.product_id = tb_product.product_ID WHERE hos__subbr.ref_idd_br = '" . $savedRefIdBr . "' ORDER BY hos__subbr.id ASC");
+		$savedProductsQuery = mysqli_query($conn, "SELECT hos__subbr.*, tb_product.access_code AS tb_access_code, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name FROM hos__subbr LEFT JOIN tb_product ON hos__subbr.product_id = tb_product.product_ID WHERE hos__subbr.ref_idd_br = '" . $loadRefIdBr . "' ORDER BY hos__subbr.id ASC");
 		if ($savedProductsQuery) {
 			while ($savedProductRow = mysqli_fetch_assoc($savedProductsQuery)) {
 				$savedProducts[] = array(
@@ -1269,15 +1272,15 @@ if ($savedRefIdBr !== "") {
 }
 
 // สถานะ/สิทธิ์สำหรับแถบปุ่ม action ด้านล่าง (mirror ของ register_suphos.php)
-$brStatusDoc = $savedBr['status_doc'] ?? '';
-$brSendSup = $savedBr['send_sup'] ?? '0';
+$brIsEditMode = ($savedBr !== null) && !$brIsCopyMode;
+$brStatusDoc = $brIsEditMode ? ($savedBr['status_doc'] ?? '') : '';
+$brSendSup = $brIsEditMode ? ($savedBr['send_sup'] ?? '0') : '0';
 $brIsClosed = in_array($brStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
 $brIsCancelled = ($brStatusDoc === 'ยกเลิก');
 // Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
-$brHideSubmit = ($savedBr !== null) && ($brSendSup === '1' || $brIsClosed);
-$brIsEditMode = ($savedBr !== null);
+$brHideSubmit = $brIsEditMode && ($brSendSup === '1' || $brIsClosed);
 $brIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
-$brSendDm = $savedBr['send_dm'] ?? '0';
+$brSendDm = $brIsEditMode ? ($savedBr['send_dm'] ?? '0') : '0';
 // แถบอนุมัติโชว์ตอนแก้ไขเอกสารที่ยังรออนุมัติ (status_doc='Request') และผู้ใช้ไม่ใช่ Sale
 // รวม Flow อนุมัติของ Sup และผู้บริหารไว้ในหน้าเดียวกัน: ถ้า send_dm='1' แสดงว่าอยู่ขั้นผู้บริหารแล้ว (stage='dm')
 $brCanShowApproveBar = $brIsEditMode && $brIsSupApprover && ($brStatusDoc === 'Request');
@@ -1373,7 +1376,7 @@ if ($savedBr !== null && trim((string)$savedBr['delivery_time']) !== '') {
 
 // ตัวแปรรองรับแท็บ 'ที่อยู่เพิ่มเติม' ที่ port มาจาก register_suphos.php
 // create mode = ค่าว่างทั้งหมด (ปุ่มพิมพ์ใบปะขึ้น Swal "ยังพิมพ์ไม่ได้"), edit mode = ค่าจากเอกสารที่บันทึกไว้
-$printCoverRefId = ($savedBr !== null) ? $savedBr['ref_id_br'] : '';
+$printCoverRefId = $brIsEditMode ? $savedBr['ref_id_br'] : '';
 $savedFirstExtraAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
 $savedDeliveryBillAddress = ['contact_name' => '', 'telephone' => '', 'province' => '', 'address' => ''];
 $savedExtraAddressRows = $savedShippingRows;
@@ -1549,11 +1552,11 @@ if ($savedBr !== null) {
 // Layout อ้างอิงจาก register_suphos.php บรรทัด ~1750 (Admin tab เดียวกัน)
 // ค่าที่ผูกเป็น inverse ของ $optionalHosBrFieldMap ใน register_supbrhos1.php
 // (admin_doc_date<-iv_date, admin_work_no<-job_no, admin_cancel_reason<-remark_cancel)
-$brIsCancelDisabled = ($savedBr !== null) && (
+$brIsCancelDisabled = $brIsEditMode && (
 	!empty(trim((string)($savedBr['stock_print'] ?? ''))) ||
 	!empty(trim((string)($savedBr['ref_idst'] ?? '')))
 );
-$brIsCancelChecked = ($savedBr !== null) && (($savedBr['status_doc'] ?? '') === 'ยกเลิก');
+$brIsCancelChecked = $brIsEditMode && (($savedBr['status_doc'] ?? '') === 'ยกเลิก');
 
 $adminInfoTab = [
 	'tab_id' => 'tab-admin-info',
@@ -1564,12 +1567,12 @@ $adminInfoTab = [
 				'type' => 'inline_group',
 				'label' => 'เลขที่เอกสาร',
 				'fields' => [
-					['type' => 'text', 'name' => 'admin_doc_no', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
+					['type' => 'text', 'name' => 'admin_doc_no', 'value' => ($brIsEditMode ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
 					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no_br', 'onclick' => 'runDocumentNoBr();', 'variant' => 'purple'],
 				],
 			],
-			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
-			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
+			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($brIsEditMode ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
+			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($brIsEditMode ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
 		],
 		[
 			['type' => 'button_field', 'button' => [
@@ -1582,7 +1585,7 @@ $adminInfoTab = [
 				'id' => 'btn_cancel_doc_br',
 				'onclick' => 'toggleCancelDocBr();'
 			]],
-			['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $brIsCancelDisabled || !$brIsCancelChecked],
+			['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($brIsEditMode ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $brIsCancelDisabled || !$brIsCancelChecked],
 		],
 	],
 ];
@@ -1592,7 +1595,7 @@ $adminInfoTab = [
 <?php
 // create mode -> INSERT handler, edit mode -> UPDATE handler (pattern เดียวกับ register_suphos.php)
 ?>
-<form action="<?php echo ($savedBr !== null) ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 
 		<div class="so-header-container">
@@ -1600,7 +1603,7 @@ $adminInfoTab = [
 				<h1 class="so-title">Borrow Order</h1>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
-					<?php if ($savedBr !== null) { ?>
+					<?php if ($brIsEditMode) { ?>
 						<span class="so-ref-value"><?php echo so_saved_h($savedBr['ref_id_br']); ?></span>
 					<?php } else {
 						// เลขนี้เป็นค่าคำนวณล่วงหน้าเท่านั้น ไม่ใช่เลขที่จะถูกบันทึกจริงเสมอไป
@@ -1930,8 +1933,8 @@ $adminInfoTab = [
 		// edit mode ต้องส่งเลขเอกสารจริงไปให้ register_supbrhos_edit1.php ใช้เป็น key ของ UPDATE
 		// create mode ส่งเลขประมาณการไปตามเดิม (backend คำนวณเลขจริงใหม่อยู่แล้ว)
 		?>
-		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id_br']) : so_saved_h($so . $nextId); ?>">
-		<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="<?php echo ($savedBr !== null && (($savedBr['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
+		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['ref_id_br']) : so_saved_h($so . $nextId); ?>">
+		<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="<?php echo ($brIsEditMode && (($savedBr['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
 
 		<!-- แท็บ ข้อมูลเอกสาร / Admin (แท็บ Admin แสดงเฉพาะ type_login == 'It' เหมือนเดิม) -->
 		<div class="so-tabs-container">
@@ -3275,11 +3278,11 @@ $adminInfoTab = [
 		<script src="js/doc-tabs-dept-comment.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-dept-comment.js'); ?>"></script>
 		<script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 
-		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip1'] ?? '') : ''; ?>">
-		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip2'] ?? '') : ''; ?>">
-		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip3'] ?? '') : ''; ?>">
-		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip4'] ?? '') : ''; ?>">
-		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['slip5'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['slip1'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['slip2'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['slip3'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['slip4'] ?? '') : ''; ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['slip5'] ?? '') : ''; ?>">
 
 	</div>
 
