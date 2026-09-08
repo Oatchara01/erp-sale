@@ -2,17 +2,35 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-if (empty($_SESSION['code'])) {
-	http_response_code(401);
+function clearBrJsonError($message, $statusCode = 500)
+{
+	if (!headers_sent()) {
+		http_response_code($statusCode);
+	}
 	echo json_encode(array(
 		'success' => false,
-		'message' => 'กรุณาเข้าสู่ระบบ'
+		'message' => $message
 	), JSON_UNESCAPED_UNICODE);
 	exit;
 }
 
+set_exception_handler(function ($error) {
+	error_log('ajax_get_clear_br_details.php: ' . $error->getMessage());
+	clearBrJsonError('เกิดข้อผิดพลาดในการโหลดข้อมูลรายละเอียดเคลียร์ยืม');
+});
+
+mysqli_report(MYSQLI_REPORT_OFF);
+
+if (empty($_SESSION['code'])) {
+	clearBrJsonError('กรุณาเข้าสู่ระบบ', 401);
+}
+
 include 'dbconnect.php';
-include 'dbconnect_sale.php';
+
+if (empty($conn) || !($conn instanceof mysqli)) {
+	error_log('ajax_get_clear_br_details.php: database connection failed');
+	clearBrJsonError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+}
 
 function formatDateThaiLocal($dateStr)
 {
@@ -27,11 +45,7 @@ function formatDateThaiLocal($dateStr)
 
 $ref_id_br = isset($_GET['ref_id_br']) ? trim($_GET['ref_id_br']) : '';
 if (empty($ref_id_br)) {
-	echo json_encode(array(
-		'success' => false,
-		'message' => 'ระบุเลขที่อ้างอิงไม่ถูกต้อง'
-	), JSON_UNESCAPED_UNICODE);
-	exit;
+	clearBrJsonError('ระบุเลขที่อ้างอิงไม่ถูกต้อง', 400);
 }
 
 $safe_ref = mysqli_real_escape_string($conn, $ref_id_br);
@@ -48,7 +62,8 @@ if (!$resBr || mysqli_num_rows($resBr) === 0) {
 }
 
 $br = mysqli_fetch_assoc($resBr);
-$ivNoEsc = mysqli_real_escape_string($conn, $br['iv_no']);
+$ivNo = isset($br['iv_no']) ? $br['iv_no'] : '';
+$ivNoEsc = mysqli_real_escape_string($conn, $ivNo);
 
 // Fetch iv_no strictly from hos__so
 $soIvNoList = array();
@@ -114,7 +129,7 @@ if ($resItems) {
 				FROM so__submain sub
 				INNER JOIN so__main head ON head.ref_id = sub.ref_idd
 				WHERE sub.clear_br = '1' AND sub.status_sol = 'Approve'
-				  AND sub.product_id = '{$prodIdEsc}' AND sub.clear_ivno = '{$ivNoEsc}'
+				  AND sub.product_id = '{$prodIdEsc}' AND sub.clear_ivno1 = '{$ivNoEsc}'
 				  AND head.approve_complete = 'Approve' AND head.cancel_ckk = '0'");
 			if ($q_so2 && $r_so2 = mysqli_fetch_assoc($q_so2)) $clearedQty += (int)$r_so2['cnt'];
 
@@ -154,11 +169,11 @@ echo json_encode(array(
 	'data' => array(
 		'ref_id_br' => $br['ref_id_br'],
 		'iv_no' => $soIvNoText,
-		'date_br' => formatDateThaiLocal($br['date_br']),
-		'iv_date' => formatDateThaiLocal($br['iv_date']),
-		'customer' => $br['customer'],
-		'sale_code' => $br['sale_code'],
-		'status_doc' => $br['status_doc'],
+		'date_br' => formatDateThaiLocal(isset($br['date_br']) ? $br['date_br'] : ''),
+		'iv_date' => formatDateThaiLocal(isset($br['iv_date']) ? $br['iv_date'] : ''),
+		'customer' => isset($br['customer']) ? $br['customer'] : '',
+		'sale_code' => isset($br['sale_code']) ? $br['sale_code'] : '',
+		'status_doc' => isset($br['status_doc']) ? $br['status_doc'] : '',
 		'status_br_text' => $brStatusText,
 		'status_br_class' => $brStatusClass,
 		'clear_docs_text' => $clearDocsText,

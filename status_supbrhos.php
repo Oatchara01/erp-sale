@@ -143,7 +143,19 @@ include "dbconnect_sale.php";
 
 		fetch('ajax_get_clear_br_details.php?ref_id_br=' + encodeURIComponent(refIdBr))
 			.then(function(res) {
-				return res.json();
+				return res.text().then(function(text) {
+					if (!res.ok) {
+						throw new Error('HTTP ' + res.status + ': ' + text.substring(0, 200));
+					}
+					if (!text) {
+						throw new Error('Empty response from ajax_get_clear_br_details.php');
+					}
+					try {
+						return JSON.parse(text);
+					} catch (e) {
+						throw new Error('Invalid JSON response: ' + text.substring(0, 200));
+					}
+				});
 			})
 			.then(function(res) {
 				loading.style.display = 'none';
