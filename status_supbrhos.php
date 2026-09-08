@@ -564,11 +564,12 @@ include "dbconnect_sale.php";
 
 						if ($status_doc != "") {
 							if ($status_doc == 'รอหัวหน้า' || $status_doc == 'Request') {
-								$strSQL .= ' AND (status_doc = "รอหัวหน้า" OR status_doc = "Request")';
+								// ไม่รวมเอกสารที่ Sup อนุมัติแล้วและกำลังรอผู้บริหาร (status_doc ยังเป็น 'Request' แต่ send_dm='1')
+								$strSQL .= ' AND (status_doc = "รอหัวหน้า" OR (status_doc = "Request" AND (send_dm IS NULL OR send_dm != "1")))';
 							} else if ($status_doc == 'ส่งกลับ') {
 								$strSQL .= ' AND status_doc = "ส่งกลับ"';
 							} else if ($status_doc == 'รอผู้บริหาร') {
-								$strSQL .= ' AND status_doc = "รอผู้บริหาร"';
+								$strSQL .= ' AND status_doc = "Request" AND send_dm = "1"';
 							} else if ($status_doc == 'Approve' || $status_doc == 'อนุมัติแล้ว') {
 								$strSQL .= ' AND (status_doc = "Approve" OR status_doc = "อนุมัติแล้ว")';
 							} else if ($status_doc == 'Rejected' || $status_doc == 'ไม่อนุมัติ') {
@@ -647,15 +648,16 @@ include "dbconnect_sale.php";
 								} else if ($objResult["status_doc"] == 'Rejected' || $objResult["status_doc"] == 'ไม่อนุมัติ') {
 									$status_class = 'rejected';
 									$status_text = 'ไม่อนุมัติ';
+								} else if ($objResult["status_doc"] == 'Request' && ($objResult["send_dm"] ?? '') == '1') {
+									// Sup อนุมัติแล้ว รอผู้บริหารอนุมัติ (status_doc ยังเป็น 'Request' แต่ send_dm='1')
+									$status_class = 'pending-exec';
+									$status_text = 'รอผู้บริหาร';
 								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า' || $objResult["status_doc"] == 'Draft') {
 									$status_class = 'pending-mgr';
 									$status_text = 'รอหัวหน้า';
 								} else if ($objResult["status_doc"] == 'ส่งกลับ') {
 									$status_class = 'returned';
 									$status_text = 'ส่งกลับ';
-								} else if ($objResult["status_doc"] == 'รอผู้บริหาร') {
-									$status_class = 'pending-exec';
-									$status_text = 'รอผู้บริหาร';
 								} else if ($objResult["status_doc"] == 'ยกเลิก') {
 									$status_class = 'cancel';
 									$status_text = 'ยกเลิก';

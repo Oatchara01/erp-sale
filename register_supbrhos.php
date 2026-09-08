@@ -894,6 +894,10 @@
 		previewFlag.remove();
 	}
 
+	function goMainSuphos() {
+		window.location.href = 'status_supbrhos.php';
+	}
+
 	function brSaveDraft() {
 		brWriteObjectiveDesHidden();
 		if (typeof syncDeptComments === 'function') {
@@ -912,6 +916,208 @@
 		var defaultHtml = btn ? btn.innerHTML : '';
 		var formData = new FormData(form);
 		formData.set('is_draft', '1');
+
+		var isUpdateMode = /Update/.test(defaultHtml);
+
+		if (btn) {
+			btn.disabled = true;
+			btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (isUpdateMode ? 'Updating...' : 'Saving...');
+		}
+
+		fetch('register_supbrhos_draft1.php', {
+				method: 'POST',
+				body: formData
+			})
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(data) {
+				if (data && data.success) {
+					return Swal.fire({
+						title: 'Save Draft success',
+						text: 'Ref ID: ' + data.ref_id,
+						icon: 'success',
+						confirmButtonColor: '#612989'
+					}).then(function() {
+						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					});
+				}
+
+				var message = data && data.message ? data.message : 'Unable to save draft';
+				return Swal.fire('Error', message, 'error');
+			})
+			.catch(function() {
+				return Swal.fire('Error', 'Unable to save draft', 'error');
+			})
+			.finally(function() {
+				if (btn) {
+					btn.disabled = false;
+					btn.innerHTML = defaultHtml;
+				}
+			});
+	}
+
+	function brClearApproveAction() {
+		var actionField = document.getElementById('br_approve_action');
+		var reasonField = document.getElementById('br_approve_reason');
+		if (actionField) actionField.value = '';
+		if (reasonField) reasonField.value = '';
+	}
+
+	function brOpenReasonPopup(opts) {
+		var refInput = document.querySelector('input[name="ref_id_br"]');
+		var refId = refInput ? refInput.value.trim() : '';
+
+		if (typeof Swal === 'undefined') {
+			var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+			fallbackReason = (fallbackReason || '').trim();
+			if (fallbackReason !== '') opts.onConfirm(fallbackReason);
+			return;
+		}
+
+		Swal.fire({
+			title: opts.title,
+			html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+				'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: opts.placeholder || '',
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true,
+			showCloseButton: true,
+			reverseButtons: false,
+			confirmButtonText: 'ตกลง',
+			cancelButtonText: 'ยกเลิก',
+			buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup',
+				title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html',
+				confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn ' + (opts.confirmBtnClass || ''),
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+				actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon',
+				input: 'so-reason-textarea',
+				closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function(value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') {
+					Swal.showValidationMessage('กรุณาระบุเหตุผล');
+					return false;
+				}
+				return trimmed;
+			}
+		}).then(function(result) {
+			if (result.isConfirmed) opts.onConfirm(result.value);
+		});
+	}
+
+	function brEnsureSubmitMarker() {
+		var form = document.forms['frmMain'];
+		if (!form) return null;
+
+		var submitValue = form.querySelector('input[type="hidden"][name="submit"]');
+		if (!submitValue) {
+			submitValue = document.createElement('input');
+			submitValue.type = 'hidden';
+			submitValue.name = 'submit';
+			form.appendChild(submitValue);
+		}
+		submitValue.value = 'submit';
+
+		return form;
+	}
+
+	function brRunApproveAction(action, skipValidation) {
+		if (skipValidation) {
+			var reasonConfig = {
+				return: {
+					title: 'ส่งกลับเอกสารนี้ ?',
+					subtitleText: 'ส่งกลับเอกสารเลขที่',
+					label: 'ระบุเหตุผลการส่งกลับ',
+					placeholder: 'ระบุเหตุผลการส่งกลับ',
+					iconBg: '#FFF4E5',
+					iconSrc: 'img/icons/send_back.png'
+				},
+				reject: {
+					title: 'ไม่อนุมัติเอกสารนี้ ?',
+					subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+					label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					iconBg: '#FEECEB',
+					iconSrc: 'img/icons/reject.png'
+				}
+			} [action];
+			if (!reasonConfig) return;
+
+			brOpenReasonPopup(Object.assign({}, reasonConfig, {
+				onConfirm: function(reason) {
+					var actionField = document.getElementById('br_approve_action');
+					var reasonField = document.getElementById('br_approve_reason');
+					if (actionField) actionField.value = action;
+					if (reasonField) reasonField.value = reason;
+					var form = brEnsureSubmitMarker();
+					if (form) HTMLFormElement.prototype.submit.call(form);
+				}
+			}));
+			return;
+		}
+
+		var actionField = document.getElementById('br_approve_action');
+		if (actionField) actionField.value = action;
+		fncSubmit();
+	}
+
+	function brToggleApproveOverflowMenu() {
+		var menu = document.getElementById('brApproveOverflowMenu');
+		if (!menu) return;
+		menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+	}
+	document.addEventListener('click', function(e) {
+		var menu = document.getElementById('brApproveOverflowMenu');
+		var trigger = document.getElementById('btn_br_approve_overflow');
+		if (!menu || menu.style.display === 'none') return;
+		if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
+		if (!menu.contains(e.target)) menu.style.display = 'none';
+	});
+
+	function brTriggerCancelDocFromApproveMenu() {
+		brOpenReasonPopup({
+			title: 'ยกเลิกเอกสารนี้ ?',
+			subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+			label: 'ระบุเหตุผลในการยกเลิก',
+			placeholder: 'ระบุเหตุผลในการยกเลิก',
+			iconBg: '#F4F5F7',
+			iconSrc: 'img/icons/cancel_document.png',
+			onConfirm: function(reason) {
+				var cancelInput = document.getElementById('br_cancel_doc');
+				if (cancelInput) cancelInput.value = '1';
+
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				var reasonField = document.getElementById('br_approve_reason');
+				var actionField = document.getElementById('br_approve_action');
+				if (reasonInput) reasonInput.value = reason;
+				if (reasonField) reasonField.value = reason;
+				if (actionField) actionField.value = '';
+				var form = brEnsureSubmitMarker();
+				if (form) HTMLFormElement.prototype.submit.call(form);
+			}
+		});
+	}
+
+	// เอกสารจบแล้ว (Approve/ยกเลิก/Rejected): Admin กดปุ่ม Update ตัวจำกัดสิทธิ์นี้เพื่อบันทึก
+	// เฉพาะเลขที่/วันที่เอกสารที่เพิ่ง Run ค้างไว้บนฟอร์ม ไม่แตะสถานะ/ข้อมูลอื่นของเอกสารที่ปิดแล้ว
+	function brSaveAdminLimitedUpdate() {
+		var form = document.forms['frmMain'];
+		if (!form) {
+			return;
+		}
+
+		var btn = form.querySelector('[name="admin_limited_update_btn"]');
+		var defaultHtml = btn ? btn.innerHTML : '';
+		var formData = new FormData(form);
+		formData.set('is_draft', '1');
+		formData.set('admin_limited_update', '1');
 
 		if (btn) {
 			btn.disabled = true;
@@ -1071,6 +1277,27 @@ if ($savedRefIdBr !== "") {
 		}
 	}
 }
+
+// สถานะ/สิทธิ์สำหรับแถบปุ่ม action ด้านล่าง (mirror ของ register_suphos.php)
+$brStatusDoc = $savedBr['status_doc'] ?? '';
+$brSendSup = $savedBr['send_sup'] ?? '0';
+$brIsClosed = in_array($brStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
+// Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
+$brHideSubmit = ($savedBr !== null) && ($brSendSup === '1' || $brIsClosed);
+$brIsEditMode = ($savedBr !== null);
+$brIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
+$brSendDm = $savedBr['send_dm'] ?? '0';
+// แถบอนุมัติโชว์ตอนแก้ไขเอกสารที่ยังรออนุมัติ (status_doc='Request') และผู้ใช้ไม่ใช่ Sale
+// รวม Flow อนุมัติของ Sup และผู้บริหารไว้ในหน้าเดียวกัน: ถ้า send_dm='1' แสดงว่าอยู่ขั้นผู้บริหารแล้ว (stage='dm')
+$brCanShowApproveBar = $brIsEditMode && $brIsSupApprover && ($brStatusDoc === 'Request');
+$brApproveStage = ($brSendDm === '1') ? 'dm' : 'sup';
+// ซ่อนปุ่ม Update ตัวหลักเมื่อเอกสารจบแล้ว หรือแถบอนุมัติกำลังโชว์อยู่ (มีปุ่ม Update ของตัวเองอยู่แล้ว)
+$brHideUpdate = $brIsClosed || $brCanShowApproveBar;
+// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารได้ ผ่านปุ่ม Update แบบจำกัดสิทธิ์แทนปุ่ม Update ปกติ
+// หน้านี้ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin') จึงเช็ค role เดียวกันตรงนี้
+// เพื่อให้คนที่แก้ไขฟิลด์ในแท็บ Admin ได้ เป็นคนเดียวกับที่กดปุ่ม Update แบบจำกัดสิทธิ์นี้ได้
+$brIsAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
+$brShowAdminLimitedUpdate = $brIsClosed && $brIsAdminUser && $brIsEditMode;
 
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
@@ -2933,8 +3160,43 @@ $adminInfoTab = [
 
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
-			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-			<button type="button" name="save_draft" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-save"></i> Save Draft</button>
+			<?php if ($brCanShowApproveBar): ?>
+				<input type="hidden" name="approve_action" id="br_approve_action" value="">
+				<input type="hidden" name="approve_stage" id="br_approve_stage" value="<?php echo so_saved_h($brApproveStage); ?>">
+				<input type="hidden" name="br_approve_reason" id="br_approve_reason" value="">
+				<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="0">
+				<div class="so-approve-actions">
+					<button type="button" class="so-overflow-menu-trigger" id="btn_br_approve_overflow" onclick="brToggleApproveOverflowMenu()">
+						<i class="fas fa-ellipsis-v"></i>
+					</button>
+					<div id="brApproveOverflowMenu" class="so-overflow-menu">
+						<button type="button" name="approve_action" value="return" onclick="brRunApproveAction('return', true);" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+						<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="brRunApproveAction('reject', true);" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+						<button type="button" onclick="brTriggerCancelDocFromApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+					</div>
+					<button type="button" name="approve_action" value="approve" class="btn-so-approve" onclick="brRunApproveAction('approve', false);">
+						<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
+					</button>
+					<button type="button" name="save_draft" onclick="brSaveDraft();" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+						<img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update
+					</button>
+				</div>
+			<?php endif; ?>
+			<?php if (!$brHideSubmit): ?>
+				<button type="submit" name="submit" value="submit" class="btn-so-submit" onclick="brClearApproveAction();"><i class="fas fa-paper-plane"></i> Submit</button>
+			<?php endif; ?>
+			<?php if (!$brHideUpdate): ?>
+				<button type="button" name="save_draft" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-<?php echo $brIsEditMode ? 'edit' : 'save'; ?>"></i> <?php echo $brIsEditMode ? 'Update' : 'Save Draft'; ?></button>
+			<?php endif; ?>
+			<?php if ($brShowAdminLimitedUpdate): ?>
+				<!-- เอกสารจบแล้ว: Admin แก้ได้เฉพาะเลขที่/วันที่เอกสารผ่าน admin_limited_update=1 ไม่แตะข้อมูลอื่น -->
+				<button type="button" name="admin_limited_update_btn" onclick="brSaveAdminLimitedUpdate();" title="แก้ไขได้เฉพาะเลขที่/วันที่เอกสาร" class="btn-so-draft">
+					<i class="far fa-save"></i> Update
+				</button>
+			<?php endif; ?>
+			<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
+				ย้อนกลับ
+			</button>
 		</div>
 	</div>
 
