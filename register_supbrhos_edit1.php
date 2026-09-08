@@ -356,6 +356,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	}
 
 	$optionalHosBrFieldMap = array(
+		'admin_doc_no' => 'iv_no',
 		'admin_doc_date' => 'iv_date',
 		'admin_work_no' => 'job_no',
 		'admin_cancel_reason' => 'remark_cancel',

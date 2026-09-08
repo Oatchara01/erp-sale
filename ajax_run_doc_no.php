@@ -66,6 +66,8 @@ $docTypePrefix = [
 	'5' => 'BRSC', // ใบยืม/หนี้ฝากขาย (register_supbrcshos.php) - เอกสารประเภทเดียวของหน้านั้น
 	'6' => 'EXC', // ใบเปลี่ยนสินค้า (register_supchange.php) - เอกสารประเภทเดียวของหน้านั้น
 	'7' => 'JN', // ใบเช่า (register_suprental.php) - เอกสารประเภทเดียวของหน้านั้น
+	'8' => 'BRES', // Borrow Order (register_supbrhos.php) type_breng=1
+	'9' => 'BREQ', // Borrow Order (register_supbrhos.php) type_breng=2
 ];
 $adminOnlyPrefix = ['IE'];
 
@@ -113,6 +115,22 @@ $docSharedCounterTable = [
 		'table'            => 'tb_docbreng',
 		'column'           => 'run_iv',
 		'headNoByCompany'  => ['3' => 'EXC', '4' => 'EXCN'],
+		'companies'        => ['3', '4'],
+		'separator'        => '',
+		'pad'              => 3,
+	],
+	'BRES' => [
+		'table'            => 'tb_docbreng',
+		'column'           => 'run_iv',
+		'headNoByCompany'  => ['3' => 'BRES', '4' => 'BRESN'],
+		'companies'        => ['3', '4'],
+		'separator'        => '',
+		'pad'              => 3,
+	],
+	'BREQ' => [
+		'table'            => 'tb_docbreng',
+		'column'           => 'run_iv',
+		'headNoByCompany'  => ['3' => 'BREQ', '4' => 'BREQN'],
 		'companies'        => ['3', '4'],
 		'separator'        => '',
 		'pad'              => 3,

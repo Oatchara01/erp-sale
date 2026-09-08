@@ -2158,21 +2158,6 @@ include("head.php"); ?>
 							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
 						],
 						[
-							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => ($savedSo !== null) ? 'openCreditNotePopup();' : "alert('กรุณาบันทึกใบสั่งขายก่อน จึงจะสามารถสร้างใบลดหนี้ได้');", 'icon_id' => 'btn_open_credit_note'],
-							['type' => 'text', 'name' => 'admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
-							[
-								'type'   => 'sub_grid',
-								'fields' => [
-									['type' => 'text', 'name' => 'admin_box_count', 'label' => 'จำนวนกล่อง', 'value' => ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : '', 'placeholder' => 'เฉพาะตัวเลข'],
-									['type' => 'text', 'name' => 'admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : '', 'placeholder' => 'เฉพาะตัวเลข'],
-								],
-							],
-						],
-						[
-							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
-						],
-						[
 							['type' => 'button_field', 'button' => [
 								'type' => 'button',
 								'icon' => 'img/icons/circle_x.png',
@@ -2190,6 +2175,13 @@ include("head.php"); ?>
 				include __DIR__ . '/partials/admin_info_tab.php';
 				unset($adminInfoTab, $isCancelDisabled, $isCancelChecked);
 				?>
+				<!-- Hidden Admin fields not shown on the Figma-matched card; preserved so submit/update does not lose existing values -->
+				<input type="hidden" name="admin_sr_no" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : ''; ?>">
+				<input type="hidden" name="admin_deposit_no" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['order_no'] ?? '') : ''; ?>">
+				<input type="hidden" name="admin_box_count" value="<?php echo ($savedRegister !== null) ? so_saved_h($savedRegister['count_box'] ?? '') : ''; ?>">
+				<input type="hidden" name="admin_edit_count" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['new_bill'] ?? '') : ''; ?>">
+				<input type="hidden" name="admin_old_doc_date" value="<?php echo ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : ''; ?>">
+				<input type="hidden" name="admin_edit_reason" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : ''; ?>">
 				<!-- End TAB 2 -->
 
 				<div class="so-card">

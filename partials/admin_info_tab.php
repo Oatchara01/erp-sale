@@ -20,8 +20,12 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 		.admin-ui-grid {
 			display: grid;
 			grid-template-columns: repeat(3, 1fr);
-			gap: 20px;
+			gap: 24px;
 			margin-bottom: 24px;
+		}
+
+		.admin-ui-grid:last-child {
+			margin-bottom: 0;
 		}
 
 		@media (max-width: 992px) {
@@ -108,16 +112,16 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 
 		.admin-ui-input {
 			width: 100%;
-			background-color: #F5F5F7;
+			background-color: #F5F6F8;
 			border: 1px solid transparent;
-			border-radius: 12px;
+			border-radius: 10px;
 			padding: 0 16px;
 			font-size: 16px;
 			font-weight: 400;
 			color: #612989;
 			font-family: 'Prompt', sans-serif;
 			outline: none;
-			height: 48px;
+			height: 42px;
 			box-sizing: border-box;
 			transition: all 0.2s ease;
 		}
@@ -152,8 +156,8 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			background-color: #F1E1FF;
 			color: #612989;
 			border: none;
-			border-radius: 24px;
-			height: 48px;
+			border-radius: 21px;
+			height: 42px;
 			padding: 0 24px;
 			font-size: 16px;
 			font-weight: 500;

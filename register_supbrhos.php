@@ -1090,17 +1090,7 @@
 			iconBg: '#F4F5F7',
 			iconSrc: 'img/icons/cancel_document.png',
 			onConfirm: function(reason) {
-				var cancelInput = document.getElementById('br_cancel_doc');
-				if (cancelInput) cancelInput.value = '1';
-
-				var reasonInput = document.getElementById('admin_cancel_reason');
-				var reasonField = document.getElementById('br_approve_reason');
-				var actionField = document.getElementById('br_approve_action');
-				if (reasonInput) reasonInput.value = reason;
-				if (reasonField) reasonField.value = reason;
-				if (actionField) actionField.value = '';
-				var form = brEnsureSubmitMarker();
-				if (form) HTMLFormElement.prototype.submit.call(form);
+				brSubmitCancelDoc(reason);
 			}
 		});
 	}
@@ -1282,6 +1272,7 @@ if ($savedRefIdBr !== "") {
 $brStatusDoc = $savedBr['status_doc'] ?? '';
 $brSendSup = $savedBr['send_sup'] ?? '0';
 $brIsClosed = in_array($brStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
+$brIsCancelled = ($brStatusDoc === 'ยกเลิก');
 // Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
 $brHideSubmit = ($savedBr !== null) && ($brSendSup === '1' || $brIsClosed);
 $brIsEditMode = ($savedBr !== null);
@@ -1297,7 +1288,7 @@ $brHideUpdate = $brIsClosed || $brCanShowApproveBar;
 // หน้านี้ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin') จึงเช็ค role เดียวกันตรงนี้
 // เพื่อให้คนที่แก้ไขฟิลด์ในแท็บ Admin ได้ เป็นคนเดียวกับที่กดปุ่ม Update แบบจำกัดสิทธิ์นี้ได้
 $brIsAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
-$brShowAdminLimitedUpdate = $brIsClosed && $brIsAdminUser && $brIsEditMode;
+$brShowAdminLimitedUpdate = $brIsClosed && !$brIsCancelled && $brIsAdminUser && $brIsEditMode;
 
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
@@ -1558,19 +1549,40 @@ if ($savedBr !== null) {
 // Layout อ้างอิงจาก register_suphos.php บรรทัด ~1750 (Admin tab เดียวกัน)
 // ค่าที่ผูกเป็น inverse ของ $optionalHosBrFieldMap ใน register_supbrhos1.php
 // (admin_doc_date<-iv_date, admin_work_no<-job_no, admin_cancel_reason<-remark_cancel)
+$brIsCancelDisabled = ($savedBr !== null) && (
+	!empty(trim((string)($savedBr['stock_print'] ?? ''))) ||
+	!empty(trim((string)($savedBr['ref_idst'] ?? '')))
+);
+$brIsCancelChecked = ($savedBr !== null) && (($savedBr['status_doc'] ?? '') === 'ยกเลิก');
+
 $adminInfoTab = [
 	'tab_id' => 'tab-admin-info',
 	'title' => 'ข้อมูลเพิ่มเติม (Admin)',
 	'rows' => [
 		[
-			['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
-			['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร'],
+			[
+				'type' => 'inline_group',
+				'label' => 'เลขที่เอกสาร',
+				'fields' => [
+					['type' => 'text', 'name' => 'admin_doc_no', 'value' => ($savedBr !== null ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
+					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no_br', 'onclick' => 'runDocumentNoBr();', 'variant' => 'purple'],
+				],
+			],
 			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
 			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
 		],
 		[
-			['type' => 'button', 'icon' => 'img/icons/circle_x.png', 'label' => 'ยกเลิกเอกสาร'],
-			['type' => 'text', 'name' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3],
+			['type' => 'button_field', 'button' => [
+				'type' => 'button',
+				'icon' => 'img/icons/circle_x.png',
+				'label' => 'ยกเลิกเอกสาร',
+				'variant' => 'danger',
+				'disabled' => $brIsCancelDisabled,
+				'active' => $brIsCancelChecked,
+				'id' => 'btn_cancel_doc_br',
+				'onclick' => 'toggleCancelDocBr();'
+			]],
+			['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $brIsCancelDisabled || !$brIsCancelChecked],
 		],
 	],
 ];
@@ -1611,6 +1623,118 @@ $adminInfoTab = [
 			// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
 			// endpoint นี้เขียนแค่ tb_register_data (ไม่ผูกกับ hos__so/hos__br) จึงใช้ร่วมกับหน้า Borrow ได้เลย
 			// โดยส่งค่า ref_id_br ของหน้านี้ไปในคีย์ ref_id — ตรงกับ logic ใน register_suphos.php ทุกจุด ต่างแค่ selector ref_id_br
+			function brSubmitCancelDoc(reason) {
+				var cancelInput = document.getElementById('br_cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc_br');
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				var reasonField = document.getElementById('br_approve_reason');
+				var actionField = document.getElementById('br_approve_action');
+
+				if (cancelInput) cancelInput.value = '1';
+				if (cancelBtn) cancelBtn.classList.add('active');
+				if (reasonInput) {
+					reasonInput.disabled = false;
+					reasonInput.value = reason;
+				}
+				if (reasonField) reasonField.value = reason;
+				if (actionField) actionField.value = '';
+
+				var form = brEnsureSubmitMarker();
+				if (form) HTMLFormElement.prototype.submit.call(form);
+			}
+
+			function toggleCancelDocBr() {
+				var cancelInput = document.getElementById('br_cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc_br');
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				if (!cancelInput || !cancelBtn) return;
+
+				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
+				var newActive = !isCurrentlyActive;
+
+				cancelInput.value = newActive ? '1' : '0';
+				cancelBtn.classList.toggle('active', newActive);
+
+				if (reasonInput) {
+					reasonInput.disabled = !newActive;
+					if (!newActive) {
+						reasonInput.value = '';
+					} else {
+						reasonInput.focus();
+					}
+				}
+			}
+
+			function runDocumentNoBr() {
+				var companySelect = document.getElementById('company_select');
+				var typeBrengSelect = document.getElementById('type_breng');
+				var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+				var docDateInput = document.querySelector('input[name="admin_doc_date"]');
+				var refIdInput = document.querySelector('input[name="ref_id_br"]');
+				var runButton = document.getElementById('btn_run_doc_no_br');
+
+				if (!companySelect || !typeBrengSelect || !docNoInput) {
+					return;
+				}
+
+				if (!docDateInput || docDateInput.value.trim() === '') {
+					Swal.fire('แจ้งเตือน', 'กรุณาใส่วันที่ออกเอกสารก่อนออกเลขที่เอกสาร', 'warning');
+					if (docDateInput) docDateInput.focus();
+					return;
+				}
+
+				if (docNoInput.value.trim() !== '') {
+					if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+						return;
+					}
+				}
+
+				var companyForDocRun = companySelect.value === '2' ? '4' : '3';
+				var docTypeForDocRun = typeBrengSelect.value === '2' ? '9' : '8';
+				var payload = new URLSearchParams();
+				payload.append('company', companyForDocRun);
+				payload.append('doc_type', docTypeForDocRun);
+				payload.append('doc_date', docDateInput.value);
+				payload.append('ref_id', refIdInput ? refIdInput.value : '');
+
+				if (runButton) {
+					runButton.disabled = true;
+				}
+
+				fetch('ajax_run_doc_no.php', {
+						method: 'POST',
+						credentials: 'same-origin',
+						cache: 'no-store',
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+						},
+						body: payload.toString()
+					})
+					.then(function(response) {
+						return response.json().then(function(data) {
+							return {
+								ok: response.ok,
+								data: data
+							};
+						});
+					})
+					.then(function(result) {
+						if (!result.ok || !result.data || !result.data.success) {
+							alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+							return;
+						}
+						docNoInput.value = result.data.doc_no;
+					})
+					.catch(function() {
+						alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+					})
+					.then(function() {
+						if (runButton) {
+							runButton.disabled = false;
+						}
+					});
+			}
+
 			function runJobNoBr() {
 				var jobNoInput = document.querySelector('input[name="admin_work_no"]');
 				var refIdInput = document.querySelector('input[name="ref_id_br"]');
@@ -1807,6 +1931,7 @@ $adminInfoTab = [
 		// create mode ส่งเลขประมาณการไปตามเดิม (backend คำนวณเลขจริงใหม่อยู่แล้ว)
 		?>
 		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id_br']) : so_saved_h($so . $nextId); ?>">
+		<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="<?php echo ($savedBr !== null && (($savedBr['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
 
 		<!-- แท็บ ข้อมูลเอกสาร / Admin (แท็บ Admin แสดงเฉพาะ type_login == 'It' เหมือนเดิม) -->
 		<div class="so-tabs-container">
@@ -3164,7 +3289,6 @@ $adminInfoTab = [
 				<input type="hidden" name="approve_action" id="br_approve_action" value="">
 				<input type="hidden" name="approve_stage" id="br_approve_stage" value="<?php echo so_saved_h($brApproveStage); ?>">
 				<input type="hidden" name="br_approve_reason" id="br_approve_reason" value="">
-				<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="0">
 				<div class="so-approve-actions">
 					<button type="button" class="so-overflow-menu-trigger" id="btn_br_approve_overflow" onclick="brToggleApproveOverflowMenu()">
 						<i class="fas fa-ellipsis-v"></i>
@@ -3189,7 +3313,6 @@ $adminInfoTab = [
 				<button type="button" name="save_draft" class="btn-so-draft" onclick="brSaveDraft();"><i class="far fa-<?php echo $brIsEditMode ? 'edit' : 'save'; ?>"></i> <?php echo $brIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 			<?php endif; ?>
 			<?php if ($brShowAdminLimitedUpdate): ?>
-				<!-- เอกสารจบแล้ว: Admin แก้ได้เฉพาะเลขที่/วันที่เอกสารผ่าน admin_limited_update=1 ไม่แตะข้อมูลอื่น -->
 				<button type="button" name="admin_limited_update_btn" onclick="brSaveAdminLimitedUpdate();" title="แก้ไขได้เฉพาะเลขที่/วันที่เอกสาร" class="btn-so-draft">
 					<i class="far fa-save"></i> Update
 				</button>
