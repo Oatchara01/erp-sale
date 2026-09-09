@@ -1,39 +1,43 @@
 <?php
+ob_start();
 
 define('FPDF_FONTPATH','font/');
  
 require('fpdf1.php');
 
-$ref_id_br=$_GET["ref_id_br"];
-$product_id=$_GET["product_code"];
-$doc_no=$_GET["doc_no"];
-$year_no=$_GET["year_no"];
-$iv_nocheck ="$doc_no/$year_no" ;
+$ref_id_br = $_GET["ref_id_br"] ?? '';
+$product_id = $_GET["product_code"] ?? '';
+$doc_no = $_GET["doc_no"] ?? '';
+$year_no = $_GET["year_no"] ?? '';
+$iv_nocheck = "$doc_no/$year_no";
 
-include"dbconnect.php";
+include "dbconnect.php";
 
-$strSQL = "SELECT * FROM hos__br  WHERE ref_id_br = '".$ref_id_br."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+$strSQL = "SELECT * FROM hos__br  WHERE ref_id_br = '".mysqli_real_escape_string($conn, $ref_id_br)."' ";
+$objQuery = mysqli_query($conn, $strSQL);
+$objResult = $objQuery ? mysqli_fetch_array($objQuery) : null;
 
-$strSQL1 = "SELECT * FROM  tb_product  WHERE product_ID = '".$product_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$objResult1 = mysqli_fetch_array($objQuery1);
+$strSQL1 = "SELECT * FROM  tb_product  WHERE product_ID = '".mysqli_real_escape_string($conn, $product_id)."' ";
+$objQuery1 = mysqli_query($conn, $strSQL1);
+$objResult1 = $objQuery1 ? mysqli_fetch_array($objQuery1) : null;
 
-$strSQL2 = "SELECT * FROM  tb_product_leaflet  WHERE product_id = '".$product_id."' ";
-$objQuery2 = mysqli_query($conn,$strSQL2) or die ("Error Query [".$strSQL2."]");
-$objResult2 = mysqli_fetch_array($objQuery2);
+$strSQL2 = "SELECT * FROM  tb_product_leaflet  WHERE product_id = '".mysqli_real_escape_string($conn, $product_id)."' ";
+$objQuery2 = mysqli_query($conn, $strSQL2);
+$objResult2 = $objQuery2 ? mysqli_fetch_array($objQuery2) : null;
 
 
 date_default_timezone_set("Asia/Bangkok");
 function DateThai($strDate)
 	{
+		if (empty($strDate) || $strDate == '0000-00-00' || $strDate == '0000-00-00 00:00:00') {
+			return '';
+		}
 		$strYear = date("Y",strtotime($strDate))+543;
 		$strMonth= date("n",strtotime($strDate));
 		$strDay= date("j",strtotime($strDate));
 		$strMonthCut = Array("","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค.");
-		$strMonthThai=$strMonthCut[$strMonth];
-	    $strYear1 =substr( $strYear , 2 , 2 );
+		$strMonthThai=$strMonthCut[$strMonth] ?? '';
+	    $strYear1 =substr( (string)$strYear , 2 , 2 );
 		return "$strDay $strMonthThai $strYear1";
 	}
 
@@ -42,45 +46,45 @@ function DateThai($strDate)
 
 
 //$newDate = date("d-m-Y", strtotime($start_date));
-$ref_id_br=$objResult["ref_id_br"];
-$date_br = DateThai($objResult["date_br"]);
-$customer =$objResult["customer"];
-$address =$objResult["address"];
-$iv_no =$objResult["iv_no"];
-$type_doc =$objResult["company"];
+$ref_id_br = $objResult["ref_id_br"] ?? $ref_id_br;
+$date_br = !empty($objResult["date_br"]) ? DateThai($objResult["date_br"]) : '';
+$customer = $objResult["customer"] ?? '';
+$address = $objResult["address"] ?? '';
+$iv_no = $objResult["iv_no"] ?? '';
+$type_doc = $objResult["company"] ?? '';
 
-$unit_name = $objResult1["unit_name"];
+$unit_name = $objResult1["unit_name"] ?? '';
 
-$product_name = $objResult1["sol_name"];
-$ingredient1 = $objResult2["ingredient1"];
-$ingredient2 = $objResult2["ingredient2"];
-$ingredient3 = $objResult2["ingredient3"];
-$ingredient4 = $objResult2["ingredient4"];
-$ingredient5 = $objResult2["ingredient5"];
-$ingredient6 = $objResult2["ingredient6"];
-$ingredient7 = $objResult2["ingredient7"];
-$ingredient8 = $objResult2["ingredient8"];
-$ingredient9 = $objResult2["ingredient9"];
-$ingredient10 = $objResult2["ingredient10"];
-$ingredient11 = $objResult2["ingredient11"];
-$ingredient12 = $objResult2["ingredient12"];
-$ingredient13 = $objResult2["ingredient13"];
-$ingredient14 = $objResult2["ingredient14"];
-$ingredient15 = $objResult2["ingredient15"];
-$ingredient16 = $objResult2["ingredient16"];
-$ingredient17 = $objResult2["ingredient17"];
-$ingredient18 = $objResult2["ingredient18"];
-$ingredient19 = $objResult2["ingredient19"];
-$ingredient20 = $objResult2["ingredient20"];
-$ingredient21 = $objResult2["ingredient21"];
-$ingredient22 = $objResult2["ingredient22"];
-$ingredient23 = $objResult2["ingredient23"];
-$ingredient24 = $objResult2["ingredient24"];
-$ingredient25 = $objResult2["ingredient25"];
-$ingredient26 = $objResult2["ingredient26"];
-$ingredient27 = $objResult2["ingredient27"];
-$ingredient28 = $objResult2["ingredient28"];
-$ingredient29 = $objResult2["ingredient29"];
+$product_name = $objResult1["sol_name"] ?? ($objResult2["product_name"] ?? '');
+$ingredient1 = $objResult2["ingredient1"] ?? '';
+$ingredient2 = $objResult2["ingredient2"] ?? '';
+$ingredient3 = $objResult2["ingredient3"] ?? '';
+$ingredient4 = $objResult2["ingredient4"] ?? '';
+$ingredient5 = $objResult2["ingredient5"] ?? '';
+$ingredient6 = $objResult2["ingredient6"] ?? '';
+$ingredient7 = $objResult2["ingredient7"] ?? '';
+$ingredient8 = $objResult2["ingredient8"] ?? '';
+$ingredient9 = $objResult2["ingredient9"] ?? '';
+$ingredient10 = $objResult2["ingredient10"] ?? '';
+$ingredient11 = $objResult2["ingredient11"] ?? '';
+$ingredient12 = $objResult2["ingredient12"] ?? '';
+$ingredient13 = $objResult2["ingredient13"] ?? '';
+$ingredient14 = $objResult2["ingredient14"] ?? '';
+$ingredient15 = $objResult2["ingredient15"] ?? '';
+$ingredient16 = $objResult2["ingredient16"] ?? '';
+$ingredient17 = $objResult2["ingredient17"] ?? '';
+$ingredient18 = $objResult2["ingredient18"] ?? '';
+$ingredient19 = $objResult2["ingredient19"] ?? '';
+$ingredient20 = $objResult2["ingredient20"] ?? '';
+$ingredient21 = $objResult2["ingredient21"] ?? '';
+$ingredient22 = $objResult2["ingredient22"] ?? '';
+$ingredient23 = $objResult2["ingredient23"] ?? '';
+$ingredient24 = $objResult2["ingredient24"] ?? '';
+$ingredient25 = $objResult2["ingredient25"] ?? '';
+$ingredient26 = $objResult2["ingredient26"] ?? '';
+$ingredient27 = $objResult2["ingredient27"] ?? '';
+$ingredient28 = $objResult2["ingredient28"] ?? '';
+$ingredient29 = $objResult2["ingredient29"] ?? '';
 
 
 
@@ -2145,6 +2149,9 @@ $pdf->MultiCell(9.0,0.6, iconv( 'UTF-8','cp874' , "FM-OF-01:Rev.2"),0 ,'R' );
 
 
 
+if (ob_get_length()) {
+	ob_end_clean();
+}
 
 $pdf->Output();
 ?>
