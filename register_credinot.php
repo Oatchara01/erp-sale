@@ -1,5 +1,6 @@
 <?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
+<?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -42,11 +43,11 @@
     }
 
     // ===== แถบอนุมัติ: หา "ระดับ" ปัจจุบันของเอกสารจากสถานะที่โหลดมา (เฉพาะโหมดแก้ไข) =====
-    $creditSendSup = $rs['send_sup'] ?? '0';
-    $creditSendDm = $rs['send_dm'] ?? '0';
-    $creditStatusDoc = $rs['status_doc'] ?? '';
+    $creditSendSup = ($mode === 'edit') ? ($rs['send_sup'] ?? '0') : '0';
+    $creditSendDm = ($mode === 'edit') ? ($rs['send_dm'] ?? '0') : '0';
+    $creditStatusDoc = ($mode === 'edit') ? ($rs['status_doc'] ?? '') : '';
     $creditIsClosed = in_array($creditStatusDoc, ['Approve', 'Rejected', 'ยกเลิก'], true);
-    $creditSendAdmin = $rs['send_admin'] ?? '0';
+    $creditSendAdmin = ($mode === 'edit') ? ($rs['send_admin'] ?? '0') : '0';
     // เคย Approve มาก่อนหรือไม่ (send_admin='1' ถูกตั้งตอนอนุมัติระดับสุดท้ายเท่านั้น และไม่มีจุดไหนเซ็ตกลับเป็น '0')
     $creditWasEverApproved = ($creditSendAdmin === '1');
     // Lock ถาวรเฉพาะ: (1) กำลัง Approve อยู่ หรือ (2) ถูกยกเลิกหลังจากเคย Approve ไปแล้ว (มีผลบัญชีไปแล้ว)
@@ -68,6 +69,39 @@
     // ปุ่ม Update (AJAX บันทึกโดยไม่รีโหลดหน้า) โชว์เฉพาะตอนแก้ไขเอกสารเดิม และไม่ถูก lock เหมือนปุ่ม Submit
     $creditIsEditMode = ($mode === 'edit');
     $creditHideUpdate = !$creditIsEditMode || $creditItemsLocked;
+
+    // ===== ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — mirror ของ register_suphos.php:1035-1045 =====
+    $creditDocumentLogRows = array();
+    if ($mode === 'edit' && $escRefCredit !== '') {
+        $creditDocumentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+        if ($creditDocumentStatusLogTableQuery && mysqli_num_rows($creditDocumentStatusLogTableQuery) > 0) {
+            $creditDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $escRefCredit . "' AND status_doc IN ('Returned', 'Rejected', 'Cancelled', 'ยกเลิก') ORDER BY created_at DESC, id DESC");
+            if ($creditDocumentLogQuery) {
+                while ($creditDocumentLogRow = mysqli_fetch_assoc($creditDocumentLogQuery)) {
+                    $creditDocumentLogRows[] = $creditDocumentLogRow;
+                }
+            }
+        }
+    }
+
+    $creditDocumentReasonTitleMap = array(
+        'Returned' => 'เหตุผลในการส่งกลับ',
+        'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+        'Cancelled' => 'เหตุผลในการยกเลิก',
+        'ยกเลิก' => 'เหตุผลในการยกเลิก'
+    );
+    $creditDocumentReasonClassMap = array(
+        'Returned' => 'is-returned',
+        'Rejected' => 'is-rejected',
+        'Cancelled' => 'is-cancelled',
+        'ยกเลิก' => 'is-cancelled'
+    );
+    $creditDocumentReasonLabelMap = array(
+        'Returned' => 'ส่งกลับ',
+        'Rejected' => 'ไม่อนุมัติ',
+        'Cancelled' => 'ยกเลิกเอกสาร',
+        'ยกเลิก' => 'ยกเลิกเอกสาร'
+    );
 
     $customerNo = '';
     $customerTypeName = '';
@@ -196,6 +230,21 @@
                 </div>
             </div>
 
+            <?php
+            $creditLatestDocumentReason = $creditDocumentLogRows[0] ?? null;
+            $creditLatestDocumentReasonStatus = trim((string)($creditLatestDocumentReason['status_doc'] ?? ''));
+            $creditLatestDocumentReasonText = trim((string)($creditLatestDocumentReason['reason'] ?? ''));
+            $creditLatestDocumentReasonTitle = $creditDocumentReasonTitleMap[$creditLatestDocumentReasonStatus] ?? '';
+            $creditLatestDocumentReasonClass = $creditDocumentReasonClassMap[$creditLatestDocumentReasonStatus] ?? '';
+            ?>
+            <?php if ($mode === 'edit' && $creditLatestDocumentReasonTitle !== '' && $creditLatestDocumentReasonText !== '') { ?>
+                <div class="so-latest-reason-banner <?php echo so_saved_h($creditLatestDocumentReasonClass); ?>" role="status">
+                    <button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+                    <div class="so-latest-reason-title"><?php echo so_saved_h($creditLatestDocumentReasonTitle); ?></div>
+                    <div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($creditLatestDocumentReasonText)); ?></div>
+                </div>
+            <?php } ?>
+
             <div class="so-tabs-container">
                 <button type="button" class="so-tab-btn active">ข้อมูลเอกสาร</button>
             </div>
@@ -204,6 +253,8 @@
             <input type="hidden" name="form_mode" value="<?php echo htmlspecialchars($mode, ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="mode_cus" id="mode_cus" value="<?php echo $rs["mode_cus"] ?? ''; ?>">
             <input type="hidden" name="opener" value="<?php echo htmlspecialchars($opener); ?>">
+            <input type="hidden" name="approve_action" id="credit_approve_action" value="">
+            <input type="hidden" name="credit_approve_reason" id="credit_approve_reason" value="">
 
             <!-- ฟิลด์ required ที่ไม่มีตำแหน่งใน Figma ปัจจุบัน (ผู้ขอคืนสินค้า/ผู้แทนขาย) — ซ่อนไว้ก่อนตามที่ตกลง -->
             <input type="hidden" name="send_return_name" id="send_return_name" value="">
@@ -898,29 +949,63 @@
 
             </div><!-- /#tab-document-info -->
 
-        </div>
+            <?php
+            $creditDocumentLogRowsForTabs = array();
+            foreach ($creditDocumentLogRows as $creditDocumentLogRow) {
+                $creditLogStatus = trim((string)($creditDocumentLogRow['status_doc'] ?? ''));
+                $creditLogCreatedAt = trim((string)($creditDocumentLogRow['created_at'] ?? ''));
+                $creditDocumentLogRowsForTabs[] = array(
+                    'status_label' => $creditDocumentReasonLabelMap[$creditLogStatus] ?? $creditLogStatus,
+                    'status_class' => $creditDocumentReasonClassMap[$creditLogStatus] ?? 'is-cancelled',
+                    'reason' => $creditDocumentLogRow['reason'] ?? '',
+                    'user_name' => $creditDocumentLogRow['user_name'] ?? '',
+                    'created_at' => ($creditLogCreatedAt !== '') ? date('d-m-Y H:i', strtotime($creditLogCreatedAt)) : '',
+                );
+            }
+            $docTabsCard = array(
+                'open_fn' => 'creditOpen3Tab',
+                'document_return_log' => array(
+                    'enabled' => true,
+                    'rows' => $creditDocumentLogRowsForTabs,
+                    'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+                ),
+            );
+            include __DIR__ . '/partials/doc_tabs_card.php';
+            ?>
+            <script>
+                function creditOpen3Tab(tabId, element) {
+                    var contents = document.getElementsByClassName('so-3tab-content');
+                    for (var i = 0; i < contents.length; i++) contents[i].style.display = 'none';
+                    var btns = element.parentElement.getElementsByClassName('so-tab-btn');
+                    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+                    document.getElementById(tabId).style.display = 'block';
+                    element.classList.add('active');
+                }
+            </script>
+
+        </div><!-- /register-so-main -->
 
         <div class="so-sticky-actions">
-            <div class="so-sticky-actions-inner">
+            <div class="so-sticky-actions-inner" style="align-items: center;">
                 <?php if ($creditCanShowApproveBar): ?>
-                    <div class="credinot-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
-                        <button type="button" class="credinot-approve-overflow-trigger" id="btn_credinot_approve_overflow" onclick="toggleCreditApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
+                    <div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
+                        <button type="button" class="so-overflow-menu-trigger" id="btn_credinot_approve_overflow" onclick="toggleCreditApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
-                        <div id="creditApproveOverflowMenu" class="credinot-approve-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
+                        <div id="creditApproveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
                             <?php if ($creditBucket === 1 || $creditBucket === 2): ?>
-                                <button type="submit" name="approve_action" value="return" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="fas fa-reply" style="width:16px;"></i> ส่งกลับ</button>
-                                <button type="submit" name="approve_action" value="reject" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><i class="fas fa-times-circle" style="width:16px;"></i> ไม่อนุมัติ</button>
+                                <button type="button" onclick="creditRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+                                <button type="button" class="so-menu-danger" onclick="creditRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
                             <?php endif; ?>
-                            <button type="submit" name="approve_action" value="cancel" formnovalidate style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><i class="far fa-window-close" style="width:16px;"></i> ยกเลิกเอกสาร</button>
+                            <button type="button" onclick="triggerCreditCancelFromApproveMenu();" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
                         </div>
                         <?php if ($creditBucket === 0): ?>
                             <button type="submit" name="approve_action" value="send_sup" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-                                <i class="far fa-paper-plane"></i> ส่งให้ SUP อนุมัติ
+                                <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php else: ?>
                             <button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-                                <i class="far fa-check-circle"></i> อนุมัติ
+                                <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php endif; ?>
                     </div>
@@ -941,7 +1026,7 @@
             </div>
         </div>
 
-        <?php if ($creditCanShowApproveBar): ?>
+        <?php if ($creditCanShowApproveBar || $creditCanCancel): ?>
             <script>
                 function toggleCreditApproveOverflowMenu() {
                     var menu = document.getElementById('creditApproveOverflowMenu');
@@ -955,6 +1040,108 @@
                     if (e.target === trigger || (trigger && trigger.contains(e.target))) return;
                     if (!menu.contains(e.target)) menu.style.display = 'none';
                 });
+
+                function creditOpenReasonPopup(opts) {
+                    var refInput = document.querySelector('input[name="ref_credit"]');
+                    var refId = refInput ? refInput.value.trim() : '';
+
+                    if (typeof Swal === 'undefined') {
+                        var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+                        fallbackReason = (fallbackReason || '').trim();
+                        if (fallbackReason !== '') opts.onConfirm(fallbackReason);
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: opts.title,
+                        html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+                            '<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+                        input: 'textarea',
+                        inputPlaceholder: opts.placeholder || '',
+                        iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+                        showCancelButton: true,
+                        showCloseButton: true,
+                        reverseButtons: false,
+                        confirmButtonText: 'ตกลง',
+                        cancelButtonText: 'ยกเลิก',
+                        buttonsStyling: false,
+                        customClass: {
+                            popup: 'figma-delete-popup so-reason-popup',
+                            title: 'figma-delete-title so-reason-title',
+                            htmlContainer: 'figma-delete-html so-reason-html',
+                            confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn ' + (opts.confirmBtnClass || ''),
+                            cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+                            actions: 'figma-delete-actions so-reason-actions',
+                            icon: 'figma-delete-icon so-reason-icon',
+                            input: 'so-reason-textarea',
+                            closeButton: 'so-reason-close-btn'
+                        },
+                        preConfirm: function(value) {
+                            var trimmed = (value || '').trim();
+                            if (trimmed === '') {
+                                Swal.showValidationMessage('กรุณาระบุเหตุผล');
+                                return false;
+                            }
+                            return trimmed;
+                        }
+                    }).then(function(result) {
+                        if (result.isConfirmed) opts.onConfirm(result.value);
+                    });
+                }
+
+                function creditRunApproveAction(action, skipValidation) {
+                    if (!skipValidation) return;
+
+                    var reasonConfig = {
+                        return: {
+                            title: 'ส่งกลับเอกสารนี้ ?',
+                            subtitleText: 'ส่งกลับเอกสารเลขที่',
+                            label: 'ระบุเหตุผลการส่งกลับ',
+                            placeholder: 'ระบุเหตุผลการส่งกลับ',
+                            iconBg: '#FFF4E5',
+                            iconSrc: 'img/icons/send_back.png'
+                        },
+                        reject: {
+                            title: 'ไม่อนุมัติเอกสารนี้ ?',
+                            subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+                            label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+                            placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+                            iconBg: '#FEECEB',
+                            iconSrc: 'img/icons/reject.png'
+                        }
+                    } [action];
+                    if (!reasonConfig) return;
+
+                    creditOpenReasonPopup(Object.assign({}, reasonConfig, {
+                        onConfirm: function(reason) {
+                            var actionField = document.getElementById('credit_approve_action');
+                            var reasonField = document.getElementById('credit_approve_reason');
+                            if (actionField) actionField.value = action;
+                            if (reasonField) reasonField.value = reason;
+                            var form = document.forms['frmMain'];
+                            if (form) HTMLFormElement.prototype.submit.call(form);
+                        }
+                    }));
+                }
+
+                function triggerCreditCancelFromApproveMenu() {
+                    creditOpenReasonPopup({
+                        title: 'ยกเลิกเอกสารนี้ ?',
+                        subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+                        label: 'ระบุเหตุผลในการยกเลิก',
+                        placeholder: 'ระบุเหตุผลในการยกเลิก',
+                        iconBg: '#F4F5F7',
+                        iconSrc: 'img/icons/cancel_document.png',
+                        onConfirm: function(reason) {
+                            var actionField = document.getElementById('credit_approve_action');
+                            var reasonField = document.getElementById('credit_approve_reason');
+                            if (actionField) actionField.value = 'cancel';
+                            if (reasonField) reasonField.value = reason;
+                            var form = document.forms['frmMain'];
+                            if (form) HTMLFormElement.prototype.submit.call(form);
+                        }
+                    });
+                }
             </script>
         <?php endif; ?>
     </form>

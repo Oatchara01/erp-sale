@@ -341,6 +341,13 @@ body.has-sidebar.sidebar-collapsed {
 
 /* ส่งกลับ */
 
+/* ส่งกลับ (ใบลดหนี้ — แยกจาก .returned ด้านบนเพราะ status_credit_admall.php ใช้ชื่อ class 'returned'
+   ไปแล้วกับความหมาย "ยังไม่ได้กดส่งให้ SUP" อยู่ก่อน) */
+.badge-status.sent-back {
+	background-color: #FFE1C5;
+	color: #FF7B0F;
+}
+
 /* Expanded Row Details */
 .so-row.is-expanded,
 .so-row.is-expanded td {

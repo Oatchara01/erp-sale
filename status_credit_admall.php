@@ -92,6 +92,7 @@ include "dbconnect_sale.php";
 										<option value="">Select</option>
 										<option value="Approve" <?php if ($status_doc == 'Approve') echo 'selected'; ?>>สมบูรณ์</option>
 										<option value="Rejected" <?php if ($status_doc == 'Rejected') echo 'selected'; ?>>ไม่อนุมัติ</option>
+										<option value="Returned" <?php if ($status_doc == 'Returned') echo 'selected'; ?>>ส่งกลับ</option>
 										<option value="ยกเลิก" <?php if ($status_doc == 'ยกเลิก') echo 'selected'; ?>>ยกเลิก</option>
 										<option value="รอผู้บริหาร" <?php if ($status_doc == 'รอผู้บริหาร') echo 'selected'; ?>>รอผู้บริหาร</option>
 										<option value="รอหัวหน้า" <?php if ($status_doc == 'รอหัวหน้า') echo 'selected'; ?>>รอหัวหน้า</option>
@@ -299,6 +300,9 @@ include "dbconnect_sale.php";
 							} else if ($objResult["status_doc"] == 'ยกเลิก') {
 								$status_class = 'cancel';
 								$status_text = $objResult["status_doc"];
+							} else if ($objResult["status_doc"] == 'Returned') {
+								$status_class = 'sent-back';
+								$status_text = 'ส่งกลับ';
 							} else if ($objResult["status_doc"] == 'Approve') {
 								$status_class = 'approve';
 								$status_text = 'สมบูรณ์';

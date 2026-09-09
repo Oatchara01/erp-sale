@@ -27,6 +27,23 @@ function credinotEsc($conn, $value)
 	return mysqli_real_escape_string($conn, (string)$value);
 }
 
+if (!function_exists('tableExists')) {
+	function tableExists($conn, $tableName)
+	{
+		static $tables = null;
+		if ($tables === null) {
+			$tables = array();
+			$res = mysqli_query($conn, "SHOW TABLES");
+			if ($res) {
+				while ($row = mysqli_fetch_array($res)) {
+					$tables[strtolower($row[0])] = true;
+				}
+			}
+		}
+		return isset($tables[strtolower($tableName)]);
+	}
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 
 	$formMode = $_POST["form_mode"] ?? '';
@@ -216,7 +233,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 		$curDocStatus = $curDocRow['status_doc'] ?? '';
 		$curDocWasEverApproved = (($curDocRow['send_admin'] ?? '0') === '1');
 		$isLockedDoc = ($curDocStatus === 'Approve') || ($curDocStatus === 'ยกเลิก' && $curDocWasEverApproved);
-		$needsStatusReset = ($curDocStatus === 'Rejected') || ($curDocStatus === 'ยกเลิก' && !$curDocWasEverApproved);
+		// 'Returned' ก็ต้อง reset กลับเข้าคิว SUP เหมือน Rejected — ไม่งั้นแก้แล้ว save/Update จะค้างสถานะ
+		// 'Returned' ตลอดไป (ไฟล์นี้ไม่มี draft handler แยกแบบ suphos จึงต้อง reset ที่นี่ทุกครั้งที่ save สำเร็จ)
+		$needsStatusReset = in_array($curDocStatus, ['Rejected', 'Returned'], true) || ($curDocStatus === 'ยกเลิก' && !$curDocWasEverApproved);
 		$blockedByLock = $isLockedDoc;
 
 		if (!$isLockedDoc) {
@@ -425,11 +444,9 @@ values
 				mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Approve', send_admin='1', dm_name='" . credinotEsc($conn, $add_by) . "', dm_date='" . $today . "', dm_datetime='" . $now . "' WHERE ref_credit='" . $escRefCredit . "'");
 			}
 		} elseif ($approveAction === 'return') {
-			if ($isBucket1) {
-				mysqli_query($conn, "UPDATE tb_credit_note SET send_sup='0' WHERE ref_credit='" . $escRefCredit . "'");
-			} elseif ($isBucket2) {
-				mysqli_query($conn, "UPDATE tb_credit_note SET send_dm='0' WHERE ref_credit='" . $escRefCredit . "'");
-			}
+			// ส่งกลับให้ Sale แก้ไข ไม่ว่าจะอยู่ระดับ SUP หรือ DM ก็ตาม — reset คิวอนุมัติทั้งหมด
+			// (mirror ของ register_supbrhos.php: "ส่งกลับ" ต้องกลับไปหา creator/Sale เสมอสำหรับเอกสาร multi-step)
+			mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Returned', send_sup='0', send_dm='0' WHERE ref_credit='" . $escRefCredit . "'");
 		} elseif ($approveAction === 'reject') {
 			if ($isBucket1) {
 				mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='Rejected', approve_name='" . credinotEsc($conn, $add_by) . "', approve_date='" . $today . "' WHERE ref_credit='" . $escRefCredit . "'");
@@ -439,6 +456,30 @@ values
 		} elseif ($approveAction === 'cancel') {
 			mysqli_query($conn, "UPDATE tb_credit_note SET status_doc='ยกเลิก' WHERE ref_credit='" . $escRefCredit . "'");
 			$cancelSucceeded = true;
+		}
+
+		// ===== ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — mirror ของ register_suphos_edit1.php:4159-4188 =====
+		if (tableExists($conn, 'tb_document_status_log')) {
+			$creditLogUserId = credinotEsc($conn, $_SESSION['UserID'] ?? '');
+			$creditLogUserName = credinotEsc($conn, $add_by);
+			$creditApproveReason = trim((string)($_POST['credit_approve_reason'] ?? ''));
+			$creditApproveStatusMap = array('return' => 'Returned', 'reject' => 'Rejected');
+
+			if (isset($creditApproveStatusMap[$approveAction]) && $creditApproveReason !== '') {
+				mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+					VALUES ('" . $escRefCredit . "', '" . $creditApproveStatusMap[$approveAction] . "', '"
+					. credinotEsc($conn, $creditApproveReason) . "', '"
+					. $creditLogUserId . "', '"
+					. $creditLogUserName . "')");
+			}
+
+			if ($approveAction === 'cancel' && $creditApproveReason !== '') {
+				mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+					VALUES ('" . $escRefCredit . "', 'Cancelled', '"
+					. credinotEsc($conn, $creditApproveReason) . "', '"
+					. $creditLogUserId . "', '"
+					. $creditLogUserName . "')");
+			}
 		}
 	}
 
