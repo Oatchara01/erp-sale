@@ -766,6 +766,11 @@ include "dbconnect_sale.php";
 												<a href="#" onclick="openClearBrModal(event, <?php echo htmlspecialchars(json_encode($objResult['ref_id_br']), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
 													<i class="fas fa-list-alt" style="width:16px;"></i> รายละเอียดเคลียร์ยืม
 												</a>
+
+												<!-- Print ใบยืมต่อเนื่อง -->
+												<a href="report_brnphos_awl.php?ref_id_br=<?php echo $ref_id_url; ?>" target="_blank" class="so-dropdown-item">
+													<i class="fas fa-print" style="width:16px;"></i> Print ใบยืมต่อเนื่อง
+												</a>
 											</div>
 										</div>
 									</td>

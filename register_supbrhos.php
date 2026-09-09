@@ -1196,6 +1196,7 @@ $savedTransaction = null;
 $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
+$savedProductChecklists = array();
 
 if ($loadRefIdBr !== "") {
 	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__br WHERE ref_id_br = '" . $loadRefIdBr . "' LIMIT 1");
@@ -1265,6 +1266,22 @@ if ($loadRefIdBr !== "") {
 					'warranty' => $savedProductRow['warranty'],
 					'store' => $savedProductRow['store_name'],
 					'store_remark' => $savedProductRow['stock_remark'],
+				);
+			}
+		}
+
+		// ใบตรวจทานสินค้า (สร้างโดย createBrProductChecklists() ตอน submit/update จริงเท่านั้น — ดู includes/br_product_checklist.php)
+		// join tb_product_leaflet เพื่อโชว์ชื่อสินค้า mirror กับแท็บ "pdf" เดิมใน register_adminbrhos_edit.php
+		$savedProductChecklistsQuery = mysqli_query($conn, "SELECT tb_product_checklist.ref_pc, tb_product_checklist.product_id, tb_product_checklist.doc_no, tb_product_checklist.year_no, tb_product_leaflet.product_name FROM tb_product_checklist LEFT JOIN tb_product_leaflet ON tb_product_checklist.product_id = tb_product_leaflet.product_id WHERE tb_product_checklist.ref_id = '" . $loadRefIdBr . "' ORDER BY tb_product_checklist.checklist_id ASC");
+		if ($savedProductChecklistsQuery) {
+			while ($savedProductChecklistRow = mysqli_fetch_assoc($savedProductChecklistsQuery)) {
+				$savedProductChecklists[] = array(
+					'product_name' => $savedProductChecklistRow['product_name'] ?? '',
+					'ref_pc' => $savedProductChecklistRow['ref_pc'] ?? '',
+					'product_code' => $savedProductChecklistRow['product_id'] ?? '',
+					'ref_id_br' => $loadRefIdBr,
+					'doc_no' => $savedProductChecklistRow['doc_no'] ?? '',
+					'year_no' => $savedProductChecklistRow['year_no'] ?? '',
 				);
 			}
 		}
@@ -3268,6 +3285,7 @@ $adminInfoTab = [
 			'dept_comment' => ['enabled' => true, 'technician_required_checked' => false],
 			'attach_file' => ['enabled' => true],
 			'related_docs' => ['enabled' => true],
+			'product_checklists' => ['enabled' => true, 'rows' => $savedProductChecklists],
 		];
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>

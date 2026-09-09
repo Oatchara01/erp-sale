@@ -11,6 +11,8 @@ $docExtraHiddenCompat = $docExtra['hidden_compat'] ?? [];
 $deptComment = $docTabsCard['dept_comment'] ?? null;
 $attachFile = $docTabsCard['attach_file'] ?? null;
 $relatedDocs = $docTabsCard['related_docs'] ?? null;
+$productChecklists = $docTabsCard['product_checklists'] ?? null;
+$productChecklistRows = $productChecklists['rows'] ?? [];
 $documentReturnLog = $docTabsCard['document_return_log'] ?? null;
 $documentReturnLogRows = $documentReturnLog['rows'] ?? [];
 
@@ -18,6 +20,7 @@ $showDocExtra = $docExtra !== null && ($docExtra['enabled'] ?? true);
 $showDeptComment = $deptComment !== null && ($deptComment['enabled'] ?? true || isset($deptComment['placeholder']));
 $showAttachFile = $attachFile !== null && ($attachFile['enabled'] ?? true || isset($attachFile['placeholder']));
 $showRelatedDocs = $relatedDocs !== null && ($relatedDocs['enabled'] ?? true || isset($relatedDocs['placeholder']));
+$showProductChecklists = $productChecklists !== null && ($productChecklists['enabled'] ?? true || isset($productChecklists['placeholder']));
 $showDocumentReturnLog = $documentReturnLog !== null && ($documentReturnLog['enabled'] ?? true || isset($documentReturnLog['placeholder']));
 
 $activeTabId = null;
@@ -25,6 +28,7 @@ if ($showDocExtra && $activeTabId === null) $activeTabId = 'tab_doc_extra';
 if ($showDeptComment && $activeTabId === null) $activeTabId = 'tab_dept_comment';
 if ($showAttachFile && $activeTabId === null) $activeTabId = 'tab_attach_file';
 if ($showRelatedDocs && $activeTabId === null) $activeTabId = 'tab_related_docs';
+if ($showProductChecklists && $activeTabId === null) $activeTabId = 'tab_product_checklists';
 if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_document_return_log';
 ?>
 <div class="so-tabs-container" style="margin-top: 24px;">
@@ -39,6 +43,9 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 	<?php } ?>
 	<?php if ($showRelatedDocs) { ?>
 		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_related_docs') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
+	<?php } ?>
+	<?php if ($showProductChecklists) { ?>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_product_checklists') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_product_checklists', this)">ใบตรวจทานสินค้า</button>
 	<?php } ?>
 	<?php if ($showDocumentReturnLog) { ?>
 		<button type="button" class="so-tab-btn so-document-return-tab-btn <?php echo ($activeTabId === 'tab_document_return_log') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_document_return_log', this)">การส่งกลับเอกสาร</button>
@@ -210,6 +217,44 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 		</div>
 	<?php } ?>
 
+	<?php if ($showProductChecklists) { ?>
+		<!-- TAB: ใบตรวจทานสินค้า -->
+		<div id="tab_product_checklists" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_product_checklists') ? 'block' : 'none'; ?>;">
+			<?php if (!empty($productChecklists['enabled'])) { ?>
+				<div class="so-related-doc-table">
+					<div class="so-related-doc-header">
+						<div>ชื่อสินค้า</div>
+						<div>เลขที่เอกสาร</div>
+						<div></div>
+					</div>
+					<div id="product_checklist_rows">
+						<?php if (!empty($productChecklistRows)) { ?>
+							<?php foreach ($productChecklistRows as $productChecklistRow) { ?>
+								<div class="so-related-doc-row">
+									<div><?php echo so_saved_h($productChecklistRow['product_name'] ?? ''); ?></div>
+									<div><?php echo so_saved_h($productChecklistRow['ref_pc'] ?? ''); ?></div>
+									<div>
+										<a href="report_checklist.php?product_code=<?php echo urlencode($productChecklistRow['product_code'] ?? ''); ?>&ref_id_br=<?php echo urlencode($productChecklistRow['ref_id_br'] ?? ''); ?>&doc_no=<?php echo urlencode($productChecklistRow['doc_no'] ?? ''); ?>&year_no=<?php echo urlencode($productChecklistRow['year_no'] ?? ''); ?>" target="_blank" class="so-related-doc-action" title="พิมพ์ใบตรวจทานสินค้า" aria-label="พิมพ์ใบตรวจทานสินค้า">
+											<i class="fas fa-print"></i>
+										</a>
+									</div>
+								</div>
+							<?php } ?>
+						<?php } else { ?>
+							<div class="so-related-doc-empty">ยังไม่มีใบตรวจทานสินค้า</div>
+						<?php } ?>
+					</div>
+				</div>
+			<?php } else { ?>
+				<div class="so-section-title-container">
+					<h3 class="so-section-title">ใบตรวจทานสินค้า</h3>
+					<hr class="so-divider">
+				</div>
+				<p style="color: var(--so-muted); font-size: 14px;"><?php echo so_saved_h($productChecklists['placeholder'] ?? 'ยังไม่มีใบตรวจทานสินค้า'); ?></p>
+			<?php } ?>
+		</div>
+	<?php } ?>
+
 	<?php if ($showDocumentReturnLog) { ?>
 		<!-- TAB 5: การส่งกลับเอกสาร -->
 		<div id="tab_document_return_log" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_document_return_log') ? 'block' : 'none'; ?>;">
@@ -260,4 +305,4 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 	<?php } ?>
 </div>
 <?php
-unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked);
+unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $productChecklists, $productChecklistRows, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showProductChecklists, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked, $productChecklistRow, $documentReturnLogRow);

@@ -60,7 +60,6 @@ $address =$objResult["address"];
 $delivery_tel =$objResult["delivery_tel"];
 $delivery_address =$objResult["delivery_address"];
 $objective =$objResult["objective"]; 
-$objective_des =$objResult["objective_des"]; 
 $objective_des1 = $objResult["objective_des1"];
 $objective_des2 = $objResult["objective_des2"];
 $objective_des4 = $objResult["objective_des4"];

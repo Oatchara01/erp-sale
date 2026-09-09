@@ -17,6 +17,7 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include("error_page.php");
+include(__DIR__ . "/includes/br_product_checklist.php");
 
 date_default_timezone_set("Asia/Bangkok");
 // เดิมเขียน $_POST["submit"] = "submit" (assignment) ทำให้เงื่อนไขเป็นจริงเสมอ
@@ -2340,6 +2341,11 @@ values($registerDataValues)";
 
 
 
+	// Create product checklist records only for real submit, inside the same transaction.
+	if ($isDraftRequest === false) {
+		createBrProductChecklists($conn, $ref_id_br);
+	}
+
 	} catch (mysqli_sql_exception $e) {
 		$saveOk = false;
 		$saveFailures[] = $e->getMessage();
@@ -2347,7 +2353,6 @@ values($registerDataValues)";
 
 	if ($saveOk) {
 		mysqli_commit($conn);
-
 		if ($isDraftRequest) {
 			if (ob_get_level() > 0) {
 				ob_end_clean();
