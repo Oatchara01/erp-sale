@@ -1197,6 +1197,7 @@ $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
 $savedProductChecklists = array();
+$brDocumentLogRows = array();
 
 if ($loadRefIdBr !== "") {
 	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__br WHERE ref_id_br = '" . $loadRefIdBr . "' LIMIT 1");
@@ -1285,6 +1286,16 @@ if ($loadRefIdBr !== "") {
 				);
 			}
 		}
+
+		$brDocumentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+		if ($brDocumentStatusLogTableQuery && mysqli_num_rows($brDocumentStatusLogTableQuery) > 0) {
+			$brDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $loadRefIdBr . "' AND status_doc IN ('ส่งกลับ', 'Returned', 'Rejected', 'Cancelled', 'ยกเลิก') ORDER BY created_at DESC, id DESC");
+			if ($brDocumentLogQuery) {
+				while ($brDocumentLogRow = mysqli_fetch_assoc($brDocumentLogQuery)) {
+					$brDocumentLogRows[] = $brDocumentLogRow;
+				}
+			}
+		}
 	}
 }
 
@@ -1292,8 +1303,9 @@ if ($loadRefIdBr !== "") {
 $brIsEditMode = ($savedBr !== null) && !$brIsCopyMode;
 $brStatusDoc = $brIsEditMode ? ($savedBr['status_doc'] ?? '') : '';
 $brSendSup = $brIsEditMode ? ($savedBr['send_sup'] ?? '0') : '0';
-$brIsClosed = in_array($brStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
-$brIsCancelled = ($brStatusDoc === 'ยกเลิก');
+$brIsApproved = in_array($brStatusDoc, ['Approve', 'อนุมัติแล้ว'], true);
+$brIsCancelled = in_array($brStatusDoc, ['ยกเลิก', 'Cancelled'], true);
+$brIsClosed = in_array($brStatusDoc, ['Approve', 'อนุมัติแล้ว', 'ยกเลิก', 'Cancelled', 'Rejected'], true);
 // Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
 $brHideSubmit = $brIsEditMode && ($brSendSup === '1' || $brIsClosed);
 $brIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
@@ -1308,7 +1320,7 @@ $brHideUpdate = $brIsClosed || $brCanShowApproveBar;
 // หน้านี้ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin') จึงเช็ค role เดียวกันตรงนี้
 // เพื่อให้คนที่แก้ไขฟิลด์ในแท็บ Admin ได้ เป็นคนเดียวกับที่กดปุ่ม Update แบบจำกัดสิทธิ์นี้ได้
 $brIsAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
-$brShowAdminLimitedUpdate = $brIsClosed && !$brIsCancelled && $brIsAdminUser && $brIsEditMode;
+$brShowAdminLimitedUpdate = $brIsClosed && !$brIsApproved && !$brIsCancelled && $brIsAdminUser && $brIsEditMode;
 
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
@@ -1636,6 +1648,35 @@ $adminInfoTab = [
 				<button type="button" class="btn-preview-so" onclick="brOpenPreview();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 			</div>
 		</div>
+
+		<?php
+		$latestBrDocumentReason = $brDocumentLogRows[0] ?? null;
+		$latestBrDocumentReasonTitleMap = array(
+			'ส่งกลับ' => 'เหตุผลในการส่งกลับ',
+			'Returned' => 'เหตุผลในการส่งกลับ',
+			'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+			'Cancelled' => 'เหตุผลในการยกเลิก',
+			'ยกเลิก' => 'เหตุผลในการยกเลิก'
+		);
+		$latestBrDocumentReasonClassMap = array(
+			'ส่งกลับ' => 'is-returned',
+			'Returned' => 'is-returned',
+			'Rejected' => 'is-rejected',
+			'Cancelled' => 'is-cancelled',
+			'ยกเลิก' => 'is-cancelled'
+		);
+		$latestBrDocumentReasonStatus = trim((string)($latestBrDocumentReason['status_doc'] ?? ''));
+		$latestBrDocumentReasonText = trim((string)($latestBrDocumentReason['reason'] ?? ''));
+		$latestBrDocumentReasonTitle = $latestBrDocumentReasonTitleMap[$latestBrDocumentReasonStatus] ?? '';
+		$latestBrDocumentReasonClass = $latestBrDocumentReasonClassMap[$latestBrDocumentReasonStatus] ?? '';
+		?>
+		<?php if ($brIsEditMode && $latestBrDocumentReasonTitle !== '' && $latestBrDocumentReasonText !== '') { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($latestBrDocumentReasonClass); ?>" role="status">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($latestBrDocumentReasonTitle); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($latestBrDocumentReasonText)); ?></div>
+			</div>
+		<?php } ?>
 
 		<script language="javascript">
 			var brSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
@@ -3259,6 +3300,54 @@ $adminInfoTab = [
 
 		<!-- การ์ดแท็บ: เอกสารเพิ่มเติม / ข้อความแจ้งแผนก / แนบไฟล์ / เอกสารที่เกี่ยวข้อง -->
 		<?php
+		function renderBrDocumentReturnStatus($statusDoc)
+		{
+			$statusMap = array(
+				'ส่งกลับ' => 'ส่งกลับ',
+				'Returned' => 'ส่งกลับ',
+				'Rejected' => 'ไม่อนุมัติ',
+				'Cancelled' => 'ยกเลิกเอกสาร',
+				'ยกเลิก' => 'ยกเลิกเอกสาร'
+			);
+
+			return $statusMap[$statusDoc] ?? $statusDoc;
+		}
+
+		function renderBrDocumentReturnStatusClass($statusDoc)
+		{
+			$statusClassMap = array(
+				'ส่งกลับ' => 'is-returned',
+				'Returned' => 'is-returned',
+				'Rejected' => 'is-rejected',
+				'Cancelled' => 'is-cancelled',
+				'ยกเลิก' => 'is-cancelled'
+			);
+
+			return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+		}
+
+		function formatBrDocumentLogDateTime($createdAt)
+		{
+			$createdAt = trim((string)$createdAt);
+			if ($createdAt === '') return '';
+
+			$timestamp = strtotime($createdAt);
+			if ($timestamp === false) return '';
+
+			return date('d-m-Y H:i', $timestamp);
+		}
+
+		$brDocumentLogRowsForTabs = array();
+		foreach ($brDocumentLogRows as $brDocumentLogRow) {
+			$brDocumentLogRowsForTabs[] = array(
+				'status_label' => renderBrDocumentReturnStatus($brDocumentLogRow['status_doc'] ?? ''),
+				'status_class' => renderBrDocumentReturnStatusClass($brDocumentLogRow['status_doc'] ?? ''),
+				'reason' => $brDocumentLogRow['reason'] ?? '',
+				'user_name' => $brDocumentLogRow['user_name'] ?? '',
+				'created_at' => formatBrDocumentLogDateTime($brDocumentLogRow['created_at'] ?? '')
+			);
+		}
+
 		$docTabsCard = [
 			'open_fn' => 'brOpen3Tab',
 			'doc_extra' => [
@@ -3286,6 +3375,11 @@ $adminInfoTab = [
 			'attach_file' => ['enabled' => true],
 			'related_docs' => ['enabled' => true],
 			'product_checklists' => ['enabled' => true, 'rows' => $savedProductChecklists],
+			'document_return_log' => [
+				'enabled' => true,
+				'rows' => $brDocumentLogRowsForTabs,
+				'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+			],
 		];
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>
