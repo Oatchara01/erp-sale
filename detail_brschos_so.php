@@ -478,7 +478,11 @@
 				}
 			}
 		};
-		req.send('product_code=' + encodeURIComponent(accessCode) + '&format=json');
+		req.send(
+			'product_code=' + encodeURIComponent(accessCode) +
+			'&type_company=' + encodeURIComponent(csGetSelectedTypeCompany()) +
+			'&format=json'
+		);
 	}
 </script>
 

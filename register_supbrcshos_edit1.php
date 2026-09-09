@@ -23,8 +23,30 @@ if (!$isDraftRequest) {
 include("dbconnect.php");
 include ("error_page.php");
 
+if (!function_exists('tableExists')) {
+	function tableExists($conn, $tableName)
+	{
+		static $tables = null;
+		if ($tables === null) {
+			$tables = array();
+			$res = mysqli_query($conn, "SHOW TABLES");
+			if ($res) {
+				while ($row = mysqli_fetch_array($res)) {
+					$tables[strtolower($row[0])] = true;
+				}
+			}
+		}
+		return isset($tables[strtolower($tableName)]);
+	}
+}
+
 date_default_timezone_set("Asia/Bangkok");
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
+
+// action ส่งกลับ/ไม่อนุมัติ/อนุมัติ/ยกเลิก — อ่านไว้ก่อน validation เพื่อข้าม backend validation ตอนส่งกลับ/ไม่อนุมัติ/ยกเลิก
+// (action เหล่านี้เป็นการคืน/ปิดเอกสาร ไม่ใช่อนุมัติข้อมูลให้ผ่าน จึงไม่ควรบังคับผู้อนุมัติกรอกฟอร์มให้ครบ)
+$csApproveAction = $_POST['approve_action'] ?? '';
+$isCancelDoc = (isset($_POST["cancel_doc"]) && (string)$_POST["cancel_doc"] === "1");
 
 // ===== Helper อ่านค่า $_POST — เหมือน register_supbrcshos1.php ทุกประการ =====
 // ไฟล์นี้ไม่เคย include คู่กับ register_supbrcshos1.php ในคำขอเดียวกัน (router เลือก include แค่ไฟล์เดียว)
@@ -152,7 +174,7 @@ if ($ref_id === '') {
 	exit();
 }
 
-$existingDocQuery = mysqli_query($conn, "SELECT ref_id FROM hos__consig WHERE ref_id = '" . $ref_id . "' LIMIT 1");
+$existingDocQuery = mysqli_query($conn, "SELECT ref_id, status_doc, send_sup, send_cm, send_admin FROM hos__consig WHERE ref_id = '" . $ref_id . "' LIMIT 1");
 if (!$existingDocQuery || mysqli_num_rows($existingDocQuery) === 0) {
 	if (ob_get_level() > 0) {
 		ob_end_clean();
@@ -164,9 +186,12 @@ if (!$existingDocQuery || mysqli_num_rows($existingDocQuery) === 0) {
 	}
 	exit();
 }
+$existingDocRow = mysqli_fetch_assoc($existingDocQuery);
 
-// Backend validation — ชุดเดียวกับ register_supbrcshos1.php (ข้ามเมื่อเป็น Draft)
-if (!$isDraftRequest) {
+// Backend validation — ชุดเดียวกับ register_supbrcshos1.php (ข้ามเมื่อเป็น Draft หรือ action ส่งกลับ/ไม่อนุมัติ/ยกเลิก
+// เพราะผู้อนุมัติต้องทำ action เหล่านี้ได้โดยไม่ต้องกรอกฟอร์มให้ครบก่อน)
+$csSkipValidationForApprove = in_array($csApproveAction, array('return', 'reject'), true) || $isCancelDoc;
+if (!$isDraftRequest && !$csSkipValidationForApprove) {
 	$csRequiredFieldLabels = array(
 		'start_time' => 'กรุณาใส่เวลาส่ง',
 		'customer_name' => 'กรุณาใส่ชื่อลูกค้า',
@@ -214,7 +239,6 @@ $sale_comment = cs_post($conn, "sale_comment");
 $objective = cs_post($conn, "objective");
 $objective_des = cs_post($conn, "objective_des");
 // ปุ่ม "ยกเลิกเอกสาร" มีลำดับเหนือ Draft — เหมือน register_supbrcshos1.php:197-200
-$isCancelDoc = (isset($_POST["cancel_doc"]) && (string)$_POST["cancel_doc"] === "1");
 $status_doc = $isCancelDoc ? "ยกเลิก" : ($isDraftRequest ? "Draft" : "Request");
 $delivery_name = cs_post($conn, "address_name");
 $delivery_type = cs_post($conn, "delivery_type");
@@ -730,7 +754,7 @@ if ($saveOk) {
 	// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — โครงเดียวกับ register_suphos_edit1.php:4029-4111
 	// ตรรกะ 2 ชั้นเดิมของ BRCS พอร์ตจาก approve_brcshos.php:21-30, approve_brcshos_cm.php:15,
 	// rejected_brcshos.php:15 และ rejected_brcshos_cm.php:15
-	$csApproveAction = $_POST['approve_action'] ?? '';
+	// ($csApproveAction อ่านไว้แล้วก่อน validation ด้านบน)
 	if ($csApproveAction !== '') {
 		$csApproveName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
 		$csApproveCode = (string)($_SESSION['code'] ?? ''); // ส่งดิบ — cs_update_column_if_exists escape ให้เอง
@@ -741,6 +765,10 @@ if ($saveOk) {
 		// ผู้อนุมัติชั้น CM ยึดชื่อผู้ใช้ตามหน้าเดิม register_brcshos_approve.php:138
 		$csIsCmApprover = in_array(($_SESSION['name'] ?? ''), array('ชลชินี', 'สมบัติ'), true);
 		$csIsExaminer = (($_SESSION['code'] ?? '') === 'SS5');
+		$csCurrentStatusDoc = (string)($existingDocRow['status_doc'] ?? '');
+		$csCurrentSendSup = (string)($existingDocRow['send_sup'] ?? '0');
+		$csCurrentSendCm = (string)($existingDocRow['send_cm'] ?? '0');
+		$csCurrentSendAdmin = (string)($existingDocRow['send_admin'] ?? '0');
 
 		if ($csApproveAction === 'return') {
 			// ส่งกลับให้ Sale แก้ไข — send_sup='0' ทำให้ปุ่ม Submit บนฟอร์มกลับมาใช้ได้อีกครั้ง
@@ -752,17 +780,55 @@ if ($saveOk) {
 				mysqli_query($conn, "UPDATE hos__consig SET status_doc='Rejected', approve='" . $csApproveName . "', approve_date='" . $csApproveDate . "', approve_time='" . $csApproveTime . "' WHERE ref_id='" . $csSafeRefId . "'");
 			}
 		} elseif ($csApproveAction === 'approve') {
-			if ($csIsCmApprover) {
-				// ชั้นสุดท้าย: CM อนุมัติ เอกสารจบ
+			$csApprovalApplied = false;
+			if ($csCurrentStatusDoc === 'Request' && $csIsCmApprover && $csCurrentSendCm === '1' && $csCurrentSendAdmin === '0') {
+				// Final tier: CM can finish the document only after manager approval.
 				mysqli_query($conn, "UPDATE hos__consig SET send_admin='1', status_doc='Approve', cm_name='" . $csApproveName . "', cm_date='" . $csApproveStamp . "' WHERE ref_id='" . $csSafeRefId . "'");
-			} elseif ($csIsExaminer) {
-				// ชั้นผู้ตรวจ (SS5): แค่ยืนยันว่าตรวจแล้ว ส่งต่อให้หัวหน้า
+				$csApprovalApplied = true;
+			} elseif ($csCurrentStatusDoc === 'Request' && $csIsExaminer && $csCurrentSendSup === '0') {
+				// Examiner tier: marks review done, then sends to manager.
 				mysqli_query($conn, "UPDATE hos__consig SET send_sup='1', status_doc='Request', examine_name='" . $csApproveName . "', examine_date='" . $csApproveDate . "' WHERE ref_id='" . $csSafeRefId . "'");
-			} else {
-				// ชั้นหัวหน้า: อนุมัติแล้วส่งต่อให้ CM
+				$csApprovalApplied = true;
+			} elseif ($csCurrentStatusDoc === 'Request' && !$csIsCmApprover && !$csIsExaminer && $csCurrentSendSup === '1' && $csCurrentSendCm === '0') {
+				// Manager tier: approve and forward to CM.
 				mysqli_query($conn, "UPDATE hos__consig SET send_cm='1', status_doc='Request', approve='" . $csApproveName . "', approve_date='" . $csApproveDate . "', approve_time='" . $csApproveTime . "' WHERE ref_id='" . $csSafeRefId . "'");
+				$csApprovalApplied = true;
 			}
-			cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'approve_code', $csApproveCode);
+			if ($csApprovalApplied) {
+				cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'approve_code', $csApproveCode);
+			}
+		}
+	}
+
+	// ===== ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — mirror ของ register_supbrhos_edit1.php:2414-2442 =====
+	if (tableExists($conn, 'tb_document_status_log')) {
+		$csLogSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+		$csLogUserId = mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '');
+		$csLogUserName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+		$csApproveReasonRaw = trim((string)($_POST['cs_approve_reason'] ?? ''));
+		$csApproveStatusMap = array(
+			'return' => 'Returned',
+			'reject' => 'Rejected',
+		);
+
+		if (isset($csApproveStatusMap[$csApproveAction]) && $csApproveReasonRaw !== '') {
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+			VALUES ('" . $csLogSafeRefId . "', '" . $csApproveStatusMap[$csApproveAction] . "', '"
+				. mysqli_real_escape_string($conn, $csApproveReasonRaw) . "', '"
+				. $csLogUserId . "', '"
+				. $csLogUserName . "')");
+		}
+
+		$csCancelReasonRaw = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+		if ($csCancelReasonRaw === '') {
+			$csCancelReasonRaw = $csApproveReasonRaw;
+		}
+		if ($isCancelDoc && $csCancelReasonRaw !== '') {
+			mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+			VALUES ('" . $csLogSafeRefId . "', 'Cancelled', '"
+				. mysqli_real_escape_string($conn, $csCancelReasonRaw) . "', '"
+				. $csLogUserId . "', '"
+				. $csLogUserName . "')");
 		}
 	}
 

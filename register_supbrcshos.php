@@ -487,6 +487,7 @@ $savedTransaction = null;
 $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
+$csDocumentLogRows = array();
 
 if ($loadRefId !== "") {
 	$savedBrQuery = mysqli_query($conn, "SELECT * FROM hos__consig WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
@@ -558,6 +559,20 @@ if ($loadRefId !== "") {
 			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
 			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
 				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
+			}
+		}
+
+		// ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก — เฉพาะ edit mode จริง (ไม่ใช่ copy mode) ใช้ ref_id ของ hos__consig
+		// mirror ของ register_supbrhos.php:1290-1298 — เช็คตารางก่อนกัน environment ที่ยังไม่มี tb_document_status_log
+		if ($savedRefId !== "") {
+			$csDocumentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+			if ($csDocumentStatusLogTableQuery && mysqli_num_rows($csDocumentStatusLogTableQuery) > 0) {
+				$csDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $loadRefId . "' AND status_doc IN ('Returned', 'ส่งกลับ', 'Rejected', 'Cancelled', 'ยกเลิก') ORDER BY created_at DESC, id DESC");
+				if ($csDocumentLogQuery) {
+					while ($csDocumentLogRow = mysqli_fetch_assoc($csDocumentLogQuery)) {
+						$csDocumentLogRows[] = $csDocumentLogRow;
+					}
+				}
 			}
 		}
 	}
@@ -779,6 +794,62 @@ if ($csPrefillSource !== null) {
 		</div>
 	</div>
 
+	<?php
+	// แบนเนอร์เหตุผลล่าสุด — mirror ของ register_supbrhos.php:1652-1679
+	function renderCsDocumentReturnStatus($statusDoc)
+	{
+		$statusMap = array(
+			'Returned' => 'ส่งกลับ',
+			'ส่งกลับ' => 'ส่งกลับ',
+			'Rejected' => 'ไม่อนุมัติ',
+			'Cancelled' => 'ยกเลิกเอกสาร',
+			'ยกเลิก' => 'ยกเลิกเอกสาร'
+		);
+		return $statusMap[$statusDoc] ?? $statusDoc;
+	}
+
+	function renderCsDocumentReturnStatusClass($statusDoc)
+	{
+		$statusClassMap = array(
+			'Returned' => 'is-returned',
+			'ส่งกลับ' => 'is-returned',
+			'Rejected' => 'is-rejected',
+			'Cancelled' => 'is-cancelled',
+			'ยกเลิก' => 'is-cancelled'
+		);
+		return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+	}
+
+	function formatCsDocumentLogDateTime($createdAt)
+	{
+		$createdAt = trim((string)$createdAt);
+		if ($createdAt === '') return '';
+		$timestamp = strtotime($createdAt);
+		if ($timestamp === false) return '';
+		return date('d-m-Y H:i', $timestamp);
+	}
+
+	$latestCsDocumentReasonTitleMap = array(
+		'Returned' => 'เหตุผลในการส่งกลับ',
+		'ส่งกลับ' => 'เหตุผลในการส่งกลับ',
+		'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+		'Cancelled' => 'เหตุผลในการยกเลิก',
+		'ยกเลิก' => 'เหตุผลในการยกเลิก'
+	);
+	$latestCsDocumentReason = $csDocumentLogRows[0] ?? null;
+	$latestCsDocumentReasonStatus = trim((string)($latestCsDocumentReason['status_doc'] ?? ''));
+	$latestCsDocumentReasonText = trim((string)($latestCsDocumentReason['reason'] ?? ''));
+	$latestCsDocumentReasonTitle = $latestCsDocumentReasonTitleMap[$latestCsDocumentReasonStatus] ?? '';
+	$latestCsDocumentReasonClass = renderCsDocumentReturnStatusClass($latestCsDocumentReasonStatus);
+	?>
+	<?php if ($savedBr !== null && $latestCsDocumentReasonTitle !== '' && $latestCsDocumentReasonText !== '') { ?>
+		<div class="so-latest-reason-banner <?php echo so_saved_h($latestCsDocumentReasonClass); ?>" role="status">
+			<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+			<div class="so-latest-reason-title"><?php echo so_saved_h($latestCsDocumentReasonTitle); ?></div>
+			<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($latestCsDocumentReasonText)); ?></div>
+		</div>
+	<?php } ?>
+
 	<form action="<?php echo ($savedBr !== null) ? 'register_supbrcshos_edit1.php' : 'register_supbrcshos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
@@ -822,6 +893,12 @@ if ($csPrefillSource !== null) {
 				if (document.frmMain.province_name.value == "") {
 					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
 					brFocusField(document.frmMain.province_name);
+					return false;
+				}
+
+				if (document.frmMain.sale_code.value == "") {
+					alert('กรุณาเลือกแผนก/เขตการขาย');
+					brFocusField(document.frmMain.sale_code);
 					return false;
 				}
 
@@ -885,9 +962,9 @@ if ($csPrefillSource !== null) {
 		</div>
 
 		<div id="tab-document-info" class="so-tab-content active">
-			<!-- Figma node 627:2681 (แท็บ "ข้อมูลเอกสาร") shows only these 2 elements — every other
-			     field this document type actually needs (วันที่, เขตการขาย, แนบไฟล์, วัตถุประสงค์,
-			     พนักงาน, แผนก) has been relocated to the cards below. -->
+			<!-- Figma node 627:2681 (แท็บ "ข้อมูลเอกสาร") shows only บริษัท/งานด่วน — แผนก/เขตการขาย
+			     ถูกเพิ่มไว้ที่นี่ (mirror ของ register_supbrhos.php:2029-2137) ส่วนฟิลด์อื่นที่เหลือ
+			     (วันที่, แนบไฟล์, วัตถุประสงค์, พนักงาน, แผนก) ถูก relocate ไปการ์ดอื่นด้านล่าง. -->
 			<div class="so-card">
 				<div class="so-doc-info-line">
 					<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
@@ -896,6 +973,41 @@ if ($csPrefillSource !== null) {
 							<select class="so-select" name="company" id="company_select" required>
 								<option value="1" selected>AWL</option>
 								<option value="2">NBM</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
+						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
+						<div class="so-select-wrapper">
+							<?php
+							// mirror ของ register_supbrhos.php:2029-2137 — ทีมขายตาม $_SESSION['code']
+							if ($_SESSION['code'] == 'SS1') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
+							} else if ($_SESSION['code'] == 'SS2') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
+							} else if ($_SESSION['code'] == 'SS3') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
+							} else if ($_SESSION['code'] == 'SS5') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
+							} else if ($_SESSION['code'] == 'MK2') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
+							} else if ($_SESSION['code'] == 'SUP_EN') {
+								$csSaleTeamSql = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
+							} else {
+								$csSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
+							}
+							?>
+							<select name="sale_code" id="sale_code" class="so-select" required>
+								<option value="">**Please Select**</option>
+								<?php
+								$csSaleTeamQuery = mysqli_query($com, $csSaleTeamSql);
+								while ($csSaleTeamRow = mysqli_fetch_array($csSaleTeamQuery)) {
+								?>
+									<option value="<?php echo $csSaleTeamRow["sale_code"]; ?>"><?php echo $csSaleTeamRow["sale_code"]; ?> - <?php echo $csSaleTeamRow["sale_name"]; ?></option>
+								<?php
+								}
+								?>
 							</select>
 						</div>
 					</div>
@@ -1125,7 +1237,6 @@ if ($csPrefillSource !== null) {
 			</div>
 
 			<input type="hidden" name="sale_comment" id="sale_comment" value="">
-			<input type="hidden" name="sale_code" id="sale_code" value="">
 
 		</div>
 
@@ -2044,10 +2155,26 @@ if ($csPrefillSource !== null) {
 
 		<!-- การ์ดแท็บ: ข้อความแจ้งแผนก / แนบไฟล์ -->
 		<?php
+		$csDocumentLogRowsForTabs = array();
+		foreach ($csDocumentLogRows as $csDocumentLogRow) {
+			$csDocumentLogRowsForTabs[] = array(
+				'status_label' => renderCsDocumentReturnStatus($csDocumentLogRow['status_doc'] ?? ''),
+				'status_class' => renderCsDocumentReturnStatusClass($csDocumentLogRow['status_doc'] ?? ''),
+				'reason' => $csDocumentLogRow['reason'] ?? '',
+				'user_name' => $csDocumentLogRow['user_name'] ?? '',
+				'created_at' => formatCsDocumentLogDateTime($csDocumentLogRow['created_at'] ?? '')
+			);
+		}
+
 		$docTabsCard = [
 			'open_fn' => 'brOpen3Tab',
 			'dept_comment' => ['enabled' => true, 'technician_required_checked' => false],
 			'attach_file' => ['enabled' => true],
+			'document_return_log' => [
+				'enabled' => true,
+				'rows' => $csDocumentLogRowsForTabs,
+				'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+			],
 		];
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>
@@ -2083,7 +2210,7 @@ $csIsExaminer = (($_SESSION['code'] ?? '') === 'SS5');
 $csIsSaleUser = (($_SESSION['type_login'] ?? '') === 'Sale');
 // แต่ละชั้นโผล่ได้ครั้งเดียว กันกดอนุมัติซ้ำทั้งที่ส่งต่อชั้นถัดไปแล้ว
 $csTierReady = $csIsCmApprover
-	? ($csSendAdmin === '0')
+	? ($csSendCm === '1' && $csSendAdmin === '0')
 	: ($csIsExaminer ? ($csSendSup === '0') : ($csSendSup === '1' && $csSendCm === '0'));
 $csCanShowApproveBar = $csIsEditMode && !$csIsSaleUser && ($csStatusDoc === 'Request') && $csTierReady;
 // ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่ เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองแล้ว
@@ -2095,17 +2222,22 @@ $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 			<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
 			     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
 			<input type="hidden" name="approve_action" id="cs_approve_action" value="">
+			<input type="hidden" name="cs_approve_reason" id="cs_approve_reason" value="">
 			<div class="so-approve-actions">
 				<button type="button" class="so-overflow-menu-trigger" id="btn_approve_overflow" onclick="toggleApproveOverflowMenu()">
 					<i class="fas fa-ellipsis-v"></i>
 				</button>
 				<div id="approveOverflowMenu" class="so-overflow-menu">
-					<button type="button" onclick="csRunApproveAction('return', true)"><i class="fas fa-reply"></i> ส่งกลับ</button>
-					<button type="button" class="so-menu-danger" onclick="csRunApproveAction('reject', true)"><i class="fas fa-times-circle"></i> ไม่อนุมัติ</button>
-					<button type="button" onclick="triggerCancelDocFromApproveMenu()"><i class="far fa-window-close"></i> ยกเลิกเอกสาร</button>
+					<button type="button" name="approve_action" value="return" onclick="csRunApproveAction('return', true);" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+					<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="csRunApproveAction('reject', true);" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+					<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 				</div>
-				<button type="button" class="btn-so-approve" onclick="csRunApproveAction('approve', false)"><i class="far fa-check-circle"></i> อนุมัติ</button>
-				<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> Update</button>
+				<button type="button" name="approve_action" value="approve" class="btn-so-approve" onclick="csRunApproveAction('approve', false);">
+					<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
+				</button>
+				<button type="button" name="save_draft" onclick="brcsSaveDraft();" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+					<img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update
+				</button>
 			</div>
 		<?php endif; ?>
 		<?php if (!$csHideSubmit): ?>
@@ -2132,29 +2264,128 @@ $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 		if (!menu.contains(e.target)) menu.style.display = 'none';
 	});
 
-	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป
-	// register_supbrcshos_edit1.php (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ)
-	// ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
-	function csRunApproveAction(action, skipValidation) {
-		var field = document.getElementById('cs_approve_action');
-		if (field) field.value = action;
+	// เปิด popup ให้กรอกเหตุผล (ส่งกลับ/ไม่อนุมัติ) — ห้าม submit ถ้าเหตุผลว่าง
+	// mirror ของ register_supbrhos.php:967-1013 (brOpenReasonPopup)
+	function csOpenReasonPopup(opts) {
+		var refInput = document.querySelector('input[name="ref_id"]');
+		var refId = refInput ? refInput.value.trim() : '';
 
-		if (skipValidation) {
-			if (csSubmitting) return;
-			csSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
-			HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+		if (typeof Swal === 'undefined') {
+			var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+			fallbackReason = (fallbackReason || '').trim();
+			if (fallbackReason !== '') opts.onConfirm(fallbackReason);
 			return;
 		}
 
+		Swal.fire({
+			title: opts.title,
+			html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+				'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: opts.placeholder || '',
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true,
+			showCloseButton: true,
+			reverseButtons: false,
+			confirmButtonText: 'ตกลง',
+			cancelButtonText: 'ยกเลิก',
+			buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup',
+				title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html',
+				confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+				actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon',
+				input: 'so-reason-textarea',
+				closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function(value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') {
+					Swal.showValidationMessage('กรุณาระบุเหตุผล');
+					return false;
+				}
+				return trimmed;
+			}
+		}).then(function(result) {
+			if (result.isConfirmed) opts.onConfirm(result.value);
+		});
+	}
+
+	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป
+	// register_supbrcshos_edit1.php (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ)
+	// ส่งกลับ/ไม่อนุมัติ ต้องกรอกเหตุผลก่อนแล้วข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+	function csRunApproveAction(action, skipValidation) {
+		var field = document.getElementById('cs_approve_action');
+
+		if (skipValidation) {
+			var reasonConfig = {
+				return: {
+					title: 'ส่งกลับเอกสารนี้ ?',
+					subtitleText: 'ส่งกลับเอกสารเลขที่',
+					label: 'ระบุเหตุผลการส่งกลับ',
+					placeholder: 'ระบุเหตุผลการส่งกลับ',
+					iconBg: '#FFF4E5',
+					iconSrc: 'img/icons/send_back.png'
+				},
+				reject: {
+					title: 'ไม่อนุมัติเอกสารนี้ ?',
+					subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+					label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					iconBg: '#FEECEB',
+					iconSrc: 'img/icons/reject.png'
+				}
+			} [action];
+			if (!reasonConfig) return;
+
+			csOpenReasonPopup(Object.assign({}, reasonConfig, {
+				onConfirm: function(reason) {
+					if (csSubmitting) return;
+					csSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+					if (field) field.value = action;
+					var reasonField = document.getElementById('cs_approve_reason');
+					if (reasonField) reasonField.value = reason;
+					HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+				}
+			}));
+			return;
+		}
+
+		if (field) field.value = action;
 		fncSubmit();
 		// fncSubmit() คืนค่า false ทั้งกรณีสำเร็จและ validation ไม่ผ่าน จึงดูจากธง csSubmitting แทน
 		if (!csSubmitting && field) field.value = '';
 	}
 
-	// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก cancel_doc แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
+	// ยกเลิกเอกสารจากเมนู ⋮ — mirror ของ register_suphos.php:3703-3729
 	function triggerCancelDocFromApproveMenu() {
-		toggleCancelDoc();
-		HTMLFormElement.prototype.submit.call(csEnsureSubmitMarker());
+		csOpenReasonPopup({
+			title: 'ยกเลิกเอกสารนี้ ?',
+			subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+			label: 'ระบุเหตุผลในการยกเลิก',
+			placeholder: 'ระบุเหตุผลในการยกเลิก',
+			iconBg: '#F4F5F7',
+			iconSrc: 'img/icons/cancel_document.png',
+			onConfirm: function(reason) {
+				var cancelInput = document.getElementById('cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc');
+				if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
+					toggleCancelDoc();
+				}
+
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				var reasonField = document.getElementById('cs_approve_reason');
+				var actionField = document.getElementById('cs_approve_action');
+				if (reasonInput) reasonInput.value = reason;
+				if (reasonField) reasonField.value = reason;
+				if (actionField) actionField.value = '';
+				var form = csEnsureSubmitMarker();
+				if (form) HTMLFormElement.prototype.submit.call(form);
+			}
+		});
 	}
 
 	function goMainSupBrcs() {

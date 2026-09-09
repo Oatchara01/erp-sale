@@ -11,14 +11,6 @@
  * BR-Order-specific stylesheet.
  */
 
-/* Figma node 627:2679 specs this page's header title at 24px/Medium;
-   the shared .so-title in so-core.css is 28px/600 (tuned for other pages
-   that reuse it) - override here only, don't touch the shared file. */
-.register-so-main .so-title {
-	font-size: 24px;
-	font-weight: 500;
-}
-
 .br-returns-row-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -917,5 +909,3 @@
 .cs-modal-btn-cancel:hover {
 	background-color: #e2e8f0;
 }
-
-
