@@ -26,7 +26,7 @@
 	}
 
 	/* ===== Drag-reorder + checkbox multi-select + bulk delete + Summary + Modal (Figma 627-2753 & 984-5469) ===== */
-	var csFieldNames = ['product_codet', 'product_id', 'product_name', 'product_name_view', 'unit_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'warranty', 'cal', 'pm', 'pm_year', 'sale_remarkk', 'print_name', 'sn'];
+	var csFieldNames = ['product_codet', 'product_id', 'product_name', 'product_name_view', 'unit_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'warranty', 'cal', 'pm', 'pm_year', 'sale_remarkk', 'sn'];
 	var csDraggedRowIndex = null;
 	var csActiveEditRowIndex = null;
 
@@ -367,14 +367,14 @@
 		var pmEl = document.getElementById('pm' + rowIndex);
 		var pmYearEl = document.getElementById('pm_year' + rowIndex);
 		var remarkEl = document.getElementById('sale_remarkk' + rowIndex);
-		var printNameEl = document.getElementById('print_name' + rowIndex);
+		var snEl = document.getElementById('sn' + rowIndex);
 
 		document.getElementById('modal_warranty').value = warrantyEl ? warrantyEl.value : '';
 		document.getElementById('modal_cal').value = calEl ? calEl.value : '';
 		document.getElementById('modal_pm_year').value = pmYearEl ? pmYearEl.value : '';
 		document.getElementById('modal_pm').value = pmEl ? pmEl.value : '';
 		document.getElementById('modal_sale_remarkk').value = remarkEl ? remarkEl.value : '';
-		document.getElementById('modal_print_name').value = printNameEl ? printNameEl.value : '';
+		document.getElementById('modal_sn').value = snEl ? snEl.value : '';
 
 		var modal = document.getElementById('cs_edit_modal');
 		if (modal) {
@@ -398,14 +398,14 @@
 		var pmEl = document.getElementById('pm' + i);
 		var pmYearEl = document.getElementById('pm_year' + i);
 		var remarkEl = document.getElementById('sale_remarkk' + i);
-		var printNameEl = document.getElementById('print_name' + i);
+		var snEl = document.getElementById('sn' + i);
 
 		if (warrantyEl) warrantyEl.value = document.getElementById('modal_warranty').value;
 		if (calEl) calEl.value = document.getElementById('modal_cal').value;
 		if (pmYearEl) pmYearEl.value = document.getElementById('modal_pm_year').value;
 		if (pmEl) pmEl.value = document.getElementById('modal_pm').value;
 		if (remarkEl) remarkEl.value = document.getElementById('modal_sale_remarkk').value;
-		if (printNameEl) printNameEl.value = document.getElementById('modal_print_name').value;
+		if (snEl) snEl.value = document.getElementById('modal_sn').value;
 
 		csCloseEditModal();
 	}
@@ -583,7 +583,6 @@
 					<th>จำนวน</th>
 					<th>ราคา/หน่วย</th>
 					<th>ยอดรวม</th>
-					<th>หมายเลข SN</th>
 					<th aria-label="จัดการรายการ"></th>
 				</tr>
 			</thead>
@@ -620,7 +619,7 @@
 							<input type='hidden' name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>" />
 							<input type='hidden' name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>" />
 							<input type='hidden' name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>" />
-							<input type='hidden' name="print_name<?php echo $i; ?>" id="print_name<?php echo $i; ?>" />
+							<input type='hidden' name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>" />
 						</td>
 						<td>
 							<span class="cs-product-name-text" id="product_name_view<?php echo $i; ?>"></span>
@@ -637,11 +636,6 @@
 						</td>
 						<td>
 							<input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" value="" jAutoCalc='{sale_count<?php echo $i; ?>} * {product_price<?php echo $i; ?>} - {discount_unit<?php echo $i; ?>} * {sale_count<?php echo $i; ?>}' readonly />
-						</td>
-						<td>
-							<div class="cs-cell-pill">
-								<input type='text' name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>" class="so-input" placeholder="ใส่เลข SN" />
-							</div>
 						</td>
 						<td class="cs-row-actions-cell">
 							<button type="button" class="cs-row-edit-btn" id="cs_extra_toggle_btn<?php echo $i; ?>" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="csOpenEditModal(<?php echo $i; ?>);">
@@ -693,8 +687,8 @@
 						<input type="text" id="modal_sale_remarkk" class="so-input" placeholder="ระบุหมายเหตุสินค้า" />
 					</div>
 					<div class="so-field-group">
-						<label class="so-label">ชื่อที่แสดงในใบส่งสินค้า</label>
-						<input type="text" id="modal_print_name" class="so-input" placeholder="ระบุชื่อสำหรับแสดงในใบส่งสินค้า" />
+						<label class="so-label">หมายเลข SN</label>
+						<input type="text" id="modal_sn" class="so-input" placeholder="ใส่เลข SN" />
 					</div>
 				</div>
 			</div>

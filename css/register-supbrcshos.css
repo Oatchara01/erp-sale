@@ -434,7 +434,7 @@
 .so-product-table th:nth-child(2),
 .so-product-table td:nth-child(2) { width: 14%; }
 .so-product-table th:nth-child(3),
-.so-product-table td:nth-child(3) { width: 25%; }
+.so-product-table td:nth-child(3) { width: 39%; }
 .so-product-table th:nth-child(4),
 .so-product-table td:nth-child(4) { width: 8%; text-align: center; }
 .so-product-table th:nth-child(5),
@@ -442,9 +442,7 @@
 .so-product-table th:nth-child(6),
 .so-product-table td:nth-child(6) { width: 11%; text-align: right; }
 .so-product-table th:nth-child(7),
-.so-product-table td:nth-child(7) { width: 14%; }
-.so-product-table th:nth-child(8),
-.so-product-table td:nth-child(8) { width: 100px; text-align: center; padding-left: 4px; padding-right: 4px; }
+.so-product-table td:nth-child(7) { width: 100px; text-align: center; padding-left: 4px; padding-right: 4px; }
 
 .so-product-table th,
 .so-product-table td {

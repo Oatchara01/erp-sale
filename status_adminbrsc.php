@@ -450,6 +450,9 @@ include "dbconnect_sale.php";
 												<a class="so-dropdown-item" href="report_brcshos.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" target="_blank">
 													<i class="fas fa-search" style="width:16px;"></i> Preview
 												</a>
+												<a class="so-dropdown-item" href="report_brcshos_n.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" target="_blank">
+													<i class="fas fa-print" style="width:16px;"></i> Print ใบยืมต่อเนื่อง
+												</a>
 											</div>
 										</div>
 									</td>
