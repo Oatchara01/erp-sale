@@ -273,6 +273,9 @@ include "dbconnect_sale.php";
 												<a href="<?php echo $preview_url; ?>?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item" target="_blank">
 													<i class="fas fa-search" style="width:16px;"></i> Preview
 												</a>
+												<a href="report_changhos1.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item" target="_blank">
+													<i class="fas fa-print" style="width:16px;"></i> Print ต่อเนื่อง
+												</a>
 											<?php } ?>
 										</div>
 									</div>

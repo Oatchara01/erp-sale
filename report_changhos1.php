@@ -4,9 +4,14 @@ define('FPDF_FONTPATH','font/');
  
 require('fpdf1.php');
 
-$ref_id=$_GET["ref_id"];
+$ref_id = isset($_GET["ref_id"]) ? trim($_GET["ref_id"]) : '';
 
 include"dbconnect.php";
+
+if ($ref_id == '') {
+	http_response_code(400);
+	exit('Missing ref_id');
+}
 
 date_default_timezone_set("Asia/Bangkok");
 function DateThai($strDate)
@@ -28,24 +33,31 @@ $pdf->AddFont('times','','times.php');
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM hos__change  WHERE ref_id = '".$ref_id."' ";
+$ref_id_sql = mysqli_real_escape_string($conn, $ref_id);
+
+$strSQL = "SELECT * FROM hos__change  WHERE ref_id = '".$ref_id_sql."' ";
 $objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
 $objResult = mysqli_fetch_array($objQuery);
 
-$strSQL1 = "SELECT * FROM (hos__subchange LEFT JOIN tb_product ON hos__subchange.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
+if (!$objResult) {
+	http_response_code(404);
+	exit('Document not found');
+}
+
+$strSQL1 = "SELECT * FROM (hos__subchange LEFT JOIN tb_product ON hos__subchange.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id_sql."' ";
 $objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
 $Num_Rows1 = mysqli_num_rows($objQuery1);
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_sale !='0' ";
+$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id_sql."' and count_sale !='0' ";
 $objQuery15 = mysqli_query($conn,$strSQL15);
 $objResult15= mysqli_fetch_array($objQuery15);
 
-$strSQL16 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id."' and count_stock !='0' ";
+$strSQL16 = "SELECT SUM(amount) AS amount_1 FROM hos__subchange WHERE ref_idd = '".$ref_id_sql."' and count_stock !='0' ";
 $objQuery16 = mysqli_query($conn,$strSQL16);
 $objResult16 = mysqli_fetch_array($objQuery16);
 
-$summary_stock=$objResult16['amount_1'];
-$summary_sale=$objResult15['amount_1'];
+$summary_stock = isset($objResult16['amount_1']) ? (float)$objResult16['amount_1'] : 0;
+$summary_sale = isset($objResult15['amount_1']) ? (float)$objResult15['amount_1'] : 0;
 
 $summary_1 = $summary_sale-$summary_stock;
 
@@ -60,7 +72,8 @@ $address =$objResult["address"];
 $delivery_tel =$objResult["delivery_tel"];
 $delivery_address =$objResult["delivery_address"];
 
-$objective =$objResult["objective"]; 
+$objective =$objResult["objective"];
+$objective_des = $objResult["objective_des"];
 
 $sale = $objResult["add_by"];
 $sale_code = $objResult["sale_code"];
@@ -70,13 +83,18 @@ $sale_comment = $objResult["sale_comment"];
 $type_doc = $objResult["company"];
 
 
-$sql = "SELECT *  FROM tb_user where name ='".$approve."' ";
+$approve_sql = mysqli_real_escape_string($conn, $approve);
+$sql = "SELECT *  FROM tb_user where name = '".$approve_sql."' ";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
 
-$name = $rs["name"];
-$surname = $rs["surname"];
-$approve_name = "$name $surname";
+if ($rs) {
+	$name = isset($rs["name"]) ? $rs["name"] : '';
+	$surname = isset($rs["surname"]) ? $rs["surname"] : '';
+	$approve_name = trim("$name $surname");
+} else {
+	$approve_name = $approve;
+}
 
 $month = date('m');
 $day = date('d');
@@ -513,7 +531,7 @@ $pdf->MultiCell(9.0,0.4, iconv( 'UTF-8','cp874' , "Purpose"),0 ,'L' );
 if ($objective=='1'){
 
 $pdf->setXY(14.1,20.6);
-$pdf->MultiCell(7.0,0.6, iconv( 'UTF-8','cp874' , "แลกเปลี่ยนสินค้า $objective_des4"),0 ,'L' );
+$pdf->MultiCell(7.0,0.6, iconv( 'UTF-8','cp874' , "แลกเปลี่ยนสินค้า $objective_des"),0 ,'L' );
 
 
 }
