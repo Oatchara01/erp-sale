@@ -146,11 +146,15 @@
 	function updateSummaryValues(summary) {
 		var safeSummary = summary || {};
 		var creditDay = String(safeSummary.credit_day || '').trim();
+		var summaryDay = getElement('creditTermSummaryDay');
+		var summaryAmount = getElement('creditTermSummaryAmount');
+		var summaryOutstanding = getElement('creditTermSummaryOutstanding');
+		var summaryRemaining = getElement('creditTermSummaryRemaining');
 
-		getElement('creditTermSummaryDay').textContent = creditDay !== '' ? creditDay : '-';
-		getElement('creditTermSummaryAmount').textContent = formatMoney(safeSummary.credit_amount || 0);
-		getElement('creditTermSummaryOutstanding').textContent = formatMoney(safeSummary.total_outstanding || 0);
-		getElement('creditTermSummaryRemaining').textContent = formatMoney(safeSummary.remaining_credit || 0);
+		if (summaryDay) summaryDay.textContent = creditDay !== '' ? creditDay : '-';
+		if (summaryAmount) summaryAmount.textContent = formatMoney(safeSummary.credit_amount || 0);
+		if (summaryOutstanding) summaryOutstanding.textContent = formatMoney(safeSummary.total_outstanding || 0);
+		if (summaryRemaining) summaryRemaining.textContent = formatMoney(safeSummary.remaining_credit || 0);
 	}
 
 	function buildTrackRowsHtml(tracks) {

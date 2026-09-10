@@ -382,6 +382,7 @@ if ($chgSrc !== null) {
 		'objective_des' => $chgSrc['objective_des'],
 		'que_ckk' => $chgSrc['que_ckk'] ?? '',
 		'send_cs' => $chgSrc['send_cs'] ?? '',
+		'sale_code' => $chgSrc['sale_code'],
 		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
 		'address_name' => $chgSrc['delivery_name'],
 		'address_merged_ui' => $chgSrc['delivery_name'],
@@ -547,6 +548,12 @@ if ($chgSrc !== null) {
 					return false;
 				}
 
+				if (document.frmMain.sale_code.value == "") {
+					alert('กรุณาเลือกแผนก/เขตการขาย');
+					chgFocusField(document.frmMain.sale_code);
+					return false;
+				}
+
 				var hasProduct = false;
 				for (var pi = 1; pi <= 6; pi++) {
 					var productIdInput = document.getElementsByName('product_id' + pi)[0];
@@ -687,6 +694,43 @@ if ($chgSrc !== null) {
 										<select class="so-select" name="company" id="company_select" required>
 											<option value="1" selected>AWL</option>
 											<option value="2">NBM</option>
+										</select>
+									</div>
+								</div>
+
+								<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
+									<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
+									<div class="so-select-wrapper">
+										<?php
+										// mirror ของ register_supbrcshos.php:984-999 — ทีมขายตาม $_SESSION['code']
+										if ($_SESSION['code'] == 'SS1') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
+										} else if ($_SESSION['code'] == 'SS2') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
+										} else if ($_SESSION['code'] == 'SS3') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
+										} else if ($_SESSION['code'] == 'SS5') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
+										} else if ($_SESSION['code'] == 'MK2') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
+										} else if ($_SESSION['code'] == 'SUP_EN') {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
+										} else {
+											$chgSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
+										}
+										?>
+										<select name="sale_code" id="sale_code" class="so-select" required>
+											<option value="">**Please Select**</option>
+											<?php
+											$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
+											if ($chgSaleTeamQuery) {
+												while ($chgSaleTeamRow = mysqli_fetch_array($chgSaleTeamQuery)) {
+											?>
+												<option value="<?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?>"><?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?> - <?php echo so_saved_h($chgSaleTeamRow["sale_name"]); ?></option>
+											<?php
+												}
+											}
+											?>
 										</select>
 									</div>
 								</div>
