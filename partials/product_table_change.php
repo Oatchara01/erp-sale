@@ -7,11 +7,9 @@
  *
  * register_supchange1.php reads exactly these fields per row i=1..6:
  *   product_id{i}, count_stock{i}, count_sale{i}, product_price{i},
- *   sale_remarkk{i}, sum_amount{i}
- * — do not rename/drop any of those. Everything else in this table
- * (product_name/unit_name/search box/sn{i}) is UI-only and not read by
- * register_supchange1.php (sn{i} is a pre-existing dead field, kept for
- * visual parity per the redesign plan).
+ *   sale_remarkk{i}, sum_amount{i}, product_name{i}, unit_name{i}
+ * — do not rename/drop any of those. product_name/unit_name are posted for
+ * the tb_register_data.product_name summary; search box/sn{i} remain UI-only.
  *
  * Row-fill AJAX target and the live search-as-you-type autocomplete both use
  * dedicated data_product_*_ptc.php endpoints (NOT the data_product_hos.php /
@@ -460,8 +458,8 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 					<td>
 						<span class="cs-code-text" id="product_codet<?php echo $i; ?>"></span>
 						<input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>">
-						<input type="hidden" id="product_name<?php echo $i; ?>">
-						<input type="hidden" id="unit_name<?php echo $i; ?>">
+						<input type="hidden" name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>">
+						<input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>">
 					</td>
 					<td>
 						<span class="cs-product-name-text" id="product_name_view<?php echo $i; ?>"></span>
