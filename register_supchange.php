@@ -711,7 +711,7 @@ if ($chgSrc !== null) {
 								['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'chgRunDocumentNo();', 'variant' => 'purple'],
 								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
+								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'chgRunJobNo();', 'icon_id' => 'btn_run_job_no'],
 							],
 							[
 								['type' => 'button_field', 'button' => [
@@ -820,6 +820,87 @@ if ($chgSrc !== null) {
 								.then(function() {
 									if (runButton) {
 										runButton.disabled = false;
+									}
+								});
+						}
+
+						// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
+						// พอร์ตจาก register_suphos.php:5413-5480 เพิ่มเติมคือกด Run แล้วติ๊ก send_cs ให้อัตโนมัติ
+						// เพราะการออกเลขที่ลงงานถือว่าเอกสารพร้อมส่งข้อมูลลงระบบ CS แล้ว
+						function chgRunJobNo() {
+							var jobNoInput = document.querySelector('input[name="admin_work_no"]');
+							var refIdInput = document.querySelector('input[name="ref_id"]');
+							// วันในการจัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
+							var jobDateInput = document.querySelector('input[name="start_date"]');
+							var runIcon = document.getElementById('btn_run_job_no');
+
+							if (!jobNoInput) {
+								return;
+							}
+
+							// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
+							if (runIcon && runIcon.dataset.loading === '1') {
+								return;
+							}
+
+							if (jobNoInput.value.trim() !== '') {
+								// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
+								if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+									return;
+								}
+							}
+
+							var payload = new URLSearchParams();
+							payload.append('ref_id', refIdInput ? refIdInput.value : '');
+							payload.append('job_date', jobDateInput ? jobDateInput.value : '');
+
+							if (runIcon) {
+								runIcon.dataset.loading = '1';
+								runIcon.style.pointerEvents = 'none';
+								runIcon.style.opacity = '0.4';
+							}
+
+							fetch('ajax_run_job_no.php', {
+									method: 'POST',
+									credentials: 'same-origin',
+									cache: 'no-store',
+									headers: {
+										'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+									},
+									body: payload.toString()
+								})
+								.then(function(response) {
+									return response.json().then(function(data) {
+										return {
+											ok: response.ok,
+											data: data
+										};
+									});
+								})
+								.then(function(result) {
+									if (!result.ok || !result.data || !result.data.success) {
+										alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
+										return;
+									}
+									jobNoInput.value = result.data.job_no;
+
+									// การออกเลขที่ลงงานถือว่าเอกสารพร้อมส่งข้อมูลลงระบบ CS แล้ว ติ๊ก send_cs ให้อัตโนมัติ
+									var sendCsInput = document.getElementById('send_cs') || document.querySelector('input[name="send_cs"]');
+									if (sendCsInput && !sendCsInput.checked) {
+										sendCsInput.checked = true;
+										sendCsInput.dispatchEvent(new Event('change', {
+											bubbles: true
+										}));
+									}
+								})
+								.catch(function() {
+									alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
+								})
+								.then(function() {
+									if (runIcon) {
+										runIcon.dataset.loading = '0';
+										runIcon.style.pointerEvents = '';
+										runIcon.style.opacity = '';
 									}
 								});
 						}
