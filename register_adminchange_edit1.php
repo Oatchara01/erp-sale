@@ -124,60 +124,70 @@ $mont = $date[1];
 $year1 = substr($year, 2 ,2);
 	
 
-if($run_id=='1'){	
+// ===== ออกเลขที่เอกสาร EXC/EXCN ตอน Admin อนุมัติ =====
+// นับจาก hos__change.iv_no โดยตรง (เลิกใช้ตารางตัวนับ tb_docbreng แล้ว) เพื่อให้เป็น series
+// เดียวกับปุ่ม "Run เอกสาร" ฝั่งขาย (ajax_run_doc_no.php doc_type=6) ที่นับจากคอลัมน์เดียวกัน
+// เลขจึงถูกจองจริงตอน UPDATE hos__change.iv_no ด้านล่าง ไม่ใช่ตอนอ่าน MAX
+// AWL (company=1) ใช้ prefix 'EXC' / NBM (company=2) ใช้ 'EXCN' — คนละ series กัน
+$chg_lock_name = '';
+if($run_id=='1'){
 
+$chg_head_no = '';
 if($company =='1'){
+	$chg_head_no = "EXC";
+}else if($company =='2'){
+	$chg_head_no = "EXCN";
+}
 
-$sql = "SELECT MAX(run_iv) AS MAXID FROM tb_docbreng where head_no='EXC' and  month_no ='".$mont."' and year_no = '".$year1."'";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
+if($chg_head_no !=''){
+
+$chg_prefix_text = $chg_head_no.$year1.$mont;
+$chg_run_offset = strlen($chg_prefix_text) + 1; // ตำแหน่งเริ่มของ running ในเลขที่เอกสาร
+
+// กัน Admin อนุมัติพร้อมกับฝั่งขายกดปุ่ม Run ด้วย named lock ชื่อเดียวกับ ajax_run_doc_no.php
+// (ปล่อย lock หลัง UPDATE hos__change ด้านล่าง เพื่อให้เลขถูกเขียนลงตารางก่อนคนถัดไปอ่าน MAX)
+$chg_lock_name = "docrun_".$chg_head_no."_".$year1.$mont;
+$chg_lock_qry = mysqli_query($conn,"SELECT GET_LOCK('".mysqli_real_escape_string($conn,$chg_lock_name)."', 5) AS got_lock");
+$chg_lock_row = $chg_lock_qry ? mysqli_fetch_assoc($chg_lock_qry) : null;
+if(!$chg_lock_row or $chg_lock_row["got_lock"] != '1'){
+	// จับ lock ไม่ได้ก็ยังออกเลขต่อ แต่ปล่อยให้ตัวกันเลขซ้ำเป็นด่านสุดท้าย
+	$chg_lock_name = '';
+}
+
+// EXCN ไม่ถูกนับรวมกับ EXC เพราะ 'EXCN6909001' ไม่ match LIKE 'EXC6909%'
+// (ตัวที่ 4 เป็น N ไม่ใช่ตัวเลขปี) และเลขรูปแบบอื่นที่ผู้ใช้พิมพ์เองก็ไม่เข้าเงื่อนไข
+$sql = "SELECT MAX(CAST(SUBSTRING(iv_no, ".$chg_run_offset.") AS UNSIGNED)) AS MAXID FROM hos__change where iv_no LIKE '".mysqli_real_escape_string($conn,$chg_prefix_text)."%'";
+$qry = mysqli_query($conn,$sql) or die(mysqli_error($conn));
 $rs = mysqli_fetch_assoc($qry);
 
-$maxId = $rs["MAXID"];	
-
-$so = "EXC";
+$maxId = $rs["MAXID"];
 
 $maxId1 = ($maxId + 1);
 $maxId2 = substr("000".$maxId1, -3);
 $nextId = $maxId2;
 
 
-$iv_no = $so.$year1.$mont.$nextId;	
+$iv_no = $chg_head_no.$year1.$mont.$nextId;
 
-$save5="insert into tb_docbreng (head_no,doc_no,year_no,month_no,run_iv,ref_id) values ('EXC','".$iv_no."','".$year1."','".$mont."','".$nextId."','".$ref_id."')";
-$qsave5=mysqli_query($conn,$save5);
-		
-	}else if($company =='2'){
-
-$sql = "SELECT MAX(run_iv) AS MAXID FROM tb_docbreng where head_no='EXCN' and  month_no ='".$mont."' and year_no = '".$year1."'";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-
-$maxId = $rs["MAXID"];	
-
-$so = "EXCN";
-
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("000".$maxId1, -3);
-$nextId = $maxId2;
-
-
-$iv_no = $so.$year1.$mont.$nextId;	
-
-$save5="insert into tb_docbreng (head_no,doc_no,year_no,month_no,run_iv,ref_id) values ('EXCN','".$iv_no."','".$year1."','".$mont."','".$nextId."','".$ref_id."')";
-$qsave5=mysqli_query($conn,$save5);
-
-
+	}else{
+$iv_no = $_POST["iv_no"];
 	}
-	
-	
-}else{	
-$iv_no = $_POST["iv_no"];	
+
+
+}else{
+$iv_no = $_POST["iv_no"];
 }
 
 
 $save="Update   hos__change set company='".$company."',date_change='".$date_change."',customer='".$customer."',customer_id='".$customer_id."',address='".$address."',sale_comment='".$sale_comment."',sn_ckk='".$sn_ckk."',sn='".$sn."',objective='".$objective."',objective_des='".$objective_des."',returns='".$returns."',returns_date='".$returns_date."',returns_time='".$returns_time."',returns_name='".$returns_name."',returns_address='".$returns_address."',returns_contact='".$returns_contact."',delivery_name='".$delivery_name."',delivery_type='".$delivery_type."',delivery_date='".$delivery_date."',delivery_time='".$delivery_time."',delivery_address='".$delivery_address."',delivery_contact='".$delivery_contact."',delivery_tel='".$delivery_tel."',sale_code = '".$sale_code."' ,date_send_key = '".$date_send_key."',return_date_bet='".$return_date_bet."',slip1 = '".$slip1."',slip2 = '".$slip2."',slip3 = '".$slip3."',slip4 = '".$slip4."',slip5 = '".$slip5."',iv_no = '".$iv_no."',iv_date = '".$iv_date."',iv_time='".$iv_time."',add_by ='".$add_by1."',ker_bath='".$ker_bath."',date_ker='".$date_ker."',order_refer_code1='".$order_refer_code1."',order_refer_code='".$order_refer_code."'   where ref_id ='".$ref_id."'";
 $qsave=mysqli_query($conn,$save);
-	
+
+// เลขที่เอกสารถูกเขียนลง hos__change.iv_no แล้ว ปล่อย lock ให้คนถัดไปอ่าน MAX ต่อได้
+if($chg_lock_name !=''){
+	mysqli_query($conn,"SELECT RELEASE_LOCK('".mysqli_real_escape_string($conn,$chg_lock_name)."')");
+	$chg_lock_name = '';
+}
+
 $status_doc = $_POST["status_doc"];
 	
 	if($status_doc !=''){

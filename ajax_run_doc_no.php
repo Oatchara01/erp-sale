@@ -17,15 +17,16 @@
  *    เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) ไม่ใช่แค่ preview เพื่อให้เลขไม่ซ้ำ
  *    แลกกับการที่ถ้ากด Run แล้วไม่บันทึกฟอร์ม เลขนั้นจะหายไปเป็นช่องว่าง
  *
- * 2) โหมดนับจากตารางเอกสารจริง ($docSourceTable) — BRSC
+ * 2) โหมดนับจากตารางเอกสารจริง ($docSourceTable) — BRSC/JN/EXC
  *    BRSC69080001 -> BRSC6908001   <- ซีรีส์เดียวทั้ง AWL/NBM ไม่มีตัวคั่น running 3 หลัก
+ *    EXC6909001 / EXCN6909001      <- แยก prefix ตามบริษัท (AWL=EXC, NBM=EXCN)
  *    ไม่มี INSERT จองเลข อ่าน MAX จากคอลัมน์เลขที่เอกสารในตารางเอกสารโดยตรง
  *    เลขจึงถูกจองจริงตอนกดบันทึกเอกสาร (กันเลขซ้ำอีกชั้นที่ register_supbrcshos1.php
- *    และ register_supbrcshos_edit1.php) และการกด Run ซ้ำก่อนบันทึกจะได้เลขเดิมเสมอ
+ *    และ register_supbrcshos_edit1.php / register_supchange1.php และ
+ *    register_supchange_edit1.php) และการกด Run ซ้ำก่อนบันทึกจะได้เลขเดิมเสมอ
  *
- * 3) โหมดตารางตัวนับกลาง ($docSharedCounterTable) — EXC/EXCN (register_supchange.php)
- *    ใช้ตาราง "tb_docbreng" ร่วมกับตัวนับของ register_adminchange_edit1.php (ฝั่ง Admin
- *    อนุมัติ) เพื่อให้เลขที่ปุ่ม "Run เอกสาร" ฝั่งขายออกมาเป็น series เดียวกัน ไม่ชนกัน
+ * 3) โหมดตารางตัวนับกลาง ($docSharedCounterTable) — BRES/BREQ (register_supbrhos.php)
+ *    ใช้ตาราง "tb_docbreng" ร่วมกับตัวนับของระบบเดิม เพื่อให้เลขออกเป็น series เดียวกัน
  *    ตารางนี้ถูกใช้ร่วมกับหลายโมดูล จึงต้องกรอง/ล็อกด้วย head_no แทนชื่อตาราง
  *    เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) เหมือนโหมด 1
  */
@@ -86,7 +87,9 @@ $docRouting = [
 // hos__consig.iv_no แล้ว ถ้าไปนับจากตารางตัวนับใหม่ที่ว่างเปล่าจะไม่รู้จักเลขเดิม
 // และออกเลขซ้ำกับใบที่พิมพ์เองไว้ได้
 // เป็นซีรีส์เดียวทั้ง AWL/NBM ไม่มีตัวคั่น running 3 หลัก ตามรูปแบบเลขเดิมทั้ง 209 ใบ
-// ชื่อตาราง/คอลัมน์มาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
+// EXC/EXCN (ใบเปลี่ยนสินค้า) เข้าโหมดนี้ด้วย แต่แยก series ตามบริษัทผ่าน prefixByCompany
+// เพราะ AWL ใช้ prefix 'EXC' และ NBM ใช้ 'EXCN' (เลขจริงทั้งหมดอยู่ใน hos__change.iv_no)
+// ชื่อตาราง/คอลัมน์/prefix มาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
 $docSourceTable = [
 	'BRSC' => [
 		'table'     => 'hos__consig',
@@ -102,23 +105,23 @@ $docSourceTable = [
 		'separator' => '',
 		'pad'       => 3,
 	],
+	// เลิกใช้ตารางตัวนับ tb_docbreng แล้ว — ฝั่ง Admin อนุมัติ (register_adminchange_edit1.php)
+	// นับจาก hos__change.iv_no ชุดเดียวกัน เลขจึงเป็น series เดียวกันโดยไม่ต้องจองล่วงหน้า
+	'EXC' => [
+		'table'           => 'hos__change',
+		'column'          => 'iv_no',
+		'prefixByCompany' => ['3' => 'EXC', '4' => 'EXCN'],
+		'companies'       => ['3', '4'],
+		'separator'       => '',
+		'pad'             => 3,
+	],
 ];
 
 // เอกสารที่ใช้ตารางตัวนับกลาง "tb_docbreng" ร่วมกับหลายโมดูล (BREG/BRES/BREQ/BRNP/...)
-// EXC/EXCN เป็น series เดียวกับที่ register_adminchange_edit1.php ใช้ตอน Admin อนุมัติ
-// (head_no='EXC' คือ AWL, 'EXCN' คือ NBM) จึงต้องนับ/จองจากตารางนี้ตรง ๆ ไม่ใช่แยกตารางใหม่
-// มิฉะนั้นเลขที่ปุ่ม "Run เอกสาร" ออกจะชนกับเลขที่ Admin อนุมัติออกไปแล้ว
+// เลขถูกจองทันทีที่กดปุ่ม เพราะระบบเดิมของโมดูลเหล่านั้นนับจากตารางนี้ ถ้าไม่จองจะชนกัน
 // ตารางนี้ใช้คอลัมน์ run_iv (ไม่ใช่ run_no) และมีคอลัมน์ head_no ไว้กรองแยกโมดูล/บริษัท
 // แทนที่จะแยกเป็นคนละตาราง — ชื่อตาราง/คอลัมน์มาจาก whitelist นี้เท่านั้น จึงนำไปต่อใน SQL ได้อย่างปลอดภัย
 $docSharedCounterTable = [
-	'EXC' => [
-		'table'            => 'tb_docbreng',
-		'column'           => 'run_iv',
-		'headNoByCompany'  => ['3' => 'EXC', '4' => 'EXCN'],
-		'companies'        => ['3', '4'],
-		'separator'        => '',
-		'pad'              => 3,
-	],
 	'BRES' => [
 		'table'            => 'tb_docbreng',
 		'column'           => 'run_iv',
@@ -154,6 +157,9 @@ $sharedConfig = $docSharedCounterTable[$prefix] ?? null;
 $isSharedCounterMode = ($sharedConfig !== null);
 
 $headNo = null;
+// prefix ที่ใช้ประกอบเลขที่เอกสารจริง — ปกติเท่ากับ $prefix ยกเว้นโหมดตารางเอกสารจริงที่แยก
+// prefix ตามบริษัท (EXC = AWL, EXCN = NBM) ซึ่งเป็นคนละ series กัน
+$docPrefix = $prefix;
 
 if ($isSourceTableMode) {
 	if (!in_array($company, $sourceConfig['companies'], true)) {
@@ -163,6 +169,12 @@ if ($isSourceTableMode) {
 	$column    = $sourceConfig['column'];
 	$separator = $sourceConfig['separator'];
 	$runPad    = $sourceConfig['pad'];
+	if (isset($sourceConfig['prefixByCompany'])) {
+		if (!isset($sourceConfig['prefixByCompany'][$company])) {
+			run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
+		}
+		$docPrefix = $sourceConfig['prefixByCompany'][$company];
+	}
 } elseif ($isSharedCounterMode) {
 	if (!isset($sharedConfig['headNoByCompany'][$company])) {
 		run_doc_no_fail('กรุณาเลือกบริษัทก่อนออกเลขที่เอกสาร');
@@ -209,12 +221,15 @@ $ivDate  = date('Y-m-d', $timestamp);
 // กันสองคนกดพร้อมกันด้วย named lock แทนการเพิ่ม unique index ให้ตารางเดิม
 // (ตารางเดิมมีไฟล์อื่นเขียนร่วมอีกกว่า 30 ไฟล์ การใส่ unique index จะทำให้ไฟล์เหล่านั้น
 //  fatal error แทนที่จะ insert ซ้ำเงียบ ๆ จึงไม่แตะ schema เดิม)
-// โหมดตารางเอกสารจริงเป็นซีรีส์เดียวทุกบริษัท ชื่อ lock จึงต้องไม่มี $company
-// ไม่งั้น AWL กับ NBM กดพร้อมกันจะไม่บล็อกกันและได้เลขเดียวกัน
+// โหมดตารางเอกสารจริงล็อกด้วย $docPrefix ไม่ใช่ $company เพราะเลขเป็นซีรีส์ตาม prefix
+// BRSC/JN เป็นซีรีส์เดียวทุกบริษัท ($docPrefix เท่ากับ $prefix) ถ้าใส่ $company จะไม่บล็อกกัน
+// และได้เลขเดียวกัน ส่วน EXC/EXCN แยก series ตามบริษัทอยู่แล้วผ่าน $docPrefix
+// (docrun_EXC_6909 / docrun_EXCN_6909 — register_adminchange_edit1.php ใช้ชื่อเดียวกัน
+//  จึงบล็อกกันข้ามหน้าจอระหว่างฝั่งขายกดปุ่ม Run กับฝั่ง Admin อนุมัติ)
 // โหมดตารางตัวนับกลาง (tb_docbreng) ใช้ $headNo แทน $prefix เพราะตารางเดียวกันถูกใช้ร่วมกับ
 // โมดูลอื่น (BREG/BRES/BREQ/BRNP) — ต้องล็อกแยกตาม head_no ไม่งั้นจะบล็อกกันข้ามโมดูลโดยไม่จำเป็น
 if ($isSourceTableMode) {
-	$lockName = 'docrun_' . $prefix . '_' . $yearNo . $monthNo;
+	$lockName = 'docrun_' . $docPrefix . '_' . $yearNo . $monthNo;
 } elseif ($isSharedCounterMode) {
 	$lockName = 'docrun_' . $headNo . '_' . $yearNo . $monthNo;
 } else {
@@ -242,9 +257,11 @@ register_shutdown_function(function () use ($conn, $lockName) {
 });
 
 // โหมดนับจากตารางเอกสารจริง: ไม่มีคอลัมน์ year_no/mount_no ให้กรอง จึงกรองด้วย prefix ของ
-// เลขที่เอกสารเอง (BRSC6908%) แล้วตัดเฉพาะส่วน running มาหา MAX
+// เลขที่เอกสารเอง (BRSC6908% / EXC6909% / EXCN6909%) แล้วตัดเฉพาะส่วน running มาหา MAX
+// EXC กับ EXCN ไม่ชนกันเอง เพราะ 'EXCN6909001' ไม่ match LIKE 'EXC6909%' (ตัวที่ 4 เป็น N ไม่ใช่ 6)
+// ค่า iv_no เดิมที่ผู้ใช้พิมพ์เองรูปแบบอื่น (เช่น TEST-DOC-001) จึงไม่ถูกนับเข้ามาด้วย
 if ($isSourceTableMode) {
-	$docPrefixText = $prefix . $yearNo . $separator . $monthNo;
+	$docPrefixText = $docPrefix . $yearNo . $separator . $monthNo;
 	$runOffset = strlen($docPrefixText) + 1; // ตำแหน่งเริ่มของ running ในเลขที่เอกสาร
 	$likePattern = $docPrefixText . '%';
 
@@ -267,7 +284,7 @@ if ($isSourceTableMode) {
 		'success'  => true,
 		'doc_no'   => $docNo,
 		'run_no'   => $runNoText,
-		'doc_type' => $prefix,
+		'doc_type' => $docPrefix,
 		'company'  => $company,
 		'year_no'  => $yearNo,
 		'mount_no' => $monthNo
@@ -277,7 +294,7 @@ if ($isSourceTableMode) {
 
 // โหมดตารางตัวนับกลาง (tb_docbreng): มี year_no/month_no ให้กรองเหมือน docRouting ปกติ
 // แต่ต้องกรอง head_no เพิ่ม (ตารางเดียวใช้ร่วมกับ BREG/BRES/BREQ/BRNP ฯลฯ) และ insert คอลัมน์
-// ref_id ตาม pattern เดิมของ register_adminchange_edit1.php:146 — เลขถูกจองทันทีที่กดปุ่ม
+// ref_id ตาม pattern เดิมของระบบ Borrow Order — เลขถูกจองทันทีที่กดปุ่ม
 // เหมือนโหมด IV/ET/IC (ไม่ใช่ preview เฉย ๆ)
 if ($isSharedCounterMode) {
 	$selectStmt = mysqli_prepare(

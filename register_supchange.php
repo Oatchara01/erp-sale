@@ -869,9 +869,10 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 						}
 
 						// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_supbrcshos.php:980-1043
-						// ต่างกันตรงที่ ajax_run_doc_no.php ใช้ doc_type='6' (EXC) และต้องส่ง ref_id
-						// ไปด้วยเพราะโหมดตารางตัวนับกลาง (tb_docbreng) insert คอลัมน์ ref_id ทุกครั้ง
+						// ajax_run_doc_no.php ใช้ doc_type='6' (EXC) และนับเลขจาก hos__change.iv_no
+						// โดยตรง ไม่มีตารางตัวนับ/ไม่มีการจองเลข ปุ่มนี้จึงคืนแค่เลขถัดไปที่แนะนำ
 						// company_select ของหน้านี้ใช้ 1=AWL/2=NBM ต้อง map เป็น 3=AWL/4=NBM ก่อนส่ง
+						// (AWL ได้ prefix EXC, NBM ได้ EXCN — คนละ series กัน)
 						function chgRunDocumentNo() {
 							var companySelect = document.getElementById('company_select');
 							var docNoInput = document.querySelector('input[name="admin_doc_no"]');
@@ -884,8 +885,9 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							}
 
 							if (docNoInput.value.trim() !== '') {
-								// เลขถูกจองจริงตอนกดปุ่มนี้ (INSERT ลง tb_docbreng ทันที) การกดซ้ำจะได้เลขถัดไป
-								// และเลขเดิมจะกลายเป็นช่องว่างในตัวนับ
+								// เลขถูกจองจริงตอนกดบันทึกเอกสาร (เขียนลง hos__change.iv_no) การกดปุ่มนี้ซ้ำ
+								// ก่อนบันทึกจะได้เลขเดิมเสมอ แต่ถ้าเอกสารนี้บันทึกเลขไว้แล้วจะได้เลขถัดไป
+								// และเลขเดิมจะถูกทับหาย จึงต้องถามยืนยันก่อน
 								if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
 									return;
 								}
