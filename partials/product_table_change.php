@@ -13,12 +13,13 @@
  * register_supchange1.php (sn{i} is a pre-existing dead field, kept for
  * visual parity per the redesign plan).
  *
- * Row-fill AJAX target is hardcoded to data_product_hos1.php for BOTH
- * departments (confirmed: detail_changehos.php and detail_changeng.php both
- * already hardcode this same endpoint). Only the live search-as-you-type
- * autocomplete source differs by department - computed below from
- * $_SESSION['department'], override-able by predefining $ptcIsEngDept
- * before including this partial.
+ * Row-fill AJAX target and the live search-as-you-type autocomplete both use
+ * dedicated data_product_*_ptc.php endpoints (NOT the data_product_hos.php /
+ * data_product_eng.php / data_product_hos1.php shared by 100+ other pages) -
+ * this flow needs its own close_pro/group1/department filter rules, and
+ * editing the shared endpoints would change behavior everywhere else too.
+ * Department is computed below from $_SESSION['department'], override-able
+ * by predefining $ptcIsEngDept before including this partial.
  *
  * C1 (Addendum 2): the old 3 per-row free-text search inputs
  * (product_codet{i}/product_code{i}/product_c{i}) are replaced by a single
@@ -35,8 +36,11 @@ if (!isset($ptcIsEngDept)) {
 }
 
 $ptcSearchCodeEndpoint = $ptcIsEngDept ? 'data_product_engi.php' : 'data_product_hosi.php';
-$ptcSearchNameEndpoint = $ptcIsEngDept ? 'data_product_eng.php' : 'data_product_hos.php';
+$ptcSearchNameEndpoint = $ptcIsEngDept ? 'data_product_eng_ptc.php' : 'data_product_hos_ptc.php';
 $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_product_searchth.php';
+/* endpoint แยกเฉพาะ flow นี้ (ไม่ใช้ data_product_hos1.php ร่วมกับหน้าอื่นอีก 100+ หน้า)
+   เพื่อ enforce close_pro/group1/แผนกให้ตรงกับ autocomplete ด้านบน */
+$ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 ?>
 <script type="text/javascript">
 	if (typeof Swal === 'undefined') {
@@ -169,7 +173,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 	}
 
 	/* ===== เติมข้อมูลสินค้าลงแถวว่างแรกจากรหัสที่เลือกจากช่องค้นหาเดียวด้านบนตาราง
-	   (ปลายทาง data_product_hos1.php เดิมทั้งสองแผนก) ===== */
+	   (ปลายทาง $ptcDetailEndpoint - data_product_hos1_ptc.php เฉพาะ flow นี้) ===== */
 	function ptcFindEmptyRowIndex() {
 		for (var i = 1; i <= 6; i++) {
 			var idEl = document.getElementById('product_id' + i);
@@ -216,7 +220,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 
 	function ptcSearchDoCallAjax(accessCode, rowIndex) {
 		var req = new XMLHttpRequest();
-		req.open('POST', 'data_product_hos1.php', true);
+		req.open('POST', '<?php echo $ptcDetailEndpoint; ?>', true);
 		req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 		req.onreadystatechange = function() {
 			if (req.readyState === 4) {
@@ -395,8 +399,6 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 				document.getElementById('ptc_product_search').value = '';
 			};
 
-			console.log(this.value.length < 1 && this.isNotClick);
-
 			if (this.value.length < 1 && this.isNotClick) return;
 			return '<?php echo $ptcSearchNameEndpoint; ?>?product_code_search=' + encodeURIComponent(this.value) + '&type_company=' + ptcGetSelectedTypeCompany();
 		}, {
@@ -556,4 +558,4 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
 	ptcUpdatePendingState();
 </script>
 <?php
-unset($ptcIsEngDept, $ptcSearchCodeEndpoint, $ptcSearchNameEndpoint, $ptcSearchThaiEndpoint);
+unset($ptcIsEngDept, $ptcSearchCodeEndpoint, $ptcSearchNameEndpoint, $ptcSearchThaiEndpoint, $ptcDetailEndpoint);
