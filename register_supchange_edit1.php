@@ -6,7 +6,7 @@
 // โครงสร้างมิเรอร์ register_supchange1.php เป็นหลัก ต่างกัน 3 จุดหลัก (เหมือน
 // register_supbrcshos_edit1.php ต่างจาก register_supbrcshos1.php):
 // (1) ref_id มาจาก POST ไม่ใช่ generate ใหม่ (2) hos__change เป็น UPDATE ไม่แตะ
-// date_change/sale_date/sale/sale_code/add_date/add_by เพื่อรักษาประวัติผู้สร้างเดิม
+// date_change/sale_date/sale/add_date/add_by เพื่อรักษาประวัติผู้สร้างเดิม
 // (send_sup*/status_doc ถูกปรับตามชนิดของคำขอในบล็อกก่อน UPDATE) (3) hos__subchange /
 // tb_register_data ต้อง DELETE ก่อน INSERT (ตารางลูกอื่นเป็น DELETE+INSERT อยู่แล้วเหมือนกับ
 // handler สร้างเอกสาร จึงก็อปมาแทบไม่ต้องแก้)
@@ -133,6 +133,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			'address_name' => 'กรุณาใส่ที่อยู่ในการส่งสินค้า',
 			'address_send' => 'กรุณาใส่สถานที่ติดตั้งเครื่อง',
 			'province_name' => 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง',
+			'sale_code' => 'กรุณาเลือกแผนก/เขตการขาย',
 		);
 
 		$chgValidationErrors = array();
@@ -174,6 +175,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$customer = cs_post($conn, "customer");
 	$customer_id = cs_post($conn, "customer_id");
 	$address = cs_post($conn, "address");
+	$sale_code = cs_post($conn, "sale_code");
 	$sale_comment = cs_post($conn, "sale_comment");
 	$sn_ckk = cs_post($conn, "sn_ckk", "0");
 	$sn = cs_post($conn, "sn");
@@ -269,13 +271,14 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	try {
 
 		// ===== hos__change (UPDATE) =====
-		// ไม่แตะ date_change/sale_date/sale/sale_code/add_date/add_by เพื่อรักษาประวัติผู้สร้างเดิมไว้
+		// ไม่แตะ date_change/sale_date/sale/add_date/add_by เพื่อรักษาประวัติผู้สร้างเดิมไว้
 		// — เหมือนแนวทาง register_supbrcshos_edit1.php:301-304
 		$chgUpdateColumns = array(
 			'company' => $company,
 			'customer' => $customer,
 			'customer_id' => $customer_id,
 			'address' => $address,
+			'sale_code' => $sale_code,
 			'sale_comment' => $sale_comment,
 			'sn_ckk' => $sn_ckk,
 			'sn' => $sn,
