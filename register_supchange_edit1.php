@@ -23,6 +23,23 @@ if (!$isDraftRequest) {
 include("dbconnect.php");
 include("error_page.php");
 
+if (!function_exists('tableExists')) {
+	function tableExists($conn, $tableName)
+	{
+		static $tables = null;
+		if ($tables === null) {
+			$tables = array();
+			$res = mysqli_query($conn, "SHOW TABLES");
+			if ($res) {
+				while ($row = mysqli_fetch_array($res)) {
+					$tables[strtolower($row[0])] = true;
+				}
+			}
+		}
+		return isset($tables[strtolower($tableName)]);
+	}
+}
+
 date_default_timezone_set("Asia/Bangkok");
 if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
@@ -109,6 +126,13 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		}
 	}
 
+	// action ส่งกลับ/ไม่อนุมัติ/อนุมัติ/ยกเลิก — อ่านไว้ก่อน validation เพื่อข้าม backend validation ตอนส่งกลับ/ไม่อนุมัติ/ยกเลิก
+	// (action เหล่านี้เป็นการคืน/ปิดเอกสาร ไม่ใช่อนุมัติข้อมูลให้ผ่าน จึงไม่ควรบังคับผู้อนุมัติกรอกฟอร์มให้ครบ)
+	// mirror ของ register_supbrcshos_edit1.php:47-49
+	$chgApproveAction = $_POST['approve_action'] ?? '';
+	// ปุ่ม "ยกเลิกเอกสาร" มีลำดับเหนือ Draft — เหมือน register_supchange1.php
+	$isCancelDoc = (cs_post_raw("cancel_doc") === "1");
+
 	// partials/product_table_change.php เรนเดอร์ 6 แถวคงที่ (product_table_change.php:474-476)
 	$chgProductRowCount = 6;
 
@@ -124,8 +148,10 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		chg_abort_with_alert('ไม่พบเอกสาร ' . $ref_id . ' ในระบบ', $isDraftRequest);
 	}
 
-	// Backend validation — ชุดเดียวกับ register_supchange1.php (ข้ามเมื่อเป็น Draft)
-	if (!$isDraftRequest) {
+	// Backend validation — ชุดเดียวกับ register_supchange1.php (ข้ามเมื่อเป็น Draft หรือ action ส่งกลับ/ไม่อนุมัติ/ยกเลิก
+	// เพราะผู้อนุมัติต้องทำ action เหล่านี้ได้โดยไม่ต้องกรอกฟอร์มให้ครบก่อน) — 'approve' ยังต้องผ่าน validation ตามปกติ
+	$chgSkipValidationForApprove = in_array($chgApproveAction, array('return', 'reject'), true) || $isCancelDoc;
+	if (!$isDraftRequest && !$chgSkipValidationForApprove) {
 		$chgRequiredFieldLabels = array(
 			'start_time' => 'กรุณาใส่เวลาส่ง',
 			'customer_name' => 'กรุณาใส่ชื่อลูกค้า',
@@ -182,8 +208,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$objective = cs_post($conn, "objective");
 	$objective_des = cs_post($conn, "objective_des");
 
-	// ปุ่ม "ยกเลิกเอกสาร" มีลำดับเหนือ Draft — เหมือน register_supchange1.php
-	$isCancelDoc = (cs_post_raw("cancel_doc") === "1");
 	$status_doc = $isCancelDoc ? "ยกเลิก" : ($isDraftRequest ? "Draft" : "Request");
 
 	$returns = cs_post($conn, "returns", "0");
@@ -565,7 +589,7 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 		// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
 		// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — ชั้นเดียว (ไม่มี CM/ผู้ตรวจแบบ BR)
 		// คอลัมน์ตรงกับ change_approve.php/change_rejected.php (หน้าอนุมัติเดิม) ทุกประการ
-		$chgApproveAction = $_POST['approve_action'] ?? '';
+		// ($chgApproveAction ถูกอ่านไว้ตั้งแต่ก่อน validation ด้านบนแล้ว)
 		if ($chgApproveAction !== '') {
 			$chgApproveName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
 			$chgApproveCode = mysqli_real_escape_string($conn, (string)($_SESSION['code'] ?? ''));
@@ -580,6 +604,42 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 				mysqli_query($conn, "UPDATE hos__change SET status_doc='Rejected', approve='" . $chgApproveName . "', approve_code='" . $chgApproveCode . "', approve_date='" . $chgApproveDate . "' WHERE ref_id='" . $chgSafeRefId . "'");
 			} elseif ($chgApproveAction === 'approve') {
 				mysqli_query($conn, "UPDATE hos__change SET status_doc='Approve', approve='" . $chgApproveName . "', approve_code='" . $chgApproveCode . "', approve_date='" . $chgApproveDate . "', approve_time='" . $chgApproveTime . "', send_admin='1' WHERE ref_id='" . $chgSafeRefId . "'");
+			}
+		}
+
+		// ===== ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — mirror ของ register_supbrcshos_edit1.php:803-833 =====
+		// log เขียนเป็นค่าอังกฤษให้เหมือนเอกสารอื่นทุกใบ ส่วน hos__change.status_doc ยังเป็นไทยตามเดิม
+		// (ฝั่งอ่านที่ register_supchange.php รับทั้งสองชุดอยู่แล้ว)
+		if (tableExists($conn, 'tb_document_status_log')) {
+			$chgLogSafeRefId = mysqli_real_escape_string($conn, $ref_id);
+			$chgLogUserId = mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '');
+			$chgLogUserName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
+			$chgApproveReasonRaw = trim((string)($_POST['chg_approve_reason'] ?? ''));
+			$chgApproveStatusMap = array(
+				'return' => 'Returned',
+				'reject' => 'Rejected',
+			);
+
+			if (isset($chgApproveStatusMap[$chgApproveAction]) && $chgApproveReasonRaw !== '') {
+				mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $chgLogSafeRefId . "', '" . $chgApproveStatusMap[$chgApproveAction] . "', '"
+					. mysqli_real_escape_string($conn, $chgApproveReasonRaw) . "', '"
+					. $chgLogUserId . "', '"
+					. $chgLogUserName . "')");
+			}
+
+			// ยกเลิกเอกสารสั่งงานผ่าน cancel_doc โดย approve_action ถูกเคลียร์เป็น '' จึงต้องเช็คแยกนอกบล็อกด้านบน
+			// admin_cancel_reason อาจไม่ถูก POST (ช่องยัง disabled อยู่) จึง fallback ไปใช้เหตุผลจาก popup
+			$chgCancelReasonRaw = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+			if ($chgCancelReasonRaw === '') {
+				$chgCancelReasonRaw = $chgApproveReasonRaw;
+			}
+			if ($isCancelDoc && $chgCancelReasonRaw !== '') {
+				mysqli_query($conn, "INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name)
+				VALUES ('" . $chgLogSafeRefId . "', 'Cancelled', '"
+					. mysqli_real_escape_string($conn, $chgCancelReasonRaw) . "', '"
+					. $chgLogUserId . "', '"
+					. $chgLogUserName . "')");
 			}
 		}
 

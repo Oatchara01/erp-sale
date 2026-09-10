@@ -299,6 +299,7 @@ $savedTransaction = null;
 $savedShippingRows = array();
 $savedDeliveryBillRow = null;
 $savedRegister = null;
+$chgDocumentLogRows = array();
 
 if ($loadRefId !== "") {
 	$savedChgQuery = mysqli_query($conn, "SELECT * FROM hos__change WHERE ref_id = '" . $loadRefId . "' LIMIT 1");
@@ -352,6 +353,21 @@ if ($loadRefId !== "") {
 			$savedCustomerQuery = mysqli_query($conn, "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.status_cus, c.vip_ckk, t.type_name FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = '" . $savedCustomerId . "' LIMIT 1");
 			if ($savedCustomerQuery && mysqli_num_rows($savedCustomerQuery) > 0) {
 				$savedCustomer = mysqli_fetch_assoc($savedCustomerQuery);
+			}
+		}
+
+		// ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก — เฉพาะ edit mode จริง (copy mode ต้องไม่รับประวัติของใบต้นทางมาด้วย)
+		// mirror ของ register_supbrcshos.php:565-577 — เช็คตารางก่อนกัน environment ที่ยังไม่มี tb_document_status_log
+		// hos__change เก็บสถานะเป็นไทย ('ส่งกลับ'/'ยกเลิก') แต่ log เขียนเป็นอังกฤษเหมือนเอกสารอื่น จึงต้องรับทั้งสองชุด
+		if ($savedChgRefId !== "") {
+			$chgDocumentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+			if ($chgDocumentStatusLogTableQuery && mysqli_num_rows($chgDocumentStatusLogTableQuery) > 0) {
+				$chgDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $loadRefId . "' AND status_doc IN ('Returned', 'ส่งกลับ', 'Rejected', 'Cancelled', 'ยกเลิก') ORDER BY created_at DESC, id DESC");
+				if ($chgDocumentLogQuery) {
+					while ($chgDocumentLogRow = mysqli_fetch_assoc($chgDocumentLogQuery)) {
+						$chgDocumentLogRows[] = $chgDocumentLogRow;
+					}
+				}
 			}
 		}
 	}
@@ -482,6 +498,54 @@ if ($chgSrc !== null) {
 		$chgPrefill['bill_extra_shipping_address_2'] = $savedDeliveryBillRow['address_nameb'];
 	}
 }
+
+// ---- แผนที่แสดงผลประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก — พอร์ตจาก register_supbrcshos.php:799-843 ----
+// รับทั้งค่าอังกฤษ (ที่เขียนลง tb_document_status_log) และค่าไทย (ที่ hos__change.status_doc ใช้)
+function renderChgDocumentReturnStatus($statusDoc)
+{
+	$statusMap = array(
+		'Returned' => 'ส่งกลับ',
+		'ส่งกลับ' => 'ส่งกลับ',
+		'Rejected' => 'ไม่อนุมัติ',
+		'Cancelled' => 'ยกเลิกเอกสาร',
+		'ยกเลิก' => 'ยกเลิกเอกสาร'
+	);
+	return $statusMap[$statusDoc] ?? $statusDoc;
+}
+
+function renderChgDocumentReturnStatusClass($statusDoc)
+{
+	$statusClassMap = array(
+		'Returned' => 'is-returned',
+		'ส่งกลับ' => 'is-returned',
+		'Rejected' => 'is-rejected',
+		'Cancelled' => 'is-cancelled',
+		'ยกเลิก' => 'is-cancelled'
+	);
+	return $statusClassMap[$statusDoc] ?? 'is-cancelled';
+}
+
+function formatChgDocumentLogDateTime($createdAt)
+{
+	$createdAt = trim((string)$createdAt);
+	if ($createdAt === '') return '';
+	$timestamp = strtotime($createdAt);
+	if ($timestamp === false) return '';
+	return date('d-m-Y H:i', $timestamp);
+}
+
+$chgLatestDocumentReasonTitleMap = array(
+	'Returned' => 'เหตุผลในการส่งกลับ',
+	'ส่งกลับ' => 'เหตุผลในการส่งกลับ',
+	'Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+	'Cancelled' => 'เหตุผลในการยกเลิก',
+	'ยกเลิก' => 'เหตุผลในการยกเลิก'
+);
+$chgLatestDocumentReason = $chgDocumentLogRows[0] ?? null;
+$chgLatestDocumentReasonStatus = trim((string)($chgLatestDocumentReason['status_doc'] ?? ''));
+$chgLatestDocumentReasonText = trim((string)($chgLatestDocumentReason['reason'] ?? ''));
+$chgLatestDocumentReasonTitle = $chgLatestDocumentReasonTitleMap[$chgLatestDocumentReasonStatus] ?? '';
+$chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDocumentReasonStatus);
 ?>
 
 <form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
@@ -500,6 +564,13 @@ if ($chgSrc !== null) {
 			</div>
 		</div>
 
+		<?php if ($savedChg !== null && $chgLatestDocumentReasonTitle !== '' && $chgLatestDocumentReasonText !== '') { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($chgLatestDocumentReasonClass); ?>" role="status">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($chgLatestDocumentReasonTitle); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($chgLatestDocumentReasonText)); ?></div>
+			</div>
+		<?php } ?>
 
 		<script language="javascript">
 			var chgSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
@@ -1850,9 +1921,26 @@ if ($chgSrc !== null) {
 					// การ์ด "แนบไฟล์" — ใช้ partial กลางร่วมกับ register_suphos.php/register_supbrhos.php
 					// (posts เข้า slip1-slip5 เหมือนเดิม) ต้อง include js/doc-tabs-attach.js ที่หัวไฟล์ไว้ด้วย
 					// ไม่งั้นปุ่ม "เพิ่มไฟล์" จะกดไม่ทำงาน (undefined function)
+					$chgDocumentLogRowsForTabs = array();
+					foreach ($chgDocumentLogRows as $chgDocumentLogRowForTabs) {
+						$chgDocumentLogRowsForTabs[] = array(
+							'status_label' => renderChgDocumentReturnStatus($chgDocumentLogRowForTabs['status_doc'] ?? ''),
+							'status_class' => renderChgDocumentReturnStatusClass($chgDocumentLogRowForTabs['status_doc'] ?? ''),
+							'reason' => $chgDocumentLogRowForTabs['reason'] ?? '',
+							'user_name' => $chgDocumentLogRowForTabs['user_name'] ?? '',
+							'created_at' => formatChgDocumentLogDateTime($chgDocumentLogRowForTabs['created_at'] ?? '')
+						);
+					}
+
+					// document_return_log ต่อท้ายเสมอ — doc_tabs_card.php เลือกแท็บแรกที่ enabled เป็นแท็บ default
 					$docTabsCard = [
 						'open_fn' => 'brOpen3Tab',
 						'attach_file' => ['enabled' => true],
+						'document_return_log' => [
+							'enabled' => true,
+							'rows' => $chgDocumentLogRowsForTabs,
+							'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+						],
 					];
 					include __DIR__ . '/partials/doc_tabs_card.php';
 					?>
@@ -1889,14 +1977,15 @@ if ($chgSrc !== null) {
 				<!-- ค่าปุ่มอนุมัติต้องมากับ hidden ไม่ใช่ value ของ <button> เพราะทุกเส้นทาง submit ของหน้านี้
 				     เป็น form.submit() แบบ programmatic ซึ่งไม่ส่ง name/value ของปุ่มที่กดไปด้วย -->
 				<input type="hidden" name="approve_action" id="chg_approve_action" value="">
+				<input type="hidden" name="chg_approve_reason" id="chg_approve_reason" value="">
 				<div class="so-approve-actions">
 					<button type="button" class="so-overflow-menu-trigger" id="btn_chg_approve_overflow" onclick="toggleChgApproveOverflowMenu()">
 						<i class="fas fa-ellipsis-v"></i>
 					</button>
 					<div id="chgApproveOverflowMenu" class="so-overflow-menu">
-						<button type="button" onclick="chgRunApproveAction('return', true)"><i class="fas fa-reply"></i> ส่งกลับ</button>
-						<button type="button" class="so-menu-danger" onclick="chgRunApproveAction('reject', true)"><i class="fas fa-times-circle"></i> ไม่อนุมัติ</button>
-						<button type="button" onclick="triggerCancelDocFromChgApproveMenu()"><i class="far fa-window-close"></i> ยกเลิกเอกสาร</button>
+						<button type="button" onclick="chgRunApproveAction('return', true)" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+						<button type="button" class="so-menu-danger" onclick="chgRunApproveAction('reject', true)" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+						<button type="button" onclick="triggerCancelDocFromChgApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 					</div>
 					<button type="button" class="btn-so-approve" onclick="chgRunApproveAction('approve', false)"><i class="far fa-check-circle"></i> อนุมัติ</button>
 					<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> Update</button>
@@ -1928,29 +2017,129 @@ if ($chgSrc !== null) {
 		if (!menu.contains(e.target)) menu.style.display = 'none';
 	});
 
-	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป register_supchange_edit1.php
-	// (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ) — พอร์ตจาก register_supbrcshos.php:2138-2152
-	// ส่งกลับ/ไม่อนุมัติ ข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
-	function chgRunApproveAction(action, skipValidation) {
-		var field = document.getElementById('chg_approve_action');
-		if (field) field.value = action;
+	// เปิด popup ให้กรอกเหตุผล (ส่งกลับ/ไม่อนุมัติ/ยกเลิก) — ห้าม submit ถ้าเหตุผลว่าง
+	// mirror ของ register_supbrcshos.php:2267-2315 (csOpenReasonPopup)
+	function chgOpenReasonPopup(opts) {
+		var refInput = document.querySelector('input[name="ref_id"]');
+		var refId = refInput ? refInput.value.trim() : '';
 
-		if (skipValidation) {
-			if (chgSubmitting) return;
-			chgSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
-			HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+		if (typeof Swal === 'undefined') {
+			var fallbackReason = window.prompt(opts.label || 'ระบุเหตุผล');
+			fallbackReason = (fallbackReason || '').trim();
+			if (fallbackReason !== '') opts.onConfirm(fallbackReason);
 			return;
 		}
 
+		Swal.fire({
+			title: opts.title,
+			html: '<p class="so-reason-subtitle">' + opts.subtitleText + ' "' + refId + '"</p>' +
+				'<label class="so-reason-label">' + opts.label + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: opts.placeholder || '',
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true,
+			showCloseButton: true,
+			reverseButtons: false,
+			confirmButtonText: 'ตกลง',
+			cancelButtonText: 'ยกเลิก',
+			buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup',
+				title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html',
+				confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+				actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon',
+				input: 'so-reason-textarea',
+				closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function(value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') {
+					Swal.showValidationMessage('กรุณาระบุเหตุผล');
+					return false;
+				}
+				return trimmed;
+			}
+		}).then(function(result) {
+			if (result.isConfirmed) opts.onConfirm(result.value);
+		});
+	}
+
+	// อนุมัติ / ส่งกลับ / ไม่อนุมัติ — เซ็ต hidden approve_action แล้วส่งฟอร์มไป register_supchange_edit1.php
+	// (บันทึกฟอร์มปกติก่อน แล้วบล็อก approve_action จึงเขียนสถานะทับ) — พอร์ตจาก register_supbrcshos.php:2320-2361
+	// ส่งกลับ/ไม่อนุมัติ ต้องกรอกเหตุผลก่อนแล้วข้าม validation ได้ ส่วนอนุมัติต้องผ่าน fncSubmit() ตามปกติ
+	function chgRunApproveAction(action, skipValidation) {
+		var field = document.getElementById('chg_approve_action');
+
+		if (skipValidation) {
+			var reasonConfig = {
+				return: {
+					title: 'ส่งกลับเอกสารนี้ ?',
+					subtitleText: 'ส่งกลับเอกสารเลขที่',
+					label: 'ระบุเหตุผลการส่งกลับ',
+					placeholder: 'ระบุเหตุผลการส่งกลับ',
+					iconBg: '#FFF4E5',
+					iconSrc: 'img/icons/send_back.png'
+				},
+				reject: {
+					title: 'ไม่อนุมัติเอกสารนี้ ?',
+					subtitleText: 'ไม่อนุมัติเอกสารเลขที่',
+					label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
+					iconBg: '#FEECEB',
+					iconSrc: 'img/icons/reject.png'
+				}
+			} [action];
+			if (!reasonConfig) return;
+
+			chgOpenReasonPopup(Object.assign({}, reasonConfig, {
+				onConfirm: function(reason) {
+					if (chgSubmitting) return;
+					chgSubmitting = true; // กันกดซ้ำ (เส้นทางนี้ไม่ผ่าน fncSubmit จึงต้องตั้งธงเอง)
+					if (field) field.value = action;
+					var reasonField = document.getElementById('chg_approve_reason');
+					if (reasonField) reasonField.value = reason;
+					HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+				}
+			}));
+			return;
+		}
+
+		if (field) field.value = action;
 		fncSubmit();
 		// fncSubmit() คืนค่า false ทั้งกรณีสำเร็จและ validation ไม่ผ่าน จึงดูจากธง chgSubmitting แทน
 		if (!chgSubmitting && field) field.value = '';
 	}
 
-	// ยกเลิกเอกสารจากเมนู ⋮ — ติ๊ก cancel_doc แล้ว submit ตรง ๆ ข้าม validation ของฟอร์ม
+	// ยกเลิกเอกสารจากเมนู ⋮ — mirror ของ register_supbrcshos.php:2364-2389
+	// chgToggleCancelDoc() เป็นตัวปลด disabled ของ admin_cancel_reason ด้วย ไม่งั้นค่าจะไม่ถูก POST
 	function triggerCancelDocFromChgApproveMenu() {
-		chgToggleCancelDoc();
-		HTMLFormElement.prototype.submit.call(chgEnsureSubmitMarker());
+		chgOpenReasonPopup({
+			title: 'ยกเลิกเอกสารนี้ ?',
+			subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+			label: 'ระบุเหตุผลในการยกเลิก',
+			placeholder: 'ระบุเหตุผลในการยกเลิก',
+			iconBg: '#F4F5F7',
+			iconSrc: 'img/icons/cancel_document.png',
+			onConfirm: function(reason) {
+				var cancelInput = document.getElementById('cancel_doc');
+				var cancelBtn = document.getElementById('btn_cancel_doc');
+				if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
+					chgToggleCancelDoc();
+				}
+
+				var reasonInput = document.getElementById('admin_cancel_reason');
+				var reasonField = document.getElementById('chg_approve_reason');
+				var actionField = document.getElementById('chg_approve_action');
+				if (reasonInput) reasonInput.value = reason;
+				if (reasonField) reasonField.value = reason;
+				if (actionField) actionField.value = '';
+				var form = chgEnsureSubmitMarker();
+				if (form) HTMLFormElement.prototype.submit.call(form);
+			}
+		});
 	}
 
 	function goMainSupChange() {
