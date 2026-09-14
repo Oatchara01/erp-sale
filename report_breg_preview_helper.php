@@ -125,6 +125,7 @@ function breg_report_build_preview_context($conn)
 	require_once __DIR__ . '/includes/breg_repo.php';
 	$metadata = breg_header_from_post($_SESSION ?? array());
 	$savedRefId = breg_report_preview_value('ref_id');
+	$original = null;
 	if ($savedRefId !== '') {
 		$original = breg_load_document($conn, $savedRefId);
 		if ($original === null) {
@@ -143,10 +144,33 @@ function breg_report_build_preview_context($conn)
 	$proComeDate = breg_report_preview_value('pro_comedate');
 	$dateBrdoc = breg_report_preview_value('date_brdoc');
 
-	$header = array(
+	// เอกสารเดิม (ref_id มีค่า) เป็น baseline ของข้อมูล lifecycle ที่เซิร์ฟเวอร์ควบคุม
+	// (เลขที่ใบส่งของ/ผู้อนุมัติ/วันที่อนุมัติ/คลังสินค้า ฯลฯ) — ฟอร์มสด overlay ได้แค่ฟิลด์ที่แก้ไขได้เอง
+	// ใบใหม่ที่ยังไม่มี $original ใช้ค่าว่างเหมือนเดิม
+	$lifecycleDefaults = array(
+		'iv_no'        => '',
+		'iv_date'      => '0000-00-00 00:00:00',
+		'sup_name'     => '',
+		'sup_date'     => '0000-00-00 00:00:00',
+		'dm_name'      => '',
+		'dm_date'      => '0000-00-00 00:00:00',
+		'receive_pro'  => '',
+		'receive_date' => '0000-00-00 00:00:00',
+		'st_name'      => '',
+		'st_date'      => '0000-00-00 00:00:00',
+		'send_erpst'   => '0',
+		'print_brdoc'  => '0',
+		'type_brdoc'   => '0',
+	);
+	$lifecycle = $lifecycleDefaults;
+	if ($original !== null) {
+		foreach ($lifecycleDefaults as $field => $default) {
+			$lifecycle[$field] = $original[$field] ?? $default;
+		}
+	}
+
+	$header = array_merge($lifecycle, array(
 		'ref_id'        => $refId,
-		'iv_no'         => '',
-		'iv_date'       => '0000-00-00 00:00:00',
 		'type_doc'      => $metadata['type_doc'],
 		'register_date' => $metadata['register_date'],
 		'add_by'        => $metadata['add_by'],
@@ -155,23 +179,12 @@ function breg_report_build_preview_context($conn)
 		'customer_name' => breg_report_preview_value('customer_name'),
 		'per_no'        => breg_report_preview_value('per_no'),
 		'cm_no'         => breg_report_preview_value('cm_no'),
-		'sup_name'      => '',
-		'sup_date'      => '0000-00-00 00:00:00',
-		'dm_name'       => '',
-		'dm_date'       => '0000-00-00 00:00:00',
-		'receive_pro'   => '',
-		'receive_date'  => '0000-00-00 00:00:00',
-		'st_name'       => '',
-		'st_date'       => '0000-00-00 00:00:00',
-		'send_erpst'    => '0',
-		'print_brdoc'   => '0',
-		'type_brdoc'    => '0',
 		'pro_come'      => (breg_report_preview_value('pro_come') === '1') ? '1' : '0',
 		'pro_comedate'  => $proComeDate !== '' ? $proComeDate : '0000-00-00',
 		'brdoc_eng'     => (breg_report_preview_value('brdoc_eng') === '1') ? '1' : '0',
 		'name_eng'      => breg_report_preview_value('name_eng'),
 		'date_brdoc'    => $dateBrdoc !== '' ? ($dateBrdoc . ' 00:00:00') : '0000-00-00 00:00:00',
-	);
+	));
 
 	return array(
 		'header' => $header,

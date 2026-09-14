@@ -238,7 +238,7 @@ include "dbconnect_sale.php";
 							$dropdown_id_js = htmlspecialchars(json_encode($dropdown_id), ENT_QUOTES, 'UTF-8');
 							$edit_url = 'register_bregawl.php?ref_id=' . urlencode($objResult["ref_id"]);
 							$copy_url = 'register_bregawl.php?copy_from=' . urlencode($objResult["ref_id"]);
-							$preview_url = 'register_bregawl.php?ref_id=' . urlencode($objResult["ref_id"]);
+							$preview_url = 'from_breg.php?ref_id=' . urlencode($objResult["ref_id"]);
 
 							$sendSup = (string)$objResult["send_sup"];
 							$sendDm = (string)$objResult["send_dm"];
@@ -301,7 +301,7 @@ include "dbconnect_sale.php";
 											<a href="<?php echo $copy_url; ?>" class="so-dropdown-item">
 												<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 											</a>
-											<a href="<?php echo $preview_url; ?>" class="so-dropdown-item">
+											<a href="<?php echo $preview_url; ?>" target="_blank" rel="noopener noreferrer" class="so-dropdown-item" onclick="event.stopPropagation();">
 												<i class="fas fa-search" style="width:16px;"></i> Preview
 											</a>
 										</div>

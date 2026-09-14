@@ -605,6 +605,7 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function(el) {
 					if (el.type === 'hidden') return;
 					if (el.classList.contains('btn-so-cancel-nav')) return;
+					if (el.classList.contains('btn-preview-so')) return;
 					el.disabled = true;
 				});
 			});
@@ -719,6 +720,10 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 
 <script language="JavaScript">
 	var bregSubmitting = false; // กันกดซ้ำระหว่างรอบันทึก
+	// สถานะ terminal คำนวณจากเซิร์ฟเวอร์แล้ว (ดู $bregIsTerminal) — ใช้เลือกเส้นทาง Preview เท่านั้น
+	// ไม่ใช่ authorization ฝั่ง client เอกสารจริงยังตรวจซ้ำที่ from_breg.php/breg_repo.php เสมอ
+	var bregIsTerminal = <?php echo $bregIsTerminal ? 'true' : 'false'; ?>;
+	var bregSavedRefId = <?php echo json_encode($bregIsDraftMode ? (string)$savedBreg['ref_id'] : '', JSON_UNESCAPED_UNICODE); ?>;
 
 	/* ===================== แถบอนุมัติ Sup/DM (ported จาก register_supchange.php:2007-2145) ===================== */
 	function bregToggleApproveOverflowMenu() {
@@ -1043,6 +1048,14 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 	/* Preview — POST ค่าปัจจุบันทั้งฟอร์มไป from_breg.php แบบ _report_preview=1
 	   ไม่แตะฐานข้อมูลและไม่จองเลข (pattern เดียวกับ openPrintReport ของ register_suphos.php) */
 	function bregOpenPreview() {
+		// เอกสาร terminal (Approve/Rejected/ยกเลิก) ต้อง preview จากค่าที่บันทึกจริงเท่านั้น
+		// ไม่รับค่าจากฟอร์ม/DOM ที่อาจถูกแก้ไข — เปิดรายงานที่บันทึกแล้วตรง ๆ แทนการ POST ฟอร์มสด
+		if (bregIsTerminal) {
+			if (!bregSavedRefId) return;
+			window.open('from_breg.php?ref_id=' + encodeURIComponent(bregSavedRefId), '_blank', 'noopener,noreferrer');
+			return;
+		}
+
 		var form = document.forms.frmMain;
 		if (!form) return;
 
