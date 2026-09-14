@@ -1,3 +1,16 @@
+<?php
+/* ร่าง (Draft) ต้องแก้ที่หน้าฟอร์มใหม่เท่านั้น — หน้านี้มีปุ่มส่งอนุมัติซึ่งใช้กับร่างไม่ได้
+   ต้องเช็คก่อน include head.php เพราะ head.php เริ่มพ่น HTML ทันที (header() จะใช้ไม่ได้)
+   ไม่เรียก session_start() ที่นี่ — ปล่อยให้ head.php เป็นคนเริ่ม session ตามเดิม
+   ($conn ที่ include ตรงนี้จะถูก head.php include ทับด้วยตัวใหม่อีกที ปกติของโค้ดชุดนี้) */
+if (isset($_GET["ref_id"]) && trim((string)$_GET["ref_id"]) !== '') {
+	include __DIR__ . '/dbconnect.php';
+	require_once __DIR__ . '/includes/breg_repo.php';
+	$breg_edit_ref = trim((string)$_GET["ref_id"]);
+	// AWL (type_doc=1) รวม lifecycle ทั้งหมดไว้ในหน้าใหม่แล้ว ไม่ว่าจะอยู่สถานะไหน — NBM เท่านั้นที่ยังใช้หน้านี้
+	breg_redirect_if_awl_get_endpoint($conn, $breg_edit_ref);
+}
+?>
 <?php include ("head.php"); ?>
 
 <script language="JavaScript">

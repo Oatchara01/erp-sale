@@ -1,4 +1,5 @@
 <?php include ("head.php"); ?>
+<?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
 
 
 
@@ -138,34 +139,58 @@ $today = $year . '-' . $month . '-' . $day;
 
 <?php 
 if($rs["pro_come"]=='1'){ ?>
-<input type="checkbox" name="pro_come" id="pro_come" value = '1' checked='checked' class="button4"  required>&nbsp;&nbsp; รับเข้าอะไหล่&nbsp;&nbsp;
+<input type="checkbox" name="pro_come" id="pro_come" value = '1' checked='checked' class="button4">&nbsp;&nbsp; รับเข้าอะไหล่&nbsp;&nbsp;
 
 <?php }else{ ?>
-<input type="checkbox" name="pro_come" id="pro_come" value = '1'  class="button4"  required>&nbsp;&nbsp; รับเข้าอะไหล่&nbsp;&nbsp;
+<input type="checkbox" name="pro_come" id="pro_come" value = '1'  class="button4">&nbsp;&nbsp; รับเข้าอะไหล่&nbsp;&nbsp;
 
 		<?php } ?>
 
 
 วันที่ :&nbsp;
-<input type="date" name="pro_comedate" id="pro_comedate" value ="<?php echo $rs["pro_comedate"];  ?>" class="button4" style="width:12%;"  ><br>	
+<input type="date" name="pro_comedate" id="pro_comedate" value ="<?php echo so_saved_iso_date_input($rs["pro_comedate"]);  ?>" class="button4" style="width:12%;"  ><br>
 	
 &nbsp;&nbsp;&nbsp;&nbsp;
 
 <?php 
 if($rs["brdoc_eng"]=='1'){ ?>
-<input type="checkbox" name="brdoc_eng" id="brdoc_eng" value = '1' checked='checked' class="button4"  required>&nbsp;&nbsp; ประกอบเรียบร้อย&nbsp;&nbsp;
+<input type="checkbox" name="brdoc_eng" id="brdoc_eng" value = '1' checked='checked' class="button4">&nbsp;&nbsp; ประกอบเรียบร้อย&nbsp;&nbsp;
 
 <?php }else{ ?>
-<input type="checkbox" name="brdoc_eng" id="brdoc_eng" value = '1'  class="button4"  required>&nbsp;&nbsp; ประกอบเรียบร้อย&nbsp;&nbsp;
+<input type="checkbox" name="brdoc_eng" id="brdoc_eng" value = '1'  class="button4">&nbsp;&nbsp; ประกอบเรียบร้อย&nbsp;&nbsp;
 
 		<?php } ?>
 
 &nbsp;&nbsp;ช่างประกอบ :&nbsp;
-<input type="text" name="name_eng" id="name_eng" value ="<?php  echo $_SESSION['name']; ?> <?php echo $_SESSION['surname'];   ?>" class="button4" style="width:12%;"  required> &nbsp;&nbsp;
+<?php
+/* ช่างประกอบเลือกจากข้อมูลหลัก tb_team_en (ฐาน `sale` ผ่าน $com) และเก็บ "ชื่อ" ลง name_eng
+   เดิมช่องนี้เป็น text ที่ prefill ชื่อผู้ล็อกอินไว้ตายตัว แล้วฝั่งบันทึกก็ทับด้วยชื่อผู้ล็อกอินอีกที
+   จึงไม่เคยเก็บชื่อช่างที่กรอกจริงเลย */
+$ensumEngineerNames = array();
+$ensumEngineerQuery = @mysqli_query($com, "SELECT sale_code, sale_name FROM tb_team_en ORDER BY sale_code ASC");
+if ($ensumEngineerQuery) {
+	while ($ensumEngineerRow = mysqli_fetch_assoc($ensumEngineerQuery)) {
+		$ensumName = trim((string)$ensumEngineerRow['sale_name']);
+		if ($ensumName !== '' && !in_array($ensumName, $ensumEngineerNames, true)) {
+			$ensumEngineerNames[] = $ensumName;
+		}
+	}
+}
+$ensumSavedEngineer = trim((string)$rs["name_eng"]);
+if ($ensumSavedEngineer !== '' && !in_array($ensumSavedEngineer, $ensumEngineerNames, true)) {
+	array_unshift($ensumEngineerNames, $ensumSavedEngineer);
+}
+?>
+<select name="name_eng" id="name_eng" class="button4" style="width:20%;">
+	<option value=""><?php echo count($ensumEngineerNames) > 0 ? '**เลือกช่างประกอบ**' : 'ไม่มีข้อมูลช่างในระบบ'; ?></option>
+	<?php foreach ($ensumEngineerNames as $ensumEngineerName) { ?>
+		<option value="<?php echo so_saved_h($ensumEngineerName); ?>" <?php echo ($ensumEngineerName === $ensumSavedEngineer) ? 'selected' : ''; ?>><?php echo so_saved_h($ensumEngineerName); ?></option>
+	<?php } ?>
+</select> &nbsp;&nbsp;
 
 
 วันที่ :&nbsp;
-<input type="date" name="date_brdoc" id="date_brdoc" value ="<?php echo $today;  ?>" class="button4" style="width:12%;"  required>
+<input type="date" name="date_brdoc" id="date_brdoc" value ="<?php echo so_saved_iso_date_input($rs["date_brdoc"]);  ?>" class="button4" style="width:12%;"  >
 
 	<br></fieldset>	
 	</div><br><br>	

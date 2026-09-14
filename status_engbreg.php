@@ -147,6 +147,8 @@ while($objResult = mysqli_fetch_array($objQuery))
 						<td bgcolor="#FF3030"  width="10%"><?php echo $objResult["status_doc"];?></td>
 				<?php }else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td  bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
+				<?php }else if ($objResult["status_doc"]=='Draft'){ /* ร่างที่ยังไม่ Submit — จองเลขไว้แล้วแต่ยังส่งอนุมัติไม่ได้ */ ?>
+				<td  bgcolor="#FFA500"><?php echo $objResult["status_doc"];?></td>
 				<?php }
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
@@ -156,7 +158,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 							
                 <td ><div align="left"><?php echo $objResult["dm_name"]; ?> <br>  
 				<?php if ($objResult["dm_date"]=="0000-00-00 00:00:00") { echo "-"; }else{ echo $objResult["dm_date"]; } ?></div></td>
-				<td><a href="register_breg_edit.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
+				<?php /* AWL (type_doc=1) รวม lifecycle ทั้งหมดไว้ในหน้าใหม่แล้ว ไม่ว่าจะอยู่สถานะไหน
+				         มีเฉพาะ NBM เท่านั้นที่ยังไปหน้าแก้ไขเดิม */ ?>
+				<td><a href="<?php echo ($objResult["type_doc"]=='1') ? 'register_bregawl.php' : 'register_breg_edit.php'; ?>?ref_id=<?php echo urlencode($objResult["ref_id"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
 				
 				<td><a href="from_breg.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a></td>
 

@@ -1,17 +1,35 @@
 <?php
 include "dbconnect.php";
-include "head.php";
+require_once __DIR__ . '/includes/breg_repo.php';
 
 $ref_id = $_GET['ref_id'];
+
+/* AWL (type_doc=1) ย้าย workflow ทั้งหมดไปหน้า register_bregawl.php แล้ว — endpoint GET เดิม
+   ต้องไม่ mutate state ของ AWL อีกต่อไป กันลิงก์เก่า/บุ๊กมาร์กยิงซ้ำข้าม workflow ใหม่
+   ต้องเช็คก่อน include head.php เพราะ head.php เริ่มพ่น HTML ทันที (header() จะใช้ไม่ได้) */
+breg_redirect_if_awl_get_endpoint($conn, $ref_id);
+
+include "head.php";
+
 $customer_name = $_GET['customer_name'];
 $add_date = date('Y-m-d H:i:s');
 $name =  $_SESSION['name'];
 $surname =	$_SESSION['surname'];
 $add_by = $_GET['add_by'];
 $sup_name = "$name $surname";
- 
 
-$save="Update  hos__breg set send_sup ='1',status_doc='Request',sup_name='".$sup_name."',sup_date='".$add_date."',send_dm='1'  where ref_id = '".$ref_id."' ";
+/* เอกสารที่ยังเป็นร่าง (Draft) ส่งอนุมัติไม่ได้ — ตรวจก่อนทั้ง UPDATE และก่อนยิง Line Notify
+   ไม่งั้นผู้บริหารจะได้แจ้งเตือนของเอกสารที่ยังกรอกไม่เสร็จ */
+$ckk_draft = mysqli_query($conn, "SELECT status_doc FROM hos__breg WHERE ref_id = '".mysqli_real_escape_string($conn,$ref_id)."' LIMIT 1");
+$rs_draft = $ckk_draft ? mysqli_fetch_assoc($ckk_draft) : null;
+if (!$rs_draft || $rs_draft['status_doc'] === 'Draft') {
+	echo "<script language=\"JavaScript\">";
+	echo "alert('เอกสารนี้ยังเป็นร่าง (Draft) กรุณากด Submit ที่หน้าฟอร์มก่อนจึงจะส่งอนุมัติได้');window.location='status_engbreg.php';";
+	echo "</script>";
+	exit();
+}
+
+$save="Update  hos__breg set send_sup ='1',status_doc='Request',sup_name='".$sup_name."',sup_date='".$add_date."',send_dm='1'  where ref_id = '".$ref_id."' and status_doc <> 'Draft' ";
 $qsave=mysqli_query($conn,$save);
  
 

@@ -1,9 +1,81 @@
+<?php
+
+/* ===================================================================
+ * เส้นทางบันทึกแบบใหม่ (breg_mode = v2) — ใช้โดย register_bregawl.php ที่ออกแบบใหม่
+ *
+ * ต้องทำงานก่อน include("head.php") เพราะต้อง redirect ด้วย header() หลังบันทึกเสร็จ
+ * และ head.php เริ่มพ่น HTML ออกไปทันที
+ *
+ * ฟอร์มเดิมที่ยังยิงมาที่ไฟล์นี้ (register_bregnbm.php) ไม่มีธง breg_mode
+ * จึงตกไปใช้เส้นทาง legacy ด้านล่างเหมือนเดิมทุกประการ
+ * =================================================================== */
+if (isset($_POST['breg_mode']) && $_POST['breg_mode'] === 'v2') {
+	session_start();
+	if (!isset($_SESSION['UserID']) || $_SESSION['UserID'] === '') {
+		header('Location: index.php');
+		exit();
+	}
+
+	date_default_timezone_set("Asia/Bangkok");
+	include __DIR__ . '/dbconnect.php';
+	require_once __DIR__ . '/includes/breg_repo.php';
+
+	try {
+		// mode 'submit' → status_doc = 'Request', send_sup/send_dm = 1/0 ทันที (เข้าคิว Sup โดยไม่ต้องกดส่งแยก)
+		$bregResult = breg_persist_from_post($conn, 'submit', $_SESSION);
+
+		// AWL ใช้หน้ารวม lifecycle ใหม่ทั้งหมด — NBM ยังคงเส้นทางแก้ไขเดิม
+		$bregSubmittedTypeDoc = isset($_POST['type_doc']) && !is_array($_POST['type_doc']) ? trim((string)$_POST['type_doc']) : '1';
+		if ($bregSubmittedTypeDoc === '1') {
+			breg_notify_stage_change($conn, $bregResult['ref_id'], 'submitted', $_SESSION);
+			header('Location: register_bregawl.php?ref_id=' . urlencode($bregResult['ref_id']) . '&saved=1');
+		} else {
+			header('Location: register_breg_edit.php?ref_id=' . urlencode($bregResult['ref_id']));
+		}
+		exit();
+	} catch (BregValidationException $e) {
+		$bregErrorMessage = $e->getMessage();
+	} catch (Throwable $e) {
+		error_log('[register_breg1:v2] ' . $e->getMessage());
+		$bregErrorMessage = 'ไม่สามารถบันทึกเอกสารได้ กรุณาลองใหม่อีกครั้ง หากยังไม่ได้กรุณาแจ้งผู้ดูแลระบบ';
+	}
+
+	// ล้มเหลว: ไม่มีอะไรถูกเขียนลงฐาน (rollback แล้ว) — แจ้งผู้ใช้แล้วพากลับไปแก้ฟอร์มเดิม
+	// ค่าที่กรอกไว้ยังอยู่ในเบราว์เซอร์ (history.back คืนฟอร์มเดิมพร้อมค่าที่พิมพ์ไว้)
+	// ไม่ include head.php ที่นี่ เพราะ head.php เรียก session_start() ซ้ำกับด้านบน
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SOL :: ITEAMDEV</title>
+</head>
+<body>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script>
+		Swal.fire({
+			title: 'บันทึกไม่สำเร็จ',
+			text: <?php echo json_encode($bregErrorMessage, JSON_UNESCAPED_UNICODE); ?>,
+			icon: 'error',
+			confirmButtonColor: '#612989',
+			confirmButtonText: 'กลับไปแก้ไข'
+		}).then(function() {
+			window.history.back();
+		});
+	</script>
+</body>
+</html>
+<?php
+	exit();
+}
+?>
 <?php include ("head.php"); ?>
 
 
 <?php
 include("dbconnect.php");
-include ("error_page.php"); 
+include ("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
 if ($_POST["submit"] = "submit") {

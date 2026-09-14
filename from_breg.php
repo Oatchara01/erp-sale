@@ -80,11 +80,64 @@ function DateThai($strDate)	{
 		return "$strDay $strMonthThai $strYear";
 }
 ///
-$ref_id = $_GET["ref_id"];
-include"dbconnect.php";
-$strSQL = "SELECT * FROM  hos__breg WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+include "dbconnect.php";
+include_once "report_breg_preview_helper.php";
+
+/* โหมด Preview: render จากค่าที่ POST มาจากฟอร์ม register_bregawl.php โดยไม่แตะฐานข้อมูล
+   โหมดปกติ (GET ?ref_id=...): โหลดเอกสารที่บันทึกแล้วเหมือนเดิม */
+$bregIsPreview = breg_report_is_preview_request();
+
+if ($bregIsPreview) {
+	if (session_status() === PHP_SESSION_NONE) {
+		session_start();
+	}
+	try {
+		$bregPreview = breg_report_build_preview_context($conn);
+	} catch (BregValidationException $e) {
+		http_response_code(422);
+		echo htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+		exit();
+	}
+	$objResult = $bregPreview['header'];
+	$ref_id = $objResult['ref_id'];
+	$bregItems1 = $bregPreview['items1'];
+	$bregItems2 = $bregPreview['items2'];
+} else {
+	$ref_id = isset($_GET["ref_id"]) ? trim((string)$_GET["ref_id"]) : '';
+	$strSQL = "SELECT * FROM  hos__breg WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "' ";
+	$objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");
+	$objResult = mysqli_fetch_array($objQuery, MYSQLI_ASSOC);
+
+	// ต้องมีหัวเอกสารจริงก่อนจึงจะอ่าน offset ต่าง ๆ ได้ — ไม่ปล่อยให้ตกไปพิมพ์ใบเปล่า
+	if (!$objResult) {
+		echo '<div style="font:14pt \'Angsana New\';padding:24px;">ไม่พบเอกสารเลขที่ '
+			. htmlspecialchars($ref_id, ENT_QUOTES, 'UTF-8') . '</div>';
+		exit();
+	}
+
+	$bregItems1 = array();
+	$strSQL1 = "SELECT sub.count1 AS count, sub.sn_number1 AS sn_number, sub.remark_eng1 AS remark_eng,
+					p.sol_name, p.unit_name
+				FROM hos__subbreg1 sub LEFT JOIN tb_product p ON sub.product_id1 = p.product_ID
+				WHERE sub.ref_id1 = '" . mysqli_real_escape_string($conn, $ref_id) . "'
+				ORDER BY " . (breg_report_items_order($conn, 'hos__subbreg1', 'id_sub1'));
+	$objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
+	while ($row = mysqli_fetch_assoc($objQuery1)) {
+		$row['type_probd'] = '';
+		$bregItems1[] = $row;
+	}
+
+	$bregItems2 = array();
+	$strSQL2 = "SELECT sub.count2 AS count, sub.sn_number2 AS sn_number, sub.remark_eng2 AS remark_eng,
+					sub.type_probd, p.sol_name, p.unit_name
+				FROM hos__subbreg2 sub LEFT JOIN tb_product p ON sub.product_id2 = p.product_ID
+				WHERE sub.ref_id2 = '" . mysqli_real_escape_string($conn, $ref_id) . "'
+				ORDER BY " . (breg_report_items_order($conn, 'hos__subbreg2', 'id_sub2'));
+	$objQuery2 = mysqli_query($conn, $strSQL2) or die("Error Query [" . $strSQL2 . "]");
+	while ($row = mysqli_fetch_assoc($objQuery2)) {
+		$bregItems2[] = $row;
+	}
+}
 
 
 $month = date('m');
@@ -111,13 +164,16 @@ if($objResult["date_brdoc"]!='0000-00-00 00:00:00'){ $date_brdoc = DateThai($obj
 	<tr>
 		<td style="width:25%;" valign="top">
 			<div align="left"><?php echo 'เลขที่อ้างอิง'; echo ' : '; echo $ref_id;?></div>
+			<div>บริษัท : <?php echo (int)($objResult['type_doc'] ?? 1) === 2 ? 'NBM' : 'AWL'; ?></div>
 		</td>
 		<td style="width:50%;" valign="top">
 			<center><h3><b>ใบขอเบิกอะไหล่จากสินค้าขาย<br>(Request For Part Withdrawal From Goods Sold)</b></h3></center>
 		</td>
 		<td style="width:25%;" valign="bottom">
-			<div align="right">เลขที่ : <?php echo $objResult["iv_no"];?></div>
-			<div align="right"><?php echo barcode($objResult["iv_no"]);?></div>
+			<div align="right">เลขที่ : <?php echo htmlspecialchars((string)$objResult["iv_no"], ENT_QUOTES, 'UTF-8');?></div>
+			<?php /* เอกสารที่ยังไม่ได้ run เลข (รวมถึงโหมด Preview) ไม่มี iv_no —
+			         BarcodeGenerator โยน exception ถ้าส่ง string ว่างเข้าไป */ ?>
+			<div align="right"><?php echo (trim((string)$objResult["iv_no"]) !== '') ? barcode($objResult["iv_no"]) : '';?></div>
 		</td>
 	</tr>
 </table>
@@ -154,24 +210,22 @@ if($objResult["date_brdoc"]!='0000-00-00 00:00:00'){ $date_brdoc = DateThai($obj
 <th width="30%" align="center">หมายเหตุ</th> 
 </tr>
 <?php
-$strSQL1 = "SELECT * FROM (hos__subbreg1 LEFT JOIN tb_product ON hos__subbreg1.product_id1=tb_product.product_ID) WHERE ref_id1 = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
-$i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1)) {
-		
+/* $bregItems1 เตรียมไว้ด้านบนแล้ว — โหมดปกติมาจาก DB (เรียงตาม sort_order เมื่อมีคอลัมน์)
+   โหมด Preview มาจากค่าที่ POST มา คีย์เหมือนกันทั้งสองโหมด */
+$i = 1;
+foreach ($bregItems1 as $objResult1) {
 	?>
 	<tr>
-		
+
 		<td align="center"><?php echo $i;?></td>
-		<td align="left"><?php echo $objResult1["sol_name"];?> </td>
-		<td align="right" style="padding-left:5px;"><?php echo $objResult1["count1"];?> </td>
-		<td align="center" style="padding-right:5px;"><?php echo $objResult1["unit_name"];?></td>
-		<td align="left" style="padding-right:5px;"><?php echo $objResult1["sn_number1"];?></td>
-		<td align="left" style="padding-right:5px;"><?php echo $objResult1["remark_eng1"];?></td>
-	<?php $i++;} ?>
+		<td align="left"><?php echo htmlspecialchars((string)$objResult1["sol_name"], ENT_QUOTES, 'UTF-8');?> </td>
+		<td align="right" style="padding-left:5px;"><?php echo htmlspecialchars((string)$objResult1["count"], ENT_QUOTES, 'UTF-8');?> </td>
+		<td align="center" style="padding-right:5px;"><?php echo htmlspecialchars((string)$objResult1["unit_name"], ENT_QUOTES, 'UTF-8');?></td>
+		<td align="left" style="padding-right:5px;"><?php echo nl2br(htmlspecialchars((string)$objResult1["sn_number"], ENT_QUOTES, 'UTF-8'));?></td>
+		<td align="left" style="padding-right:5px;"><?php echo nl2br(htmlspecialchars((string)$objResult1["remark_eng"], ENT_QUOTES, 'UTF-8'));?></td>
 	</tr>
-	
+<?php $i++; } ?>
+
 </table>
 
 	<p><b>เบิกอะไหล่จากสินค้า :</b>
@@ -187,25 +241,21 @@ while($objResult1 = mysqli_fetch_array($objQuery1)) {
 <th width="10%" align="center">ประเภทสินค้า</th> 
 </tr>
 <?php
-$strSQL2 = "SELECT * FROM (hos__subbreg2 LEFT JOIN tb_product ON hos__subbreg2.product_id2=tb_product.product_ID) WHERE ref_id2 = '".$ref_id."' ";
-$objQuery2 = mysqli_query($conn,$strSQL2) or die ("Error Query [".$strSQL2."]");
-$Num_Rows2 = mysqli_num_rows($objQuery2);
-$i=1;
-while($objResult2 = mysqli_fetch_array($objQuery2)) {
-		
+$i = 1;
+foreach ($bregItems2 as $objResult2) {
 	?>
 	<tr>
-		
+
 		<td align="center"><?php echo $i;?></td>
-		<td align="left"><?php echo $objResult2["sol_name"];?> </td>
-		<td align="left" style="padding-right:5px;"><?php echo $objResult2["sn_number2"];?></td>
-		<td align="right" style="padding-left:5px;"><?php echo $objResult2["count2"];?> </td>
-		<td align="center" style="padding-right:5px;"><?php echo $objResult2["unit_name"];?></td>
-		<td align="left" style="padding-right:5px;"><?php echo $objResult2["remark_eng2"];?></td>
-		<td align="center" style="padding-right:5px;"><?php echo $objResult2["type_probd"];?></td>
-	<?php $i++;} ?>
+		<td align="left"><?php echo htmlspecialchars((string)$objResult2["sol_name"], ENT_QUOTES, 'UTF-8');?> </td>
+		<td align="left" style="padding-right:5px;"><?php echo nl2br(htmlspecialchars((string)$objResult2["sn_number"], ENT_QUOTES, 'UTF-8'));?></td>
+		<td align="right" style="padding-left:5px;"><?php echo htmlspecialchars((string)$objResult2["count"], ENT_QUOTES, 'UTF-8');?> </td>
+		<td align="center" style="padding-right:5px;"><?php echo htmlspecialchars((string)$objResult2["unit_name"], ENT_QUOTES, 'UTF-8');?></td>
+		<td align="left" style="padding-right:5px;"><?php echo nl2br(htmlspecialchars((string)$objResult2["remark_eng"], ENT_QUOTES, 'UTF-8'));?></td>
+		<td align="center" style="padding-right:5px;"><?php echo htmlspecialchars((string)$objResult2["type_probd"], ENT_QUOTES, 'UTF-8');?></td>
 	</tr>
-	
+<?php $i++; } ?>
+
 </table>
 	
 
