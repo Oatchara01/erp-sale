@@ -209,7 +209,7 @@ if (!function_exists('breg_insert_header')) {
 			$stmt,
 			// s ref_id | i type_doc | s×10 register_date..status_doc | i pro_come | s pro_comedate
 			// | i brdoc_eng | s name_eng | s date_brdoc | s send_sup | s send_dm | s send_supname | s send_supdate
-			'sissssssssssisisssss',
+			'sissssssssssisissssss',
 			$refId,
 			$header['type_doc'],
 			$header['register_date'],
@@ -267,7 +267,7 @@ if (!function_exists('breg_update_header')) {
 			$stmt,
 			// i type_doc | s×8 register_date..status_doc | i pro_come | s pro_comedate
 			// | i brdoc_eng | s name_eng | s date_brdoc | s×4 send_sup..send_supdate | s ref_id (WHERE)
-			'issssssssisissssss',
+			'issssssssisisssssss',
 			$header['type_doc'],
 			$header['register_date'],
 			$header['bill_id'],
@@ -1222,6 +1222,79 @@ if (!function_exists('breg_log_status')) {
 		mysqli_stmt_bind_param($stmt, 'sssss', $refId, $statusLabel, $reason, $userId, $userName);
 		mysqli_stmt_execute($stmt);
 		mysqli_stmt_close($stmt);
+	}
+}
+
+if (!function_exists('breg_document_return_status_label')) {
+	/**
+	 * label ที่โชว์ผู้ใช้สำหรับแถวประวัติ/banner — ตั้งใจยุบ Sup/DM ให้เป็น label เดียวกัน
+	 * (ไม่แยกชั้นเหมือนใน tb_document_status_log.status_doc) เพราะทั้งหน้านี้และ
+	 * register_supbrhos.php ซึ่งมี flow Sup/DM สองชั้นเหมือนกัน ก็ไม่เคยโชว์ชั้นอนุมัติ
+	 * ให้ผู้ใช้เห็นที่ไหนมาก่อน ข้อมูล stage ที่แท้จริงยังอยู่ครบใน status_doc ของตาราง log
+	 */
+	function breg_document_return_status_label($statusDoc)
+	{
+		$map = array(
+			'Sup Returned' => 'ส่งกลับ',
+			'DM Returned'  => 'ส่งกลับ',
+			'Sup Rejected' => 'ไม่อนุมัติ',
+			'DM Rejected'  => 'ไม่อนุมัติ',
+			'Cancelled'    => 'ยกเลิกเอกสาร',
+		);
+		return $map[$statusDoc] ?? $statusDoc;
+	}
+}
+
+if (!function_exists('breg_document_return_status_class')) {
+	function breg_document_return_status_class($statusDoc)
+	{
+		$map = array(
+			'Sup Returned' => 'is-returned',
+			'DM Returned'  => 'is-returned',
+			'Sup Rejected' => 'is-rejected',
+			'DM Rejected'  => 'is-rejected',
+			'Cancelled'    => 'is-cancelled',
+		);
+		return $map[$statusDoc] ?? 'is-cancelled';
+	}
+}
+
+if (!function_exists('breg_format_document_log_datetime')) {
+	function breg_format_document_log_datetime($createdAt)
+	{
+		$createdAt = trim((string)$createdAt);
+		if ($createdAt === '') {
+			return '';
+		}
+		$timestamp = strtotime($createdAt);
+		if ($timestamp === false) {
+			return '';
+		}
+		return date('d-m-Y H:i', $timestamp);
+	}
+}
+
+if (!function_exists('breg_load_status_log')) {
+	/**
+	 * ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก สำหรับ banner ล่าสุดและ tab ประวัติ — กรองเฉพาะ label
+	 * ที่ breg_log_status() เขียนไว้ตอน return/reject/cancel เท่านั้น ไม่รวม 'Submitted',
+	 * 'Sup Approved', 'DM Approved', 'Updated' ซึ่งไม่ใช่เหตุการณ์ "ส่งกลับเอกสาร"
+	 */
+	function breg_load_status_log($conn, $refId)
+	{
+		$rows = array();
+		if ($refId === '' || !breg_table_exists($conn, 'tb_document_status_log')) {
+			return $rows;
+		}
+		$safeRefId = mysqli_real_escape_string($conn, $refId);
+		$statusList = "'Sup Returned','Sup Rejected','DM Returned','DM Rejected','Cancelled'";
+		$query = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $safeRefId . "' AND status_doc IN (" . $statusList . ") ORDER BY created_at DESC, id DESC");
+		if ($query) {
+			while ($row = mysqli_fetch_assoc($query)) {
+				$rows[] = $row;
+			}
+		}
+		return $rows;
 	}
 }
 

@@ -47,6 +47,7 @@ date_default_timezone_set("Asia/Bangkok");
 $savedBreg = null;
 $bregSavedItems1 = array();
 $bregSavedItems2 = array();
+$bregDocumentLogRows = array();
 
 if ($bregRequestedRefId !== '') {
 	if (!empty($bregDocumentMissing)) {
@@ -72,6 +73,7 @@ if ($bregRequestedRefId !== '') {
 
 	$bregSavedItems1 = breg_load_items($conn, $savedBreg['ref_id'], 1);
 	$bregSavedItems2 = breg_load_items($conn, $savedBreg['ref_id'], 2);
+	$bregDocumentLogRows = breg_load_status_log($conn, $savedBreg['ref_id']);
 }
 
 $bregIsDraftMode = ($savedBreg !== null);
@@ -274,6 +276,8 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 	     (เอกสารที่มีอยู่แล้วส่งไป register_bregawl_edit1.php ทั้งหมด) ฟอร์มเดิม (register_bregnbm.php)
 	     ไม่มีธงนี้ จึงยังวิ่งเส้นทาง legacy เหมือนเดิม -->
 	<input type="hidden" name="breg_mode" value="v2">
+	<!-- native form.submit() ไม่ส่ง name/value ของปุ่ม submit จึงต้องเก็บ action แยกไว้ -->
+	<input type="hidden" name="submit" id="breg_submit_action" value="">
 	<?php if ($bregIsDraftMode) { ?>
 		<input type="hidden" name="ref_id" id="ref_id" value="<?php echo so_saved_h($savedBreg['ref_id']); ?>">
 	<?php } else { ?>
@@ -299,6 +303,28 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 				</button>
 			</div>
 		</div>
+
+		<?php
+		$bregLatestReasonTitleMap = array(
+			'Sup Returned' => 'เหตุผลในการส่งกลับ',
+			'DM Returned'  => 'เหตุผลในการส่งกลับ',
+			'Sup Rejected' => 'เหตุผลที่ไม่อนุมัติ',
+			'DM Rejected'  => 'เหตุผลที่ไม่อนุมัติ',
+			'Cancelled'    => 'เหตุผลในการยกเลิก',
+		);
+		$bregLatestReason = $bregDocumentLogRows[0] ?? null;
+		$bregLatestReasonStatus = trim((string)($bregLatestReason['status_doc'] ?? ''));
+		$bregLatestReasonText = trim((string)($bregLatestReason['reason'] ?? ''));
+		$bregLatestReasonTitle = $bregLatestReasonTitleMap[$bregLatestReasonStatus] ?? '';
+		$bregLatestReasonClass = breg_document_return_status_class($bregLatestReasonStatus);
+		?>
+		<?php if ($bregIsDraftMode && $bregLatestReasonTitle !== '' && $bregLatestReasonText !== '') { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($bregLatestReasonClass); ?>" role="status" style="margin-bottom:16px;">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($bregLatestReasonTitle); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($bregLatestReasonText)); ?></div>
+			</div>
+		<?php } ?>
 
 		<!-- ===================== การ์ด: ข้อมูลเอกสาร ===================== -->
 		<div class="so-card breg-document-card">
@@ -500,6 +526,29 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 				</div>
 			</div>
 		</div>
+
+		<?php
+		$bregDocumentLogRowsForTabs = array();
+		foreach ($bregDocumentLogRows as $bregDocumentLogRow) {
+			$bregDocumentLogRowsForTabs[] = array(
+				'status_label' => breg_document_return_status_label($bregDocumentLogRow['status_doc'] ?? ''),
+				'status_class' => breg_document_return_status_class($bregDocumentLogRow['status_doc'] ?? ''),
+				'reason'       => $bregDocumentLogRow['reason'] ?? '',
+				'user_name'    => $bregDocumentLogRow['user_name'] ?? '',
+				'created_at'   => breg_format_document_log_datetime($bregDocumentLogRow['created_at'] ?? ''),
+			);
+		}
+
+		$docTabsCard = array(
+			'open_fn' => 'bregOpen3Tab',
+			'document_return_log' => array(
+				'enabled' => true,
+				'rows' => $bregDocumentLogRowsForTabs,
+				'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+			),
+		);
+		include __DIR__ . '/partials/doc_tabs_card.php';
+		?>
 	</div>
 
 	<div class="so-sticky-actions">
@@ -536,15 +585,13 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 		</div>
 	</div>
 	<?php if ($bregIsTerminal) { ?>
-		<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-yellow" style="max-width:1096px;margin:16px auto;">
-			<p>เอกสารนี้ปิดแล้ว (สถานะ: <?php echo so_saved_h($bregStatusDoc); ?>) ไม่สามารถแก้ไขได้อีก</p>
-		</div>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				var form = document.forms.frmMain;
 				if (!form) return;
 				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function(el) {
 					if (el.type === 'hidden') return;
+					if (el.classList.contains('btn-so-cancel-nav')) return;
 					el.disabled = true;
 				});
 			});
@@ -803,6 +850,16 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 		});
 	}
 
+	/* สลับแท็บของ partials/doc_tabs_card.php — pattern เดียวกับ brOpen3Tab ของ register_supbrcshos.php */
+	function bregOpen3Tab(tabId, element) {
+		var contents = document.getElementsByClassName('so-3tab-content');
+		for (var i = 0; i < contents.length; i++) contents[i].style.display = 'none';
+		var btns = element.parentElement.getElementsByClassName('so-tab-btn');
+		for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+		document.getElementById(tabId).style.display = 'block';
+		element.classList.add('active');
+	}
+
 	/* ส่วนช่าง — เปิด/ปิดช่องตามเงื่อนไข และย้ำสถานะ active ของ checkbox pill
 	   กติกาเดียวกับ breg_validate_engineer_section() ฝั่ง server */
 	function bregSyncEngineerSection() {
@@ -893,6 +950,12 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 			if (proComeDate.value !== '' && dateBrdoc.value < proComeDate.value) {
 				return bregValidationFail('วันที่ประกอบต้องไม่ก่อนวันที่รับเข้าอะไหล่', dateBrdoc);
 			}
+		}
+
+		var approveAction = document.getElementById('breg_approve_action');
+		var submitAction = document.getElementById('breg_submit_action');
+		if (submitAction && (!approveAction || approveAction.value === '')) {
+			submitAction.value = 'submit';
 		}
 
 		bregSubmitting = true;
