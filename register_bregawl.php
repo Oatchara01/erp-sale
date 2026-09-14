@@ -5,7 +5,7 @@ require_once __DIR__ . '/includes/breg_repo.php';
 /* ===================================================================
  * ด่านตัดสินใจก่อน head.php
  *
- * เอกสารที่พ้นขั้นร่างไปแล้วต้องแก้ที่หน้าแก้ไขเดิม — ต้อง redirect ตรงนี้
+ * เอกสาร BREG ทุกประเภทเปิดผ่านหน้านี้จาก status_engbreg.php
  * เพราะ head.php เริ่มพ่น HTML ทันทีที่ include ทำให้ header() ใช้ไม่ได้อีก
  * ($conn ที่ include ตรงนี้จะถูก head.php include ทับด้วยตัวใหม่อีกที
  *  ตาม convention เดียวกับ register_breg_edit.php)
@@ -14,12 +14,6 @@ $bregRequestedRefId = isset($_GET['ref_id']) ? trim((string)$_GET['ref_id']) : '
 if ($bregRequestedRefId !== '') {
 	include __DIR__ . '/dbconnect.php';
 	$bregPreloaded = breg_load_document($conn, $bregRequestedRefId);
-	// เฉพาะ NBM เท่านั้นที่ยัง redirect ไปหน้าแก้ไขเดิม — AWL (type_doc=1) รวม lifecycle
-	// ทั้งหมด (Draft/Request/terminal) ไว้ในหน้านี้แล้ว ไม่ว่าจะอยู่สถานะไหน
-	if ($bregPreloaded !== null && (string)$bregPreloaded['type_doc'] !== '1') {
-		header('Location: register_breg_edit.php?ref_id=' . urlencode($bregPreloaded['ref_id']));
-		exit();
-	}
 	$bregDocumentMissing = ($bregPreloaded === null);
 }
 ?>
@@ -40,7 +34,7 @@ date_default_timezone_set("Asia/Bangkok");
  * โหมดของหน้า
  *   - ไม่มี ref_id            → สร้างใบใหม่ (เลขที่แสดงเป็นเลขคาดการณ์ จองจริงตอนบันทึก)
  *   - ref_id ของใบ Draft      → เปิดร่างเดิมกลับมาแก้ เลขไม่เปลี่ยน
- *   - ref_id ของใบที่ไม่ใช่ Draft → ถูก redirect ไปหน้าแก้ไขเดิมตั้งแต่ก่อน head.php แล้ว
+ *   - ref_id ของใบที่ไม่ใช่ Draft → เปิดดู/จัดการ lifecycle ในหน้านี้
  *
  * โหลดซ้ำด้วย $conn ตัวที่ head.php เพิ่ง include มา (ตัวก่อนหน้าถูกทิ้งไปแล้ว)
  * =================================================================== */
@@ -48,6 +42,20 @@ $savedBreg = null;
 $bregSavedItems1 = array();
 $bregSavedItems2 = array();
 $bregDocumentLogRows = array();
+
+/* คัดลอกใบเดิม — เฉพาะตอนสร้างใบใหม่เท่านั้น (ไม่มี ref_id) */
+$bregCopyFromRefId = ($bregRequestedRefId === '' && isset($_GET['copy_from'])) ? trim((string)$_GET['copy_from']) : '';
+$bregCopySource = null;
+$bregCopySourceNotFound = false;
+if ($bregCopyFromRefId !== '') {
+	$bregCopySource = breg_load_document($conn, $bregCopyFromRefId);
+	if ($bregCopySource === null) {
+		$bregCopySourceNotFound = true;
+	} else {
+		$bregSavedItems1 = breg_load_items($conn, $bregCopySource['ref_id'], 1);
+		$bregSavedItems2 = breg_load_items($conn, $bregCopySource['ref_id'], 2);
+	}
+}
 
 if ($bregRequestedRefId !== '') {
 	if (!empty($bregDocumentMissing)) {
@@ -66,11 +74,6 @@ if ($bregRequestedRefId !== '') {
 		include 'foot.php';
 		exit();
 	}
-	if ((string)$savedBreg['type_doc'] !== '1') {
-		header('Location: register_breg_edit.php?ref_id=' . urlencode($savedBreg['ref_id']));
-		exit();
-	}
-
 	$bregSavedItems1 = breg_load_items($conn, $savedBreg['ref_id'], 1);
 	$bregSavedItems2 = breg_load_items($conn, $savedBreg['ref_id'], 2);
 	$bregDocumentLogRows = breg_load_status_log($conn, $savedBreg['ref_id']);
@@ -78,6 +81,11 @@ if ($bregRequestedRefId !== '') {
 
 $bregIsDraftMode = ($savedBreg !== null);
 $bregDisplayRefId = $bregIsDraftMode ? $savedBreg['ref_id'] : breg_peek_next_ref_id($conn);
+
+/* ค่าตั้งต้นของฟอร์ม — ร่างเดิม (แก้ไข) มาก่อนต้นฉบับที่คัดลอกมา (สร้างใหม่) เสมอ
+   ใช้เฉพาะ prefill ฟิลด์ข้อมูลเอกสาร/ลูกค้า ไม่รวม lifecycle (ref_id, สถานะ, การอนุมัติ)
+   ซึ่งกำหนดจาก $bregIsDraftMode อยู่แล้วและต้องเริ่มต้นใหม่เสมอเมื่อคัดลอก */
+$bregPrefill = $bregIsDraftMode ? $savedBreg : $bregCopySource;
 
 /* ===================================================================
  * สถานะ lifecycle ของเอกสาร — คำนวณจาก (status_doc, send_sup, send_dm) ล้วน ๆ
@@ -135,14 +143,14 @@ if ($bregSaleCodeQuery) {
 		$bregSaleCodeOptions[] = $bregSaleCodeRow;
 	}
 }
-$bregSelectedSaleCode = $bregIsDraftMode ? (string)$savedBreg['sale_code'] : $bregUserSaleCode;
+$bregSelectedSaleCode = $bregPrefill ? (string)$bregPrefill['sale_code'] : $bregUserSaleCode;
 
 /* ค่าตั้งต้นของส่วนช่าง */
-$bregProCome = $bregIsDraftMode ? ((string)$savedBreg['pro_come'] === '1') : false;
-$bregProComeDate = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['pro_comedate']) : '';
-$bregBrdocEng = $bregIsDraftMode ? ((string)$savedBreg['brdoc_eng'] === '1') : false;
-$bregNameEng = $bregIsDraftMode ? (string)$savedBreg['name_eng'] : '';
-$bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brdoc']) : '';
+$bregProCome = $bregPrefill ? ((string)$bregPrefill['pro_come'] === '1') : false;
+$bregProComeDate = $bregPrefill ? so_saved_iso_date_input($bregPrefill['pro_comedate']) : '';
+$bregBrdocEng = $bregPrefill ? ((string)$bregPrefill['brdoc_eng'] === '1') : false;
+$bregNameEng = $bregPrefill ? (string)$bregPrefill['name_eng'] : '';
+$bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc']) : '';
 ?>
 
 <?php if (isset($_GET['saved']) && $_GET['saved'] === '1') { ?>
@@ -318,6 +326,11 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 		$bregLatestReasonTitle = $bregLatestReasonTitleMap[$bregLatestReasonStatus] ?? '';
 		$bregLatestReasonClass = breg_document_return_status_class($bregLatestReasonStatus);
 		?>
+		<?php if (!$bregIsDraftMode && $bregCopySourceNotFound) { ?>
+			<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" style="margin-bottom:16px;">
+				<p>ไม่พบเอกสารเลขที่ <?php echo so_saved_h($bregCopyFromRefId); ?> ที่ต้องการคัดลอก — ระบบเริ่มสร้างใบใหม่แบบว่างให้แทน</p>
+			</div>
+		<?php } ?>
 		<?php if ($bregIsDraftMode && $bregLatestReasonTitle !== '' && $bregLatestReasonText !== '') { ?>
 			<div class="so-latest-reason-banner <?php echo so_saved_h($bregLatestReasonClass); ?>" role="status" style="margin-bottom:16px;">
 				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
@@ -360,7 +373,7 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 					<label class="so-label" for="cm_no">เลขที่ใบงานบริการ <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
 						<input type="text" name="cm_no" id="cm_no" class="so-input" placeholder="เลขที่อ้างอิง"
-							value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['cm_no']) : ''; ?>">
+							value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['cm_no']) : ''; ?>">
 					</div>
 				</div>
 
@@ -368,7 +381,7 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 					<label class="so-label" for="per_no">เลขที่ PER <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
 						<input type="text" name="per_no" id="per_no" class="so-input" placeholder="ระบุเลขที่ PER"
-							value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['per_no']) : ''; ?>">
+							value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['per_no']) : ''; ?>">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('per_no').value='';" aria-label="ล้างค่า"></button>
 					</div>
 				</div>
@@ -393,10 +406,10 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 
 					<!-- เก็บข้อมูลลูกค้าที่เลือกไว้สำหรับบันทึก โดยไม่แสดงเป็นฟิลด์ซ้ำกับการ์ดข้อมูลลูกค้า -->
 					<input type="hidden" name="customer_name" id="customer_name"
-						value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['customer_name']) : ''; ?>">
+						value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['customer_name']) : ''; ?>">
 					<!-- bill_id = tb_customer.customer_id ตรงกับที่ hos__breg.bill_id เก็บอยู่เดิม -->
-					<input type="hidden" name="bill_id" id="bill_id" value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['bill_id']) : ''; ?>">
-					<input type="hidden" name="h_bill_id" id="h_bill_id" value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['bill_id']) : ''; ?>">
+					<input type="hidden" name="bill_id" id="bill_id" value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['bill_id']) : ''; ?>">
+					<input type="hidden" name="h_bill_id" id="h_bill_id" value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['bill_id']) : ''; ?>">
 				</div>
 
 				<div class="so-customer-top-right">
@@ -453,7 +466,7 @@ $bregDateBrdoc = $bregIsDraftMode ? so_saved_iso_date_input($savedBreg['date_brd
 			</div>
 			<div class="so-field-group" style="margin-bottom:0;">
 				<label class="so-label" for="description">วัตถุประสงค์การเบิก <span style="color:red;">*</span></label>
-				<input type="text" name="description" id="description" class="so-input" placeholder="ระบุวัตถุประสงค์การเบิก" value="<?php echo $bregIsDraftMode ? so_saved_h($savedBreg['description']) : ''; ?>">
+				<input type="text" name="description" id="description" class="so-input" placeholder="ระบุวัตถุประสงค์การเบิก" value="<?php echo $bregPrefill ? so_saved_h($bregPrefill['description']) : ''; ?>">
 			</div>
 		</div>
 

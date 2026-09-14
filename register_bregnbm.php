@@ -1,5 +1,23 @@
 <?php include ("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
+<?php require_once __DIR__ . '/includes/breg_repo.php'; ?>
+<?php
+/* คัดลอกใบเดิม (คัดลอกใบเดิม บนหน้า status_engbreg.php) — โหลดเอกสารต้นทางเพื่อ prefill
+   ฟอร์มสร้างใหม่เท่านั้น ไม่บันทึกอะไรจนกว่าผู้ใช้จะกด "บันทึก" เอง
+   ฟอร์มนี้ (legacy) จำกัดแถวรายการไว้ที่ 10 แถวต่อกลุ่มอยู่แล้ว (ดู register_breg1.php) —
+   เอกสารต้นทางที่มีมากกว่า 10 แถวต่อกลุ่มจะถูกคัดลอกมาเฉพาะ 10 แถวแรก */
+$bregCopyFromRefId = isset($_GET['copy_from']) ? trim((string)$_GET['copy_from']) : '';
+$bregCopySource = null;
+$bregCopyItems1 = array();
+$bregCopyItems2 = array();
+if ($bregCopyFromRefId !== '') {
+	$bregCopySource = breg_load_document($conn, $bregCopyFromRefId);
+	if ($bregCopySource !== null) {
+		$bregCopyItems1 = array_slice(breg_load_items($conn, $bregCopySource['ref_id'], 1), 0, 10);
+		$bregCopyItems2 = array_slice(breg_load_items($conn, $bregCopySource['ref_id'], 2), 0, 10);
+	}
+}
+?>
 
 <script language="JavaScript">
 
@@ -214,6 +232,11 @@ function fncSubmit()   //ห้ามชื่อสินค้า ยี่ห
 <div class="w3-white">
 		<div class="w3-container w3-padding-large"><!-- main div -->
 			<div class="w3-panel w3-light-gray"><h4>ใบขอเบิกอะไหล่จากสินค้าขาย (BREG)</h4></div>
+<?php if ($bregCopyFromRefId !== '' && $bregCopySource === null) { ?>
+			<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange">
+				<p>ไม่พบเอกสารเลขที่ <?php echo htmlspecialchars($bregCopyFromRefId); ?> ที่ต้องการคัดลอก — ระบบเริ่มสร้างใบใหม่แบบว่างให้แทน</p>
+			</div>
+<?php } ?>
 <?php
 date_default_timezone_set("Asia/Bangkok");
 
@@ -243,24 +266,24 @@ $today = $year . '-' . $month . '-' . $day;
 
 		รหัสลูกค้า  : 
 
-<input type='text' name = "bill_id"  id = "bill_id" class="w3-input" placeholder="Search ชื่อลูกค้า..."  style="width:90%;" OnChange="JavaScript:doCallAjax1('bill_id','customer_name');"/> 
-<input type='hidden' name = "h_bill_id"  id = "h_bill_id"  class="button4" readonly>	
-			
+<input type='text' name = "bill_id"  id = "bill_id" class="w3-input" placeholder="Search ชื่อลูกค้า..."  style="width:90%;" value="<?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['bill_id']) : ''; ?>" OnChange="JavaScript:doCallAjax1('bill_id','customer_name');"/>
+<input type='hidden' name = "h_bill_id"  id = "h_bill_id"  class="button4" value="<?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['bill_id']) : ''; ?>" readonly>
+
 			วัตถุประสงค์การเบิก
-<textarea name="description" id="description" class="w3-input" rows="2" style="width:90%"></textarea>			
-			
+<textarea name="description" id="description" class="w3-input" rows="2" style="width:90%"><?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['description']) : ''; ?></textarea>
+
 </div>
-		
+
 		<div class="w3-half 1">
 ชื่อลูกค้า :
-				
-<input type='text' name = "customer_name"  id = "customer_name" style="width:90%;" class="w3-input" >
-			
+
+<input type='text' name = "customer_name"  id = "customer_name" style="width:90%;" class="w3-input" value="<?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['customer_name']) : ''; ?>">
+
 เลขที่ PER :
-<input type='text' name = "per_no"  id = "per_no" style="width:90%;" class="w3-input" >
+<input type='text' name = "per_no"  id = "per_no" style="width:90%;" class="w3-input" value="<?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['per_no']) : ''; ?>">
 
 เลขที่ใบงานบริการ :
-<input type='text' name = "cm_no"  id = "cm_no" style="width:90%;" class="w3-input" >
+<input type='text' name = "cm_no"  id = "cm_no" style="width:90%;" class="w3-input" value="<?php echo $bregCopySource ? htmlspecialchars((string)$bregCopySource['cm_no']) : ''; ?>">
 	<br>					
 </div>
 		
@@ -280,11 +303,55 @@ $today = $year . '-' . $month . '-' . $day;
 
 <br>
 		
-<div id="cs" class="w3-container city1" style="display:none">		
+<div id="cs" class="w3-container city1" style="display:none">
 	<?php include ('detail_bregengnb1.php');		 ?>
 </div>
 
-<br>	
+<?php if (!empty($bregCopyItems1) || !empty($bregCopyItems2)) { ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	function bregNbmFillRow(prefix, idx, item) {
+		var suffix = prefix === 'group2' ? '_' + idx : idx;
+		function set(fieldBase, value) {
+			var el = document.getElementById(fieldBase + suffix);
+			if (el) el.value = value === null || value === undefined ? '' : String(value);
+		}
+		set('product_id', item.product_id);
+		set('product_name', item.product_name);
+		set('unit_name', item.unit_name);
+		set('sale_count', item.count_value);
+		set('sn_number', item.sn_number);
+		set('remark_eng', item.remark_eng);
+	}
+
+	var bregCopyItems1 = <?php echo json_encode(array_map(function ($item) {
+		return array(
+			'product_id'   => $item['product_id'],
+			'product_name' => $item['sol_name'] !== null && $item['sol_name'] !== '' ? $item['sol_name'] : $item['access_code'],
+			'unit_name'    => $item['unit_name'],
+			'count_value'  => $item['count_value'],
+			'sn_number'    => $item['sn_number'],
+			'remark_eng'   => $item['remark_eng'],
+		);
+	}, $bregCopyItems1), JSON_UNESCAPED_UNICODE); ?>;
+	var bregCopyItems2 = <?php echo json_encode(array_map(function ($item) {
+		return array(
+			'product_id'   => $item['product_id'],
+			'product_name' => $item['sol_name'] !== null && $item['sol_name'] !== '' ? $item['sol_name'] : $item['access_code'],
+			'unit_name'    => $item['unit_name'],
+			'count_value'  => $item['count_value'],
+			'sn_number'    => $item['sn_number'],
+			'remark_eng'   => $item['remark_eng'],
+		);
+	}, $bregCopyItems2), JSON_UNESCAPED_UNICODE); ?>;
+
+	bregCopyItems1.forEach(function(item, i) { bregNbmFillRow('group1', i + 1, item); });
+	bregCopyItems2.forEach(function(item, i) { bregNbmFillRow('group2', i + 1, item); });
+});
+</script>
+<?php } ?>
+
+<br>
 <center>
 <input type="submit" name="submit" value="บันทึก" class="w3-button w3-teal" >
 </center>

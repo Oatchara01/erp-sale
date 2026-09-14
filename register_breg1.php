@@ -24,14 +24,9 @@ if (isset($_POST['breg_mode']) && $_POST['breg_mode'] === 'v2') {
 		// mode 'submit' → status_doc = 'Request', send_sup/send_dm = 1/0 ทันที (เข้าคิว Sup โดยไม่ต้องกดส่งแยก)
 		$bregResult = breg_persist_from_post($conn, 'submit', $_SESSION);
 
-		// AWL ใช้หน้ารวม lifecycle ใหม่ทั้งหมด — NBM ยังคงเส้นทางแก้ไขเดิม
-		$bregSubmittedTypeDoc = isset($_POST['type_doc']) && !is_array($_POST['type_doc']) ? trim((string)$_POST['type_doc']) : '1';
-		if ($bregSubmittedTypeDoc === '1') {
-			breg_notify_stage_change($conn, $bregResult['ref_id'], 'submitted', $_SESSION);
-			header('Location: register_bregawl.php?ref_id=' . urlencode($bregResult['ref_id']) . '&saved=1');
-		} else {
-			header('Location: register_breg_edit.php?ref_id=' . urlencode($bregResult['ref_id']));
-		}
+		// เอกสารที่สร้างจากหน้า register_bregawl.php ใช้หน้ารวม lifecycle ใหม่ทุกบริษัท (AWL/NBM)
+		breg_notify_stage_change($conn, $bregResult['ref_id'], 'submitted', $_SESSION);
+		header('Location: register_bregawl.php?ref_id=' . urlencode($bregResult['ref_id']) . '&saved=1');
 		exit();
 	} catch (BregValidationException $e) {
 		$bregErrorMessage = $e->getMessage();
