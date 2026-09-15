@@ -88,7 +88,6 @@ $sale_code = $_POST['sale_code'];
 $type_product_map = ['สินค้าเตียง' => 1, 'สินค้าที่นอน' => 2, 'สินค้าอื่นๆ' => 3];
 $type_product = $type_product_map[$_POST['product_type_rental'] ?? ''] ?? 0;
 $des_productunit = mysqli_real_escape_string($conn, $_POST['rental_item_name'] ?? '');
-$have_order = isset($_POST['have_order']) ? 1 : 0;
 
 // เลขที่ลงงาน (job_no) แก้ได้เฉพาะผ่านแท็บ Admin ตรง ๆ เหมือน iv_no — ไม่ re-run เครื่องออกเลขอัตโนมัติ
 $job_no = mysqli_real_escape_string($conn, trim($_POST['rt_admin_work_no'] ?? ''));
@@ -116,8 +115,6 @@ $rental_addr_detail = mysqli_real_escape_string($conn, $_POST['rental_addr_detai
 $rental_province = mysqli_real_escape_string($conn, $_POST['rental_province'] ?? '');
 $rental_district = mysqli_real_escape_string($conn, $_POST['rental_district'] ?? '');
 $rental_zipcode = mysqli_real_escape_string($conn, $_POST['rental_zipcode'] ?? '');
-$rental_referrer = mysqli_real_escape_string($conn, $_POST['rental_referrer'] ?? '');
-$rental_repeat_cus = isset($_POST['rental_repeat_cus']) ? 1 : 0;
 
 $location_link = mysqli_real_escape_string($conn, $_POST['location_link'] ?? '');
 $transport_company = mysqli_real_escape_string($conn, $_POST['transport_company'] ?? '');
@@ -196,7 +193,6 @@ try {
 	bank_img='" . $bank_img . "',
 	type_product='" . $type_product . "',
 	des_productunit='" . $des_productunit . "',
-	have_order='" . $have_order . "',
 	iv_no='" . $iv_no . "',
 	iv_date='" . $iv_date . "',
 	job_no='" . $job_no . "',
@@ -214,9 +210,7 @@ try {
 	rental_addr_detail='" . $rental_addr_detail . "',
 	rental_province='" . $rental_province . "',
 	rental_district='" . $rental_district . "',
-	rental_zipcode='" . $rental_zipcode . "',
-	rental_referrer='" . $rental_referrer . "',
-	rental_repeat_cus='" . $rental_repeat_cus . "'
+	rental_zipcode='" . $rental_zipcode . "'
 	where ref_id = '" . $ref_id . "'";
 
 	$objQuerySave = mysqli_query($conn, $save);

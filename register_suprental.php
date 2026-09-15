@@ -657,7 +657,6 @@
 			'start_promis' => so_saved_iso_date_input($rentalSrc['start_promis'] ?? ''),
 			'count_m' => $rentalSrc['count_m'],
 			'rental_item_name' => $rentalSrc['des_productunit'],
-			'have_order' => $rentalSrc['have_order'],
 			'register_date' => so_saved_iso_date_input($rentalSrc['register_date'] ?? ''),
 			'rental_address' => $rentalSrc['rental_address'],
 			'rental_name' => $rentalSrc['rental_name'],
@@ -668,8 +667,6 @@
 			'rental_province' => $rentalSrc['rental_province'],
 			'rental_district' => $rentalSrc['rental_district'],
 			'rental_zipcode' => $rentalSrc['rental_zipcode'],
-			'rental_referrer' => $rentalSrc['rental_referrer'],
-			'rental_repeat_cus' => $rentalSrc['rental_repeat_cus'],
 			'payment' => $rentalSrc['payment'],
 			'des_sale' => $rentalSrc['des_sale'],
 			'delivery_type' => $rentalSrc['delivery_type'],
@@ -1216,10 +1213,6 @@
 							</div>
 						</div>
 
-						<label class="so-toggle-pill" style="margin-top:12px;">
-							<input type="checkbox" name="have_order" value="1">
-							<span>ออเดอร์ฝาก</span>
-						</label>
 					</div>
 				</div>
 
@@ -1549,29 +1542,11 @@
 						</div>
 					</div>
 
-					<div class="so-grid-3" style="margin-top: 18px;">
-						<div class="so-field-group" style="margin-bottom: 0;">
-							<label class="so-label" for="rental_referrer">ผู้แนะนำ</label>
-							<div class="so-input-wrapper">
-								<input type="text" name="rental_referrer" id="rental_referrer" class="so-input" placeholder="ระบุชื่อผู้แนะนำ" style="padding-right: 32px;">
-								<i class="fas fa-times so-clear-icon" onclick="document.getElementById('rental_referrer').value='';" aria-label="ล้างผู้แนะนำ"></i>
-							</div>
-						</div>
-						<div class="so-field-group" style="margin-bottom: 0; justify-content: flex-end;">
-							<div style="display: flex; align-items: center; height: 42px;">
-								<label class="so-toggle-pill" id="lbl-rental_repeat_cus">
-									<input type="checkbox" name="rental_repeat_cus" id="rental_repeat_cus" value="1">
-									<span>ลูกค้าซื้อซ้ำ</span>
-								</label>
-							</div>
-						</div>
-						<div></div>
-					</div>
 				</div>
 
 				<!-- ===================== การชำระเงิน (payment/des_sale — sale_code/start_promis/count_m ย้าย
 				     ไปการ์ด "ข้อมูลเอกสาร" ในแท็บด้านบนแล้ว) ===================== -->
-				<div class="so-card">
+				<div class="so-card" style="display: none;">
 					<div class="so-section-title-container">
 						<h2 class="so-section-title">การชำระเงิน</h2>
 						<hr class="so-divider">
@@ -2751,7 +2726,7 @@
 				}
 
 				// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
-				['is_high_roof', 'call_customer', 'no_money', 'send_cs', 'have_order', 'rental_repeat_cus'].forEach(function(name) {
+				['is_high_roof', 'call_customer', 'no_money', 'send_cs'].forEach(function(name) {
 					var el = document.querySelector('[name="' + name + '"]');
 					if (el) el.dispatchEvent(new Event('change', {
 						bubbles: true

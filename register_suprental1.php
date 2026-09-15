@@ -104,7 +104,6 @@ $sale_code = $_POST['sale_code'];
 $type_product_map = ['สินค้าเตียง' => 1, 'สินค้าที่นอน' => 2, 'สินค้าอื่นๆ' => 3];
 $type_product = $type_product_map[$_POST['product_type_rental'] ?? ''] ?? 0;
 $des_productunit = mysqli_real_escape_string($conn, $_POST['rental_item_name'] ?? '');
-$have_order = isset($_POST['have_order']) ? 1 : 0;
 
 $iv_no = mysqli_real_escape_string($conn, $_POST['rt_admin_doc_no'] ?? '');
 $iv_date = !empty($_POST['rt_admin_doc_date']) ? $_POST['rt_admin_doc_date'] : '0000-00-00';
@@ -127,8 +126,6 @@ $rental_addr_detail = mysqli_real_escape_string($conn, $_POST['rental_addr_detai
 $rental_province = mysqli_real_escape_string($conn, $_POST['rental_province'] ?? '');
 $rental_district = mysqli_real_escape_string($conn, $_POST['rental_district'] ?? '');
 $rental_zipcode = mysqli_real_escape_string($conn, $_POST['rental_zipcode'] ?? '');
-$rental_referrer = mysqli_real_escape_string($conn, $_POST['rental_referrer'] ?? '');
-$rental_repeat_cus = isset($_POST['rental_repeat_cus']) ? 1 : 0;
 
 $location_link = mysqli_real_escape_string($conn, $_POST['location_link'] ?? '');
 $transport_company = mysqli_real_escape_string($conn, $_POST['transport_company'] ?? '');
@@ -216,9 +213,9 @@ mysqli_begin_transaction($conn);
 try {
 
 $save="insert into hos__rental
-(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,have_order,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,rental_addr_detail,rental_province,rental_district,rental_zipcode,rental_referrer,rental_repeat_cus,status_doc,send_sup,sup_name,sup_date)
+(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,rental_addr_detail,rental_province,rental_district,rental_zipcode,status_doc,send_sup,sup_name,sup_date)
 values
-('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$have_order."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$rental_referrer."','".$rental_repeat_cus."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
+('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
 
 $qsave=mysqli_query($conn,$save);
 	
