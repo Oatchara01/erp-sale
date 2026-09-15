@@ -33,6 +33,13 @@
 		icon: 'figma-delete-icon'
 	};
 
+	/* ===== บริษัท (AWL/NBM) จาก #rt_type_doc_select: 4=NBM, อื่น/ไม่มี=AWL ===== */
+	function rtGetSelectedCompany() {
+		var sel = document.getElementById('rt_type_doc_select');
+		if (!sel) return 'AWL';
+		return sel.value === '4' ? 'NBM' : 'AWL';
+	}
+
 	function rtEscapeHtml(text) {
 		if (!text) return '';
 		return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -362,7 +369,7 @@
 
 	function rtDoCallAjax(accessCode, rowIndex) {
 		var req = new XMLHttpRequest();
-		req.open('POST', 'data_product_hos1.php', true);
+		req.open('POST', 'data_product_rental.php', true);
 		req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 		req.onreadystatechange = function() {
 			if (req.readyState === 4) {
@@ -379,7 +386,7 @@
 				}
 			}
 		};
-		req.send('product_code=' + encodeURIComponent(accessCode) + '&format=json');
+		req.send('product_code=' + encodeURIComponent(accessCode) + '&type_company=' + encodeURIComponent(rtGetSelectedCompany()) + '&format=json');
 	}
 
 	function rtValidateHeaderFields() {
@@ -640,7 +647,7 @@
 		};
 
 		if (this.value.length < 1 && this.isNotClick) return;
-		return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value);
+		return "data_pro_rental.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + encodeURIComponent(rtGetSelectedCompany());
 	}, {
 		select_first: 0
 	});
@@ -665,4 +672,58 @@
 	$(document).ready(function() {
 		rtCalculateSummary();
 	});
+
+	/* ===== เปลี่ยนบริษัท: ถ้ามีสินค้าอยู่ ให้ยืนยันก่อนล้างทั้ง 10 แถว ===== */
+	(function rtInitCompanyChangeGuard() {
+		var companySelect = document.getElementById('rt_type_doc_select');
+		if (!companySelect) return;
+
+		var rtPrevCompanyValue = companySelect.value;
+
+		function rtHasAnyProduct() {
+			for (var i = 1; i <= RT_ROW_COUNT; i++) {
+				var idEl = document.getElementById('product_id' + i);
+				if (idEl && idEl.value.trim() !== '') return true;
+			}
+			return false;
+		}
+
+		function rtClearAllRowsAndResetSearch() {
+			for (var i = 1; i <= RT_ROW_COUNT; i++) {
+				rtExecuteClearRow(i);
+			}
+			var searchInput = document.getElementById('rt_product_search');
+			if (searchInput) searchInput.value = '';
+			var selectAll = document.getElementById('rt_select_all');
+			if (selectAll) selectAll.checked = false;
+			rtUpdateDeleteButtonVisibility();
+		}
+
+		companySelect.addEventListener('change', function() {
+			var newValue = companySelect.value;
+
+			if (!rtHasAnyProduct()) {
+				rtPrevCompanyValue = newValue;
+				return;
+			}
+
+			Swal.fire({
+				title: 'เปลี่ยนบริษัท ?',
+				html: 'การเปลี่ยนบริษัทจะล้างรายการสินค้าทั้งหมดและคำนวณยอดใหม่ ต้องการดำเนินการต่อหรือไม่ ?',
+				showCancelButton: true,
+				confirmButtonText: 'ยืนยัน',
+				cancelButtonText: 'ยกเลิก',
+				reverseButtons: true,
+				customClass: RT_DELETE_CUSTOM_CLASS,
+				buttonsStyling: false
+			}).then(function(result) {
+				if (result.isConfirmed) {
+					rtClearAllRowsAndResetSearch();
+					rtPrevCompanyValue = newValue;
+				} else {
+					companySelect.value = rtPrevCompanyValue;
+				}
+			});
+		});
+	})();
 </script>
