@@ -253,6 +253,7 @@
 		var priceEl = document.getElementById('product_price' + rowIndex);
 		var remarkEl = document.getElementById('sale_remarkk' + rowIndex);
 		var displayNameEl = document.getElementById('display_name' + rowIndex);
+		var snNumberEl = document.getElementById('sn_number' + rowIndex);
 
 		var depositInput = document.getElementById('rt_modal_deposit');
 		if (depositInput) {
@@ -265,6 +266,10 @@
 		var displayNameInput = document.getElementById('rt_modal_display_name');
 		if (displayNameInput) {
 			displayNameInput.value = displayNameEl ? displayNameEl.value : '';
+		}
+		var snNumberInput = document.getElementById('rt_modal_sn_number');
+		if (snNumberInput) {
+			snNumberInput.value = snNumberEl ? snNumberEl.value : '';
 		}
 
 		rtSyncModalClearButtons();
@@ -295,6 +300,10 @@
 		}
 		if (displayNameEl && document.getElementById('rt_modal_display_name')) {
 			displayNameEl.value = document.getElementById('rt_modal_display_name').value;
+		}
+		var snNumberEl = document.getElementById('sn_number' + rtActiveEditRowIndex);
+		if (snNumberEl && document.getElementById('rt_modal_sn_number')) {
+			snNumberEl.value = document.getElementById('rt_modal_sn_number').value;
 		}
 		rtCloseEditModal();
 	}
@@ -500,10 +509,7 @@
 				</th>
 				<th>รหัสสินค้า</th>
 				<th>รายการสินค้า</th>
-				<th>ของแถม</th>
 				<th>จำนวน</th>
-				<th>ยอดรวม</th>
-				<th>หมายเลข SN</th>
 				<th aria-label="จัดการรายการ"></th>
 			</tr>
 		</thead>
@@ -545,24 +551,14 @@
 					<td>
 						<span class="so-product-name-label" id="product_name_label<?php echo $i; ?>"></span>
 					</td>
-					<td>
-						<div class="cs-cell-pill">
-							<input type='text' name="free_count<?php echo $i; ?>" id="free_count<?php echo $i; ?>" class="so-input" style="text-align:center" value="0">
-						</div>
-					</td>
+					<input type='hidden' name="free_count<?php echo $i; ?>" id="free_count<?php echo $i; ?>" value="0">
 					<td>
 						<div class="cs-cell-pill">
 							<input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="rtUpdateRowTotal(<?php echo $i; ?>); rtCalculateSummary();">
 						</div>
 					</td>
-					<td>
-						<input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" value="" readonly>
-					</td>
-					<td>
-						<div class="cs-cell-pill">
-							<input type='text' name="sn_number<?php echo $i; ?>" id="sn_number<?php echo $i; ?>" class="so-input" placeholder="ใส่เลข SN">
-						</div>
-					</td>
+					<input type='hidden' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" value="">
+					<input type='hidden' name="sn_number<?php echo $i; ?>" id="sn_number<?php echo $i; ?>" value="">
 					<td class="cs-row-actions-cell">
 						<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="rtOpenEditModal(<?php echo $i; ?>);">
 							<i class="fas fa-pen" aria-hidden="true"></i>
@@ -590,13 +586,6 @@
 			<button type="button" class="cs-modal-close-btn" onclick="rtCloseEditModal();" aria-label="ปิด">&times;</button>
 		</div>
 		<div class="cs-modal-body">
-			<div class="so-field-group rt-modal-deposit-wrap">
-				<label class="so-label">ค่ามัดจำ</label>
-				<div class="so-modal-input-wrap">
-					<input type="text" id="rt_modal_deposit" class="so-input" placeholder="0.00" data-clearable="true">
-					<button type="button" class="so-modal-clear" data-target="rt_modal_deposit" aria-label="ล้างข้อมูล">&times;</button>
-				</div>
-			</div>
 			<div class="cs-modal-grid-2">
 				<div class="so-field-group">
 					<label class="so-label">หมายเหตุสินค้า</label>
@@ -606,10 +595,10 @@
 					</div>
 				</div>
 				<div class="so-field-group">
-					<label class="so-label">ชื่อที่แสดงในใบส่งสินค้า</label>
+					<label class="so-label">หมายเลข SN</label>
 					<div class="so-modal-input-wrap">
-						<input type="text" id="rt_modal_display_name" class="so-input" placeholder="ระบุชื่อสำหรับแสดงในใบส่งสินค้า" data-clearable="true">
-						<button type="button" class="so-modal-clear" data-target="rt_modal_display_name" aria-label="ล้างข้อมูล">&times;</button>
+						<input type="text" id="rt_modal_sn_number" class="so-input" placeholder="ใส่เลข SN" data-clearable="true">
+						<button type="button" class="so-modal-clear" data-target="rt_modal_sn_number" aria-label="ล้างข้อมูล">&times;</button>
 					</div>
 				</div>
 			</div>
