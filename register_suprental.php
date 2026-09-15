@@ -1192,6 +1192,15 @@
 								<label class="so-label" for="count_m">ระยะเวลาเช่า (เดือน)<span style="color: #dc3545;">*</span></label>
 								<input type="text" name="count_m" id="count_m" placeholder="ใส่เฉพาะตัวเลข" class="so-input">
 							</div>
+							<script>
+								document.getElementById('count_m').addEventListener('input', function() {
+									var months = parseFloat(this.value.replace(/,/g, ''));
+									if (!isNaN(months) && months >= 3) {
+										var deliveryInput = document.getElementById('rt_header_delivery');
+										if (deliveryInput) deliveryInput.value = '0';
+									}
+								});
+							</script>
 
 							<div class="so-field-group">
 								<label class="so-label">เลขที่สัญญา</label>
