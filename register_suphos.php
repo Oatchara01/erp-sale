@@ -1135,6 +1135,60 @@ include("head.php"); ?>
 				} else {
 					$fromRentalError = "ไม่พบสินค้าเงินประกัน (รหัส 5111) ในระบบ กรุณาติดต่อผู้ดูแลระบบ";
 				}
+			} else if ($rentalConversionType === "IV") {
+				// ออกใบสั่งขายค่าเช่า (IV): ไม่คัดลอกสินค้าจริงที่ให้เช่า แต่สร้างรายการค่าบริการมาตรฐาน 2 แถวแทน
+				// 5112 = ค่าเช่า (ราคา = SUM(amount) ของใบเช่า), 3200 = ค่าบริการ/ค่าจัดส่ง Messenger (ราคา = delivery_cost แถวแรก)
+				// ห้าม SUM(delivery_cost) เพราะค่านี้ถูกเก็บซ้ำทุกแถวสินค้าในใบเช่า ไม่ใช่ค่าต่อแถว
+				$rentalFeeSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS fee_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
+				$rentalFeeSumRow = $rentalFeeSumQuery ? mysqli_fetch_assoc($rentalFeeSumQuery) : null;
+				$rentalFeeAmount = $rentalFeeSumRow ? (float)$rentalFeeSumRow["fee_sum"] : 0;
+
+				$rentalDeliveryCostQuery = mysqli_query($conn, "SELECT delivery_cost FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "' ORDER BY id_sub ASC LIMIT 1");
+				$rentalDeliveryCostRow = $rentalDeliveryCostQuery ? mysqli_fetch_assoc($rentalDeliveryCostQuery) : null;
+				$rentalDeliveryCost = $rentalDeliveryCostRow ? (float)$rentalDeliveryCostRow["delivery_cost"] : 0;
+
+				$feeProductQuery = mysqli_query($conn, "SELECT * FROM tb_product WHERE product_ID IN ('5112', '3200')");
+				$feeProductRows = array();
+				if ($feeProductQuery) {
+					while ($feeProductRow = mysqli_fetch_assoc($feeProductQuery)) {
+						$feeProductRows[(string)$feeProductRow["product_ID"]] = $feeProductRow;
+					}
+				}
+
+				if (isset($feeProductRows['5112']) && isset($feeProductRows['3200'])) {
+					$rentalFeeLineItems = array(
+						array('id' => '5112', 'amount' => $rentalFeeAmount),
+						array('id' => '3200', 'amount' => $rentalDeliveryCost),
+					);
+					foreach ($rentalFeeLineItems as $rentalFeeLineItem) {
+						$feeProductRow = $feeProductRows[$rentalFeeLineItem['id']];
+						$savedProductsForForm[] = array(
+							'product_id' => $rentalFeeLineItem['id'],
+							'product_code' => (string)($feeProductRow["access_code"] ?? ""),
+							'product_name' => (string)($feeProductRow["sol_name"] ?? ""),
+							'product_sn' => "",
+							'unit_name' => (string)($feeProductRow["unit_name"] ?? ""),
+							'sale_count' => "1",
+							'product_price' => (string)$rentalFeeLineItem['amount'],
+							'discount_unit' => "0",
+							'sum_amount' => (string)$rentalFeeLineItem['amount'],
+							'warranty' => "",
+							'cal' => "",
+							'pm_year' => "",
+							'pm' => "",
+							'sale_remarkk' => "",
+							'clear_br' => "",
+							'clear_ivno' => "",
+							'jong_ckk' => "",
+							'jong_no' => "",
+							'display_name' => "",
+							'subso_db_id' => "",
+							'remark_hc' => (string)($feeProductRow["remark_hc"] ?? ""),
+						);
+					}
+				} else {
+					$fromRentalError = "ไม่พบสินค้าค่าเช่า (รหัส 5112) หรือค่าบริการ (รหัส 3200) ในระบบ กรุณาติดต่อผู้ดูแลระบบ";
+				}
 			} else {
 				$rentalProductQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name, tb_product.remark_hc AS tb_remark_hc FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $fromRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
 				if ($rentalProductQuery) {
