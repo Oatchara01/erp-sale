@@ -356,4 +356,3 @@ $adminTabRows = $adminInfoTab['rows'] ?? [];
 </div>
 <?php
 unset($adminTabId, $adminTabTitle, $adminTabRows, $adminTabRow, $adminTabField, $fieldType, $spanVal, $fieldSpanClass);
-

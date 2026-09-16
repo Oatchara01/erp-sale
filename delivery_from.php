@@ -1541,7 +1541,7 @@ $pdf->setXY(0.5,18.45);
 $pdf->Cell(17.6,0,'','T',0,'C',0);
 
 $pdf->setXY(0.55,18.35);
-$pdf->Cell(10.5,0.6, iconv( 'UTF-8//IGNORE','cp874//IGNORE' , "17.$list_des17"),0 ,'L' ); 
+$pdf->Cell(10.5,0.6, iconv( 'UTF-8//IGNORE','cp874//IGNORE' , "17."),0 ,'L' );
 
 if($rs1["check17"]=='1'){
 $pdf->Image("img/chk32.png",11.4,18.5,0.35,0.35);	

@@ -390,11 +390,12 @@
 						cashSel.value = sel.value;
 					}
 
-					if (typeof callback === 'function') {
-						callback();
-					}
 				} else {
 					console.error('โหลดช่องทางชำระเงินไม่สำเร็จ');
+				}
+
+				if (typeof callback === 'function') {
+					callback();
 				}
 			}
 		};
@@ -402,7 +403,7 @@
 	}
 
 	// สลับโหมดการชำระเงิน (เครดิต / เงินสด)
-	function switchPaymentMode(mode) {
+	function switchPaymentMode(mode, onComplete) {
 		var isCredit = (mode === 'credit');
 
 		var radCredit = document.getElementById('pay_mode_credit');
@@ -432,6 +433,7 @@
 				var cashSel = document.getElementById('payment_cash_select');
 				if (cashSel) cashSel.value = sel.value;
 				updateCreditDisplay();
+				if (typeof onComplete === 'function') onComplete();
 			});
 		} else {
 			var shouldDisableCredit = hasSelectedCustomerForPaymentMode() && getResolvedCustomerPaymentMode() === 'cash';
@@ -459,6 +461,7 @@
 				}
 				var cashSel = document.getElementById('payment_cash_select');
 				if (cashSel) cashSel.value = sel.value;
+				if (typeof onComplete === 'function') onComplete();
 			});
 		}
 	}
@@ -486,13 +489,17 @@
 	}
 
 	document.addEventListener('DOMContentLoaded', function() {
+		rtBeginDocumentInitialization();
 		loadTypeBankOptions(function() {
 			var pmSelect = document.getElementById('payment_method');
 			if (pmSelect && pmSelect.value !== '0' && pmSelect.value !== '') {
-				loadBankOptions(true, pmSelect.value);
+				loadBankOptions(true, pmSelect.value, rtEndDocumentInitialization);
+			} else {
+				rtEndDocumentInitialization();
 			}
 		});
-		switchPaymentMode('credit');
+		rtBeginDocumentInitialization();
+		switchPaymentMode('credit', rtEndDocumentInitialization);
 
 		var pmSelectElem = document.getElementById('payment_method');
 		if (pmSelectElem) {
@@ -759,6 +766,10 @@
 
 		<script language="javascript">
 			var rtSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
+			var rtIsEditMode = <?php echo $rentalIsEditMode ? 'true' : 'false'; ?>; // มาจากฝั่งเซิร์ฟเวอร์ ห้ามใช้แค่ ref_id เพราะ create mode ก็มี ref_id ที่ generate ไว้ล่วงหน้า
+			var rtDocBaseline = null; // snapshot ฟอร์มหลัง prefill เสร็จ ใช้เทียบก่อนเปิดเอกสารเดิม (register_suprental.php)
+			var rtDocInitializationPending = 0;
+			var rtDocDomReady = false;
 
 			// สลับแท็บที่ field ซ่อนอยู่ให้ขึ้นมาก่อน focus (รองรับทั้ง 3 ระบบแท็บของหน้านี้:
 			// so-tab-content/rtOpenDocTab, so-addr-tab-content/rtOpenAddrTab, rt-fin-tab-content/rtOpenFinTab)
@@ -977,6 +988,78 @@
 				else form.setAttribute('enctype', originalEnctype);
 
 				form.removeChild(previewFlag);
+			}
+
+			// snapshot ค่าฟอร์มปัจจุบัน (ไม่รวม field ชั่วคราวที่เกิดจาก action flow เช่นตอน submit/preview)
+			// ใช้เทียบกับ rtDocBaseline เพื่อรู้ว่าฟอร์มถูกแก้หลัง prefill ไปแล้วหรือยัง
+			function rtCaptureFormSnapshot() {
+				var form = document.forms['frmMain'];
+				if (!form) return '';
+
+				var rtSnapshotExcludeNames = ['submit', '_report_preview', 'is_draft'];
+				var parts = [];
+
+				Array.prototype.forEach.call(form.elements, function(el) {
+					if (!el.name || rtSnapshotExcludeNames.indexOf(el.name) !== -1) return;
+					if (el.disabled) return;
+
+					if (el.type === 'file') {
+						var fileList = el.files ? Array.prototype.map.call(el.files, function(f) {
+							return f.name + ':' + f.size;
+						}).join(',') : '';
+						parts.push(el.name + '=' + fileList);
+					} else if (el.type === 'checkbox' || el.type === 'radio') {
+						parts.push(el.name + ':' + el.value + '=' + (el.checked ? '1' : '0'));
+					} else {
+						parts.push(el.name + '=' + el.value);
+					}
+				});
+
+				return parts.join('|');
+			}
+
+			function rtBeginDocumentInitialization() {
+				rtDocInitializationPending++;
+			}
+
+			function rtEndDocumentInitialization() {
+				if (rtDocInitializationPending > 0) rtDocInitializationPending--;
+				rtCaptureDocumentBaselineWhenReady();
+			}
+
+			function rtCaptureDocumentBaselineWhenReady() {
+				if (!rtDocDomReady || rtDocInitializationPending !== 0) return;
+				rtDocBaseline = rtCaptureFormSnapshot();
+			}
+
+			// เปิดเอกสารเดิม (หนังสือสัญญา/ใบรับส่งสินค้า/ใบรับส่งสินค้า Preview) ที่อ่านข้อมูลจาก DB ตรงๆ
+			// ต้องเป็นข้อมูลที่บันทึกแล้วเท่านั้น จึงเช็ค edit mode + ต้องไม่มีการแก้ไขค้างที่ยังไม่ Update
+			function rtOpenSavedRentalDocument(reportFile) {
+				if (!rtIsEditMode) {
+					Swal.fire('แจ้งเตือน', 'กรุณาบันทึกเอกสารก่อน จึงจะสามารถเปิดรายงานนี้ได้', 'warning');
+					return;
+				}
+
+				if (rtDocBaseline === null) {
+					Swal.fire('แจ้งเตือน', 'ระบบกำลังเตรียมข้อมูลเอกสาร กรุณารอสักครู่แล้วลองอีกครั้ง', 'warning');
+					return;
+				}
+
+				if (rtCaptureFormSnapshot() !== rtDocBaseline) {
+					Swal.fire('แจ้งเตือน', 'มีการแก้ไขข้อมูลในฟอร์ม กรุณากด Update เพื่อบันทึกก่อน จึงจะสามารถเปิดรายงานนี้ได้', 'warning');
+					return;
+				}
+
+				var form = document.forms['frmMain'];
+				var refInput = form ? form.querySelector('input[name="ref_id"]') : null;
+				var refId = refInput ? refInput.value.trim() : '';
+
+				if (!refId) {
+					Swal.fire('แจ้งเตือน', 'ไม่พบเลขที่อ้างอิง (ref_id)', 'warning');
+					return;
+				}
+
+				window.open(reportFile + '?ref_id=' + encodeURIComponent(refId), '_blank');
 			}
 		</script>
 
@@ -1254,16 +1337,9 @@
 							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'rtRunJobNo();', 'icon_id' => 'btn_rt_run_job_no', 'value' => ($savedRental !== null) ? ($savedRental['job_no'] ?? '') : ''],
 						],
 						[
-							['type' => 'text', 'name' => 'rt_admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'icon' => 'img/icons/preview.png', 'value' => ($savedRental !== null) ? ($savedRental['sr_no'] ?? '') : ''],
-							['type' => 'text', 'name' => 'rt_admin_deposit_no', 'label' => 'เลขที่ใบฝาก', 'icon' => 'img/icons/preview.png', 'value' => ($savedRental !== null) ? ($savedRental['order_no'] ?? '') : ''],
-							['type' => 'sub_grid', 'fields' => [
-								['type' => 'text', 'name' => 'rt_admin_box_count', 'label' => 'จำนวนกล่อง', 'placeholder' => 'เฉพาะตัวเลข', 'value' => ($savedRegister !== null) ? ($savedRegister['count_box'] ?? '') : ''],
-								['type' => 'text', 'name' => 'rt_admin_edit_count', 'label' => 'จำนวนครั้งที่แก้ไขบิล', 'placeholder' => 'ใส่เฉพาะตัวเลข', 'value' => ($savedRental !== null) ? ($savedRental['new_bill'] ?? '') : ''],
-							]],
-						],
-						[
-							['type' => 'date_th', 'name' => 'rt_admin_doc_date_old', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['date_oldbill'] ?? '') : ''],
-							['type' => 'text', 'name' => 'rt_admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'placeholder' => 'ระบุสาเหตุการแก้ไขบิล', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'value' => ($savedRental !== null) ? ($savedRental['desnew_bill'] ?? '') : ''],
+							['type' => 'button_field', 'button' => ['type' => 'button', 'label' => 'หนังสือสัญญา', 'id' => 'btn_rt_contract', 'onclick' => "rtOpenSavedRentalDocument('promis_from.php');"]],
+							['type' => 'button_field', 'button' => ['type' => 'button', 'label' => 'ใบรับส่งสินค้า', 'id' => 'btn_rt_delivery', 'onclick' => "rtOpenSavedRentalDocument('delivery_from.php');"]],
+							['type' => 'button_field', 'button' => ['type' => 'button', 'label' => 'ใบรับส่งสินค้า Preview', 'id' => 'btn_rt_delivery_preview', 'onclick' => "rtOpenSavedRentalDocument('delivery_from_pw.php');"]],
 						],
 						[
 							['type' => 'button_field', 'button' => [
@@ -1272,6 +1348,7 @@
 								'label' => 'ยกเลิกเอกสาร',
 								'id' => 'btn_rt_cancel_doc',
 								'onclick' => 'rtToggleCancelDoc();',
+								'variant' => 'danger',
 								'active' => $rentalIsCancelChecked,
 							]],
 							['type' => 'text', 'name' => 'rt_admin_cancel_reason', 'id' => 'rt_admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => !$rentalIsCancelChecked, 'value' => ($savedRental !== null) ? ($savedRental['remark_cancel'] ?? '') : ''],
@@ -2794,10 +2871,15 @@
 				if (hCreditCkk) hCreditCkk.value = cusCkk;
 
 				if (typeof resolveBankPaymentMode === 'function') {
+					rtBeginDocumentInitialization();
 					resolveBankPaymentMode(cusCkk, function(resolvedMode) {
 						var customerPaymentModeInput = document.getElementById('h_customer_payment_mode');
 						if (customerPaymentModeInput) customerPaymentModeInput.value = resolvedMode;
-						if (typeof switchPaymentMode === 'function') switchPaymentMode(resolvedMode);
+						if (typeof switchPaymentMode === 'function') {
+							switchPaymentMode(resolvedMode, rtEndDocumentInitialization);
+						} else {
+							rtEndDocumentInitialization();
+						}
 					});
 				}
 			});
@@ -2842,6 +2924,15 @@
 		function goMainSupRental() {
 			window.location.href = 'status_suprental.php';
 		}
+	</script>
+
+	<!-- แจ้งว่า DOM prefill เสร็จแล้ว; baseline จะถูก capture เมื่อ XHR initialization ของข้อมูลชำระเงินเสร็จครบด้วย -->
+	<!-- ใช้เทียบก่อนเปิดปุ่มเอกสารเดิม (rtOpenSavedRentalDocument) ว่าฟอร์มถูกแก้หลังโหลดข้อมูลครบแล้วหรือยัง -->
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			rtDocDomReady = true;
+			rtCaptureDocumentBaselineWhenReady();
+		});
 	</script>
 
 	<div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true" style="display: none;">
