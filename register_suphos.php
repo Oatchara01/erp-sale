@@ -948,6 +948,8 @@ include("head.php"); ?>
 	// ไม่ใช่เลขที่เอกสารเช่า จึงต้องใช้ชื่อพารามิเตอร์ใหม่เพื่อไม่ให้ชนกับความหมายเดิม
 	$fromRentalRefId = isset($_GET["from_rental"]) ? mysqli_real_escape_string($conn, $_GET["from_rental"]) : "";
 	$rentalConversionType = isset($_GET["type"]) ? mysqli_real_escape_string($conn, $_GET["type"]) : "";
+	// ออกใบสั่งขาย (IV) จากใบเช่า: ไม่บังคับกรอกช่องทางการชำระเงิน เพราะยอดจะไปรวมเก็บตอนปิดรอบบิลเช่า
+	$isRentalIvConversion = ($fromRentalRefId !== "" && $rentalConversionType === "IV");
 	$loadRefId = $savedRefId !== "" ? $savedRefId : $copyFromRefId;
 	$savedSo = null;
 	$copySrcSo = null;
@@ -1486,6 +1488,7 @@ include("head.php"); ?>
 
 		<script language="javascript">
 			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
+			window.soIsRentalIvConversion = <?php echo $isRentalIvConversion ? 'true' : 'false'; ?>;
 
 			// return true = ยังไม่มีวงเงิน/วงเงินไม่พอ ต้อง block การบันทึก (โชว์ modal เตือนให้แล้วในตัว)
 			function isCreditOverLimitBlocking() {
@@ -1535,7 +1538,7 @@ include("head.php"); ?>
 					document.frmMain.sale_code.focus();
 					return false;
 				}
-				if (getMainFormFieldValue('payment') == "") {
+				if (!window.soIsRentalIvConversion && getMainFormFieldValue('payment') == "") {
 					alert('กรุณาเลือกช่องทางการชำระเงิน');
 					var visiblePayment = document.getElementById('payment_cash_select') || document.getElementById('payment_method') || document.getElementById('pay_mode_cash');
 					if (visiblePayment) {
