@@ -434,6 +434,7 @@ try {
 	$customer_contact = $_POST["customer_contact"] ?? '';
 	$mk_research = $_POST["mk_research"] ?? '';
 	$on_time = $_POST["on_time"] ?? '';
+	$amphur_name = mysqli_real_escape_string($conn, $_POST["amphur_name"] ?? '');
 
 	$product_sn = "เลขที่เอกสาร " . ($iv_no !== '' ? $iv_no : '-');
 	$product_name = mysqli_real_escape_string($conn, "ส่ง " . $des_productunit);
@@ -447,6 +448,7 @@ try {
 	$dept = $_POST["dept"] ?? '';
 	$status_comment = $_POST["status_comment"];
 	$check_detail = (isset($_POST['more']) && $_POST['more'] != '') ? $_POST["more"] : '0';
+	$number = mysqli_real_escape_string($conn, $_POST["number"] ?? '');
 	$rtEditAddDate = date('Y-m-d H:i:s');
 
 	mysqli_query($conn, "DELETE FROM tb_register_data WHERE ref_id = '" . $ref_id . "'");
@@ -488,6 +490,81 @@ try {
 	if (!$objQuery99) {
 		$saveOk = false;
 		$saveError = 'tb_transaction: ' . mysqli_error($conn);
+	}
+
+	if ($saveOk && $send_cs == '1') {
+		$yearMonth = substr(date("Y") + 543, -2) . date("m");
+		if ($job_no !== '') {
+			$nextId = $job_no;
+			$strSQL89 = "UPDATE tb_register_data SET
+				start_date='" . $start_date . "', between_date='" . $between_date . "', start_time='" . $start_time . "',
+				end_time='" . $end_time . "', status='" . $status . "', fix_date='" . $fix_date . "', no_price='" . $no_price . "',
+				call_customer='" . $call_customer . "', credit='" . $credit . "', call_employee='" . $call_employee . "',
+				cash='" . $chash . "', check_peper='" . $check_peper . "', bill='" . $bill . "', department='" . $department . "',
+				type_customer='" . $type_customer . "', type_company='" . $type_company . "', customer_name='" . $customer_name . "',
+				customer_tel='" . $customer_tel . "', address_name='" . $address_name . "', address_send='" . $address_send . "',
+				want_bus='" . $want_bus . "', amphur_name='" . $amphur_name . "', province_name='" . $province_name . "',
+				product_name='" . $product_name . "', product_sn='" . $product_sn . "', unit_credit='" . $unit_credit . "',
+				price='" . $price . "', employee_name='" . $employee_name . "', employee_tel='" . $employee_tel . "',
+				add_by='" . $rtEditAddBy . "', description='" . $description . "', have_map='" . $havemap . "', add_date='" . $rtEditAddDate . "',
+				unit_bill='" . $unit_bill1 . "', unit_check='" . $unit_check1 . "', unit_tran='" . $unit_tran . "', tran='" . $tran . "',
+				check_detail='" . $check_detail . "', number='" . $number . "', status_comment='" . $status_comment . "',
+				dep='" . $dep . "', dept='" . $dept . "', department_show='" . $department_show . "', on_time='" . $on_time . "',
+				address_1='" . $address_1 . "', mk_research='" . $mk_research . "', customer_contact='" . $customer_contact . "',
+				ref_id='" . $ref_id . "', count_box='" . $count_box . "', location_link='" . $location_link . "',
+				transport_company='" . $transport_company . "'
+				WHERE running = '" . $nextId . "'";
+
+			$objQuery89 = mysqli_query($conn, $strSQL89);
+			if (!$objQuery89) {
+				$saveOk = false;
+				$saveError = 'tb_register_data (UPDATE by job_no): ' . mysqli_error($conn);
+			}
+		} else {
+			$sql = "SELECT MAX(running) AS MAXID FROM tb_register_data";
+			$qry = mysqli_query($conn, $sql);
+			$rs = mysqli_fetch_assoc($qry);
+			$maxId = substr($rs['MAXID'] ?? '', -4);
+			$maxId1 = substr($rs['MAXID'] ?? '', 0, -4);
+
+			if ($maxId1 == $yearMonth) {
+				$maxId1 = ($maxId + 1);
+				$maxId2 = substr("00000" . $maxId1, -4);
+				$nextId = $yearMonth . $maxId2;
+			} else {
+				$maxId1 = "0001";
+				$nextId = $yearMonth . $maxId1;
+			}
+
+			$strSQL89 = "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,on_time,address_1,add_code,mk_research,customer_contact,ref_id,count_box,location_link,transport_company)
+			values('" . $nextId . "','" . $start_date . "','" . $between_date . "','" . $start_time . "','" . $end_time . "','" . $status . "','" . $fix_date . "','" . $no_price . "','" . $call_customer . "','" . $credit . "','" . $call_employee . "','" . $chash . "','" . $check_peper . "','" . $bill . "','" . $department . "','" . $type_customer . "','" . $type_company . "','" . $customer_name . "','" . $customer_tel . "','" . $address_name . "','" . $address_send . "','" . $want_bus . "','" . $amphur_name . "','" . $province_name . "','" . $product_name . "','" . $product_sn . "','" . $unit_credit . "','" . $price . "','" . $employee_name . "','" . $employee_tel . "','" . $rtEditAddBy . "','" . $description . "','" . $havemap . "','" . $rtEditAddDate . "','" . $unit_bill1 . "','" . $unit_check1 . "','" . $unit_tran . "','" . $tran . "','" . $check_detail . "','" . $number . "','" . $status_comment . "','" . $dep . "','" . $dept . "','" . $department_show . "','" . $on_time . "','" . $address_1 . "','" . mysqli_real_escape_string($conn, (string)($_SESSION['emid'] ?? '')) . "','" . $mk_research . "','" . $customer_contact . "','" . $ref_id . "','" . $count_box . "','" . $location_link . "','" . $transport_company . "')";
+
+			$objQuery89 = mysqli_query($conn, $strSQL89);
+			if (!$objQuery89) {
+				$saveOk = false;
+				$saveError = 'tb_register_data (send_cs insert): ' . mysqli_error($conn);
+			}
+		}
+
+		if ($saveOk) {
+			mysqli_query($conn, "DELETE FROM tb_transaction WHERE running = '" . $nextId . "'");
+			$strSQL90 = "insert into tb_transaction (running,car_home,car_park,slope,bundai,unit_bundai,install,install_room,room_bigger,room_longer,bundai_big,lip_big,lip_long,lip_weight,want_employee,employee_unit,ferniger_name,description,height_ltd,add_date,add_by)
+			values('" . $nextId . "','" . $car_home . "','" . $car_park . "','" . $slope . "','" . $bundai . "','" . $unit_bundai . "','" . $install . "','" . $install_room . "','" . $room_bigger . "','" . $room_longer . "','" . $bundai_big . "','" . $lip_big . "','" . $lip_long . "','" . $lip_weight . "','" . $want_employee . "','" . $employee_unit . "','" . $ferniger_name . "','" . $addr_note . "','" . $height_ltd . "','" . $rtEditAddDate . "','" . $rtEditAddBy . "')";
+
+			$objQuery90 = mysqli_query($conn, $strSQL90);
+			if (!$objQuery90) {
+				$saveOk = false;
+				$saveError = 'tb_transaction (send_cs insert): ' . mysqli_error($conn);
+			}
+		}
+
+		if ($saveOk) {
+			$objQuery26 = mysqli_query($conn, "Update hos__rental set job_no='" . $nextId . "',send_cs='2' where ref_id='" . $ref_id . "'");
+			if (!$objQuery26) {
+				$saveOk = false;
+				$saveError = 'hos__rental (send_cs update): ' . mysqli_error($conn);
+			}
+		}
 	}
 } catch (mysqli_sql_exception $e) {
 	$saveOk = false;

@@ -689,6 +689,18 @@
 		}
 
 		if ($savedRegister !== null) {
+			$rentalSavedStartTime = substr((string)($savedRegister['start_time'] ?? ''), 0, 5);
+			$rentalSavedEndTime = substr((string)($savedRegister['end_time'] ?? ''), 0, 5);
+			$rentalSavedTimeRange = '';
+			if ($rentalSavedStartTime === '08:00' && $rentalSavedEndTime === '12:00') {
+				$rentalSavedTimeRange = 'morning';
+			} else if ($rentalSavedStartTime === '13:00' && $rentalSavedEndTime === '17:00') {
+				$rentalSavedTimeRange = 'afternoon';
+			} else if ($rentalSavedStartTime === '08:00' && $rentalSavedEndTime === '17:00') {
+				$rentalSavedTimeRange = 'allday';
+			} else if ($rentalSavedStartTime !== '') {
+				$rentalSavedTimeRange = 'specific';
+			}
 			$rentalAddress1OrName = ($savedRegister['address_1'] ?? '') !== '' ? $savedRegister['address_1'] : ($savedRegister['address_name'] ?? '');
 			$rentalPrefill['customer_name'] = $savedRegister['customer_name'];
 			$rentalPrefill['customer_tel'] = $savedRegister['customer_tel'];
@@ -702,6 +714,9 @@
 			$rentalPrefill['status_comment'] = $savedRegister['status_comment'];
 			$rentalPrefill['call_customer'] = $savedRegister['call_customer'];
 			$rentalPrefill['no_money'] = $savedRegister['no_price'];
+			$rentalPrefill['start_time'] = $rentalSavedStartTime;
+			$rentalPrefill['end_time'] = $rentalSavedEndTime;
+			$rentalPrefill['time_range_ui'] = $rentalSavedTimeRange;
 		}
 
 		// tb_transaction ('แท็บ รายละเอียดที่อยู่') — ผูกกลับด้านของ mapping ใน register_suprental1.php
@@ -2055,6 +2070,15 @@
 									<i class="far fa-image so-file-picker-icon"></i>
 									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" <?php echo $rentalIsEditMode ? '' : 'required'; ?> onchange="showRentalBankImgName(this)">
 								</label>
+								<?php if ($rentalIsEditMode && !empty($savedRental['bank_img'])) {
+									$rtBankImgFile = basename((string)$savedRental['bank_img']);
+									$rtBankImgUrl = 'credit_no/' . rawurlencode($rtBankImgFile);
+									?>
+									<a class="rt-bank-img-view-link" href="<?php echo so_saved_h($rtBankImgUrl); ?>" target="_blank" rel="noopener">
+										<i class="far fa-eye" aria-hidden="true"></i>
+										<span>เปิดดูไฟล์</span>
+									</a>
+								<?php } ?>
 								<!-- edit mode: ไม่อัปโหลดไฟล์ใหม่ = คงไฟล์เดิม (register_suprental_edit1.php อ่านค่านี้เมื่อ $_FILES['bank_img'] ว่าง) -->
 								<input type="hidden" name="bank_img_existing" value="<?php echo ($savedRental !== null) ? so_saved_h($savedRental['bank_img'] ?? '') : ''; ?>">
 							</div>
