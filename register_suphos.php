@@ -1053,6 +1053,7 @@ include("head.php"); ?>
 	// รายการสินค้า: auto-copy จาก hos__subrental มา prefill ตาราง SO ให้ (enhancement เหนือกว่า open_rentaliv_sup.php เดิม
 	// ที่ไม่เคย copy เลย) ผู้ใช้ยังแก้ไข/ลบ/เพิ่มแถวได้ก่อน submit ตามปกติ ไม่กระทบ hos__subrental ต้นฉบับ
 	$rentalPrefill = null;
+	$fromRentalError = null;
 	if ($loadRefId === "" && $fromRentalRefId !== "") {
 		$rentalSourceQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
 		$rentalSourceRow = $rentalSourceQuery ? mysqli_fetch_assoc($rentalSourceQuery) : null;
@@ -1097,34 +1098,75 @@ include("head.php"); ?>
 				$savedTransaction = mysqli_fetch_assoc($rentalTransactionQuery);
 			}
 
-			$rentalProductQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name, tb_product.remark_hc AS tb_remark_hc FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $fromRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
-			if ($rentalProductQuery) {
-				while ($rentalProductRow = mysqli_fetch_assoc($rentalProductQuery)) {
+			if ($rentalConversionType === "AI") {
+				// ใบสั่งขายเงินประกันสินค้า (AI): ไม่คัดลอกรายการเช่า ให้มีเฉพาะสินค้าเงินประกัน ID 5111
+				// ราคา = ยอดรวมเงินประกันของใบเช่า (SUM(hos__subrental.amount)) x 2
+				$rentalDepositSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS deposit_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
+				$rentalDepositSumRow = $rentalDepositSumQuery ? mysqli_fetch_assoc($rentalDepositSumQuery) : null;
+				$rentalDepositAmount = $rentalDepositSumRow ? ((float)$rentalDepositSumRow["deposit_sum"] * 2) : 0;
+
+				$depositProductQuery = mysqli_query($conn, "SELECT * FROM tb_product WHERE product_ID = '5111' LIMIT 1");
+				$depositProductRow = $depositProductQuery ? mysqli_fetch_assoc($depositProductQuery) : null;
+
+				if ($depositProductRow) {
 					$savedProductsForForm[] = array(
-						'product_id' => (string)($rentalProductRow["product_id"] ?? ""),
-						'product_code' => (string)($rentalProductRow["product_code"] ?? ""),
-						'product_name' => (string)($rentalProductRow["tb_sol_name"] ?? ""),
-						'product_sn' => (string)($rentalProductRow["sn_number"] ?? ""),
-						'unit_name' => (string)($rentalProductRow["tb_unit_name"] ?? ""),
-						'sale_count' => (string)($rentalProductRow["count"] ?? ""),
-						'product_price' => (string)($rentalProductRow["price"] ?? ""),
-						'discount_unit' => "",
-						'sum_amount' => (string)($rentalProductRow["amount"] ?? ""),
-						'warranty' => (string)($rentalProductRow["warranty"] ?? ""),
+						'product_id' => '5111',
+						'product_code' => (string)($depositProductRow["access_code"] ?? ""),
+						'product_name' => (string)($depositProductRow["sol_name"] ?? ""),
+						'product_sn' => "",
+						'unit_name' => (string)($depositProductRow["unit_name"] ?? ""),
+						'sale_count' => "1",
+						'product_price' => (string)$rentalDepositAmount,
+						'discount_unit' => "0",
+						'sum_amount' => (string)$rentalDepositAmount,
+						'warranty' => "",
 						'cal' => "",
 						'pm_year' => "",
 						'pm' => "",
-						'sale_remarkk' => (string)($rentalProductRow["remark_sale"] ?? ""),
+						'sale_remarkk' => "",
 						'clear_br' => "",
 						'clear_ivno' => "",
 						'jong_ckk' => "",
 						'jong_no' => "",
-						'display_name' => (string)($rentalProductRow["display_name"] ?? ""),
+						'display_name' => "",
 						'subso_db_id' => "",
-						'remark_hc' => (string)($rentalProductRow["tb_remark_hc"] ?? ""),
+						'remark_hc' => (string)($depositProductRow["remark_hc"] ?? ""),
 					);
+				} else {
+					$fromRentalError = "ไม่พบสินค้าเงินประกัน (รหัส 5111) ในระบบ กรุณาติดต่อผู้ดูแลระบบ";
+				}
+			} else {
+				$rentalProductQuery = mysqli_query($conn, "SELECT hos__subrental.*, tb_product.sol_name AS tb_sol_name, tb_product.unit_name AS tb_unit_name, tb_product.remark_hc AS tb_remark_hc FROM hos__subrental LEFT JOIN tb_product ON hos__subrental.product_id = tb_product.product_ID WHERE hos__subrental.ref_idd = '" . $fromRentalRefId . "' ORDER BY hos__subrental.id_sub ASC");
+				if ($rentalProductQuery) {
+					while ($rentalProductRow = mysqli_fetch_assoc($rentalProductQuery)) {
+						$savedProductsForForm[] = array(
+							'product_id' => (string)($rentalProductRow["product_id"] ?? ""),
+							'product_code' => (string)($rentalProductRow["product_code"] ?? ""),
+							'product_name' => (string)($rentalProductRow["tb_sol_name"] ?? ""),
+							'product_sn' => (string)($rentalProductRow["sn_number"] ?? ""),
+							'unit_name' => (string)($rentalProductRow["tb_unit_name"] ?? ""),
+							'sale_count' => (string)($rentalProductRow["count"] ?? ""),
+							'product_price' => (string)($rentalProductRow["price"] ?? ""),
+							'discount_unit' => "",
+							'sum_amount' => (string)($rentalProductRow["amount"] ?? ""),
+							'warranty' => (string)($rentalProductRow["warranty"] ?? ""),
+							'cal' => "",
+							'pm_year' => "",
+							'pm' => "",
+							'sale_remarkk' => (string)($rentalProductRow["remark_sale"] ?? ""),
+							'clear_br' => "",
+							'clear_ivno' => "",
+							'jong_ckk' => "",
+							'jong_no' => "",
+							'display_name' => (string)($rentalProductRow["display_name"] ?? ""),
+							'subso_db_id' => "",
+							'remark_hc' => (string)($rentalProductRow["tb_remark_hc"] ?? ""),
+						);
+					}
 				}
 			}
+		} else if ($fromRentalRefId !== "") {
+			$fromRentalError = "ไม่พบใบสั่งเช่าอ้างอิง กรุณาตรวจสอบลิงก์ที่ใช้เปิดหน้านี้";
 		}
 	}
 
@@ -1489,6 +1531,11 @@ include("head.php"); ?>
 		<script language="javascript">
 			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
 			window.soIsRentalIvConversion = <?php echo $isRentalIvConversion ? 'true' : 'false'; ?>;
+			<?php if ($fromRentalError !== null): ?>
+			document.addEventListener('DOMContentLoaded', function() {
+				Swal.fire('แจ้งเตือน', <?php echo json_encode($fromRentalError, JSON_UNESCAPED_UNICODE); ?>, 'error');
+			});
+			<?php endif; ?>
 
 			// return true = ยังไม่มีวงเงิน/วงเงินไม่พอ ต้อง block การบันทึก (โชว์ modal เตือนให้แล้วในตัว)
 			function isCreditOverLimitBlocking() {
