@@ -5030,11 +5030,11 @@ include("head.php"); ?>
 						var isOverLimit = (netTotal > remaining) || (remaining <= 0);
 						updateSubmitButtonState(isOverLimit);
 
-						// กรณีที่ 1: มียอดหนี้คงค้างเก่าเตือนสีแดง (ตามเงื่อนไขที่กำหนด)
-						if (remaining <= 0) {
+						// กรณีที่ 1: มียอดหนี้คงค้างจริง (totalOutstanding > 0) เตือนสีแดง
+						if (totalOutstanding > 0) {
 							showCreditWarningModal('debt', customerName, totalOutstanding, creditAmount, remaining);
 						} else if (isOverLimit) {
-							// กรณีที่ 2: วงเงินไม่เพียงพอเตือนสีส้ม
+							// กรณีที่ 2: ไม่มีหนี้ค้าง แต่วงเงินไม่เพียงพอ (หรือยังไม่ได้ตั้งวงเงิน) เตือนสีส้ม
 							showCreditWarningModal('limit', customerName, 0, creditAmount, remaining);
 						}
 					}
