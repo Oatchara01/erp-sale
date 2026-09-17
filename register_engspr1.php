@@ -3,7 +3,13 @@
 
 <?php
 include("dbconnect.php");
-include ("error_page.php"); 
+include ("error_page.php");
+
+$main_conn = $conn;
+include("dbconnect_service.php");
+$service = $conn;
+$servicenb = $conn;
+$conn = $main_conn;
 
 date_default_timezone_set("Asia/Bangkok");
 if ($_POST["submit"] = "submit") {
@@ -44,8 +50,8 @@ $year_1 = substr(date("Y")+543, -2);
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__spr";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
+$maxId = substr((string)$rs['MAXID'], -4);
+$maxId3 = substr((string)$rs['MAXID'],-8);
 
 $maxId1 = substr($maxId3,0,-4);
 $so = "SPR";

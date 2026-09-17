@@ -70,14 +70,14 @@ $year_1 = substr(date("Y")+543, -2);
 $sql = "SELECT MAX(ref_id) AS MAXID FROM hos__spr";
 $qry = mysqli_query($conn,$sql) or die(mysqli_error());
 $rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
+$maxId = substr((string)$rs['MAXID'], -4);
+$maxId3 = substr((string)$rs['MAXID'],-8);
 
 $maxId1 = substr($maxId3,0,-4);
 $so = "SPR";
 
 
-if($maxId1 == $year)
+if($maxId1 == $yearMonth)
 {
 $maxId1 = ($maxId + 1);
 $maxId2 = substr("00000".$maxId1, -4);
@@ -228,7 +228,6 @@ $today = $year . '-' . $month . '-' . $day;
 	</div><br>
 	</div>
 	</form>
-</div>
-<div id="cr_bar"> <?php include "foot.php"; ?></div>		
+</div>	
 
 		
