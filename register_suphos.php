@@ -1431,6 +1431,34 @@ include("head.php"); ?>
 		</script>
 	<?php } ?>
 
+	<?php if (isset($_GET["receipt_sync"])) {
+		$receiptSyncOk = ($_GET["receipt_sync"] === "1");
+		$receiptSyncMsgJs = json_encode((string)($_GET["receipt_sync_msg"] ?? ''), JSON_UNESCAPED_UNICODE);
+	?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				var cleanUrl = new URL(window.location.href);
+				cleanUrl.searchParams.delete('receipt_sync');
+				cleanUrl.searchParams.delete('receipt_sync_msg');
+				window.history.replaceState({}, document.title, cleanUrl);
+
+				var message = <?php echo $receiptSyncMsgJs; ?> || (<?php echo $receiptSyncOk ? 'true' : 'false'; ?> ? 'ส่งรายการรับ-จ่ายเรียบร้อยแล้ว' : 'ส่งรายการรับ-จ่ายไม่สำเร็จ');
+
+				if (typeof Swal === 'undefined') {
+					alert(message);
+					return;
+				}
+
+				Swal.fire({
+					title: message,
+					icon: <?php echo $receiptSyncOk ? "'success'" : "'error'"; ?>,
+					confirmButtonColor: '#612989',
+					confirmButtonText: 'ตกลง'
+				});
+			});
+		</script>
+	<?php } ?>
+
 	<?php if (false && ($savedSo || $savedRegister)) { ?>
 		<div style="max-width: 1200px; margin: 24px auto 0; padding: 0 16px; box-sizing: border-box;">
 			<div style="background: #fff; border: 1px solid #EBEBEB; border-left: 5px solid #612989; border-radius: 8px; padding: 20px 24px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); font-family: 'Prompt', sans-serif;">
@@ -2044,6 +2072,7 @@ include("head.php"); ?>
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
 			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
+			<input type="hidden" name="admin_action" id="admin_action" value="">
 
 			<!-- Card Container -->
 			<div>
@@ -2245,6 +2274,10 @@ include("head.php"); ?>
 					!empty(trim((string)($savedSo['ref_idst'] ?? '')))
 				);
 				$isCancelChecked = ($savedSo !== null) && (($savedSo['status_doc'] ?? '') === 'ยกเลิก');
+				// ส่งรายการรับ-จ่ายได้เฉพาะเอกสารที่บันทึกแล้ว, อนุมัติแล้ว, ไม่ถูกยกเลิก, และยังไม่เคยส่งสำเร็จ
+				$isSendReceiptEnabled = ($savedSo !== null)
+					&& (($savedSo['status_doc'] ?? '') === 'Approve')
+					&& (($savedSo['send_receipt'] ?? '') !== '2');
 
 				$adminInfoTab = [
 					'tab_id' => 'tab-admin-info',
@@ -2292,8 +2325,21 @@ include("head.php"); ?>
 						],
 					],
 				];
+				if ($savedSo !== null) {
+					$adminInfoTab['rows'][] = [
+						['type' => 'button_field', 'button' => [
+							'type' => 'button',
+							'icon' => 'img/icons/preview.png',
+							'label' => (($savedSo['send_receipt'] ?? '') === '2') ? 'ส่งรายการรับ-จ่ายแล้ว' : 'ส่งรายการรับ-จ่าย',
+							'variant' => 'purple',
+							'disabled' => !$isSendReceiptEnabled,
+							'id' => 'btn_send_receipt',
+							'onclick' => 'sendInvoiceReceipt();'
+						]],
+					];
+				}
 				include __DIR__ . '/partials/admin_info_tab.php';
-				unset($adminInfoTab, $isCancelDisabled, $isCancelChecked);
+				unset($adminInfoTab, $isCancelDisabled, $isCancelChecked, $isSendReceiptEnabled);
 				?>
 				<!-- End TAB 2 -->
 
@@ -3703,6 +3749,30 @@ include("head.php"); ?>
 				var reasonField = document.getElementById('so_approve_reason');
 				if (actionField) actionField.value = '';
 				if (reasonField) reasonField.value = '';
+			}
+
+			// ปุ่ม "ส่งรายการรับ-จ่าย" ในแท็บ Admin: confirm แล้ว set admin_action ก่อน submit form ปกติ
+			// ใช้ skip validation แบบเดียวกับปุ่มอนุมัติ/ยกเลิกเอกสาร เพราะเอกสารที่ส่งได้ต้อง Approve
+			// อยู่แล้ว (ปิดแก้ไขแล้ว) การบังคับ validation ของฟอร์มสร้างใหม่จะกันไม่ให้ส่งเอกสารเก่าที่ยังขาด
+			// ฟิลด์ตามกฎ validation ปัจจุบันโดยไม่จำเป็น — แต่ยังส่งค่าปัจจุบันทั้งฟอร์มไป save ก่อน sync เสมอ
+			function sendInvoiceReceipt() {
+				var actionInput = document.getElementById('admin_action');
+				if (!actionInput) return;
+
+				if (!confirm('ยืนยันส่งรายการรับ-จ่ายสำหรับเอกสารนี้?')) {
+					return;
+				}
+
+				actionInput.value = 'send_receipt';
+
+				window.soSkipValidation = true;
+				var form = soEnsureSubmitMarker();
+				if (!form) {
+					actionInput.value = '';
+					return;
+				}
+
+				HTMLFormElement.prototype.submit.call(form);
 			}
 
 			function soApplyPendingApproveAction() {

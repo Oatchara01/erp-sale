@@ -5,6 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 include("dbconnect.php");
 mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
+require_once __DIR__ . "/includes/invoice_receipt_sync.php";
+require_once __DIR__ . "/includes/hos_so_submission_status.php";
 
 if (!function_exists('tableExists')) {
 	function tableExists($conn, $tableName)
@@ -484,10 +486,12 @@ exit();
 	// ทันทีที่กด Save Draft และเอกสาร Returned จะเด้งกลับเป็น Request ทันทีที่กด Update
 	$isDraftRequest = (($_POST['is_draft'] ?? '') === '1');
 	$cancelDocPost = $_POST["cancel_doc"] ?? null;
+	$adminAction = $_POST['admin_action'] ?? '';
+	$statusDecision = resolveHosSoStatusFields($isDraftRequest, $cancelDocPost, $adminAction);
 
-	if ($cancelDocPost === '1') {
+	if ($statusDecision['status_doc'] === 'ยกเลิก') {
 		$statusFields = "send_sup='1',status_doc='ยกเลิก',";
-	} elseif ($isDraftRequest) {
+	} elseif ($statusDecision['status_doc'] === null) {
 		$statusFields = "";
 	} else {
 		$statusFields = "send_sup='1',send_supname='" . $add_by . "',send_supdate='" . $add_date
@@ -4186,6 +4190,19 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 				. $soLogUserName . "')");
 		}
 	}
+
+	// ปุ่ม "ส่งรายการรับ-จ่าย" (แท็บ Admin, register_suphos.php) — ทำงานหลังบันทึก SO/Admin สำเร็จแล้วเท่านั้น
+	// SO ต้อง save สำเร็จเสมอแม้ sync ล้มเหลว จึงไม่ผูกผลลัพธ์นี้กับ $qsave ที่ใช้ตัดสินใจ redirect
+	$soReceiptSyncResult = null;
+	if ($qsave && (($_POST['admin_action'] ?? '') === 'send_receipt')) {
+		require_once __DIR__ . "/dbconnect_acc.php";
+		$soReceiptActor = array(
+			'id' => (string)($_SESSION['emid'] ?? ($_SESSION['UserID'] ?? '')),
+			'name' => trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')),
+		);
+		$soReceiptSyncResult = syncHosSoToInvoiceReceipt($conn, $code, $ref_id, $soReceiptActor);
+	}
+
 	if ($qsave) {
 		if (($_POST['is_draft'] ?? '') === '1') {
 			header('Content-Type: application/json; charset=utf-8');
@@ -4197,6 +4214,10 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		$redirect_url = $redirect_to . "?ref_id=" . urlencode($ref_id);
 		if (strpos($redirect_to, "register_suphos.php") !== false) {
 			$redirect_url .= "&saved=1";
+		}
+		if ($soReceiptSyncResult !== null) {
+			$redirect_url .= "&receipt_sync=" . ($soReceiptSyncResult['success'] ? '1' : '0')
+				. "&receipt_sync_msg=" . urlencode($soReceiptSyncResult['message']);
 		}
 		echo "window.location='" . $redirect_url . "';";
 		echo "</script>";

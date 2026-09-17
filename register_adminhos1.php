@@ -1400,45 +1400,10 @@ $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 
 
 
-if ($type_doc=='3'){
-		$com ="ฟาร์ ทริลเลี่ยน บจก.";
-	}else if ($type_doc=='4'){
-	$com="โนเบิล เมด บจก.";	
-	}
-	
-	
-if($payment =='1'){
-$cash = '5';	
-}else if($payment =='8'){
-	$cash = '22';
-}else  if($payment =='21'){
-	$cash = '7';
-}
-	
-	
-
-	if($payment=='1' or $payment =='8' or $payment =='21'){
-		
-$strSQL29 = "SELECT SUM(amount) AS unit_cash FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
-$objQuery29 = mysqli_query($conn,$strSQL29) or die ("Error Query [".$strSQL29."]");
-$rs = mysqli_fetch_assoc($objQuery29);
-if($payment=='2' or $payment=='3' or $payment=='4' or $payment=='5' ){
-$unit_cash = "0.00";
-}else{
-$unit_cash = $rs["unit_cash"];
-}
-		
-
-	
-$strSQL292="insert into   tb_register_data (IV_number,date_inv,company,customer_name,date_tranfer,employee_name,credit,cash,unit_cash,description,ref_id,between_dateinv) values ('".$iv_no."','".$start_date."','".$com."','".$bill_name."','".$date_tranfer ."','".$sale."','".$credit."','$cash','".$unit_cash."','".$payment_des."','".$ref_id."','".$date_send_key."')";
-
-$objQuery292 = mysqli_query($code,$strSQL292);	
-			
-
-$strSQL262="Update  hos__so set send_receipt ='2'  where ref_id='".$ref_id."'";
-$objQuery262 = mysqli_query($conn,$strSQL262);		
-
-	}
+// เดิมมี auto-send รายการรับ-จ่ายทันทีที่ payment เป็น 1/8/21 (เงินสด/เช็ค/บัตรเครดิต) โดยไม่ผ่าน
+// Admin action ใด ๆ ยกเลิกแล้วตามสเปค: การส่งรายการรับ-จ่ายต้องเป็นการกดปุ่มจาก Admin เท่านั้น
+// (ปุ่ม "ส่งรายการรับ-จ่าย" ในแท็บ Admin ของ register_suphos.php และ checkbox เดิมใน
+// register_adminhos_edit1.php ยังใช้งานได้ตามปกติ ทั้งคู่วิ่งผ่าน includes/invoice_receipt_sync.php)
 
 
 

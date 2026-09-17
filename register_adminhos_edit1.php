@@ -1,8 +1,9 @@
 
 <?php
 include("dbconnect.php");
-include("dbconnect_acc.php");	
+include("dbconnect_acc.php");
 include("dbconnect_cs.php");
+require_once __DIR__ . "/includes/invoice_receipt_sync.php";
 include("head.php");
 
 date_default_timezone_set("Asia/Bangkok");
@@ -2601,105 +2602,15 @@ $objQuery26 = mysqli_query($conn,$strSQL26);
 mysqli_query($conn,"SELECT RELEASE_LOCK('".mysqli_real_escape_string($conn,$lockName)."')");
 	
 	}
-	$doc_noo = substr($iv_no,0,3);
-	
-	if($doc_noo=="IV2"){
-		$com ="บิลเงินสด";
-}else if ($type_doc=='3'){
-		$com ="ออลล์เวล ไลฟ์ บจก.";
-	}else if ($type_doc=='4'){
-	$com="โนเบิล เมด บจก.";	
-	}
-	
-if($payment =='36' or $payment =='38' or $payment =='39' or $payment =='40' or $payment =='41' or $payment =='42'){
-		$credit ='1';
-	}else{
-$credit ='0';
-}
-
-$cash = $payment;	
-
-	
-$qfirst = "select em_id from tb_user where code = '".$sale_code."'";
-$first = mysqli_query($conn,$qfirst);
-$ffirst = mysqli_fetch_array($first);
-	
-	
-	if($delivery_type=='2'){
-		$chang_name = $sale;
-		$chang_code = $ffirst["em_id"];
-	}else{
-        $chang_name = "";
-		$chang_code = "";
-	}
-	
-
-	if($send_receipt=='1'){
-		
-$strSQL29 = "SELECT SUM(amount) AS unit_cash FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
-$objQuery29 = mysqli_query($conn,$strSQL29) or die ("Error Query [".$strSQL29."]");
-$rs = mysqli_fetch_assoc($objQuery29);
-/*if($payment=='2' or $payment=='3' or $payment=='4' or $payment=='5' ){
-$unit_cash = "0.00";
-}else{*/
-$unit_cash = $rs["unit_cash"];
-//}
-		
-if($_POST["iv_date"]!=''){
-$date_inv = $_POST["iv_date"];	
-}else{
- $date_inv= $add_date;	
-}
-		
-if($bus_inter =='1'){
-$defef = "ขนส่งอินเตอร์ $payment_des";
-}else{
-$defef = "";
-}
-
-	
-$strSQL292="insert into   tb_register_data (IV_number,date_inv,company,customer_name,date_tranfer,employee_name,credit,cash,unit_cash,description,ref_id,doc_send,date_send,doc_send1,inv_return,date_inv_return,inv_return1,doc_receive,doc_receive1,bill_id) values ('".$iv_no."','".$iv_date."','".$com."','".$bill_name."','".$date_tranfer ."','บรรจบพร','".$credit."','$cash','".$unit_cash."','".$defef."','".$ref_id."','".$em_id."','".$add_date."','".$name."','".$em_id."','".$add_date."','".$name."','".$chang_code."','".$chang_name."','".$bill_id."')";
-
-$objQuery292 = mysqli_query($code,$strSQL292);	
-			
-
-$strSQL262="Update  hos__so set send_receipt ='2'  where ref_id='".$ref_id."'";
-$objQuery262 = mysqli_query($conn,$strSQL262);		
-
-	}
-	
-
-if($send_receipt=='2'){
-		
-$strSQL29 = "SELECT SUM(amount) AS unit_cash FROM hos__subso WHERE ref_idd = '".$ref_id."' ";
-$objQuery29 = mysqli_query($conn,$strSQL29) or die ("Error Query [".$strSQL29."]");
-$rs = mysqli_fetch_assoc($objQuery29);
-/*if($payment=='2' or $payment=='3' or $payment=='4' or $payment=='5' ){
-$unit_cash = "0.00";
-}else{*/
-$unit_cash = $rs["unit_cash"];
-//}
-	
-if($start_date !=''){
-$date_inv = $_POST["start_date"];
-}else if($_POST["iv_date"]!=''){
-$date_inv = $_POST["iv_date"];	
-}else{
- $date_inv= $add_date;	
-}
-
-if($bus_inter =='1'){
-$defef = "ขนส่งอินเตอร์";
-}else{
-$defef = "";
-}
-	
-$strSQL293="Update  tb_register_data Set date_inv ='".$iv_date."',company = '".$com."',customer_name = '".$bill_name."',date_tranfer = '".$date_tranfer ."',employee_name ='บรรจบพร',credit ='".$credit."',cash ='$cash',unit_cash = '".$unit_cash."',IV_number = '".$iv_no."',description='".$defef."',doc_receive='".$chang_code."',doc_receive1='".$chang_name."',bill_id='".$bill_id."' where ref_id = '".$ref_id."' and type_1 =''";
-//echo $strSQL293;
-//exit();
-$objQuery293 = mysqli_query($code,$strSQL293);	
-			
-
+	// ส่ง/ทบทวนรายการรับ-จ่าย (checkbox ฝั่งเดิม): ทั้ง insert ครั้งแรก (send_receipt='1') และ
+	// reconcile ครั้งถัดไป (send_receipt='2') วิ่งผ่าน module กลางเดียวกับปุ่ม Admin ใน register_suphos.php แล้ว
+	// ป้องกันไม่ให้สอง path เขียน tb_register_data ด้วย logic คนละชุดจนข้อมูลเพี้ยนต่างกัน
+	if ($send_receipt === '1' || $send_receipt === '2') {
+		$legacyReceiptActor = array(
+			'id' => (string)$em_id,
+			'name' => (string)$name,
+		);
+		syncHosSoToInvoiceReceipt($conn, $code, $ref_id, $legacyReceiptActor);
 	}
 
 

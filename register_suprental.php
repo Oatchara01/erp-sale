@@ -2234,7 +2234,7 @@
 											$rtFinDepositAmount = $rtFinDepositAmtRow['amount'] ?? 0;
 										}
 
-										$rtFinDepositRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "'");
+										$rtFinDepositRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_ai']) . "' ORDER BY id_off DESC LIMIT 1");
 										$rtFinDepositRegisterRow = $rtFinDepositRegisterQuery ? mysqli_fetch_assoc($rtFinDepositRegisterQuery) : null;
 
 										$rtFinDepositCreditQuery = mysqli_query($conn, "SELECT date_tran FROM tb_credit_note WHERE iv_no_ref LIKE '" . mysqli_real_escape_string($conn, $rtFinDepositDocNo) . "' AND status_doc = 'Approve'");
@@ -2319,7 +2319,7 @@
 													$rtFinInstLink = 'register_admin_edit.php?ref_id=' . urlencode($rtFinInstallmentRow['ref_idiv']);
 												}
 
-												$rtFinInstRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "'");
+												$rtFinInstRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $rtFinInstallmentRow['ref_idiv']) . "' ORDER BY id_off DESC LIMIT 1");
 												$rtFinInstRegisterRow = $rtFinInstRegisterQuery ? mysqli_fetch_assoc($rtFinInstRegisterQuery) : null;
 											?>
 												<tr>
@@ -2359,7 +2359,7 @@
 											$rtFinFinalLink = 'register_admin_edit.php?ref_id=' . urlencode($savedRental['ref_iv']);
 										}
 
-										$rtFinFinalRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "'");
+										$rtFinFinalRegisterQuery = mysqli_query($code, "SELECT summary_cash FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $savedRental['ref_iv']) . "' ORDER BY id_off DESC LIMIT 1");
 										$rtFinFinalRegisterRow = $rtFinFinalRegisterQuery ? mysqli_fetch_assoc($rtFinFinalRegisterQuery) : null;
 										?>
 										<tr>
