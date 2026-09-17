@@ -177,21 +177,27 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<td><div align="left"><?php echo $objResult["customer"];?></div></td>
 				<td><div align="left"><?php echo $objResult["engineer"];?></div></td>
 				
-				<?php if($objResult["status_doc"]=='Rejected'){	?>
+				<?php if($objResult["status_doc"]=='Draft'){ ?>
+				<td bgcolor="#E9ECEF"><?php echo "Draft (ร่าง)";?></td>
+				<?php }else if($objResult["status_doc"]=='Rejected'){	?>
 						<td bgcolor="#FF3030"><?php echo $objResult["status_doc"];?></td>
+				<?php }else if($objResult["status_doc"]=='Returned'){	?>
+						<td bgcolor="#FF830F"><?php echo "ส่งกลับ";?></td>
+				<?php }else if($objResult["status_doc"]=='ยกเลิก'){	?>
+						<td bgcolor="#BDBDBD"><?php echo "ยกเลิกเอกสาร";?></td>
 				<?php }else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
 				<?php }else if ($objResult["send_sup"]=='1' and $objResult["sup_name"]=='' and $objResult["status_doc"]=='Request'){ ?>
 				<td ><?php echo "รอหัวหน้าอนุมัติ";?></td>
 				<?php }else if ($objResult["send_sup"]=='1' and $objResult["sup_name"] !='' and $objResult["cm_name"]=='' and $objResult["status_doc"]=='Request'){ ?>
 				<td  bgcolor="#FFFF00"><?php echo "รอผู้บริหารอนุมัติ";?></td>
-				
+
 				<?php }else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>
 				<td>
-				
-				<a href="register_engspr_edit.php?ref_id=<?php echo $objResult["ref_id"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+
+				<a href="register_engspr.php?ref_id=<?php echo $objResult["ref_id"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 												
 				</td>
 					

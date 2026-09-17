@@ -1,0 +1,399 @@
+/* Page-specific styles for register_engspr.php ("ใบเบิกเครื่องและอะไหล่ / SPR" reskin)
+
+   ต่อยอดจาก css/so-core.css + css/register-suphos.css + css/register-supbrcshos.css
+   (ชุด .so-* / .cs-* เดียวกับที่ register_bregawl.php ใช้) ไฟล์นี้มีเฉพาะส่วนที่หน้า SPR
+   ต่างจากหน้าอื่นจริง ๆ */
+
+.spr-layout {
+	max-width: 1096px;
+	margin: 0 auto;
+}
+
+.spr-document-card {
+	padding: 20px 28px;
+}
+
+.spr-company-select-row {
+	display: grid;
+	grid-template-columns: minmax(260px, 32%);
+	gap: 21px;
+	margin-bottom: 20px;
+}
+
+.spr-document-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	column-gap: 24px;
+}
+
+.spr-document-address {
+	grid-column: 1 / -1;
+}
+
+.spr-return-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+	gap: 24px;
+}
+
+.spr-linked-documents {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 24px;
+}
+
+.spr-linked-document-control {
+	position: relative;
+}
+
+.spr-linked-document-input {
+	padding-right: 48px;
+	color: var(--so-primary);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.spr-linked-document-input[readonly] {
+	background: #FFFFFF;
+	border-color: #E5DDEA;
+}
+
+.spr-linked-document-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 42px;
+	height: 42px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #4A4A4A;
+	cursor: pointer;
+}
+
+.spr-linked-document-button .fa-search {
+	font-size: 8px;
+	margin: 12px 0 0 -4px;
+}
+
+.so-label .required,
+.required {
+	color: #DC3545;
+	margin-left: 2px;
+}
+
+/* ===== หมายเหตุ ===== */
+.spr-note-card,
+.spr-warehouse-card {
+	padding: 24px 28px;
+}
+
+.spr-note-field,
+.spr-warehouse-grid .so-field-group {
+	margin-bottom: 0;
+}
+
+/* ===== รายการสินค้า ===== */
+.spr-items-card {
+	min-height: 552px;
+	padding: 24px 28px;
+}
+
+.spr-items-title-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+}
+
+.spr-items-title-row .so-divider {
+	grid-column: 1 / -1;
+	width: 100%;
+}
+
+.spr-items-title-count {
+	font-size: 18px;
+	font-weight: 400;
+	color: #6F6B72;
+	white-space: nowrap;
+}
+
+.spr-summary-panel {
+	display: grid;
+	grid-template-columns: 1fr 1px 1fr;
+	align-items: stretch;
+	min-height: 96px;
+	margin: 12px 0 24px;
+	padding: 8px 0;
+	border-radius: 10px;
+	background: #F5F6F8;
+	box-sizing: border-box;
+}
+
+.spr-summary-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+.spr-summary-label {
+	font-size: 14px;
+	font-weight: 400;
+	color: #7A767D;
+}
+
+.spr-summary-value {
+	font-size: 22px;
+	line-height: 1.2;
+	font-weight: 400;
+	color: #3B3B3B;
+}
+
+.spr-summary-divider {
+	width: 1px;
+	margin: 0;
+	background: #B9B5BC;
+}
+
+/* ===== toolbar ตารางสินค้า: ช่องค้นหา (ซ้าย) + สรุปจำนวน/ยอดรวม (ขวา) ===== */
+.spr-toolbar-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: flex-start;
+	gap: 16px;
+	margin-bottom: 18px;
+}
+
+.spr-toolbar-row .cs-product-search-wrap {
+	min-width: 260px;
+	flex: 1 1 260px;
+}
+
+.spr-cell-amount {
+	text-align: right;
+	font-weight: 500;
+	color: var(--so-text);
+}
+
+.spr-items-card .so-product-table-wrap {
+	width: calc(100% + 56px);
+	margin: 0 -28px 16px;
+	overflow-x: auto;
+}
+
+.spr-product-table {
+	border-top: 1px solid #8A42BD;
+}
+
+.spr-product-table th,
+.spr-product-table td {
+	padding-top: 9px;
+	padding-bottom: 9px;
+}
+
+.spr-product-table th:nth-child(1),
+.spr-product-table td:nth-child(1) { width: 32px; padding-left: 8px; padding-right: 2px; text-align: center; }
+.spr-product-table th:nth-child(2),
+.spr-product-table td:nth-child(2) { width: 42px; padding-left: 2px; padding-right: 8px; text-align: center; }
+.spr-product-table th:nth-child(3),
+.spr-product-table td:nth-child(3) { width: 20%; text-align: left; }
+.spr-product-table th:nth-child(4),
+.spr-product-table td:nth-child(4) { width: 30%; text-align: left; }
+.spr-product-table th:nth-child(5),
+.spr-product-table td:nth-child(5) { width: 9%; text-align: center; }
+.spr-product-table th:nth-child(6),
+.spr-product-table td:nth-child(6) { width: 15%; text-align: right; }
+.spr-product-table th:nth-child(7),
+.spr-product-table td:nth-child(7) { width: 13%; text-align: right; }
+.spr-product-table th:nth-child(8),
+.spr-product-table td:nth-child(8) { width: 80px; padding-left: 4px; padding-right: 8px; text-align: center; }
+
+.spr-product-table .cs-row-edit-btn,
+.spr-product-table .so-product-remove-btn {
+	width: 28px;
+	height: 28px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	color: #77727A;
+}
+
+.spr-product-table .cs-row-edit-btn:hover,
+.spr-product-table .so-product-remove-btn:hover {
+	background: transparent;
+	border: 0;
+	color: var(--so-primary);
+}
+
+/* ===== สำหรับคลังสินค้า ===== */
+.spr-warehouse-grid {
+	display: grid;
+	grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+	gap: 24px;
+}
+
+.spr-cell-unit {
+	display: block;
+	margin-top: 2px;
+	font-size: 12px;
+	color: var(--so-muted);
+}
+
+.spr-clear-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #EFEBFF;
+	color: var(--so-primary);
+	font-size: 12px;
+	margin-right: 4px;
+}
+
+.breg-empty-state {
+	padding: 28px 16px;
+	text-align: center;
+	font-size: 14px;
+	color: var(--so-muted);
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
+}
+
+#spr_edit_modal .spr-remark-modal-card {
+	display: flex;
+	flex-direction: column;
+	width: calc(100% - 24px);
+	max-width: 1096px;
+	min-height: 330px;
+	padding: 24px 32px;
+	border-radius: 10px;
+}
+
+#spr_edit_modal .so-input-wrapper .so-input {
+	background: #F5F6F8;
+}
+
+#spr_edit_modal .cs-modal-header {
+	padding-bottom: 14px;
+	margin-bottom: 18px;
+}
+
+#spr_edit_modal .spr-modal-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
+#spr_edit_modal .spr-modal-fields {
+	display: grid;
+	grid-template-columns: minmax(120px, 0.45fr) minmax(240px, 1fr) minmax(360px, 1.55fr);
+	gap: 24px;
+}
+
+#spr_edit_modal .spr-modal-fields .so-field-group {
+	margin-bottom: 0;
+}
+
+#spr_edit_modal .cs-modal-footer {
+	gap: 20px;
+	margin-top: auto;
+	padding-top: 28px;
+	border-top: 0;
+}
+
+#spr_edit_modal .cs-modal-btn-update,
+#spr_edit_modal .cs-modal-btn-cancel {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 172px;
+	height: 42px;
+	padding: 0 24px;
+	border-radius: 24px;
+	font-size: 14px;
+}
+
+#spr_edit_modal .cs-modal-btn-update {
+	background: var(--so-primary);
+	color: #FFFFFF;
+	border: 1px solid var(--so-primary);
+}
+
+#spr_edit_modal .cs-modal-btn-cancel {
+	background: #FFFFFF;
+	color: #4A4A4A;
+	border: 1px solid #E5E1E7;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 640px) {
+	.spr-document-card,
+	.spr-note-card,
+	.spr-items-card,
+	.spr-warehouse-card { padding-left: 16px; padding-right: 16px; }
+	.spr-company-select-row,
+	.spr-document-grid,
+	.spr-return-grid,
+	.spr-linked-documents,
+	.spr-warehouse-grid { grid-template-columns: 1fr; }
+	.spr-document-address { grid-column: auto; }
+	.spr-toolbar-row { flex-direction: column; align-items: stretch; }
+	.spr-items-card .so-product-table-wrap { width: calc(100% + 32px); margin-left: -16px; margin-right: -16px; }
+	.spr-items-title-count { font-size: 16px; }
+	.spr-summary-value { font-size: 19px; }
+	#spr_edit_modal .spr-remark-modal-card { width: 100%; min-height: auto; padding: 20px 16px; }
+	#spr_edit_modal .spr-modal-fields { grid-template-columns: 1fr; gap: 14px; }
+	#spr_edit_modal .cs-modal-footer { margin-top: 24px; padding-top: 0; }
+	#spr_edit_modal .cs-modal-btn-update,
+	#spr_edit_modal .cs-modal-btn-cancel { width: 100%; }
+}
+
+@media (min-width: 641px) and (max-width: 992px) {
+	.spr-document-grid,
+	.spr-linked-documents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.spr-document-address { grid-column: 1 / -1; }
+}
+
+@media (max-width: 767px) {
+	.spr-product-table,
+	#spr_table {
+		min-width: 640px;
+	}
+}
+
+/* ปุ่มยกเลิกเอกสารแบบยืนเดี่ยวบน sticky bar — ใช้ตอนที่ไม่มีแถบอนุมัติ (ใบ Draft/
+   Returned/Rejected) ซึ่งเมนู ⋮ ของแถบอนุมัติไม่ได้แสดง ทรงเดียวกับ .btn-so-cancel-nav
+   แต่เป็นโทนเตือนเพราะเป็น action ที่ย้อนกลับไม่ได้ */
+.btn-so-cancel-doc {
+	background-color: #FFFFFF;
+	color: #D32F2F;
+	border: 1px solid #F5C6C4;
+	border-radius: 24px;
+	padding: 12px 24px;
+	font-family: 'Prompt', sans-serif;
+	font-size: 16px;
+	font-weight: 500;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.btn-so-cancel-doc:hover {
+	background-color: #FEECEB;
+}
+
+.btn-so-cancel-doc:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

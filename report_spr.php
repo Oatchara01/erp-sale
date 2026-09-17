@@ -1,27 +1,59 @@
 <?php
 
 define('FPDF_FONTPATH','font/');
- 
+
 require('fpdf.php');
 
-$ref_id=$_GET["ref_id"];
-
 include"dbconnect.php";
+include_once "includes/spr_repo.php";
+include_once "includes/spr_report_preview_helper.php";
 
-$strSQL = "SELECT * FROM hos__spr WHERE ref_id = '".$ref_id."' ";
-$objQuery = mysqli_query($conn,$strSQL)or die ("Error Query [".$strSQL."]");;
-$objResult = mysqli_fetch_array($objQuery);
+/* โหมด Preview: render จากค่าที่ POST มาจากฟอร์ม register_engspr.php โดยไม่แตะฐานข้อมูล
+   โหมดปกติ (GET ?ref_id=...): โหลดเอกสารที่บันทึกแล้วเหมือนเดิม — ลิงก์เก่า
+   report_spr.php?ref_id=... ยังทำงานเหมือนเดิมทุกประการ */
+$sprIsPreview = spr_report_is_preview_request();
 
-$strSQL1 = "SELECT * FROM (hos__subspr LEFT JOIN tb_product ON hos__subspr.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+if ($sprIsPreview) {
+	if (session_status() === PHP_SESSION_NONE) {
+		session_start();
+	}
+	try {
+		$sprPreview = spr_report_build_preview_context($conn);
+	} catch (SprValidationException $e) {
+		http_response_code(422);
+		echo htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+		exit();
+	}
+	$objResult = $sprPreview['header'];
+	$ref_id = $objResult['ref_id'];
+	$sprItems = $sprPreview['items'];
+	$sum_a = number_format(array_sum(array_column($sprItems, 'sum_amount')), 2) . "";
+} else {
+	$ref_id = $_GET["ref_id"];
 
+	$strSQL = "SELECT * FROM hos__spr WHERE ref_id = '".$ref_id."' ";
+	$objQuery = mysqli_query($conn,$strSQL)or die ("Error Query [".$strSQL."]");;
+	$objResult = mysqli_fetch_array($objQuery, MYSQLI_ASSOC);
 
-$strSQL2 = "SELECT SUM(sum_amount) As sum_amount FROM hos__subspr WHERE ref_idd = '".$ref_id."' ";
-$objQuery2 = mysqli_query($conn,$strSQL2)or die ("Error Query [".$strSQL2."]");;
-$objResult2 = mysqli_fetch_array($objQuery2);
+	if (!$objResult) {
+		echo '<div style="font:14pt \'Angsana New\';padding:24px;">ไม่พบเอกสารเลขที่ '
+			. htmlspecialchars($ref_id, ENT_QUOTES, 'UTF-8') . '</div>';
+		exit();
+	}
 
-$sum_a = number_format($objResult2["sum_amount"],2)."";
+	$strSQL1 = "SELECT * FROM (hos__subspr LEFT JOIN tb_product ON hos__subspr.product_ID=tb_product.product_id) WHERE ref_idd = '".$ref_id."' ORDER BY " . (spr_column_exists($conn, 'hos__subspr', 'sort_order') ? 'hos__subspr.sort_order ASC, hos__subspr.id ASC' : 'hos__subspr.id ASC');
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$sprItems = array();
+	while ($row = mysqli_fetch_assoc($objQuery1)) {
+		$sprItems[] = $row;
+	}
+
+	$strSQL2 = "SELECT SUM(sum_amount) As sum_amount FROM hos__subspr WHERE ref_idd = '".$ref_id."' ";
+	$objQuery2 = mysqli_query($conn,$strSQL2)or die ("Error Query [".$strSQL2."]");;
+	$objResult2 = mysqli_fetch_array($objQuery2);
+
+	$sum_a = number_format($objResult2["sum_amount"],2)."";
+}
 
 date_default_timezone_set("Asia/Bangkok");
 function DateThai($strDate)
@@ -90,18 +122,30 @@ $stock_date = DateThai($objResult['stock_date']);
 $stock_date ='';	
 }
 $stock_name = 	$objResult['stock_name'];
+$warehouse_action = $objResult['warehouse_action'] ?? '';
 
 
+// st__signature อาจไม่มีในบางฐาน (เช่นฐานทดสอบ) — กันไม่ให้ทั้งใบพิมพ์พังถ้าตาราง/แถวไม่มี
 $qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
-$first = mysqli_query($new,$qfirst);
-$ffirst = mysqli_fetch_array($first);
+try {
+	$first = @mysqli_query($conn,$qfirst);
+} catch (Throwable $e) {
+	$first = false;
+}
+$ffirst = $first ? mysqli_fetch_array($first) : null;
+if (!$ffirst) { $ffirst = array("cs_name" => "", "cs_dt" => "0000-00-00", "cs_code" => ""); }
 
 $cus_name = $ffirst["cs_name"];
 $cs_dt = DateThai($ffirst["cs_dt"]);
 
 $qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
-$first2 = mysqli_query($conn,$qfirst2);
-$ffirst2 = mysqli_fetch_array($first2);
+try {
+	$first2 = @mysqli_query($conn,$qfirst2);
+} catch (Throwable $e) {
+	$first2 = false;
+}
+$ffirst2 = $first2 ? mysqli_fetch_array($first2) : null;
+if (!$ffirst2) { $ffirst2 = array("name" => "", "surname" => ""); }
 $name = $ffirst2["name"];
 $surname = $ffirst2["surname"];
 
@@ -460,7 +504,7 @@ $pdf->MultiCell(2.0,0.5, iconv( 'UTF-8','cp874' , ""),0 ,'L' );
 
 
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
+foreach ($sprItems as $objResult1)
 {
 
 $unit_name  =$objResult1["unit_name"];
@@ -589,7 +633,7 @@ $pdf->setXY(1.2,15.2);
 $pdf->MultiCell(9.0, 0.6 , iconv( 'UTF-8','cp874' ,"อาการเสีย :"),0,'L' );
 
 $pdf->setXY(2.8,15.0);
-$pdf->MultiCell(17.0, 0.4 , iconv('UTF-8','cp874//ASCII//TRANSLIT//IGNORE',"$pro_des"),0,'L');
+$pdf->MultiCell(17.0, 0.4 , iconv('UTF-8//IGNORE','cp874//IGNORE',"$pro_des"),0,'L');
 
 
 $pdf->setXY(2.8,15.8);
@@ -754,22 +798,34 @@ $pdf->setXY(11.9,23.3);
 $pdf->MultiCell(9.0, 0.6 , iconv( 'UTF-8','cp874' ,"................................"),0,'L' );
 
 
+if($warehouse_action=='1'){
+$pdf->Image("img/cor.jpeg",16.35,21.35,0.5,0.5);
+}else{
 $pdf->setXY(16.4,21.5);
 $pdf->Cell(0.4,0.3, "",1,1,"c" );
+}
 
 $pdf->setXY(16.9,21.3);
 $pdf->MultiCell(9.0, 0.6 , iconv( 'UTF-8','cp874' ,"จากคลังสินค้าชำรุด"),0,'L' );
 
 
+if($warehouse_action=='2'){
+$pdf->Image("img/cor.jpeg",16.35,22.35,0.5,0.5);
+}else{
 $pdf->setXY(16.4,22.5);
 $pdf->Cell(0.4,0.3, "",1,1,"c" );
+}
 
 $pdf->setXY(16.9,22.3);
 $pdf->MultiCell(9.0, 0.6 , iconv( 'UTF-8','cp874' ,"เข้า Stock ชำรุด"),0,'L' );
 
 
+if($warehouse_action=='3'){
+$pdf->Image("img/cor.jpeg",16.35,23.35,0.5,0.5);
+}else{
 $pdf->setXY(16.4,23.5);
 $pdf->Cell(0.4,0.3, "",1,1,"c" );
+}
 
 $pdf->setXY(16.9,23.3);
 $pdf->MultiCell(9.0, 0.6 , iconv( 'UTF-8','cp874' ,"ทำลาย"),0,'L' );

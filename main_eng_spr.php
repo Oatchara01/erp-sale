@@ -17,7 +17,7 @@
 		 
 	      <p align="center"><br \><br \><br \>
 		  <a href=javascript:if(confirm('!!!ต้องการสร้างใบเบิกSPRบริษัทออลเวลล์ไลฟ์ใช่หรือไม่')==true){window.location='register_engspr.php';}><img src="img/allwell_logo.png"width="250" height="70"></a>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-		 <a href=javascript:if(confirm('!!!ต้องการสร้างใบเบิกSPRบริษัทโนเบิลเมดใช่หรือไม่')==true){window.location='register_engsprnb.php';}><img src="img/nbm_select.png" width="250" height="120"></a>&nbsp&nbsp&nbsp</br></br></br></br>
+		 <a href=javascript:if(confirm('!!!ต้องการสร้างใบเบิกSPRบริษัทโนเบิลเมดใช่หรือไม่')==true){window.location='register_engspr.php?company=2';}><img src="img/nbm_select.png" width="250" height="120"></a>&nbsp&nbsp&nbsp</br></br></br></br>
 
 		 		  
 		  </p>

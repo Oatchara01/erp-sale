@@ -1,3 +1,79 @@
+<?php
+
+/* ===================================================================
+ * เส้นทางบันทึกแบบใหม่ (spr_mode = v2) — ใช้โดย register_engspr.php ที่ออกแบบใหม่
+ *
+ * ต้องทำงานก่อน include("head.php") เพราะต้อง redirect ด้วย header() หลังบันทึกเสร็จ
+ * และ head.php เริ่มพ่น HTML ออกไปทันที
+ *
+ * ฟอร์มเดิมที่อาจยังยิงมาที่ไฟล์นี้โดยไม่มีธงนี้ (ลิงก์/บุ๊กมาร์กเก่า) ไม่ได้รับผลกระทบ
+ * เพราะตกไปใช้เส้นทาง legacy ด้านล่างเหมือนเดิมทุกประการ
+ * =================================================================== */
+if (isset($_POST['spr_mode']) && $_POST['spr_mode'] === 'v2') {
+	session_start();
+	if (!isset($_SESSION['UserID']) || $_SESSION['UserID'] === '') {
+		header('Location: index.php');
+		exit();
+	}
+
+	date_default_timezone_set("Asia/Bangkok");
+	include __DIR__ . '/dbconnect.php';
+	require_once __DIR__ . '/includes/spr_repo.php';
+
+	try {
+		// mode 'submit' → status_doc = 'Request' + ส่งเข้าคิวอนุมัติทันที (ข้อกำหนดข้อ 5)
+		$sprResult = spr_persist_from_post($conn, 'submit', $_SESSION);
+
+		// ตั้ง spar_ckk/spr_no กลับไปที่ใบงานบริการต้นทาง — มิเรอร์พฤติกรรมเดิม เกิดเฉพาะ
+		// ตอน Submit เท่านั้น (ไม่ใช่ทุกครั้งที่ Save Draft) ใช้ connection แยกเหมือนเดิม
+		$sprSavedDoc = spr_load_document($conn, $sprResult['ref_id']);
+		if ($sprSavedDoc) {
+			$sprMainConn = $conn;
+			include __DIR__ . '/dbconnect_service.php';
+			spr_stamp_service_order($conn, $conn, $sprSavedDoc['type_company'], $sprSavedDoc['wo_no'], $sprSavedDoc['spr_no']);
+			$conn = $sprMainConn;
+		}
+
+		// กลับมาหน้าเดิม (หน้าสร้าง/แก้ไขชุดเดียวกัน) พร้อมธง saved=1 ให้ขึ้น SweetAlert
+		// — ยิงตรงไม่ผ่าน register_engspr_edit.php ที่เป็นแค่ redirect ต่ออีกทอด
+		header('Location: register_engspr.php?ref_id=' . urlencode($sprResult['ref_id']) . '&saved=1');
+		exit();
+	} catch (SprValidationException $e) {
+		$sprErrorMessage = $e->getMessage();
+	} catch (Throwable $e) {
+		error_log('[register_engspr1:v2] ' . $e->getMessage());
+		$sprErrorMessage = 'ไม่สามารถบันทึกเอกสารได้ กรุณาลองใหม่อีกครั้ง หากยังไม่ได้กรุณาแจ้งผู้ดูแลระบบ';
+	}
+
+	// ล้มเหลว: ไม่มีอะไรถูกเขียนลงฐาน (rollback แล้ว) — แจ้งผู้ใช้แล้วพากลับไปแก้ฟอร์มเดิม
+	// ไม่ include head.php ที่นี่ เพราะ head.php เรียก session_start() ซ้ำกับด้านบน
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SOL :: ITEAMDEV</title>
+</head>
+<body>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script>
+		Swal.fire({
+			title: 'บันทึกไม่สำเร็จ',
+			text: <?php echo json_encode($sprErrorMessage, JSON_UNESCAPED_UNICODE); ?>,
+			icon: 'error',
+			confirmButtonColor: '#612989',
+			confirmButtonText: 'กลับไปแก้ไข'
+		}).then(function() {
+			window.history.back();
+		});
+	</script>
+</body>
+</html>
+<?php
+	exit();
+}
+?>
 <?php include ("head.php"); ?>
 
 
