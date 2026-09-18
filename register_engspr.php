@@ -329,10 +329,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="epe_no">ใบส่งออกผลิตภัณฑ์ชำรุดต่างประเทศ (EPE)</label>
-					<div class="spr-linked-document-control">
-						<input type="text" name="epe_no" id="epe_no" class="so-input spr-linked-document-input" value="<?php echo so_saved_h($sprField('epe_no')); ?>" placeholder="เลขที่ EPE จะแสดงอัตโนมัติ" readonly onclick="sprOpenLinkedDocument('epe_no', 'ใบส่งออกผลิตภัณฑ์ชำรุดต่างประเทศ (EPE)');">
-						<button type="button" class="spr-linked-document-button" onclick="sprOpenLinkedDocument('epe_no', 'ใบส่งออกผลิตภัณฑ์ชำรุดต่างประเทศ (EPE)');" aria-label="ดูใบ EPE"><i class="far fa-file-alt" aria-hidden="true"></i><i class="fas fa-search" aria-hidden="true"></i></button>
-					</div>
+					<input type="text" name="epe_no" id="epe_no" class="so-input" value="<?php echo so_saved_h($sprField('epe_no')); ?>" placeholder="กรอกเลขที่ EPE">
 				</div>
 			</div>
 			<?php if (!$sprIsEditMode || $sprHasPerReturnNo) { ?>
