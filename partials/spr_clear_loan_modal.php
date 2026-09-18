@@ -82,7 +82,10 @@
 		var tbody = document.getElementById('sprClearLoanRows');
 		tbody.innerHTML = '<tr class="clear-loan-state-row"><td colspan="6">กำลังค้นหา...</td></tr>';
 
-		fetch('data_clearbr_search_for_spr.php?keyword=' + encodeURIComponent(keyword || ''), { credentials: 'same-origin', cache: 'no-store' })
+		// ใบยืมต้องเป็นบริษัทเดียวกับใบ SPR — sprGetTypeCompany() มาจาก partials/spr_item_table.php
+		var url = 'data_clearbr_search_for_spr.php?keyword=' + encodeURIComponent(keyword || '') +
+			'&type_company=' + encodeURIComponent(sprGetTypeCompany());
+		fetch(url, { credentials: 'same-origin', cache: 'no-store' })
 			.then(function(res) { return res.json(); })
 			.then(function(data) {
 				if (requestToken !== sprClearLoanRequestToken) return;
@@ -119,10 +122,18 @@
 
 			doc.items.forEach(function(item, itemIndex) {
 				var key = doc.ref_id_br + '|' + item.product_id + '|' + itemIndex;
-				html += '<tr class="clear-loan-subrow" data-spr-doc="' + docIndex + '">' +
+				// ใบยืมเก่าบางใบมีสินค้าต่างบริษัทปนอยู่ — แสดงให้เห็นแต่เลือกไม่ได้ (server ก็ไม่รับ)
+				var selectable = item.company_match !== false;
+				var mismatchNote = selectable ? '' :
+					'<span class="clear-loan-item-meta spr-clear-loan-mismatch">สินค้าของ ' + sprEscapeHtmlCl(item.product_company || 'บริษัทอื่น') +
+					' — นำเข้าใบ SPR ของ ' + sprEscapeHtmlCl(sprGetTypeCompany()) + ' ไม่ได้</span>';
+				html += '<tr class="clear-loan-subrow' + (selectable ? '' : ' spr-clear-loan-disabled') + '" data-spr-doc="' + docIndex + '">' +
 					'<td></td>' +
-					'<td><span class="clear-loan-check-circle"><input type="checkbox" class="clear-loan-check-input" onchange="sprToggleClearLoanItem(\'' + key + '\', this.checked)"></span></td>' +
-					'<td colspan="2">' + sprEscapeHtmlCl(item.product_name) + ' (' + sprEscapeHtmlCl(item.access_code) + ')</td>' +
+					'<td><label class="clear-loan-item-option" aria-label="เลือกรายการ">' +
+						'<input type="checkbox" class="clear-loan-check-input"' + (selectable ? '' : ' disabled') +
+						' onchange="sprToggleClearLoanItem(\'' + key + '\', this.checked)">' +
+						'<span class="clear-loan-check-circle" aria-hidden="true"></span></label></td>' +
+					'<td colspan="2">' + sprEscapeHtmlCl(item.product_name) + ' (' + sprEscapeHtmlCl(item.access_code) + ')' + mismatchNote + '</td>' +
 					'<td>' + sprEscapeHtmlCl(item.count) + ' ' + sprEscapeHtmlCl(item.unit_name) + '</td>' +
 					'<td></td>' +
 					'</tr>';

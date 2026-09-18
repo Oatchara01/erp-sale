@@ -238,24 +238,19 @@
 	gap: 24px;
 }
 
-.spr-cell-unit {
-	display: block;
-	margin-top: 2px;
-	font-size: 12px;
-	color: var(--so-muted);
+
+/* modal เคลียร์ยืม — รายการสินค้าต่างบริษัทที่เลือกไม่ได้ */
+.spr-clear-loan-disabled .clear-loan-item-option {
+	cursor: not-allowed;
 }
 
-.spr-clear-badge {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 24px;
-	height: 24px;
-	border-radius: 50%;
-	background: #EFEBFF;
-	color: var(--so-primary);
-	font-size: 12px;
-	margin-right: 4px;
+.spr-clear-loan-disabled .clear-loan-check-circle {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.spr-clear-loan-mismatch {
+	color: #DC3545;
 }
 
 .breg-empty-state {

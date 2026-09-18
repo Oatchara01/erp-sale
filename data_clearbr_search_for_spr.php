@@ -7,6 +7,11 @@
  *
  * สิทธิ์การมองเห็น มิเรอร์ status_clearbr.php เดิม (ช่างเห็นใบยืมของกลุ่ม EN ทั้งหมด,
  * ผู้ใช้อื่นเห็นเฉพาะของ sale_code ตัวเอง) — endpoint นี้อ่านอย่างเดียว ไม่มีการเขียนฐานข้อมูล
+ *
+ * กรองเฉพาะใบยืมของบริษัทเดียวกับใบ SPR — hos__br.company ใช้ 1=AWL / 2=NBM
+ * (3/4 เป็นค่าชุดรันเลขเอกสาร รวมไว้ด้วยแบบเดียวกับ ajax_clear_loan_popup_search.php)
+ * ใบยืมเก่าบางใบมีสินค้าต่างบริษัทปนอยู่ จึงส่ง product_company ของแต่ละรายการกลับไป
+ * ให้ modal ปิดการเลือกรายการนั้น (spr_validate_item_company() ปฏิเสธซ้ำตอนบันทึก)
  */
 
 session_start();
@@ -22,12 +27,18 @@ if (!isset($_SESSION['code']) || $_SESSION['code'] === '') {
 $keyword = isset($_GET['keyword']) ? trim((string)$_GET['keyword']) : '';
 $saleCode = (string)$_SESSION['code'];
 $userType = isset($_SESSION['user_type']) ? (string)$_SESSION['user_type'] : '';
+$typeCompany = (isset($_GET['type_company']) && $_GET['type_company'] === 'NBM') ? 'NBM' : 'AWL';
+$companyFilter = ($typeCompany === 'NBM') ? "company IN ('2','4')" : "company IN ('1','3')";
 
 if ($userType === 'Engineer') {
 	$where = "sale_code LIKE '%EN%' AND close_br = '0' AND status_doc = 'Approve'";
 } else {
 	$where = "sale_code = '" . mysqli_real_escape_string($conn, $saleCode) . "' AND close_br = '0' AND status_doc = 'Approve'";
 }
+$where .= " AND " . $companyFilter;
+// ตัดใบที่ไม่มีรายการค้างเคลียร์ตั้งแต่ใน SQL — ถ้าไปตัดทีหลัง LIMIT ใบยืมล่าสุดที่ไม่มี
+// รายการจะกิน 30 ช่องจนไม่เหลือใบที่เคลียร์ได้จริง (เงื่อนไขเดียวกับ query รายการด้านล่าง)
+$where .= " AND EXISTS (SELECT 1 FROM hos__subbr sub WHERE sub.ref_idd_br = hos__br.ref_id_br AND sub.clear_ckk = '0')";
 
 if ($keyword !== '') {
 	$safeKeyword = mysqli_real_escape_string($conn, $keyword);
@@ -43,7 +54,7 @@ if (!$query) {
 
 $docs = array();
 while ($doc = mysqli_fetch_assoc($query)) {
-	$itemStmt = mysqli_prepare($conn, "SELECT sub.product_id, sub.count, sub.price, p.access_code, p.sol_name, p.unit_name
+	$itemStmt = mysqli_prepare($conn, "SELECT sub.product_id, sub.count, sub.price, p.access_code, p.sol_name, p.unit_name, p.type_company
 		FROM hos__subbr sub LEFT JOIN tb_product p ON p.product_ID = sub.product_id
 		WHERE sub.ref_idd_br = ? AND sub.clear_ckk = '0'");
 	mysqli_stmt_bind_param($itemStmt, 's', $doc['ref_id_br']);
@@ -58,6 +69,8 @@ while ($doc = mysqli_fetch_assoc($query)) {
 			'unit_name'    => (string)$item['unit_name'],
 			'count'        => (string)$item['count'],
 			'unit_price'   => (string)$item['price'],
+			'product_company' => trim((string)$item['type_company']),
+			'company_match'   => trim((string)$item['type_company']) === $typeCompany,
 		);
 	}
 	mysqli_stmt_close($itemStmt);

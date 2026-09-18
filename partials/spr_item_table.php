@@ -70,7 +70,6 @@ $sprRowsToJs = function (array $rows) {
 			'</td>';
 
 		html += '<td><span class="cs-product-name-text spr-cell-name">' + sprEscapeHtml(data.product_name) + '</span>' +
-			'<span class="spr-cell-unit">' + (data.unit_name ? 'หน่วย: ' + sprEscapeHtml(data.unit_name) : '') + '</span>' +
 			'<input type="hidden" name="' + p + '[unit_name]" class="spr-f-unit_name" value="' + sprEscapeHtml(data.unit_name) + '"></td>';
 
 		html += '<td><div class="cs-cell-pill">' +
@@ -91,7 +90,6 @@ $sprRowsToJs = function (array $rows) {
 			'<input type="hidden" name="' + p + '[sn]" class="spr-f-sn" value="' + sprEscapeHtml(data.sn) + '">' +
 			'<input type="hidden" name="' + p + '[clear_br]" class="spr-f-clear_br" value="' + (data.clear_br === '1' ? '1' : '0') + '">' +
 			'<input type="hidden" name="' + p + '[clear_ivno]" class="spr-f-clear_ivno" value="' + sprEscapeHtml(data.clear_ivno) + '">' +
-			(data.clear_br === '1' ? '<span class="spr-clear-badge" title="เคลียร์ยืมเลขที่ ' + sprEscapeHtml(data.clear_ivno) + '"><i class="fas fa-link" aria-hidden="true"></i></span>' : '') +
 			'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" onclick="sprOpenEditModal(this);"><i class="far fa-edit" aria-hidden="true"></i></button>' +
 			'<button type="button" class="so-product-remove-btn" title="ลบรายการ" onclick="sprRemoveRow(this);"><i class="far fa-trash-alt" aria-hidden="true"></i></button>' +
 			'</td>';
@@ -356,12 +354,6 @@ $sprRowsToJs = function (array $rows) {
 			if (clearBrEl) clearBrEl.value = isClear ? '1' : '0';
 			if (clearIvnoEl) clearIvnoEl.value = clearIvno;
 
-			var badge = sprEditingRow.querySelector('.spr-clear-badge');
-			var actionsCell = sprEditingRow.querySelector('.cs-row-actions-cell');
-			if (badge) badge.remove();
-			if (isClear && actionsCell) {
-					actionsCell.insertAdjacentHTML('afterbegin', '<span class="spr-clear-badge" title="เคลียร์ยืมเลขที่ ' + sprEscapeHtml(clearIvno) + '"><i class="fas fa-link" aria-hidden="true"></i></span>');
-			}
 		}
 		sprCloseEditModal();
 	}
@@ -370,6 +362,13 @@ $sprRowsToJs = function (array $rows) {
 	function sprTotalRowCount() {
 		var tbody = sprTbody();
 		return tbody ? tbody.querySelectorAll('tr.spr-row').length : 0;
+	}
+
+	function sprClearAllRows() {
+		var tbody = sprTbody();
+		if (tbody) tbody.innerHTML = '';
+		sprRefreshSummary();
+		sprSyncSelectAll();
 	}
 
 	/** เพิ่มแถวจากการนำเข้าจาก modal เคลียร์ยืม (partials/spr_clear_loan_modal.php) */
@@ -516,5 +515,55 @@ $sprRowsToJs = function (array $rows) {
 			sprAddRow(row);
 		});
 		sprRefreshSummary();
+	})();
+
+	/* เปลี่ยนบริษัทตอนมีรายการอยู่แล้ว — ต้องล้างรายการ เพราะ product_id ของแต่ละแถวผูกกับ
+	   บริษัทเดิม (pattern เดียวกับ register_supbrhos.php) กดยกเลิก = คืนค่าบริษัทเดิม */
+	(function sprBindCompanyChange() {
+		var companySelect = document.getElementById('type_company_select');
+		if (!companySelect) return;
+
+		var previousCompanyValue = companySelect.value;
+
+		companySelect.addEventListener('change', function() {
+			var nextCompanyValue = companySelect.value;
+			if (nextCompanyValue === previousCompanyValue) return;
+
+			if (sprTotalRowCount() === 0) {
+				previousCompanyValue = nextCompanyValue;
+				return;
+			}
+
+			function applyChange() {
+				sprClearAllRows();
+				previousCompanyValue = nextCompanyValue;
+			}
+
+			function cancelChange() {
+				companySelect.value = previousCompanyValue;
+			}
+
+			var message = 'รายการสินค้าทั้งหมด ' + sprTotalRowCount() + ' รายการจะถูกล้าง เพื่อป้องกันสินค้าข้ามบริษัท';
+
+			if (typeof Swal === 'undefined') {
+				if (confirm('เปลี่ยนบริษัท ?\n' + message)) applyChange();
+				else cancelChange();
+				return;
+			}
+
+			Swal.fire({
+				icon: 'warning',
+				title: 'เปลี่ยนบริษัท ?',
+				text: message,
+				showCancelButton: true,
+				confirmButtonText: 'ยืนยัน',
+				cancelButtonText: 'ยกเลิก',
+				reverseButtons: true,
+				confirmButtonColor: '#612989'
+			}).then(function(result) {
+				if (result.isConfirmed) applyChange();
+				else cancelChange();
+			});
+		});
 	})();
 </script>

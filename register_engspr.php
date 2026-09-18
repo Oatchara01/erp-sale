@@ -57,7 +57,6 @@ if ($sprRequestedRefId !== '') {
 
 $sprIsEditMode = ($savedSpr !== null);
 $sprDisplayRefId = $sprIsEditMode ? $savedSpr['ref_id'] : spr_peek_next_ref_id($conn);
-$sprDisplaySprNo = $sprIsEditMode ? $savedSpr['spr_no'] : '(ยังไม่ออกเลข)';
 
 $sprStatusDoc = $sprIsEditMode ? (string)$savedSpr['status_doc'] : 'Draft';
 $sprIsTerminal = spr_is_terminal_status($sprStatusDoc);
@@ -134,13 +133,15 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($sprDisplayRefId); ?></span>
-					<span class="so-ref-label">SPR</span>
-					<span class="so-ref-value"><?php echo so_saved_h($sprDisplaySprNo); ?></span>
+					<?php if ($sprIsEditMode) { ?>
+						<span class="so-ref-label">SPR</span>
+						<span class="so-ref-value"><?php echo so_saved_h($savedSpr['spr_no']); ?></span>
+					<?php } ?>
 				</div>
 			</div>
 			<div class="so-header-right">
 				<button type="button" class="btn-so-secondary" onclick="sprOpenClearLoanModal();">
-					<i class="fas fa-link" aria-hidden="true"></i> เคลียร์ยืม
+					เคลียร์ยืม
 				</button>
 				<button type="button" class="btn-preview-so" onclick="sprOpenPreview();">
 					<img src="img/icons/preview.png" alt="preview" style="width:16px;height:16px;"> Preview

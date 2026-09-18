@@ -729,6 +729,64 @@ if (!function_exists('spr_validate')) {
 	}
 }
 
+if (!function_exists('spr_product_company_code')) {
+	/** hos__spr.type_company (1/2) → ค่าใน tb_product.type_company (AWL/NBM) */
+	function spr_product_company_code($typeCompany)
+	{
+		return ((int)$typeCompany === 2) ? 'NBM' : 'AWL';
+	}
+}
+
+if (!function_exists('spr_validate_item_company')) {
+	/**
+	 * สินค้าทุกแถวต้องเป็นของบริษัทเดียวกับหัวเอกสาร — หน้าเว็บกรองให้แล้วทั้งช่องค้นหา
+	 * และ modal เคลียร์ยืม แต่ product_id มาจาก client จึงต้องตรวจซ้ำที่นี่
+	 * (แยกจาก spr_validate() เพราะต้องใช้ $conn)
+	 *
+	 * @return string[] รายการข้อความผิดพลาด (ว่าง = ผ่าน)
+	 */
+	function spr_validate_item_company($conn, $typeCompany, array $items)
+	{
+		$productIds = array();
+		foreach ($items as $row) {
+			$productIds[(int)$row['product_id']] = true;
+		}
+		if (count($productIds) === 0) {
+			return array();
+		}
+		$productIds = array_keys($productIds);
+
+		$placeholders = implode(',', array_fill(0, count($productIds), '?'));
+		$stmt = mysqli_prepare($conn, "SELECT product_ID, access_code, type_company FROM tb_product WHERE product_ID IN ($placeholders)");
+		if (!$stmt) {
+			throw new RuntimeException(mysqli_error($conn));
+		}
+		mysqli_stmt_bind_param($stmt, str_repeat('i', count($productIds)), ...$productIds);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+
+		$expected = spr_product_company_code($typeCompany);
+		$found = array();
+		$mismatchCodes = array();
+		while ($result && ($row = mysqli_fetch_assoc($result))) {
+			$found[(int)$row['product_ID']] = true;
+			if (trim((string)$row['type_company']) !== $expected) {
+				$mismatchCodes[] = (string)$row['access_code'];
+			}
+		}
+		mysqli_stmt_close($stmt);
+
+		$errors = array();
+		if (count($mismatchCodes) > 0) {
+			$errors[] = 'สินค้าต่อไปนี้ไม่ใช่สินค้าของ ' . $expected . ' กรุณาลบออกจากรายการ: ' . implode(', ', array_unique($mismatchCodes));
+		}
+		if (count($found) < count($productIds)) {
+			$errors[] = 'พบรายการสินค้าที่ไม่มีอยู่ในระบบ กรุณาลบแล้วเพิ่มใหม่';
+		}
+		return $errors;
+	}
+}
+
 if (!function_exists('spr_compute_submit_routing')) {
 	/**
 	 * routing ตอน Submit — เทียบเท่า send_sprsup_approve.php / send_spr_approve.php
@@ -819,6 +877,9 @@ if (!function_exists('spr_persist_from_post')) {
 
 		// Save Draft ต้อง validate เท่ากับ Submit เสมอ (ข้อกำหนดข้อ 11)
 		$errors = spr_validate($header, $items);
+		if (count($errors) === 0) {
+			$errors = spr_validate_item_company($conn, $header['type_company'], $items);
+		}
 		if (count($errors) > 0) {
 			throw new SprValidationException(implode("\n", $errors));
 		}
