@@ -8,10 +8,14 @@ require_once __DIR__ . '/includes/spr_repo.php';
  * ($conn ที่ include ตรงนี้จะถูก head.php include ทับด้วยตัวใหม่อีกที)
  * =================================================================== */
 $sprRequestedRefId = isset($_GET['ref_id']) ? trim((string)$_GET['ref_id']) : '';
-if ($sprRequestedRefId !== '') {
+/* คัดลอกใบเดิม — เฉพาะตอนสร้างใบใหม่เท่านั้น (ไม่มี ref_id) */
+$sprCopyFromRefId = ($sprRequestedRefId === '' && isset($_GET['copy_from'])) ? trim((string)$_GET['copy_from']) : '';
+if ($sprRequestedRefId !== '' || $sprCopyFromRefId !== '') {
 	include __DIR__ . '/dbconnect.php';
-	$sprPreloaded = spr_load_document($conn, $sprRequestedRefId);
-	$sprDocumentMissing = ($sprPreloaded === null);
+	if ($sprRequestedRefId !== '') {
+		$sprPreloaded = spr_load_document($conn, $sprRequestedRefId);
+		$sprDocumentMissing = ($sprPreloaded === null);
+	}
 }
 ?>
 <?php include("head.php"); ?>
@@ -33,6 +37,29 @@ date_default_timezone_set("Asia/Bangkok");
  * =================================================================== */
 $sprSavedItems = array();
 $sprDocumentLogRows = array();
+
+/* คัดลอกใบเดิม — โหลดหัวเอกสาร+รายการต้นทาง แต่ตัด lifecycle/stock-state ทิ้งก่อนใช้ prefill
+   (ref_id/spr_no/status_doc/approval/audit ไม่ถูกอ่านจาก $sprCopySource ที่ไหนเลยอยู่แล้ว เพราะ
+   $sprIsEditMode เป็น false เสมอในโหมดนี้ — ส่วนที่ต้องล้างเองคือเลขเอกสารเชื่อมโยงที่ระบบ
+   ออกให้อัตโนมัติ (PER/EPE/BR/BRNP) ซึ่งเป็นของอินสแตนซ์เอกสารเดิมเท่านั้น ไม่ใช่ business data) */
+$sprCopySource = null;
+$sprCopySourceNotFound = false;
+if ($sprCopyFromRefId !== '') {
+	$sprCopySource = spr_load_document($conn, $sprCopyFromRefId);
+	if ($sprCopySource === null) {
+		$sprCopySourceNotFound = true;
+	} else {
+		foreach (array('per_no', 'epe_no', 'per_return_no', 'brn_no', 'brnp_no', 'clear_brn', 'clear_brnp', 'clear_epe') as $sprStockField) {
+			$sprCopySource[$sprStockField] = '';
+		}
+
+		$sprSavedItems = array_map(function ($row) {
+			$row['clear_br'] = '0';
+			$row['clear_ivno'] = '';
+			return $row;
+		}, spr_load_items($conn, $sprCopySource['ref_id']));
+	}
+}
 
 if ($sprRequestedRefId !== '') {
 	if (!empty($sprDocumentMissing)) {
@@ -77,9 +104,11 @@ $sprCanCancelDoc = $sprIsEditMode && !$sprIsTerminal && spr_user_can_cancel($sav
 $sprCanSubmit = !$sprIsTerminal && $sprStage === null;
 $sprCanUpdate = !$sprIsTerminal;
 
-$sprTypeCompanyDefault = $sprIsEditMode ? (string)$savedSpr['type_company'] : ((isset($_GET['company']) && $_GET['company'] === '2') ? '2' : '1');
+$sprTypeCompanyDefault = $sprIsEditMode
+	? (string)$savedSpr['type_company']
+	: ((isset($_GET['company']) && $_GET['company'] === '2') ? '2' : ($sprCopySource !== null ? (string)$sprCopySource['type_company'] : '1'));
 
-$sprPrefill = $sprIsEditMode ? $savedSpr : null;
+$sprPrefill = $sprIsEditMode ? $savedSpr : $sprCopySource;
 $sprField = function ($key, $default = '') use ($sprPrefill) {
 	if ($sprPrefill === null) {
 		return $default;
@@ -148,6 +177,12 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				</button>
 			</div>
 		</div>
+
+		<?php if (!$sprIsEditMode && $sprCopySourceNotFound) { ?>
+			<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" style="margin-bottom:16px;">
+				<p>ไม่พบเอกสารเลขที่ <?php echo so_saved_h($sprCopyFromRefId); ?> ที่ต้องการคัดลอก — ระบบเริ่มสร้างใบใหม่แบบว่างให้แทน</p>
+			</div>
+		<?php } ?>
 
 		<?php
 		/* เหตุผลล่าสุดจาก tb_document_status_log (แถวแรก = ใหม่สุด) — ถ้ายังไม่มี log
