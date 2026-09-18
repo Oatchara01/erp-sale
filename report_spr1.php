@@ -149,7 +149,7 @@ $strSQL2 = "SELECT SUM(sum_amount) As sum_amount FROM hos__subspr WHERE ref_idd 
 $objQuery2 = mysqli_query($conn,$strSQL2)or die ("Error Query [".$strSQL2."]");;
 $objResult2 = mysqli_fetch_array($objQuery2);
 
-$sum_a = number_format($objResult2["sum_amount"],2)."";
+$sum_a = number_format($objResult2["sum_amount"] ?? 0,2)."";
 
 
 
@@ -495,17 +495,33 @@ $i++;
 	</fieldset>
 		<?php
 
+// st__signature อาจไม่มีในบางฐาน (เช่นฐานทดสอบ) — กันไม่ให้ทั้งใบพิมพ์พังถ้าตาราง/แถวไม่มี
 $qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
-$first = mysqli_query($new,$qfirst);
-$ffirst = mysqli_fetch_array($first);
+try {
+	$first = @mysqli_query($conn,$qfirst);
+} catch (Throwable $e) {
+	$first = false;
+}
+$ffirst = $first ? mysqli_fetch_array($first) : null;
+if (!$ffirst) { $ffirst = array("en_code" => "", "cs_code" => "", "stock_print" => "", "stock_d" => "0000-00-00", "cs_name" => "", "cs_dt" => "0000-00-00", "st_name" => ""); }
 
 $qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
-$first1 = mysqli_query($conn,$qfirst1);
-$ffirst1 = mysqli_fetch_array($first1);
+try {
+	$first1 = @mysqli_query($conn,$qfirst1);
+} catch (Throwable $e) {
+	$first1 = false;
+}
+$ffirst1 = $first1 ? mysqli_fetch_array($first1) : null;
+if (!$ffirst1) { $ffirst1 = array("name" => "", "surname" => ""); }
 
 $qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
-$first2 = mysqli_query($conn,$qfirst2);
-$ffirst2 = mysqli_fetch_array($first2);
+try {
+	$first2 = @mysqli_query($conn,$qfirst2);
+} catch (Throwable $e) {
+	$first2 = false;
+}
+$ffirst2 = $first2 ? mysqli_fetch_array($first2) : null;
+if (!$ffirst2) { $ffirst2 = array("name" => "", "surname" => ""); }
 
 	?>
 

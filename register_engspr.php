@@ -445,9 +445,6 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				<?php if ($sprCanUpdate) { ?>
 					<button type="button" name="save_draft" class="btn-so-draft" onclick="sprSaveDraft();"><i class="far fa-save"></i> <?php echo $sprIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php } ?>
-				<?php if ($sprCanCancelDoc) { ?>
-					<button type="button" class="btn-so-cancel-doc" onclick="sprTriggerCancelDoc();"><img src="img/icons/cancel_document.png" alt="" style="width:18px;height:18px;"> ยกเลิกเอกสาร</button>
-				<?php } ?>
 			<?php } ?>
 			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_spr.php';">ย้อนกลับ</button>
 		</div>

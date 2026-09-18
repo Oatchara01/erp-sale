@@ -98,7 +98,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 			<div class="sidebar-group">
 				<button type="button" class="sidebar-group-btn"><span class="sidebar-icon"><i class="fa fa-wrench"></i></span><span class="sidebar-label">ใบเบิกเครื่องและอะไหล่</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 				<div class="sidebar-submenu">
-					<a href="main_eng_spr.php">สร้างใบเบิกเครื่องและอะไหล่</a>
+					<a href="register_engspr.php">สร้างใบเบิกเครื่องและอะไหล่</a>
 					<a href="status_spr.php">รายการใบเบิกเครื่องและอะไหล่ (ออลล์เวล ไลฟ์)</a>
 					<a href="status_spr_no.php">รายการใบเบิกเครื่องและอะไหล่ (โนเบิล เมด)</a>
 				</div>
