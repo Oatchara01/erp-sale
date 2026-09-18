@@ -322,7 +322,6 @@ include "dbconnect_sale.php";
 												<thead>
 													<tr>
 														<th width="28%">รายการสินค้า</th>
-														<th width="14%">S/N</th>
 														<th width="18%">เคลียร์ยืม</th>
 														<th width="10%" style="text-align:center;">จำนวน</th>
 														<th width="14%" style="text-align:right !important;">ราคา/หน่วย</th>
@@ -337,7 +336,7 @@ include "dbconnect_sale.php";
 													if (count($sprItemRows) === 0) {
 													?>
 														<tr>
-															<td colspan="6" style="text-align:center; color:#8E8B94; padding:20px;">ไม่มีรายการสินค้า</td>
+															<td colspan="5" style="text-align:center; color:#8E8B94; padding:20px;">ไม่มีรายการสินค้า</td>
 														</tr>
 													<?php
 													} else {
@@ -349,7 +348,6 @@ include "dbconnect_sale.php";
 													?>
 															<tr>
 																<td><?php echo htmlspecialchars((string)($sprItemRow['sol_name'] ?? '-')); ?></td>
-																<td><?php echo htmlspecialchars(((string)($sprItemRow['sn'] ?? '')) !== '' ? (string)$sprItemRow['sn'] : '-'); ?></td>
 																<td>
 																	<?php if ((string)($sprItemRow['clear_br'] ?? '0') === '1') { ?>
 																		<span style="display:inline-flex; align-items:center; gap:6px;">
@@ -368,7 +366,7 @@ include "dbconnect_sale.php";
 														}
 													?>
 															<tr style="border-top: 1px solid #EDE9F0;">
-																<td colspan="5" style="text-align:right; font-weight:500; padding: 14px 12px !important; font-size: 14px; color: #3B3B3B;">ยอดรวม</td>
+																<td colspan="4" style="text-align:right; font-weight:500; padding: 14px 12px !important; font-size: 14px; color: #3B3B3B;">ยอดรวม</td>
 																<td style="text-align:right; font-size:16px; color:#612989; font-weight:600; padding: 14px 12px !important;"><?php echo number_format($sprItemsTotal, 2); ?></td>
 															</tr>
 													<?php
