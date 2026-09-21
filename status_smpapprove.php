@@ -138,7 +138,7 @@ $date_send = $objResultd1["between_date"];
 					<td ><?php echo $objResult["status_sup"];?></td>
 				<?php } ?>
 				<td>
-				<a href="dmsmp_approve.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_supsmp.php?ref_idsmp=<?php echo urlencode($objResult["ref_idsmp"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 								
 				</td>
 				

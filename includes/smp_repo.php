@@ -489,11 +489,14 @@ function smp_persist_from_post($conn, $mode, array $session)
 			throw new SmpValidationException('ไม่พบเอกสารเลขที่ ' . $existingRef);
 		}
 		if ($isUpdate) {
-			if ((string)$existing['status_sup'] !== 'Request') {
-				throw new SmpValidationException('เอกสารนี้ไม่ได้อยู่ในสถานะ Request แล้ว ไม่สามารถแก้ไขจากหน้านี้ได้');
+			if (!in_array((string)$existing['status_sup'], array('Request', 'Returned'), true)) {
+				throw new SmpValidationException('เอกสารนี้ไม่ได้อยู่ในสถานะ Request/Returned แล้ว ไม่สามารถแก้ไขจากหน้านี้ได้');
 			}
-		} elseif ((string)$existing['status_sup'] !== 'Draft') {
+		} elseif ((string)$existing['status_sup'] !== 'Draft' && ($isDraft || (string)$existing['status_sup'] !== 'Returned')) {
 			throw new SmpValidationException('เอกสารนี้ถูกส่งแล้ว ไม่สามารถแก้ไขจากหน้านี้ได้ กรุณาแก้ไขที่หน้าแก้ไขเอกสาร');
+		}
+		if (!smp_user_can_edit_document($existing, $session)) {
+			throw new SmpValidationException('คุณไม่มีสิทธิ์แก้ไขเอกสารนี้ในสถานะปัจจุบัน (Draft/Returned แก้ไขได้เฉพาะเจ้าของเอกสาร, Request แก้ไขได้เฉพาะผู้อนุมัติของด่านปัจจุบัน)');
 		}
 	} elseif ($isUpdate) {
 		throw new SmpValidationException('ไม่พบเลขที่เอกสารที่ต้องการแก้ไข');
@@ -561,7 +564,8 @@ function smp_persist_from_post($conn, $mode, array $session)
 			mysqli_stmt_bind_result($lockStmt, $lockedStatus);
 			$lockFound = mysqli_stmt_fetch($lockStmt);
 			mysqli_stmt_close($lockStmt);
-			if (!$lockFound || (string)$lockedStatus !== ($isUpdate ? 'Request' : 'Draft')) {
+			$allowedLocked = $isUpdate ? array('Request', 'Returned') : ($isDraft ? array('Draft') : array('Draft', 'Returned'));
+			if (!$lockFound || !in_array((string)$lockedStatus, $allowedLocked, true)) {
 				throw new SmpValidationException($isUpdate
 					? 'เอกสารนี้ถูกเปลี่ยนสถานะแล้ว ไม่สามารถแก้ไขได้ กรุณาโหลดหน้าใหม่'
 					: 'เอกสารนี้ถูกส่งแล้ว ไม่สามารถแก้ไขจากหน้านี้ได้ กรุณาแก้ไขที่หน้าแก้ไขเอกสาร');
@@ -611,6 +615,10 @@ function smp_persist_from_post($conn, $mode, array $session)
 			$header += array('status_sup' => 'Draft', 'send_sup' => '0', 'sup_name' => '', 'sup_date' => '0000-00-00');
 		} else {
 			$header += array('status_sup' => 'Request', 'send_sup' => '1', 'sup_name' => $sessionName, 'sup_date' => $today);
+			if ($existing !== null && (string)$existing['status_sup'] === 'Returned') {
+				/* ส่งใหม่หลังถูกส่งกลับ — เคลียร์ flag ชั้นถัดไปให้เข้าคิวอนุมัติใหม่ตั้งแต่ต้น */
+				$header += array('send_dm' => '0', 'send_stock' => '0', 'send_admin' => '0');
+			}
 		}
 
 		if ($created) {
@@ -682,4 +690,623 @@ function smp_persist_from_post($conn, $mode, array $session)
 	}
 
 	return array('ref_id' => $refId, 'created' => $created);
+}
+
+/* ===================================================================
+ * Workflow อนุมัติด่าน sup ในหน้าฟอร์ม (register_supsmp.php)
+ *
+ * พอร์ตจาก register_engspr.php / spr_run_document_action() — ส่งกลับ / ไม่อนุมัติ / ยกเลิก /
+ * อนุมัติ ผ่าน endpoint เดียว (register_supsmp_action1.php) ใน transaction เดียว
+ * ตรวจสิทธิ์ฝั่ง server ทุก action (การซ่อนปุ่มในหน้าเป็นแค่ UX)
+ *
+ * ขอบเขต: ด่าน sup เท่านั้น (คิว status_sample_approve.php) — ด่าน DM/stock ยังใช้หน้าเดิม
+ * ต้นทางของ logic อนุมัติ: sample_approve.php และ sample_approve1.php (หน้าเก่า ไม่ถูกแก้)
+ * =================================================================== */
+
+/** ชื่อผู้ใช้ที่ใช้ sample_approve1.php (สิทธิ์ตามชื่อ — supsmp_approve.php:77) */
+function smp_amount_route_user_names()
+{
+	return array('รุจิรา', 'ลักษณาวรรณ');
+}
+
+/** sale_code ของใบที่ผู้ใช้ข้างบนใช้ sample_approve1.php (supsmp_approve.php:78) */
+function smp_amount_route_sale_codes()
+{
+	return array('SOL1', 'SOL2', 'SOL99', 'SOL3', 'SOL4', 'SOL5', 'SOL91', 'SOL92', 'SOL93', 'SOL94', 'MK');
+}
+
+/**
+ * ขอบเขตคิวอนุมัติ sup ของผู้ใช้ — ย้ายมาจาก status_sample_approve.php (คงพฤติกรรมเดิมทุกกรณี)
+ * ใช้ทั้งหน้าคิวและ guard ของ action เพื่อให้ "เห็นในคิว = ทำได้" ตรงกันเสมอ
+ * @return array ['type' => 'in'|'like'|'all', 'values' => array, 'status' => 'Request'|'Pending review']
+ */
+function smp_sup_queue_scope(array $session)
+{
+	$code = (string)($session['code'] ?? '');
+	$name = (string)($session['name'] ?? '');
+	$scope = array('type' => 'all', 'values' => array(), 'status' => ($code === 'SS5') ? 'Pending review' : 'Request');
+
+	if ($code === 'SS1') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('S15', 'S16', 'S21', 'S22', 'S14');
+	} elseif ($code === 'SS2') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('S11', 'S12', 'S17', 'S24', 'S13');
+	} elseif ($code === 'SM1') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('SOL1', 'SOL2', 'SOL3', 'SOL4', 'SOL5', 'SOL6', 'SOL7', 'SOL8', 'SOL99');
+	} elseif ($code === 'SS3') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('SM1', 'S31', 'S32', 'S33', 'MM1', 'SOL1', 'SOL2', 'SOL3', 'SOL4', 'SOL5', 'SOL6', 'SOL7', 'SOL8', 'SOL99');
+	} elseif ($code === 'SS5') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('S31', 'S32');
+	} elseif ($code === 'SUP_EN') {
+		$scope['type'] = 'like';
+		$scope['values'] = array('EN');
+	} elseif ($code === 'SUP_MK') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('MK', 'SOL91', 'SOL92', 'SOL93', 'SOL94', 'SOL99');
+	} elseif ($name === 'ชลชินี' || $name === 'อัจฉรา') {
+		$scope['type'] = 'in';
+		$scope['values'] = array('MK', 'SOL91', 'SOL92', 'SOL93', 'SOL94', 'SOL99');
+	}
+	return $scope;
+}
+
+/** ส่วน SQL ต่อท้าย WHERE ของคิว (constants ล้วน ไม่มีค่าจากผู้ใช้) — ' AND sale_code IN (...)' หรือ '' */
+function smp_sup_queue_sql_filter(array $scope)
+{
+	if ($scope['type'] === 'in') {
+		return " AND sale_code IN ('" . implode("','", $scope['values']) . "')";
+	}
+	if ($scope['type'] === 'like') {
+		return " AND sale_code LIKE '%" . $scope['values'][0] . "%'";
+	}
+	return '';
+}
+
+/** sale_code ของใบอยู่ในขอบเขตคิวหรือไม่ (เทียบแบบไม่สนตัวพิมพ์เหมือน collation ของ MySQL) */
+function smp_doc_in_sup_scope(array $doc, array $scope)
+{
+	$saleCode = strtolower(trim((string)($doc['sale_code'] ?? '')));
+	if ($scope['type'] === 'in') {
+		foreach ($scope['values'] as $value) {
+			if (strtolower($value) === $saleCode) {
+				return true;
+			}
+		}
+		return false;
+	}
+	if ($scope['type'] === 'like') {
+		return strpos($saleCode, strtolower($scope['values'][0])) !== false;
+	}
+	return true;
+}
+
+/**
+ * ใบอยู่ด่าน sup — ตรงกับเงื่อนไขคิว: Request + send_sup=1 และยังไม่ส่งด่านถัดไป
+ * ('Pending review' ของ SS5 ไม่อยู่ในขอบเขต — ไม่มีโค้ดใดเขียนสถานะนี้ให้ SMP จึงยังใช้หน้าเดิม)
+ */
+function smp_is_awaiting_sup(array $doc)
+{
+	return (string)($doc['status_sup'] ?? '') === 'Request'
+		&& (string)($doc['send_sup'] ?? '') === '1'
+		&& (string)($doc['send_dm'] ?? '') === '0'
+		&& (string)($doc['send_stock'] ?? '') === '0'
+		&& (string)($doc['send_admin'] ?? '') === '0';
+}
+
+/**
+ * role ที่เข้าคิว sup ได้ — อนุมานจากเมนูที่ลิงก์ไป status_sample_approve.php (โค้ดเดิมไม่เคยเช็คสิทธิ์):
+ * menu_suphos.php:57 → Sup_Sale, menu_supallwell.php:61 → Sup_AllWell, menu_it.php:80 → It เฉพาะ ชลชินี/อัจฉรา
+ */
+function smp_user_has_sup_role(array $session)
+{
+	$type = (string)($session['type_login'] ?? '');
+	if ($type === 'Sup_Sale' || $type === 'Sup_AllWell') {
+		return true;
+	}
+	return $type === 'It' && in_array((string)($session['name'] ?? ''), array('ชลชินี', 'อัจฉรา'), true);
+}
+
+function smp_user_can_act_on_sup_stage(array $doc, array $session)
+{
+	if (!smp_is_awaiting_sup($doc) || !smp_user_has_sup_role($session)) {
+		return false;
+	}
+	$scope = smp_sup_queue_scope($session);
+	return $scope['status'] === (string)$doc['status_sup'] && smp_doc_in_sup_scope($doc, $scope);
+}
+
+/**
+ * ใบอยู่ด่าน DM — ตรงกับคิว status_smpapprove.php (Request + send_dm='1') และยังไม่ส่งคลัง/แอดมิน
+ * (send_dm='1' กับ send_dm='0' ของด่าน sup ไม่ทับกัน)
+ */
+function smp_is_awaiting_dm(array $doc)
+{
+	return (string)($doc['status_sup'] ?? '') === 'Request'
+		&& (string)($doc['send_dm'] ?? '') === '1'
+		&& (string)($doc['send_stock'] ?? '') === '0'
+		&& (string)($doc['send_admin'] ?? '') === '0';
+}
+
+/** ชื่อผู้ใช้ที่เข้าคิว DM ได้ — menu_it.php:70,79 (คิว status_smpapprove.php แสดงเฉพาะ It ชื่อเหล่านี้) */
+function smp_dm_role_names()
+{
+	return array('ชลชินี', 'อัจฉรา', 'สมบัติ');
+}
+
+function smp_user_has_dm_role(array $session)
+{
+	return (string)($session['type_login'] ?? '') === 'It'
+		&& in_array((string)($session['name'] ?? ''), smp_dm_role_names(), true);
+}
+
+/** ด่านอนุมัติปัจจุบันของใบ: 'sup' | 'dm' | null (ไม่ได้อยู่ในคิวอนุมัติ) */
+function smp_stage_of(array $doc)
+{
+	if (smp_is_awaiting_sup($doc)) {
+		return 'sup';
+	}
+	if (smp_is_awaiting_dm($doc)) {
+		return 'dm';
+	}
+	return null;
+}
+
+/** ผู้ใช้ทำ action (อนุมัติ/ส่งกลับ/ไม่อนุมัติ/ยกเลิก) กับใบที่อยู่ในด่านปัจจุบันได้หรือไม่ */
+function smp_user_can_act_on_stage(array $doc, array $session)
+{
+	$stage = smp_stage_of($doc);
+	if ($stage === 'sup') {
+		return smp_user_can_act_on_sup_stage($doc, $session);
+	}
+	if ($stage === 'dm') {
+		return smp_user_has_dm_role($session);
+	}
+	return false;
+}
+
+/** ใบที่จบแล้ว (เปิดดูอย่างเดียว) */
+function smp_is_terminal_status($status)
+{
+	return in_array((string)$status, array('Approve', 'Rejected'), true);
+}
+
+/** เจ้าของใบ — เทียบ add_by (ชื่อ-นามสกุล) เหมือนตัวกรอง Draft ของ status_samplesup.php */
+function smp_user_owns_document(array $doc, array $session)
+{
+	$owner = trim((string)($doc['add_by'] ?? ''));
+	$me = trim((string)($session['name'] ?? '') . ' ' . (string)($session['surname'] ?? ''));
+	return $owner !== '' && $me !== '' && $owner === $me;
+}
+
+/**
+ * ยกเลิกได้เมื่อ: ใบอยู่ในด่านอนุมัติ (sup/DM) → ผู้อนุมัติที่ทำ action ด่านนั้นได้ /
+ * ใบ Draft หรือ Returned → เจ้าของใบ หรือผู้ที่มี role ผู้อนุมัติ (sup/DM)
+ */
+function smp_user_can_cancel(array $doc, array $session)
+{
+	$status = (string)($doc['status_sup'] ?? '');
+	if ($status === 'Draft' || $status === 'Returned') {
+		return smp_user_owns_document($doc, $session) || smp_user_has_sup_role($session) || smp_user_has_dm_role($session);
+	}
+	return smp_user_can_act_on_stage($doc, $session);
+}
+
+/**
+ * ผู้ใช้แก้ไข/บันทึกใบนี้ได้หรือไม่ (Save Draft / Update / Submit):
+ * Draft, Returned → เจ้าของใบเท่านั้น; Request → ผู้อนุมัติของด่านปัจจุบันเท่านั้น; อื่น ๆ (จบแล้ว) → ไม่มีใครแก้ได้
+ */
+function smp_user_can_edit_document(array $doc, array $session)
+{
+	$status = (string)($doc['status_sup'] ?? '');
+	if ($status === 'Draft' || $status === 'Returned') {
+		return smp_user_owns_document($doc, $session);
+	}
+	if ($status === 'Request') {
+		return smp_user_can_act_on_stage($doc, $session);
+	}
+	return false;
+}
+
+function smp_actor_name(array $session)
+{
+	return trim((string)($session['name'] ?? '') . ' ' . (string)($session['surname'] ?? ''));
+}
+
+function smp_table_exists($conn, $table)
+{
+	$query = @mysqli_query($conn, "SHOW TABLES LIKE '" . mysqli_real_escape_string($conn, $table) . "'");
+	return (bool)($query && mysqli_num_rows($query) > 0);
+}
+
+/** เขียนประวัติลง tb_document_status_log — เรียกภายใน transaction เดียวกับการเปลี่ยนสถานะ */
+function smp_log_status($conn, $refId, $statusLabel, $reason, array $session)
+{
+	$stmt = mysqli_prepare($conn, 'INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name) VALUES (?,?,?,?,?)');
+	if (!$stmt) {
+		throw new RuntimeException(mysqli_error($conn));
+	}
+	$userId = (string)($session['UserID'] ?? '');
+	$userName = smp_actor_name($session);
+	mysqli_stmt_bind_param($stmt, 'sssss', $refId, $statusLabel, $reason, $userId, $userName);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
+}
+
+/** รัน UPDATE ที่ไม่บังคับว่าต้องมีแถวถูกแก้ (เช่น ตั้ง clear_ckk / status_smp ของรายการ) */
+function smp_exec_write($conn, $sql, $types, array $params)
+{
+	$stmt = mysqli_prepare($conn, $sql);
+	if (!$stmt) {
+		throw new RuntimeException(mysqli_error($conn));
+	}
+	mysqli_stmt_bind_param($stmt, $types, ...$params);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
+}
+
+/** UPDATE สถานะแบบมีเงื่อนไขสถานะเดิม — ไม่มีแถวถูกแก้ = มีคนเปลี่ยนสถานะไปก่อนแล้ว */
+function smp_exec_status_update($conn, $sql, $types, array $values)
+{
+	$stmt = mysqli_prepare($conn, $sql);
+	if (!$stmt) {
+		throw new RuntimeException(mysqli_error($conn));
+	}
+	mysqli_stmt_bind_param($stmt, $types, ...$values);
+	mysqli_stmt_execute($stmt);
+	$affected = mysqli_stmt_affected_rows($stmt);
+	mysqli_stmt_close($stmt);
+	if ($affected < 1) {
+		throw new SmpValidationException('เอกสารถูกเปลี่ยนสถานะไปแล้ว กรุณาโหลดหน้าใหม่');
+	}
+}
+
+/** ค่าคอลัมน์แรกของแถวแรก (ไม่พบ/NULL = $default) */
+function smp_query_value($conn, $sql, $types, array $params, $default = null)
+{
+	$stmt = mysqli_prepare($conn, $sql);
+	if (!$stmt) {
+		throw new RuntimeException(mysqli_error($conn));
+	}
+	if ($types !== '') {
+		mysqli_stmt_bind_param($stmt, $types, ...$params);
+	}
+	mysqli_stmt_execute($stmt);
+	$row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+	mysqli_stmt_close($stmt);
+	return ($row && $row[0] !== null) ? $row[0] : $default;
+}
+
+/**
+ * เส้นทางอนุมัติ:
+ *   'default' = sample_approve.php  (แถวแรก sale_count >= 100 หรือมีสินค้า 'สินค้าขาย' → ส่งต่อ DM)
+ *   'amount'  = sample_approve1.php (ยอด sum_amount รวม >= 501 → ส่งต่อ DM) — เฉพาะผู้ใช้/เขตตาม supsmp_approve.php:77-90
+ */
+function smp_approve_variant(array $doc, array $session)
+{
+	if (in_array((string)($session['name'] ?? ''), smp_amount_route_user_names(), true)
+		&& in_array((string)($doc['sale_code'] ?? ''), smp_amount_route_sale_codes(), true)) {
+		return 'amount';
+	}
+	return 'default';
+}
+
+/** true = ต้องส่งต่อด่าน DM, false = อนุมัติจบที่ด่าน sup */
+function smp_should_forward_to_dm($conn, $refId, $variant, array $items)
+{
+	if ($variant === 'amount') {
+		$total = 0.0;
+		foreach ($items as $item) {
+			$total += (float)$item['sum_amount'];
+		}
+		return $total >= 501;
+	}
+
+	/* พฤติกรรมเดิมของ sample_approve.php: เช็ค sale_count เฉพาะ "แถวแรก" ของรายการ (ไม่ใช่ทุกแถว) — คงไว้ตามเดิม */
+	if (count($items) > 0 && (float)$items[0]['sale_count'] >= 100) {
+		return true;
+	}
+	$goodsCount = smp_query_value($conn, "SELECT COUNT(*) FROM hos__subsmp s LEFT JOIN tb_product p ON s.product_ID = p.product_id
+		WHERE s.reff_idsmp = ? AND p.product_type = 'สินค้าขาย'", 's', array($refId), 0);
+	return (int)$goodsCount > 0;
+}
+
+/**
+ * ตรวจยอดใบยืมที่เคลียร์ (เฉพาะรายการที่มี br_no) — พอร์ตจาก sample_approve*.php
+ * ต่างจากของเดิม: ทำใน transaction (ยอดไม่พอ = throw แล้ว rollback ทั้งหมด รวมการตั้ง clear_ckk ของรายการก่อนหน้า)
+ * และอ่านรายการจาก DB ไม่ใช่ POST
+ * $useBreg = false สำหรับ sample_approve1.php (ไม่นับ hos__breg / hos__subbreg1)
+ */
+function smp_check_loan_clearance($conn, array $items, $useBreg)
+{
+	foreach ($items as $item) {
+		$brNo = trim((string)$item['br_no']);
+		if ($brNo === '') {
+			continue;
+		}
+		$productId = (string)$item['product_id'];
+		$qty = (float)$item['sale_count'];
+
+		$brRef = (string)smp_query_value($conn, "SELECT ref_id_br FROM hos__br WHERE iv_no = ? AND status_doc = 'Approve' LIMIT 1", 's', array($brNo), '');
+		$brTotal = (float)smp_query_value($conn, 'SELECT SUM(`count`) FROM hos__subbr WHERE ref_idd_br = ? AND product_id = ?', 'ss', array($brRef, $productId), 0);
+
+		$soRef = (string)smp_query_value($conn, "SELECT ref_id FROM so__main WHERE doc_no = ? AND cancel_ckk = '0' LIMIT 1", 's', array($brNo), '');
+		$soTotal = (float)smp_query_value($conn, 'SELECT SUM(sale_count) FROM so__submain WHERE ref_idd = ? AND product_id = ?', 'ss', array($soRef, $productId), 0);
+
+		$bregRef = '';
+		$bregTotal = 0.0;
+		if ($useBreg) {
+			$bregRef = (string)smp_query_value($conn, "SELECT ref_id FROM hos__breg WHERE iv_no = ? AND status_doc = 'Approve' LIMIT 1", 's', array($brNo), '');
+			$bregTotal = (float)smp_query_value($conn, 'SELECT SUM(count1) FROM hos__subbreg1 WHERE ref_id1 = ? AND product_id1 = ?', 'ss', array($bregRef, $productId), 0);
+		}
+
+		$sprUsed = (float)smp_query_value($conn, "SELECT SUM(sale_count) FROM hos__subspr WHERE product_id = ? AND clear_br = '1' AND clear_ivno = ? AND status_spr = 'Approve'", 'ss', array($productId, $brNo), 0);
+		$recvRef = (string)smp_query_value($conn, 'SELECT ref_id FROM hos__receive WHERE iv_no = ? LIMIT 1', 's', array($brNo), '');
+		$recvUsed = (float)smp_query_value($conn, 'SELECT SUM(`count`) FROM hos__subreceive WHERE ref_idd = ? AND product_id = ?', 'ss', array($recvRef, $productId), 0);
+		$smpUsed = (float)smp_query_value($conn, "SELECT SUM(sale_count) FROM hos__subsmp WHERE product_id = ? AND clear_br = '1' AND br_no = ? AND status_smp = 'Approve'", 'ss', array($productId, $brNo), 0);
+
+		/* พฤติกรรมเดิม: ตัวแปร $count13 ของหน้าเก่าอ่านจากผล SPR ($rs3) ไม่ใช่ผล SO ($rs13) ทำให้ยอด SPR ถูกหักสองครั้ง
+		   (ยอด hos__subso ที่ query ไว้ไม่เคยถูกใช้) — คงการคำนวณนี้ไว้ตามเดิม ไม่แก้เงียบ ๆ */
+		$remaining = ($brTotal + $soTotal + $bregTotal) - ($sprUsed + $recvUsed + $smpUsed + $sprUsed + $qty);
+
+		if ($remaining < -0.00001) {
+			throw new SmpValidationException('สินค้าในใบยืมเลขที่ ' . $brNo . ' (รหัสสินค้า ' . $productId . ') มีไม่พอในการเคลียร์ยืมครั้งนี้');
+		}
+		if (abs($remaining) < 0.00001) {
+			smp_exec_write($conn, "UPDATE hos__subbr SET clear_ckk = '1' WHERE ref_idd_br = ? AND product_id = ?", 'ss', array($brRef, $productId));
+			smp_exec_write($conn, "UPDATE so__submain SET clear_ckk = '1' WHERE ref_idd = ? AND product_id = ?", 'ss', array($soRef, $productId));
+			if ($useBreg) {
+				smp_exec_write($conn, "UPDATE hos__subbreg1 SET clear_ckk = '1' WHERE ref_id1 = ? AND product_id1 = ?", 'ss', array($bregRef, $productId));
+			}
+		}
+	}
+}
+
+/**
+ * ส่งข้อมูลจัดส่งของใบที่อนุมัติจบไป DB ของ CS (allwell_cs) — พอร์ตจาก sample_approve*.php
+ * เรียกหลัง commit (คนละ connection กับ $conn จึงอยู่ใน transaction เดียวกันไม่ได้)
+ * อ่านจากแถว tb_register_data ของใบนี้ ไม่ใช่ POST; คงการ map ที่อยู่เดิม
+ * @return string '' เมื่อสำเร็จ/ไม่เข้าเงื่อนไข, ข้อความเตือนเมื่อส่งไม่สำเร็จ
+ */
+function smp_export_to_cs($conn, array $doc, $variant)
+{
+	/* กลุ่มยกเว้นต่างกันตามหน้าเดิม: sample_approve.php มีวงเล็บ ('(SOL99)') ส่วน sample_approve1.php ไม่มี — คงไว้ตามเดิม */
+	$excluded = ($variant === 'amount')
+		? array('SOL99', 'EN', 'SOL1', 'SOL2', 'SOL3')
+		: array('(SOL99)', 'EN', '(SOL1)', '(SOL2)', 'SOL3');
+	if (in_array((string)$doc['sale_code'], $excluded, true) || (string)$doc['delivery_type'] !== '2') {
+		return '';
+	}
+	/* เหมือน dm_approve.php: ไม่ส่งซ้ำถ้าเคยส่งไป CS แล้ว */
+	if (trim((string)($doc['cs_no'] ?? '')) !== '' || (string)($doc['send_cs'] ?? '') === '2') {
+		return '';
+	}
+
+	$refId = (string)$doc['ref_idsmp'];
+	try {
+		$reg = smp_load_row($conn, 'tb_register_data', 'ref_id', $refId);
+		if ($reg === null) {
+			throw new RuntimeException('ไม่พบข้อมูลจัดส่ง (tb_register_data) ของ ' . $refId);
+		}
+
+		include __DIR__ . '/../dbconnect_cs.php';
+		if (!isset($com1) || !$com1) {
+			throw new RuntimeException('เชื่อมต่อฐานข้อมูล CS ไม่ได้');
+		}
+		@mysqli_query($com1, "SET SESSION sql_mode = ''");
+
+		$yearMonth = substr(date('Y') + 543, -2) . date('m');
+		$maxRunning = (string)smp_query_value($com1, 'SELECT MAX(running) FROM tb_register_data', '', array(), '');
+		$lastSeq = substr($maxRunning, -4);
+		$lastMonth = substr($maxRunning, 0, -4);
+		$nextId = ($lastMonth == $yearMonth)
+			? $yearMonth . substr('00000' . ((int)$lastSeq + 1), -4)
+			: $yearMonth . '0001';
+
+		$pick = function ($column, $default = '') use ($reg) {
+			$value = (string)($reg[$column] ?? '');
+			return $value !== '' ? $value : $default;
+		};
+		smp_db_insert($com1, 'tb_register_data', array(
+			'running'          => $nextId,
+			'start_date'       => $pick('start_date', '0000-00-00'),
+			'between_date'     => $pick('between_date'),
+			'start_time'       => $pick('start_time'),
+			'end_time'         => $pick('end_time'),
+			'status'           => $pick('status'),
+			'fix_date'         => $pick('fix_date', '0'),
+			'no_price'         => $pick('no_price', '0'),
+			'call_customer'    => $pick('call_customer', '0'),
+			'credit'           => $pick('credit', '0'),
+			'call_employee'    => $pick('call_employee', '0'),
+			'cash'             => $pick('cash', '0'),
+			'check_peper'      => $pick('check_peper', '0'),
+			'bill'             => $pick('bill', '0'),
+			'department'       => $pick('department'),
+			'type_customer'    => $pick('type_customer'),
+			'type_company'     => $pick('type_company'),
+			'customer_name'    => $pick('customer_name'),
+			'customer_tel'     => $pick('customer_tel'),
+			'address_name'     => $pick('address_1') . ' ' . $pick('province_name'),
+			'address_send'     => $pick('address_name') . ' ' . $pick('address_send'),
+			'want_bus'         => $pick('want_bus', '0'),
+			'amphur_name'      => $pick('amphur_name'),
+			'province_name'    => $pick('province_name'),
+			'product_name'     => $pick('product_name'),
+			'product_sn'       => $pick('product_sn') . ' เลขที่อ้างอิง : ' . $refId,
+			'unit_credit'      => $pick('unit_credit'),
+			'price'            => $pick('price'),
+			'employee_name'    => $pick('employee_name'),
+			'employee_tel'     => $pick('employee_tel'),
+			'add_by'           => $pick('add_by'),
+			'description'      => $pick('description'),
+			'have_map'         => $pick('have_map'),
+			'add_date'         => date('Y-m-d H:i:s'),
+			'unit_bill'        => $pick('unit_bill'),
+			'unit_check'       => $pick('unit_check'),
+			'unit_tran'        => $pick('unit_tran'),
+			'tran'             => $pick('tran', '0'),
+			'check_detail'     => $pick('check_detail', '0'),
+			'number'           => '',
+			'status_comment'   => $pick('status_comment'),
+			'dep'              => $pick('dep', '0'),
+			'dept'             => $pick('dept'),
+			'department_show'  => $pick('department_show'),
+			'address_bus'      => $pick('province_name'),
+			'customer_contact' => $pick('customer_contact'),
+			'on_time'          => $pick('on_time', '0'),
+			'add_code'         => $pick('add_code'),
+			'ref_id'           => $refId,
+		));
+		smp_db_insert($com1, 'tb_transaction', array('running' => $nextId));
+
+		$csFields = array('send_cs' => '2');
+		if ($variant === 'amount') {
+			$csFields['cs_no'] = $nextId; /* sample_approve1.php เท่านั้นที่บันทึก cs_no */
+		}
+		smp_db_update($conn, 'hos__smp', $csFields, 'ref_idsmp', $refId);
+		return '';
+	} catch (Throwable $e) {
+		error_log('[smp_export_to_cs] ' . $refId . ': ' . $e->getMessage());
+		return 'อนุมัติเอกสารแล้ว แต่ส่งข้อมูลจัดส่งไประบบ CS ไม่สำเร็จ กรุณาแจ้งผู้ดูแลระบบ (เลขที่ ' . $refId . ')';
+	}
+}
+
+/**
+ * ทำ action ของแถบอนุมัติ: approve | return | reject | cancel
+ * @return array ['ref_id', 'action', 'outcome', 'warning']
+ * @throws SmpValidationException ข้อผิดพลาดที่แสดงให้ผู้ใช้เห็นได้
+ */
+function smp_run_document_action($conn, $refId, $action, $reason, array $session)
+{
+	@mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
+
+	$refId = trim((string)$refId);
+	$reason = trim((string)$reason);
+	if ($refId === '') {
+		throw new SmpValidationException('ไม่พบเลขที่เอกสาร');
+	}
+	if (!in_array($action, array('approve', 'return', 'reject', 'cancel'), true)) {
+		throw new SmpValidationException('คำสั่งไม่ถูกต้อง');
+	}
+	if ($action !== 'approve' && $reason === '') {
+		throw new SmpValidationException('กรุณาระบุเหตุผล');
+	}
+	if (!smp_table_exists($conn, 'tb_document_status_log')) {
+		throw new SmpValidationException('ไม่พบตารางบันทึกประวัติเอกสาร (tb_document_status_log) กรุณาแจ้งผู้ดูแลระบบ');
+	}
+
+	$actor = (string)($session['name'] ?? '');
+	$today = date('Y-m-d');
+	$now = date('Y-m-d H:i:s');
+	$outcome = '';
+	$csVariant = null;
+	$doc = null;
+
+	mysqli_begin_transaction($conn);
+	try {
+		$stmt = mysqli_prepare($conn, 'SELECT * FROM hos__smp WHERE ref_idsmp = ? LIMIT 1 FOR UPDATE');
+		if (!$stmt) {
+			throw new RuntimeException(mysqli_error($conn));
+		}
+		mysqli_stmt_bind_param($stmt, 's', $refId);
+		mysqli_stmt_execute($stmt);
+		$doc = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt)) ?: null;
+		mysqli_stmt_close($stmt);
+		if ($doc === null) {
+			throw new SmpValidationException('ไม่พบเอกสารเลขที่ ' . $refId);
+		}
+		$currentStatus = (string)$doc['status_sup'];
+
+		if ($action === 'cancel') {
+			if (!in_array($currentStatus, array('Draft', 'Returned', 'Request'), true)) {
+				throw new SmpValidationException('เอกสารเลขที่ ' . $refId . ' ปิดแล้ว ไม่สามารถยกเลิกได้');
+			}
+			if (!smp_user_can_cancel($doc, $session)) {
+				throw new SmpValidationException('คุณไม่มีสิทธิ์ยกเลิกเอกสารนี้');
+			}
+			/* ไม่เพิ่มสถานะ Cancelled — หน้าอื่นอ่าน status_sup เป็น Rejected/Approve อยู่หลายที่; แยกจาก Reject ด้วย log 'Cancelled' */
+			smp_exec_status_update($conn,
+				"UPDATE hos__smp SET status_sup = 'Rejected', sup_date = ?, sup_name = ? WHERE ref_idsmp = ? AND status_sup = ?",
+				'ssss', array($today, $actor, $refId, $currentStatus));
+			smp_log_status($conn, $refId, 'Cancelled', $reason, $session);
+			$outcome = 'cancelled';
+		} else {
+			$stage = smp_stage_of($doc);
+			if ($stage === null) {
+				throw new SmpValidationException('เอกสารไม่ได้อยู่ในสถานะรออนุมัติแล้ว กรุณาโหลดหน้าใหม่');
+			}
+			if (!smp_user_can_act_on_stage($doc, $session)) {
+				throw new SmpValidationException('คุณไม่มีสิทธิ์ดำเนินการกับเอกสารนี้');
+			}
+			$awaitingWhere = ($stage === 'sup')
+				? "ref_idsmp = ? AND status_sup = 'Request' AND send_sup = '1' AND send_dm = '0' AND send_stock = '0' AND send_admin = '0'"
+				: "ref_idsmp = ? AND status_sup = 'Request' AND send_dm = '1' AND send_stock = '0' AND send_admin = '0'";
+
+			if ($action === 'return') {
+				/* ส่งกลับหาผู้ยื่นเสมอ ไม่ว่าจากด่านไหน — ล้าง flag ทุกด่านเพื่อให้ใบหลุดจากทุกคิว แล้ว Submit ใหม่วิ่งครบทุกด่านตามปกติ */
+				smp_exec_status_update($conn,
+					"UPDATE hos__smp SET status_sup = 'Returned', send_sup = '0', send_dm = '0', send_stock = '0', send_admin = '0' WHERE " . $awaitingWhere,
+					's', array($refId));
+				smp_log_status($conn, $refId, 'Returned', $reason, $session);
+				$outcome = 'returned';
+			} elseif ($action === 'reject') {
+				/* เขียนคอลัมน์ comment/name/date ของด่านไว้ด้วย เพื่อให้หน้า/รายงานเดิมที่อ่านคอลัมน์เหล่านี้ยังทำงานได้ (ประวัติเต็มอยู่ใน log) */
+				if ($stage === 'sup') {
+					smp_exec_status_update($conn,
+						"UPDATE hos__smp SET status_sup = 'Rejected', comment_sup = ?, sup_date = ?, sup_name = ? WHERE " . $awaitingWhere,
+						'ssss', array($reason, $today, $actor, $refId));
+				} else {
+					smp_exec_status_update($conn,
+						"UPDATE hos__smp SET status_sup = 'Rejected', comment_dm = ?, dm_date = ?, dm_name = ? WHERE " . $awaitingWhere,
+						'ssss', array($reason, $today, $actor, $refId));
+				}
+				smp_log_status($conn, $refId, 'Rejected', $reason, $session);
+				$outcome = 'rejected';
+			} elseif ($stage === 'dm') {
+				/* ด่าน DM อนุมัติจบเสมอ (ไม่มีเช็คยอดใบยืมซ้ำ — เช็คไปแล้วตอน sup อนุมัติ) เหมือน dm_approve.php */
+				smp_exec_status_update($conn,
+					"UPDATE hos__smp SET status_sup = 'Approve', send_stock = '1', send_admin = '1', dm_date = ?, dm_name = ?, dm_adddate = ? WHERE " . $awaitingWhere,
+					'ssss', array($today, $actor, $now, $refId));
+				smp_exec_write($conn, "UPDATE hos__subsmp SET status_smp = 'Approve' WHERE reff_idsmp = ?", 's', array($refId));
+				smp_log_status($conn, $refId, 'DM Approved', '', $session);
+				$outcome = 'approved';
+				$csVariant = 'default';
+			} else {
+				$items = smp_load_items($conn, $refId);
+				$variant = smp_approve_variant($doc, $session);
+				smp_check_loan_clearance($conn, $items, $variant === 'default');
+
+				if (smp_should_forward_to_dm($conn, $refId, $variant, $items)) {
+					smp_exec_status_update($conn,
+						"UPDATE hos__smp SET send_dm = '1', sup_date = ?, sup_name = ?, sup_adddate = ? WHERE " . $awaitingWhere,
+						'ssss', array($today, $actor, $now, $refId));
+					smp_log_status($conn, $refId, 'Sup Forwarded to DM', '', $session);
+					$outcome = 'forwarded';
+				} else {
+					smp_exec_status_update($conn,
+						"UPDATE hos__smp SET status_sup = 'Approve', send_stock = '1', send_admin = '1', sup_date = ?, sup_name = ?, sup_adddate = ? WHERE " . $awaitingWhere,
+						'ssss', array($today, $actor, $now, $refId));
+					smp_exec_write($conn, "UPDATE hos__subsmp SET status_smp = 'Approve' WHERE reff_idsmp = ?", 's', array($refId));
+					smp_log_status($conn, $refId, 'Sup Approved', '', $session);
+					$outcome = 'approved';
+					$csVariant = $variant;
+				}
+			}
+		}
+
+		mysqli_commit($conn);
+	} catch (Throwable $e) {
+		mysqli_rollback($conn);
+		throw $e;
+	}
+
+	$warning = '';
+	if ($csVariant !== null) {
+		$warning = smp_export_to_cs($conn, $doc, $csVariant);
+	}
+	return array('ref_id' => $refId, 'action' => $action, 'outcome' => $outcome, 'warning' => $warning);
 }

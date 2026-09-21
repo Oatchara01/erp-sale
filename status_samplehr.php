@@ -151,7 +151,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<td>
 				 
 
-				<a href="register_supsmp_edit.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_supsmp.php?ref_idsmp=<?php echo urlencode($objResult["ref_idsmp"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 												
 				</td>
 				

@@ -3,14 +3,21 @@ require_once __DIR__ . '/includes/so_saved_helpers.php';
 require_once __DIR__ . '/includes/smp_repo.php';
 
 /* ด่านตัดสินใจก่อน head.php (head.php พ่น HTML ทันที header() จึงใช้หลังจากนั้นไม่ได้)
-   หน้านี้ครอบคลุมสร้างใหม่ + Draft + Request — สถานะอื่น (Approve/ยกเลิก/Rejected) ใช้หน้าแก้ไขเดิม */
+   หน้านี้เป็นศูนย์กลางของใบ: สร้างใหม่ + Draft + Request (ด่าน sup/DM) + Returned + ที่จบแล้ว (Approve/Rejected = ดูอย่างเดียว)
+   ส่งไปหน้าแก้ไขเดิมเฉพาะ (ก) สถานะที่หน้านี้ไม่รู้จัก เช่น Pending review หรือ (ข) ใบที่จบแล้วแต่ไม่มีแถว tb_register_data
+   (ใบที่สร้างจากฟอร์มเก่าอื่น) ซึ่งหน้านี้แสดงข้อมูลจัดส่งให้ไม่ครบ */
 $smpRequestedRef = trim((string)($_GET['ref_idsmp'] ?? ''));
 if ($smpRequestedRef !== '') {
 	include __DIR__ . '/dbconnect.php';
 	$smpPreloaded = smp_load_document($conn, $smpRequestedRef);
-	if ($smpPreloaded !== null && !in_array((string)$smpPreloaded['status_sup'], array('Draft', 'Request'), true)) {
-		header('Location: register_supsmp_edit.php?ref_idsmp=' . rawurlencode($smpRequestedRef));
-		exit();
+	if ($smpPreloaded !== null) {
+		$smpPreStatus = (string)$smpPreloaded['status_sup'];
+		$smpOpenHere = in_array($smpPreStatus, array('Draft', 'Request', 'Returned'), true)
+			|| (smp_is_terminal_status($smpPreStatus) && smp_load_row($conn, 'tb_register_data', 'ref_id', $smpRequestedRef) !== null);
+		if (!$smpOpenHere) {
+			header('Location: register_supsmp_edit.php?ref_idsmp=' . rawurlencode($smpRequestedRef));
+			exit();
+		}
 	}
 }
 ?>
@@ -47,6 +54,53 @@ if ($smpRequestedRef !== '') {
 $smpHasDocument = ($smpDoc !== null);
 $smpIsDraft = $smpHasDocument && (string)$smpDoc['status_sup'] === 'Draft';
 $smpIsRequest = $smpHasDocument && (string)$smpDoc['status_sup'] === 'Request';
+$smpIsReturned = $smpHasDocument && (string)$smpDoc['status_sup'] === 'Returned';
+/* แถบอนุมัติ (ส่งกลับ/ไม่อนุมัติ/ยกเลิก/อนุมัติ) — คำนวณจากแถวเอกสาร + ผู้ใช้ด้วยฟังก์ชันชุดเดียวกับฝั่ง server (includes/smp_repo.php)
+   การซ่อน/แสดงเป็นแค่ UX ไม่ใช่ authorization — register_supsmp_action1.php ตรวจสิทธิ์ซ้ำทุก action เสมอ */
+$smpStage = $smpHasDocument ? smp_stage_of($smpDoc) : null;
+$smpCanAct = $smpHasDocument && smp_user_can_act_on_stage($smpDoc, $_SESSION);
+$smpIsTerminal = $smpHasDocument && smp_is_terminal_status($smpDoc['status_sup']);
+/* แก้ไขได้: ใบใหม่ / Draft-Returned ของเจ้าของ / Request ของผู้อนุมัติด่านปัจจุบัน — นอกนั้นเปิดดูอย่างเดียว (server ตรวจซ้ำที่ smp_persist_from_post) */
+$smpReadOnly = $smpHasDocument && !smp_user_can_edit_document($smpDoc, $_SESSION);
+/* ปุ่มย้อนกลับ: ผู้อนุมัติกลับคิวของด่านที่ตัวเองทำ นอกนั้นกลับรายการของฝ่ายสนับสนุนเหมือนเดิม */
+$smpBackUrl = $smpCanAct ? ($smpStage === 'dm' ? 'status_smpapprove.php' : 'status_sample_approve.php') : 'status_samplesup.php';
+/* ปุ่มยกเลิกของเจ้าของใบ Draft/Returned (ใบที่อยู่ในคิวอนุมัติให้ผู้อนุมัติยกเลิกจาก overflow) */
+$smpCanCancelOwn = $smpHasDocument && ($smpIsDraft || $smpIsReturned) && smp_user_can_cancel($smpDoc, $_SESSION);
+
+/* ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — ใช้แสดงแบนเนอร์เหตุผลล่าสุดและแท็บประวัติ */
+$smpLogLabels = array('Returned' => 'ส่งกลับ', 'ส่งกลับ' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร', 'ยกเลิก' => 'ยกเลิกเอกสาร');
+$smpLogClasses = array('Returned' => 'is-returned', 'ส่งกลับ' => 'is-returned', 'Rejected' => 'is-rejected', 'Cancelled' => 'is-cancelled', 'ยกเลิก' => 'is-cancelled');
+$smpLogTitles = array('Returned' => 'เหตุผลในการส่งกลับ', 'ส่งกลับ' => 'เหตุผลในการส่งกลับ', 'Rejected' => 'เหตุผลที่ไม่อนุมัติ', 'Cancelled' => 'เหตุผลในการยกเลิก', 'ยกเลิก' => 'เหตุผลในการยกเลิก');
+$smpLogRows = array();
+if ($smpHasDocument) {
+	$logTableCheck = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+	if ($logTableCheck && mysqli_num_rows($logTableCheck) > 0) {
+		$logStmt = mysqli_prepare($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log
+			WHERE ref_id = ? AND status_doc IN ('Returned','ส่งกลับ','Rejected','Cancelled','ยกเลิก') ORDER BY created_at DESC, id DESC");
+		mysqli_stmt_bind_param($logStmt, 's', $smpDoc['ref_idsmp']);
+		mysqli_stmt_execute($logStmt);
+		$logResult = mysqli_stmt_get_result($logStmt);
+		while ($logRow = mysqli_fetch_assoc($logResult)) {
+			$smpLogRows[] = $logRow;
+		}
+		mysqli_stmt_close($logStmt);
+	}
+}
+$smpLatestLog = $smpLogRows[0] ?? null;
+$smpLatestLogStatus = trim((string)($smpLatestLog['status_doc'] ?? ''));
+$smpLatestLogReason = trim((string)($smpLatestLog['reason'] ?? ''));
+$smpLatestLogTitle = $smpLogTitles[$smpLatestLogStatus] ?? '';
+$smpLogRowsForTabs = array();
+foreach ($smpLogRows as $logRow) {
+	$logTime = strtotime((string)$logRow['created_at']);
+	$smpLogRowsForTabs[] = array(
+		'status_label' => $smpLogLabels[$logRow['status_doc']] ?? $logRow['status_doc'],
+		'status_class' => $smpLogClasses[$logRow['status_doc']] ?? 'is-cancelled',
+		'reason'       => $logRow['reason'],
+		'user_name'    => $logRow['user_name'],
+		'created_at'   => $logTime === false ? '' : date('d-m-Y H:i', $logTime),
+	);
+}
 
 /* ใบสั่งขายอ้างอิง (หมายเลขคำสั่งซื้อ): Draft ใช้ค่าที่บันทึกไว้ก่อนเสมอ; เอกสารใหม่ค่อย lookup จาก ?ref_id=; เปิดตรงไม่มี ref_id = ว่าง */
 $smpSaleRef = '';
@@ -248,6 +302,14 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<button type="button" class="btn-preview-so" onclick="smpOpenPreview();"><i class="far fa-file-alt"></i> Preview</button>
 			</div>
 		</div>
+
+		<?php if ($smpHasDocument && $smpLatestLogTitle !== '' && $smpLatestLogReason !== '') { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($smpLogClasses[$smpLatestLogStatus] ?? 'is-cancelled'); ?>" role="status">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($smpLatestLogTitle); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($smpLatestLogReason)); ?></div>
+			</div>
+		<?php } ?>
 
 		<!-- ===================== ข้อมูลเอกสาร ===================== -->
 		<div class="so-card smp-doc-card">
@@ -458,6 +520,11 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				'allowed_ext' => 'jpg,jpeg,png,pdf',
 				'accept' => '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf',
 			),
+			'document_return_log' => array(
+				'enabled' => true,
+				'rows' => $smpLogRowsForTabs,
+				'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+			),
 		);
 		include __DIR__ . '/partials/doc_tabs_card.php';
 		?>
@@ -470,15 +537,39 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 
 	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 		<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
-			<?php if (!$smpIsRequest) { ?>
+			<?php if ($smpCanAct || $smpCanCancelOwn) { ?>
+			<!-- ค่า action มากับ hidden เพราะ submit เป็น form.submit() แบบ programmatic (ไม่ส่ง name/value ของปุ่ม) -->
+			<input type="hidden" name="approve_action" id="smp_approve_action" value="">
+			<input type="hidden" name="smp_approve_reason" id="smp_approve_reason" value="">
+			<input type="hidden" name="smp_cancel_doc" id="smp_cancel_doc" value="">
+			<?php } ?>
+			<?php if ($smpCanAct) { ?>
+			<div class="so-approve-actions">
+				<button type="button" class="so-overflow-menu-trigger" id="smp_btn_approve_overflow" onclick="smpToggleApproveOverflowMenu();" aria-label="เมนูเพิ่มเติม"><i class="fas fa-ellipsis-v"></i></button>
+				<div id="smpApproveOverflowMenu" class="so-overflow-menu">
+					<button type="button" onclick="smpRunApproveAction('return');" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+					<button type="button" class="so-menu-danger" onclick="smpRunApproveAction('reject');" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+					<button type="button" onclick="smpTriggerCancelDoc();"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+				</div>
+				<button type="button" class="btn-so-approve" id="smp_btn_approve" onclick="smpApproveDocument();"><i class="far fa-check-circle"></i> อนุมัติ</button>
+			</div>
+			<?php } ?>
+			<?php if (!$smpIsRequest && !$smpReadOnly) { ?>
 			<button type="submit" name="submit" id="smp_btn_submit" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
 				<i class="far fa-paper-plane"></i> Submit
 			</button>
 			<?php } ?>
-			<button type="<?php echo $smpIsRequest ? 'submit' : 'button'; ?>" name="save_draft" id="smp_btn_draft" <?php echo $smpIsRequest ? '' : 'onclick="smpSaveDraft();"'; ?> style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+			<?php if (!$smpReadOnly) { ?>
+			<button type="<?php echo $smpIsRequest ? 'submit' : 'button'; ?>" name="save_draft" id="smp_btn_draft" <?php echo $smpIsRequest ? '' : ($smpIsReturned ? 'onclick="smpUpdateReturned();"' : 'onclick="smpSaveDraft();"'); ?> style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
 				<i class="far fa-save"></i> <?php echo $smpHasDocument ? 'Update' : 'Save Draft'; ?>
 			</button>
-			<button type="button" name="cancel_edit" onclick="window.location.href='main_suphos_smp.php';" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
+			<?php } ?>
+			<?php if ($smpCanCancelOwn) { ?>
+			<button type="button" id="smp_btn_cancel_doc" onclick="smpTriggerCancelDoc();" style="background-color: white; color: #FF0000; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px; display: flex; align-items: center; gap: 8px;">
+				<img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร
+			</button>
+			<?php } ?>
+			<button type="button" name="cancel_edit" onclick="window.location.href='<?php echo $smpBackUrl; ?>';" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
 				ย้อนกลับ
 			</button>
 		</div>
@@ -567,6 +658,41 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 	window.SMP_SAVED_CUSTOMER = <?php echo json_encode($smpCustomer, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
 	window.SMP_IS_DRAFT = <?php echo $smpIsDraft ? 'true' : 'false'; ?>;
 	window.SMP_IS_REQUEST = <?php echo $smpIsRequest ? 'true' : 'false'; ?>;
+	window.SMP_IS_RETURNED = <?php echo $smpIsReturned ? 'true' : 'false'; ?>;
+	window.SMP_READ_ONLY = <?php echo $smpReadOnly ? 'true' : 'false'; ?>;
 </script>
 <script src="js/doc-tabs-attach.js?v=<?php echo $assetVersion('js/doc-tabs-attach.js'); ?>"></script>
 <script src="js/register-supsmp.js?v=<?php echo $assetVersion('js/register-supsmp.js'); ?>"></script>
+<?php if ($smpReadOnly) { ?>
+	<script>
+		/* ใบที่จบแล้ว / ไม่ใช่ของผู้ใช้ที่จะแก้ได้ → เปิดดูอย่างเดียว (ล็อกทุกช่อง; ต้องรันหลัง register-supsmp.js สร้างแถวรายการเสร็จ) */
+		(function () {
+			var form = document.getElementById('smp-form');
+			if (!form) return;
+			var keepClasses = ['btn-preview-so', 'so-tab-btn', 'so-latest-reason-close'];
+			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function (el) {
+				if (el.type === 'hidden' || el.name === 'cancel_edit') return;
+				for (var i = 0; i < keepClasses.length; i++) { if (el.classList.contains(keepClasses[i])) return; }
+				el.disabled = true;
+			});
+		})();
+	</script>
+<?php } ?>
+<?php
+/* ผลของ action จาก register_supsmp_action1.php (PRG) — แสดงครั้งเดียวแล้วล้าง */
+if (!empty($_SESSION['smp_flash']) && is_array($_SESSION['smp_flash'])) {
+	$smpFlash = $_SESSION['smp_flash'];
+	unset($_SESSION['smp_flash']);
+	?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var flash = <?php echo json_encode($smpFlash, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+			if (typeof Swal === 'undefined') { alert(flash.title + '
+' + flash.text); return; }
+			var body = document.createElement('div');
+			body.style.whiteSpace = 'pre-line';
+			body.textContent = flash.text || '';
+			Swal.fire({ icon: flash.icon || 'info', title: flash.title || '', html: body, confirmButtonColor: '#612989', confirmButtonText: 'ตกลง' });
+		});
+	</script>
+<?php } ?>

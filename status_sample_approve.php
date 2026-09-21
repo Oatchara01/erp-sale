@@ -33,32 +33,13 @@ include "dbconnect_sale.php";
 
 	
 $emid = $_SESSION['code'];
-	
-if($emid=='SS1'){
-$sddd = " AND sale_code IN ('S15','S16','S21','S22','S14')";
-}else if($emid=='SS2'){
-$sddd = " AND sale_code IN ('S11','S12','S17','S24','S13')";	
-}else if($emid=='SM1'){ 
-$sddd = " AND sale_code IN ('SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";	
-}else if($emid=='SS3'){
-$sddd = " AND sale_code IN ('SM1','S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-}else if($emid=='SS5'){
-$sddd = " AND sale_code IN ('S31','S32')";	
-}else if($emid=='SUP_EN'){
-$sddd = " and sale_code LIKE '%EN%'";	
-}else if($emid=='SUP_MK'){
-$sddd = " and  sale_code  IN ('MK','SOL91','SOL92','SOL93','SOL93','SOL94','SOL99')";	
-}else if($_SESSION['name']=='ชลชินี' or $_SESSION['name']=='อัจฉรา'){
-$sddd = " and  sale_code  IN ('MK','SOL91','SOL92','SOL93','SOL94','SOL99','MK')";	
-}else{
-$sddd = "";			
-}
 
-if($emid=='SS5'){
-$status_doc = "AND status_sup ='Pending review'";	
-}else{
-$status_doc = "AND status_sup ='Request'";		
-}
+/* ขอบเขตคิว (เขตการขาย + สถานะ) อยู่ใน includes/smp_repo.php — ใช้ตัวเดียวกับ guard ของปุ่มอนุมัติใน
+   register_supsmp.php / register_supsmp_action1.php เพื่อให้ "เห็นในคิว = ทำได้" ตรงกันเสมอ */
+require_once __DIR__ . '/includes/smp_repo.php';
+$smpQueueScope = smp_sup_queue_scope($_SESSION);
+$sddd = smp_sup_queue_sql_filter($smpQueueScope);
+$status_doc = "AND status_sup ='" . $smpQueueScope['status'] . "'";
 ?>
 
 <div class="w3-container">
@@ -183,7 +164,7 @@ $objResult11 = mysqli_fetch_array($objQuery11);
 <?php if($objResult["send_supdate"]!='0000-00-00 00:00:00'){ echo Datethai($objResult["send_supdate"]); ?> <?php   echo   substr($objResult["send_supdate"],-9);   }  ?>				
 </td>					
 <?php } ?>	
-<td><a href="supsmp_approve.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
+<td><a href="register_supsmp.php?ref_idsmp=<?php echo urlencode($objResult["ref_idsmp"]);?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
 				
 			
 			</tr>

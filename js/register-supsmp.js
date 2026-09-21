@@ -671,6 +671,126 @@
 			confirmButtonColor: '#612989', cancelButtonColor: '#6c757d'
 		}).then(function (r) { if (r.isConfirmed) send(); });
 	};
+	/* Update เอกสารที่ถูกส่งกลับ — validate เต็ม คงสถานะ Returned (Submit ปกติจึงเป็นทางเดียวที่ส่งกลับเข้า Request) */
+	window.smpUpdateReturned = function () {
+		if (busy || !validateSubmit()) return;
+		setBusy(true, el('smp_btn_draft'), '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...');
+		form.action = 'register_supsmp_update1.php';
+		HTMLFormElement.prototype.submit.call(form);
+	};
+	/* ===================== แถบอนุมัติ (approver) ===================== */
+	function openReasonPopup(opts) {
+		var refInput = el('ref_idsmp');
+		var refId = refInput ? refInput.value.trim() : '';
+		if (typeof Swal === 'undefined') {
+			var fallback = (window.prompt(opts.label) || '').trim();
+			if (fallback !== '') opts.onConfirm(fallback);
+			return;
+		}
+		Swal.fire({
+			title: opts.title,
+			html: '<p class="so-reason-subtitle">' + esc(opts.subtitleText) + ' "' + esc(refId) + '"</p>' +
+				'<label class="so-reason-label">' + esc(opts.label) + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: opts.placeholder || '',
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true, showCloseButton: true, reverseButtons: false,
+			confirmButtonText: 'ตกลง', cancelButtonText: 'ยกเลิก', buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup', title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html', confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn', actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon', input: 'so-reason-textarea', closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function (value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') { Swal.showValidationMessage('กรุณาระบุเหตุผล'); return false; }
+				return trimmed;
+			}
+		}).then(function (result) { if (result.isConfirmed) opts.onConfirm(result.value); });
+	}
+	window.smpToggleApproveOverflowMenu = function () {
+		var menu = el('smpApproveOverflowMenu');
+		if (menu) menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+	};
+	document.addEventListener('click', function (e) {
+		var menu = el('smpApproveOverflowMenu'), trigger = el('smp_btn_approve_overflow');
+		if (!menu || !menu.style.display || menu.style.display === 'none') return;
+		if (trigger && (e.target === trigger || trigger.contains(e.target))) return;
+		if (!menu.contains(e.target)) menu.style.display = 'none';
+	});
+	/* ===== ส่งกลับ / ไม่อนุมัติ / ยกเลิก / อนุมัติ — ทุก action ไป register_supsmp_action1.php (สิทธิ์ตรวจซ้ำที่ server) ===== */
+	var approveReasonConfig = {
+		'return': {
+			title: 'ส่งกลับเอกสารนี้ ?', subtitleText: 'ส่งกลับเอกสารเลขที่', label: 'ระบุเหตุผลการส่งกลับ',
+			placeholder: 'ระบุเหตุผลการส่งกลับ', iconBg: '#FFF4E5', iconSrc: 'img/icons/send_back.png'
+		},
+		'reject': {
+			title: 'ไม่อนุมัติเอกสารนี้ ?', subtitleText: 'ไม่อนุมัติเอกสารเลขที่', label: 'ระบุเหตุผลที่ไม่อนุมัติ',
+			placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ', iconBg: '#FEECEB', iconSrc: 'img/icons/reject.png'
+		}
+	};
+	/* ค่า action มากับ hidden (ไม่ใช่ value ของปุ่ม) เพราะส่งด้วย form.submit() แบบ programmatic — endpoint ไม่บันทึกค่าฟอร์มใด ๆ */
+	function submitApproveAction(action, reason, isCancel) {
+		busy = true;
+		el('smp_approve_action').value = isCancel ? '' : action;
+		el('smp_approve_reason').value = reason;
+		el('smp_cancel_doc').value = isCancel ? '1' : '';
+		form.action = 'register_supsmp_action1.php';
+		HTMLFormElement.prototype.submit.call(form);
+	}
+	/* ส่งกลับ / ไม่อนุมัติ — บังคับกรอกเหตุผล ข้าม validation ฟอร์ม */
+	window.smpRunApproveAction = function (action) {
+		var config = approveReasonConfig[action];
+		if (busy || !config) return;
+		openReasonPopup(Object.assign({}, config, {
+			onConfirm: function (reason) {
+				if (busy) return;
+				submitApproveAction(action, reason, false);
+			}
+		}));
+	};
+	/* ยกเลิกเอกสาร — ผู้อนุมัติด่าน sup (ใบ Request) หรือเจ้าของใบ Draft/Returned (server ตรวจซ้ำ) */
+	window.smpTriggerCancelDoc = function () {
+		if (busy) return;
+		openReasonPopup({
+			title: 'ยกเลิกเอกสารนี้ ?', subtitleText: 'ต้องการยกเลิกเอกสารเลขที่', label: 'ระบุเหตุผลในการยกเลิก',
+			placeholder: 'ระบุเหตุผลในการยกเลิก', iconBg: '#F4F5F7', iconSrc: 'img/icons/cancel_document.png',
+			onConfirm: function (reason) {
+				if (busy) return;
+				submitApproveAction('cancel', reason, true);
+			}
+		});
+	};
+	/* ภาพรวมค่าในฟอร์ม (ไม่รวม hidden ของ action) — ใช้ตรวจว่าผู้อนุมัติแก้ค้างโดยยังไม่ได้ Update */
+	var formSnapshot = '';
+	var userTouchedForm = false;
+	function snapshotForm() {
+		var skip = { approve_action: 1, smp_approve_reason: 1, smp_cancel_doc: 1 };
+		var parts = [];
+		Array.prototype.forEach.call(form.elements, function (field) {
+			var type = (field.type || '').toLowerCase();
+			if (!field.name || field.disabled || skip[field.name] || type === 'button' || type === 'submit' || type === 'reset') return;
+			if (type === 'file') {
+				if (field.files && field.files.length) parts.push(field.name + '=file:' + field.files[0].name + ':' + field.files[0].size);
+				return;
+			}
+			if ((type === 'checkbox' || type === 'radio') && !field.checked) return;
+			parts.push(field.name + '=' + field.value);
+		});
+		return parts.join('');
+	}
+	/* อนุมัติ — ต่างจาก 3 action ข้างบนตรงที่ต้องผ่าน validation ฟอร์มตามปกติ และ endpoint ตัดสินจากข้อมูลที่บันทึกไว้
+	   (ทั้งเช็คยอดใบยืมและเส้นทางส่งต่อ) จึงบล็อกถ้ามีการแก้ไขที่ยังไม่ได้กด Update */
+	window.smpApproveDocument = function () {
+		if (busy) return;
+		if (snapshotForm() !== formSnapshot) {
+			notify('มีการแก้ไขที่ยังไม่ได้บันทึก', 'กรุณากด Update เพื่อบันทึกการแก้ไขก่อนอนุมัติ เพราะระบบอนุมัติตามข้อมูลที่บันทึกไว้แล้ว', 'warning');
+			return;
+		}
+		if (!validateSubmit()) return;
+		submitApproveAction('approve', '', false);
+	};
 	window.smpSaveDraft = function () {
 		if (busy) return;
 		var fileProblem = checkFiles();
@@ -694,6 +814,12 @@
 	};
 	/* Preview — POST ค่าปัจจุบันทั้งฟอร์มไป report_sample.php แบบ _report_preview=1 (ไม่แตะฐานข้อมูล ไม่จองเลข) */
 	window.smpOpenPreview = function () {
+		/* เปิดดูอย่างเดียว: ช่องฟอร์มถูกล็อก (disabled ไม่ถูกส่ง) จึงเปิดรายงานของใบที่บันทึกไว้แทนการ POST ค่าในฟอร์ม */
+		if (window.SMP_READ_ONLY) {
+			var savedRef = getValue('ref_idsmp');
+			if (savedRef) window.open('report_sample.php?ref_idsmp=' + encodeURIComponent(savedRef), '_blank', 'noopener,noreferrer');
+			return;
+		}
 		var target = 'smp_preview_' + Date.now();
 		var win = window.open('', target);
 		if (!win) { notify('เปิด Preview ไม่ได้', 'เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง', 'warning'); return; }
@@ -718,6 +844,11 @@
 	else if (window.SMP_PREFILL && window.SMP_PREFILL.customer_typename) setText('display_customer_typename', window.SMP_PREFILL.customer_typename);
 	(window.SMP_SAVED_ITEMS || []).forEach(function (item) { addRow(item); });
 	refreshSummary();
+	formSnapshot = snapshotForm();
+	/* เผื่อค่าบางช่องถูกเติมหลังโหลด (เช่น ข้อมูลลูกค้า) — ถ้าผู้ใช้ยังไม่แตะฟอร์ม ให้ถ่ายภาพรวมใหม่ตอนโหลดเสร็จ */
+	form.addEventListener('input', function () { userTouchedForm = true; });
+	form.addEventListener('change', function () { userTouchedForm = true; });
+	window.addEventListener('load', function () { if (!userTouchedForm) formSnapshot = snapshotForm(); });
 
 	/* สลับบริษัท: สินค้าคนละบริษัทปนกันไม่ได้ — ถ้ามีรายการอยู่ให้ยืนยันก่อนแล้วล้างทั้งตาราง (ผูกหลัง prefill เพื่อไม่ให้ Draft เด้งถามตอนโหลด) */
 	var companySelect = named('type_company');
