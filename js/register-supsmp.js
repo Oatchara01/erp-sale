@@ -789,7 +789,26 @@
 			return;
 		}
 		if (!validateSubmit()) return;
-		submitApproveAction('approve', '', false);
+		var refInput = el('ref_idsmp');
+		var refId = refInput ? refInput.value.trim() : '';
+		var approve = function () { submitApproveAction('approve', '', false); };
+		if (typeof Swal === 'undefined') {
+			if (confirm('ยืนยันการอนุมัติเอกสารเลขที่ "' + refId + '" ใช่หรือไม่?')) approve();
+			return;
+		}
+		Swal.fire({
+			icon: 'question',
+			title: 'ยืนยันการอนุมัติเอกสาร',
+			text: 'ต้องการอนุมัติเอกสารเลขที่ "' + refId + '" ใช่หรือไม่?',
+			showCancelButton: true,
+			confirmButtonText: 'ยืนยันอนุมัติ',
+			cancelButtonText: 'ยกเลิก',
+			reverseButtons: true,
+			confirmButtonColor: '#612989',
+			cancelButtonColor: '#6c757d'
+		}).then(function (result) {
+			if (result.isConfirmed) approve();
+		});
 	};
 	window.smpSaveDraft = function () {
 		if (busy) return;

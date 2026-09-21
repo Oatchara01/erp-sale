@@ -27,28 +27,37 @@ include('dbconnect_sale.php');
 include('dbconnect.php');
 date_default_timezone_set('Asia/Bangkok');
 
+/* Duplicate (?copy_from=) — เปิดเป็นใบใหม่ (ออกเลขใหม่ ยังไม่บันทึก) โดยเติมข้อมูลจากใบต้นฉบับ; ?ref_idsmp= มาก่อนเสมอ */
+$smpCopyFromRef = $smpRequestedRef === '' ? trim((string)($_GET['copy_from'] ?? '')) : '';
+$smpSourceRef = $smpRequestedRef !== '' ? $smpRequestedRef : $smpCopyFromRef;
+$smpIsCopy = ($smpCopyFromRef !== '');
+
 $smpDoc = null;
+$smpSource = null;
 $smpRegister = null;
 $smpTransaction = null;
 $smpItems = array();
 $smpCustomer = null;
-if ($smpRequestedRef !== '') {
-	$smpDoc = smp_load_document($conn, $smpRequestedRef);
-	if ($smpDoc === null) {
-		echo '<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;"><p>ไม่พบเอกสารเลขที่ ' . so_saved_h($smpRequestedRef) . '</p></div>';
+if ($smpSourceRef !== '') {
+	$smpSource = smp_load_document($conn, $smpSourceRef);
+	if ($smpSource === null) {
+		echo '<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;"><p>ไม่พบเอกสารเลขที่ ' . so_saved_h($smpSourceRef) . '</p></div>';
 		include 'foot.php';
 		exit();
 	}
-	$smpRegister = smp_load_row($conn, 'tb_register_data', 'ref_id', $smpDoc['ref_idsmp']);
-	$smpTransaction = smp_load_row($conn, 'tb_transaction', 'ref_id', $smpDoc['ref_idsmp']);
-	$smpItems = smp_load_items($conn, $smpDoc['ref_idsmp']);
-	if (trim((string)$smpDoc['bill_id']) !== '') {
+	$smpRegister = smp_load_row($conn, 'tb_register_data', 'ref_id', $smpSource['ref_idsmp']);
+	$smpTransaction = smp_load_row($conn, 'tb_transaction', 'ref_id', $smpSource['ref_idsmp']);
+	$smpItems = smp_load_items($conn, $smpSource['ref_idsmp']);
+	if (trim((string)$smpSource['bill_id']) !== '') {
 		$custStmt = mysqli_prepare($conn, 'SELECT c.customer_id, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
 			FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = ? LIMIT 1');
-		mysqli_stmt_bind_param($custStmt, 's', $smpDoc['bill_id']);
+		mysqli_stmt_bind_param($custStmt, 's', $smpSource['bill_id']);
 		mysqli_stmt_execute($custStmt);
 		$smpCustomer = mysqli_fetch_assoc(mysqli_stmt_get_result($custStmt)) ?: null;
 		mysqli_stmt_close($custStmt);
+	}
+	if (!$smpIsCopy) {
+		$smpDoc = $smpSource;
 	}
 }
 $smpHasDocument = ($smpDoc !== null);
@@ -105,9 +114,9 @@ foreach ($smpLogRows as $logRow) {
 /* ใบสั่งขายอ้างอิง (หมายเลขคำสั่งซื้อ): Draft ใช้ค่าที่บันทึกไว้ก่อนเสมอ; เอกสารใหม่ค่อย lookup จาก ?ref_id=; เปิดตรงไม่มี ref_id = ว่าง */
 $smpSaleRef = '';
 $smpOrderId = '';
-if ($smpDoc !== null) {
-	$smpSaleRef = trim((string)$smpDoc['ref_idsale']);
-	$smpOrderId = trim((string)$smpDoc['order_id']);
+if ($smpSource !== null) {
+	$smpSaleRef = trim((string)$smpSource['ref_idsale']);
+	$smpOrderId = trim((string)$smpSource['order_id']);
 } elseif (trim((string)($_GET['ref_id'] ?? '')) !== '') {
 	$smpRequestedSale = trim((string)$_GET['ref_id']);
 	$smpSaleOrder = smp_lookup_sale_order($conn, $smpRequestedSale);
@@ -131,33 +140,42 @@ $smpTimeOf = function ($v) {
 	return preg_match('/(?<!\d)([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)/', (string)$v, $m) ? sprintf('%02d:%s', $m[1], $m[2]) : '';
 };
 $smpPrefill = array();
-if ($smpDoc !== null) {
+if ($smpSource !== null) {
 	$smpPrefill = array(
-		'type_company'  => (string)$smpDoc['type_company'],
-		'sale_code'     => (string)$smpDoc['sale_code'],
-		'smp_date'      => $blankDate($smpDoc['smp_date']) ?: date('Y-m-d'), /* ช่องซ่อนอยู่ — ห้ามว่าง ไม่งั้น validate ผ่านไม่ได้ */
-		'comment_sale'  => (string)$smpDoc['comment_sale'],
-		'comment_sup'   => (string)$smpDoc['comment_sup'],
-		'brnp_ckk'      => (string)$smpDoc['brnp_ckk'],
-		'brnp_no'       => (string)$smpDoc['brnp_no'],
-		'crm_ckk'       => (string)$smpDoc['crm_ckk'] === '1' ? '1' : '0',
-		'crm_ref'       => (string)$smpDoc['crm_ref'],
-		'have_order'    => (string)$smpDoc['have_order'] === '1' ? '1' : '0',
-		'customer_id'   => (string)$smpDoc['bill_id'],
-		'customer_name' => (string)$smpDoc['customer_name'],
-		'cus_tel'       => (string)$smpDoc['customer_tel'],
-		'address_name'  => (string)$smpDoc['address_name'],
-		'cus_province'  => (string)($smpDoc['customer_province'] ?? ''),
-		'cus_ampher'    => (string)($smpDoc['customer_ampher'] ?? ''),
-		'cus_postcode'  => (string)($smpDoc['customer_postcode'] ?? ''),
-		'delivery_type' => (string)$smpDoc['delivery_type'],
-		'start_date'    => $blankDate($smpDoc['delivery_date']),
-		'between_date'  => (string)$smpDoc['date_send_key'],
-		'shipping_date' => $blankDate($smpDoc['date_ker']),
-		'shipping_cost' => ((float)$smpDoc['ker_bath'] > 0) ? (string)$smpDoc['ker_bath'] : '',
-		'shipping_ref1' => (string)$smpDoc['ref_no'],
-		'shipping_ref2' => (string)$smpDoc['ref_no1'],
+		'type_company'  => (string)$smpSource['type_company'],
+		'sale_code'     => (string)$smpSource['sale_code'],
+		'smp_date'      => $blankDate($smpSource['smp_date']) ?: date('Y-m-d'), /* ช่องซ่อนอยู่ — ห้ามว่าง ไม่งั้น validate ผ่านไม่ได้ */
+		'comment_sale'  => (string)$smpSource['comment_sale'],
+		'comment_sup'   => (string)$smpSource['comment_sup'],
+		'brnp_ckk'      => (string)$smpSource['brnp_ckk'],
+		'brnp_no'       => (string)$smpSource['brnp_no'],
+		'crm_ckk'       => (string)$smpSource['crm_ckk'] === '1' ? '1' : '0',
+		'crm_ref'       => (string)$smpSource['crm_ref'],
+		'have_order'    => (string)$smpSource['have_order'] === '1' ? '1' : '0',
+		'customer_id'   => (string)$smpSource['bill_id'],
+		'customer_name' => (string)$smpSource['customer_name'],
+		'cus_tel'       => (string)$smpSource['customer_tel'],
+		'address_name'  => (string)$smpSource['address_name'],
+		'cus_province'  => (string)($smpSource['customer_province'] ?? ''),
+		'cus_ampher'    => (string)($smpSource['customer_ampher'] ?? ''),
+		'cus_postcode'  => (string)($smpSource['customer_postcode'] ?? ''),
+		'delivery_type' => (string)$smpSource['delivery_type'],
+		'start_date'    => $blankDate($smpSource['delivery_date']),
+		'between_date'  => (string)$smpSource['date_send_key'],
+		'shipping_date' => $blankDate($smpSource['date_ker']),
+		'shipping_cost' => ((float)$smpSource['ker_bath'] > 0) ? (string)$smpSource['ker_bath'] : '',
+		'shipping_ref1' => (string)$smpSource['ref_no'],
+		'shipping_ref2' => (string)$smpSource['ref_no1'],
 	);
+	if ($smpIsCopy) {
+		/* ใบใหม่: วันที่เป็นวันนี้ และไม่พาความเห็นหัวหน้า/ข้อมูลการส่งของใบเดิมมาด้วย (เหมือน register_supsmp_createnew.php เดิม) */
+		$smpPrefill['smp_date'] = date('Y-m-d');
+		$smpPrefill['comment_sup'] = '';
+		$smpPrefill['shipping_date'] = '';
+		$smpPrefill['shipping_cost'] = '';
+		$smpPrefill['shipping_ref1'] = '';
+		$smpPrefill['shipping_ref2'] = '';
+	}
 }
 if ($smpRegister !== null) {
 	$smpPrefill += array(
@@ -228,8 +246,9 @@ foreach ($smpItems as $row) {
 		'waranty'      => (string)$row['waranty'],
 		'sn'           => (string)$row['sn'],
 		'sale_remark'  => (string)$row['sale_remark'],
-		'br_no'        => (string)$row['br_no'],
-		'clear_br'     => (string)$row['clear_br'],
+		/* ใบที่ duplicate ไม่พาการเคลียร์ยืมเดิมมา — BR เดิมถูกเคลียร์ด้วยใบต้นฉบับไปแล้ว */
+		'br_no'        => $smpIsCopy ? '' : (string)$row['br_no'],
+		'clear_br'     => $smpIsCopy ? '0' : (string)$row['clear_br'],
 	);
 }
 $smpSavedFiles = array();
@@ -263,7 +282,7 @@ if ($q) while ($row = mysqli_fetch_assoc($q)) $provinces[] = $row['province_name
 $isEngineer = ($_SESSION['department'] ?? '') === 'วิศวกรรม';
 $department = $isEngineer ? 'ฝ่ายวิศวกรรม' : 'ฝ่ายขาย';
 $workType = $isEngineer ? 'วิศวกรรม' : 'Sale';
-$employeeName = $smpRegister !== null ? (string)$smpRegister['employee_name'] : (string)($_SESSION['name'] ?? '');
+$employeeName = ($smpRegister !== null && !$smpIsCopy) ?(string)$smpRegister['employee_name'] : (string)($_SESSION['name'] ?? '');
 $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 ?>
 

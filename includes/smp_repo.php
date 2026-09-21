@@ -716,42 +716,14 @@ function smp_amount_route_sale_codes()
 }
 
 /**
- * ขอบเขตคิวอนุมัติ sup ของผู้ใช้ — ย้ายมาจาก status_sample_approve.php (คงพฤติกรรมเดิมทุกกรณี)
+ * ขอบเขตคิวอนุมัติ sup ของผู้ใช้ — Sup ทุกคนเห็น/อนุมัติได้ทุกเขตการขาย (ยกเลิกการแบ่งเขตตาม code เดิมแล้ว)
  * ใช้ทั้งหน้าคิวและ guard ของ action เพื่อให้ "เห็นในคิว = ทำได้" ตรงกันเสมอ
  * @return array ['type' => 'in'|'like'|'all', 'values' => array, 'status' => 'Request'|'Pending review']
  */
 function smp_sup_queue_scope(array $session)
 {
 	$code = (string)($session['code'] ?? '');
-	$name = (string)($session['name'] ?? '');
-	$scope = array('type' => 'all', 'values' => array(), 'status' => ($code === 'SS5') ? 'Pending review' : 'Request');
-
-	if ($code === 'SS1') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('S15', 'S16', 'S21', 'S22', 'S14');
-	} elseif ($code === 'SS2') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('S11', 'S12', 'S17', 'S24', 'S13');
-	} elseif ($code === 'SM1') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('SOL1', 'SOL2', 'SOL3', 'SOL4', 'SOL5', 'SOL6', 'SOL7', 'SOL8', 'SOL99');
-	} elseif ($code === 'SS3') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('SM1', 'S31', 'S32', 'S33', 'MM1', 'SOL1', 'SOL2', 'SOL3', 'SOL4', 'SOL5', 'SOL6', 'SOL7', 'SOL8', 'SOL99');
-	} elseif ($code === 'SS5') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('S31', 'S32');
-	} elseif ($code === 'SUP_EN') {
-		$scope['type'] = 'like';
-		$scope['values'] = array('EN');
-	} elseif ($code === 'SUP_MK') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('MK', 'SOL91', 'SOL92', 'SOL93', 'SOL94', 'SOL99');
-	} elseif ($name === 'ชลชินี' || $name === 'อัจฉรา') {
-		$scope['type'] = 'in';
-		$scope['values'] = array('MK', 'SOL91', 'SOL92', 'SOL93', 'SOL94', 'SOL99');
-	}
-	return $scope;
+	return array('type' => 'all', 'values' => array(), 'status' => ($code === 'SS5') ? 'Pending review' : 'Request');
 }
 
 /** ส่วน SQL ต่อท้าย WHERE ของคิว (constants ล้วน ไม่มีค่าจากผู้ใช้) — ' AND sale_code IN (...)' หรือ '' */

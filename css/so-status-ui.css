@@ -232,6 +232,11 @@ body.has-sidebar.sidebar-collapsed {
 	font-size: 14px;
 }
 
+/* Keep SMP list columns stable when its nested detail table is revealed. */
+.so-table.smp-status-table {
+	table-layout: fixed;
+}
+
 .so-table th {
 	background: #FFFFFF;
 	font-size: 16px;
