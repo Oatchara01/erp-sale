@@ -23,7 +23,7 @@ if ($limit > 50) {
 }
 
 $sql = "SELECT c.customer_id, c.first_name, c.last_name, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.cus_address,
-               c.customer_no, c.type_customer, c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
+               c.cus_ampher, c.cus_province, c.cus_postcode, c.customer_no, c.type_customer, c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
         FROM tb_customer c
         LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id
         WHERE 1";
@@ -97,6 +97,9 @@ foreach ($rows as $row) {
         'bill_name' => $row['bill_name'],
         'cus_tel' => $displayTel,
         'cus_address' => $row['cus_address'],
+        'cus_ampher' => $row['cus_ampher'],
+        'cus_province' => $row['cus_province'],
+        'cus_postcode' => $row['cus_postcode'],
         'customer_no' => $row['customer_no'],
         'type_customer' => $row['type_customer'],
         'type_name' => $row['type_name'],

@@ -1,0 +1,113 @@
+/* register_supsmp.php — ใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP)
+   ต่อยอดจาก css/so-core.css + css/register-suphos.css + css/register-supbrcshos.css
+   (Figma: AWL ERP Sale / node 787:4246 และ modal 1011:4812) ไฟล์นี้มีเฉพาะส่วนที่หน้า SMP ต่างจริง ๆ */
+
+.smp-layout { max-width: 1096px; margin: 0 auto; }
+.smp-layout .so-card { margin-bottom: 24px; }
+.smp-span-2 { grid-column: span 2; }
+.smp-draft-badge { display: inline-block; margin-left: 8px; padding: 2px 12px; border-radius: 12px; background: #F1E1FF; color: #612989; font-size: 13px; font-weight: 500; }
+.smp-align-end { align-items: end; }
+
+.smp-pill-btn { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 24px; border: 0; border-radius: 24px; background: #F4E8FF; color: #612989; font: 500 14px 'Prompt', sans-serif; cursor: pointer; }
+.smp-pill-btn--outline { background: #FFFFFF; border: 1px solid #EBEBEB; }
+.smp-pill-btn img { width: 16px; height: 16px; object-fit: contain; }
+.so-address-actions { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+/* แท็บที่อยู่/รายละเอียดที่อยู่: ระยะห่างระหว่างแถวตาม Change Order (margin-top 16px บนแถวที่ 2 เป็นต้นไป) */
+.smp-addr-gap { margin-top: 16px; }
+/* label ในแท็บที่อยู่เว้นวรรคก่อนดอกจันเหมือน Change Order — ตัด margin-left 2px ของ .so-label .required ไม่ให้ระยะซ้อนกัน */
+#smp_addr_main .so-label .required { margin-left: 0; }
+.smp-radio-row { display: flex; gap: 16px; min-height: 42px; align-items: center; flex-wrap: wrap; }
+.smp-radio-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #333; }
+.smp-radio-row input { accent-color: #612989; width: 18px; height: 18px; }
+.smp-pair { display: flex; gap: 12px; }
+.smp-pair .so-input { flex: 1; min-width: 0; }
+
+/* ===== รายการสินค้า ===== */
+.smp-items-card { min-height: 552px; }
+.smp-items-title-row { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+.smp-items-title-row .so-divider { grid-column: 1 / -1; width: 100%; }
+.smp-items-count { font-size: 18px; font-weight: 400; color: #6F6B72; white-space: nowrap; }
+.smp-summary-panel { display: grid; grid-template-columns: 1fr 1px 1fr; align-items: stretch; min-height: 96px; margin: 12px 0 24px; padding: 8px 0; border-radius: 10px; background: #F5F6F8; box-sizing: border-box; }
+.smp-summary-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.smp-summary-label { font-size: 14px; color: #7A767D; }
+.smp-summary-value { font-size: 22px; line-height: 1.2; font-weight: 400; color: #3B3B3B; }
+.smp-summary-divider { width: 1px; background: #B9B5BC; }
+.smp-product-search { max-width: 680px; margin-bottom: 18px; }
+.smp-items-card .so-product-table-wrap { width: calc(100% + 2 * clamp(16px, 3vw, 32px)); margin: 0 calc(-1 * clamp(16px, 3vw, 32px)) 16px; overflow-x: auto; }
+/* 9 คอลัมน์: ลาก | เลือก | รหัส | ชื่อ | จำนวน | ราคา/หน่วย | ยอดรวม | SN | ปุ่ม
+   .so-product-table เป็น table-layout: fixed ความกว้างจึงคุมด้วย nth-child และต้องใส่ทั้ง th และ td */
+.smp-product-table { border-top: 1px solid #8A42BD; min-width: 900px; }
+.smp-product-table th, .smp-product-table td { padding-top: 9px; padding-bottom: 9px; }
+.smp-product-table th:nth-child(1), .smp-product-table td:nth-child(1) { width: 32px; padding-left: clamp(16px, 3vw, 32px); padding-right: 2px; text-align: center; }
+.smp-product-table th:nth-child(2), .smp-product-table td:nth-child(2) { width: 42px; padding-left: 2px; padding-right: 8px; text-align: center; }
+.smp-product-table th:nth-child(3), .smp-product-table td:nth-child(3) { width: 14%; text-align: left; }
+.smp-product-table th:nth-child(4), .smp-product-table td:nth-child(4) { width: 24%; text-align: left; }
+.smp-product-table th:nth-child(5), .smp-product-table td:nth-child(5) { width: 8%; text-align: center; }
+.smp-product-table th:nth-child(6), .smp-product-table td:nth-child(6) { width: 12%; text-align: right; }
+.smp-product-table th:nth-child(7), .smp-product-table td:nth-child(7) { width: 12%; text-align: right; }
+.smp-product-table th:nth-child(8), .smp-product-table td:nth-child(8) { width: 16%; text-align: left; }
+.smp-product-table th:nth-child(9), .smp-product-table td:nth-child(9) { width: 84px; padding-left: 4px; padding-right: 12px; text-align: center; white-space: nowrap; }
+.smp-cell-amount { font-weight: 500; color: var(--so-text); }
+.smp-product-table .cs-row-edit-btn, .smp-product-table .so-product-remove-btn { width: 28px; height: 28px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: #77727A; }
+.smp-product-table .cs-row-edit-btn:hover, .smp-product-table .so-product-remove-btn:hover { background: transparent; border: 0; color: var(--so-primary); }
+.breg-empty-state { padding: 28px 16px; text-align: center; font-size: 14px; color: var(--so-muted); background: #FAF9FC; border: 1px dashed #E3DCEA; border-radius: 10px; }
+
+/* modal เคลียร์ยืม — รายการสินค้าต่างบริษัทที่เลือกไม่ได้ */
+.smp-loan-disabled .clear-loan-item-option, .smp-loan-disabled .clear-loan-check-circle { cursor: not-allowed; opacity: .4; }
+.smp-loan-mismatch { color: #DC3545; }
+
+/* ===== modal ข้อมูลรายการสินค้าเพิ่มเติม (Figma 1011:4812: 1096x337) ===== */
+#smp_edit_modal .smp-remark-modal-card { display: flex; flex-direction: column; width: calc(100% - 24px); max-width: 1096px; min-height: 337px; padding: 24px 32px; border-radius: 10px; }
+#smp_edit_modal .so-input-wrapper .so-input, #smp_edit_modal .so-input { background: #F5F6F8; }
+#smp_edit_modal .cs-modal-header { padding-bottom: 14px; margin-bottom: 18px; }
+#smp_edit_modal .smp-modal-body { display: flex; flex: 1; flex-direction: column; }
+#smp_edit_modal .smp-modal-fields { display: grid; grid-template-columns: 152px 328px minmax(0, 1fr); gap: 24px; }
+#smp_edit_modal .smp-modal-fields .so-field-group { margin-bottom: 0; }
+#smp_edit_modal .cs-modal-footer { gap: 20px; margin-top: auto; padding-top: 28px; border-top: 0; }
+#smp_edit_modal .cs-modal-btn-update, #smp_edit_modal .cs-modal-btn-cancel { display: inline-flex; align-items: center; justify-content: center; width: 172px; height: 42px; padding: 0 24px; border-radius: 24px; font-size: 14px; }
+#smp_edit_modal .cs-modal-btn-update { background: var(--so-primary); color: #FFF; border: 1px solid var(--so-primary); }
+#smp_edit_modal .cs-modal-btn-cancel { background: #FFF; color: #4A4A4A; border: 1px solid #E5E1E7; box-shadow: 0 2px 6px rgba(0, 0, 0, .04); }
+
+/* ===== footer actions ===== */
+.smp-sticky-actions { margin-top: 8px; }
+
+@media (max-width: 900px) {
+	.smp-span-2 { grid-column: 1 / -1; }
+	#smp_edit_modal .smp-modal-fields { grid-template-columns: 1fr 2fr; }
+	#smp_edit_modal .smp-modal-fields .so-field-group:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+	.smp-items-count { font-size: 16px; }
+	.smp-summary-value { font-size: 19px; }
+	#smp_edit_modal .smp-remark-modal-card { width: 100%; min-height: auto; padding: 20px 16px; }
+	#smp_edit_modal .smp-modal-fields { grid-template-columns: 1fr; gap: 14px; }
+	#smp_edit_modal .cs-modal-footer { margin-top: 24px; padding-top: 0; }
+	#smp_edit_modal .cs-modal-btn-update, #smp_edit_modal .cs-modal-btn-cancel { width: 100%; }
+}
+
+/* ===== การ์ดข้อมูลเอกสาร: บริษัท/เขตการขาย → หัวข้อ → หมายเลขคำสั่งซื้อ + CRM → ออเดอร์ฝาก ===== */
+.smp-doc-card .smp-doc-top { margin-bottom: 24px; }
+.smp-doc-card .smp-doc-bottom { margin-top: 24px; }
+.smp-doc-card .smp-doc-top .so-field-group,
+.smp-doc-card .smp-align-end .so-field-group,
+.smp-doc-card .smp-doc-bottom .so-field-group { margin-bottom: 0; }
+.smp-doc-card #order_id { background: #F5F6F8; color: #3B3B3B; cursor: default; }
+.smp-doc-card #crm_ref:disabled { background: #F4F3F7; color: #8A8690; cursor: not-allowed; }
+.smp-doc-card #crm_ref.is-invalid { border-color: #DC3545; }
+
+.smp-pill-toggle { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; height: 42px; padding: 0 16px; border-radius: 10px; background: #F4F3F7; color: #6E6E6E; font: 500 14px 'Prompt', sans-serif; cursor: pointer; user-select: none; transition: background-color .2s ease, color .2s ease; }
+.smp-pill-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.smp-pill-toggle:has(input:checked) { background: #612989; color: #FFF; }
+.smp-pill-toggle:has(input:focus-visible) { outline: 2px solid #612989; outline-offset: 2px; }
+/* ออเดอร์ฝาก: ปุ่มแคบพอดีข้อความ (ไม่ขยายเต็มคอลัมน์ของ grid) — ปุ่มแลกสินค้า CRM ยังเต็มคอลัมน์เหมือนเดิม */
+.smp-doc-card .smp-doc-bottom .smp-pill-toggle { width: fit-content; padding: 0 32px; }
+
+/* ===== การ์ดข้อมูลลูกค้า: แถวเบอร์โทร/ที่อยู่ (.so-grid-3-custom) และแถวจังหวัด/เขต/ไปรษณีย์ (.so-grid-3) ===== */
+.smp-cust-block { margin-top: 18px; margin-bottom: 0; }
+.smp-cust-block .so-field-group { margin-bottom: 0; }
+
+/* ===== การ์ดหมายเหตุ: พนักงาน (ข้อความเปล่า) | หมายเหตุ ===== */
+.smp-note-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
+.smp-note-card .so-field-group { margin-bottom: 0; }
+.smp-employee-text { display: flex; align-items: center; min-height: 42px; padding-left: 5px; font-size: 14px; color: #3B3B3B; }
+@media (max-width: 768px) { .smp-note-grid { grid-template-columns: 1fr; gap: 16px; } }

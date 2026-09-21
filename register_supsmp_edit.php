@@ -372,6 +372,10 @@ $sel = "";
 </div>
 
 <div class="w3-bar w3-margin-bottom">
+			หมายเลขคำสั่งซื้อ 
+			<input type="text" id="order_id" value="<?php echo htmlspecialchars($ffirst['order_id']); ?>" class="w3-input" style="width:90%;" readonly>
+</div>	
+<div class="w3-bar w3-margin-bottom">
 			Comment Sale :&nbsp;
 			<textarea name="comment_sale" id="comment_sale" class="w3-input" style="width:90%;"  required><?php echo $ffirst['comment_sale']; ?></textarea>
 </div>
@@ -398,6 +402,11 @@ $sel = "";
 			แลกสินค้าระบบ CRM เลขที่อ้างอิง  
 			<input type="text" name="crm_ref" id="crm_ref" value="<?php echo $ffirst['crm_ref']; ?>" class="w3-input" style="width:90%;"  >
 </div>			
+<div class="w3-bar w3-margin-bottom">
+	<input type="checkbox" name="have_order" id="have_order" value="1"<?php echo $ffirst['have_order']=='1' ? " checked='checked'" : ''; ?>>
+			ออเดอร์ฝาก
+</div>
+<script>(function(){var c=document.getElementById('crm_ckk'),r=document.getElementById('crm_ref');if(!c||!r)return;function s(){r.required=c.checked;}c.addEventListener('change',s);s();})();</script>
 </div>
 		
 		
@@ -519,20 +528,10 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 
 <div id="cs" class="w3-container city1" style="display:none">
 
-<?php if($ffirst["delivery_type"]=='1') { ?>
-<input type="radio" name="delivery_type" value="1" checked='checked' >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2"  >&nbsp;บริษัทจัดส่ง <br />
-
-
-<?php }else if ($ffirst["delivery_type"]=='2') { ?>
-
-<input type="radio" name="delivery_type" value="1"  >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2" checked='checked' >&nbsp;บริษัทจัดส่ง 
-
-<?php }else{ ?>
-	<input type="radio" name="delivery_type" value="1"  >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2" >&nbsp;บริษัทจัดส่ง 
-	<?php } ?>
+<?php require_once __DIR__ . '/includes/smp_repo.php'; ?>
+<?php foreach (smp_delivery_type_options() as $dtValue => $dtLabel) { ?>
+<input type="radio" name="delivery_type" value="<?php echo $dtValue; ?>"<?php echo (string)$ffirst["delivery_type"] === (string)$dtValue ? " checked='checked'" : ''; ?> >&nbsp;<?php echo $dtLabel . ' '; ?>
+<?php } ?><br />
 
 
 	<?php

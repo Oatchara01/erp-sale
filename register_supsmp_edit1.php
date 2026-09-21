@@ -23,8 +23,14 @@ $ref_idsmp = $_POST['ref_idsmp'];
 $delivery_date =$_POST["start_date"];
 $delivery_type = $_POST["delivery_type"];
 $date_send_key =$_POST["between_date"];	
-$crm_ref = $_POST["crm_ref"];
-$crm_ckk = $_POST["crm_ckk"];
+$crm_ckk = isset($_POST["crm_ckk"]) && $_POST["crm_ckk"] == '1' ? '1' : '0';
+$crm_ref = $crm_ckk == '1' ? trim((string)$_POST["crm_ref"]) : '';
+$have_order = isset($_POST["have_order"]) && $_POST["have_order"] == '1' ? '1' : '0';
+if($crm_ckk == '1' && $crm_ref === ''){
+	echo "<script language=\"JavaScript\">alert('กรุณาระบุเลขที่อ้างอิง (CRM) เมื่อเลือกแลกสินค้า CRM');window.history.back();</script>";
+	exit();
+}
+$crm_ref = mysqli_real_escape_string($conn, $crm_ref);
 	
 $brnp_ckk =$_POST["brnp_ckk"];
 $brnp_no =$_POST["brnp_no"];		
@@ -56,7 +62,7 @@ if($_FILES['up_img3']['name']!=''){
 	
 
 $save="Update  hos__smp set
-smp_date = '".$smp_date."',address_name ='".$address_name."',customer_name ='".$customer_name."',comment_sale = '".$comment_sale."',sup_name = '".$sup_name."',sale_code = '".$sale_code."',comment_sup='".$comment_sup."',delivery_date='".$delivery_date."',date_send_key='".$date_send_key."',brnp_no='".$brnp_no."',brnp_ckk='".$brnp_ckk."',up_img1='".$up_img1."',up_img2='".$up_img2."',up_img3='".$up_img3."',crm_ref='".$crm_ref."',crm_ckk='".$crm_ckk."',delivery_type='".$delivery_type."'  where ref_idsmp = '".$ref_idsmp."'";
+smp_date = '".$smp_date."',address_name ='".$address_name."',customer_name ='".$customer_name."',comment_sale = '".$comment_sale."',sup_name = '".$sup_name."',sale_code = '".$sale_code."',comment_sup='".$comment_sup."',delivery_date='".$delivery_date."',date_send_key='".$date_send_key."',brnp_no='".$brnp_no."',brnp_ckk='".$brnp_ckk."',up_img1='".$up_img1."',up_img2='".$up_img2."',up_img3='".$up_img3."',crm_ref='".$crm_ref."',crm_ckk='".$crm_ckk."',have_order='".$have_order."',delivery_type='".$delivery_type."'  where ref_idsmp = '".$ref_idsmp."'";
 
 $qsave=mysqli_query($conn,$save);
 

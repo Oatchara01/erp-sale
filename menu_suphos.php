@@ -72,7 +72,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 		<div class="sidebar-group">
 			<button type="button" class="sidebar-group-btn"><span class="sidebar-icon"><i class="fa fa-cubes"></i></span><span class="sidebar-label">ใบเบิกสินค้า</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 			<div class="sidebar-submenu">
-				<a href="main_suphos_smp.php">สร้างใบเบิกสินค้า (สนับสนุนการขาย)</a>
+				<a href="register_supsmp.php">สร้างใบเบิกสินค้า (สนับสนุนการขาย)</a>
 				<a href="status_samplesup.php">รายการใบเบิกสินค้า (สนับสนุนการขาย)</a>
 			</div>
 		</div>

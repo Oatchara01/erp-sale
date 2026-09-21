@@ -159,24 +159,40 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 	<?php if ($showAttachFile) { ?>
 		<!-- TAB 3: แนบไฟล์ -->
 		<div id="tab_attach_file" class="so-3tab-content" style="display:<?php echo ($activeTabId === 'tab_attach_file') ? 'block' : 'none'; ?>;">
-			<?php if (!empty($attachFile['enabled'])) { ?>
+			<?php if (!empty($attachFile['enabled'])) {
+				// Optional overrides (defaults = slip1-slip5 / slots 2-5 / upload/): see js/doc-tabs-attach.js attachConfig().
+				$attachPrefix = $attachFile['file_prefix'] ?? 'slip';
+				$attachSlots = max(1, (int)($attachFile['slots'] ?? 5));
+				$attachFirstSlot = max(1, (int)($attachFile['first_slot'] ?? 2));
+				$attachBaseUrl = $attachFile['base_url'] ?? 'upload/';
+				$attachMaxBytes = (int)($attachFile['max_bytes'] ?? 1100000);
+				$attachAllowedExt = $attachFile['allowed_ext'] ?? '';
+				$attachAccept = $attachFile['accept'] ?? '';
+				$attachHint = $attachFile['hint'] ?? '';
+			?>
 				<h3 style="font-size: 18px; color: #3B3B3B; margin-bottom: 24px;">แนบไฟล์เพิ่มเติม</h3>
 				<hr style="border: 0; border-top: 1px solid #EBEBEB; margin-bottom: 24px;">
 
-				<button type="button" onclick="triggerAttachFile()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
+				<button type="button" onclick="triggerAttachFile()" style="background-color: #EFEBFF; color: #612989; border: none; border-radius: 24px; padding: 10px 24px; font-family: 'Prompt', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: <?php echo $attachHint !== '' ? '12' : '24'; ?>px;">
 					<img src="img/icons/import_file.png" alt="import_file" style="width: 16px; height: 16px;"> เพิ่มไฟล์
 				</button>
+				<?php if ($attachHint !== '') { ?>
+					<p style="margin: 0 0 24px; font-size: 13px; color: #7A767D;"><?php echo so_saved_h($attachHint); ?></p>
+				<?php } ?>
 
-				<div id="attach_file_list" style="display: flex; flex-wrap: wrap; gap: 16px;">
+				<div id="attach_file_list" style="display: flex; flex-wrap: wrap; gap: 16px;"
+					data-first-slot="<?php echo $attachFirstSlot; ?>"
+					data-last-slot="<?php echo $attachSlots; ?>"
+					data-base-url="<?php echo so_saved_h($attachBaseUrl); ?>"
+					data-max-bytes="<?php echo $attachMaxBytes; ?>"
+					data-allowed-ext="<?php echo so_saved_h($attachAllowedExt); ?>">
 					<!-- Dynamic files will go here -->
 				</div>
 
-				<!-- slip1 is reserved for payment proof; additional files use slip2-slip5. -->
-				<input type="file" name="slip1" id="hidden_slip1" style="display:none;" onchange="handleFileSelect(this, 1)">
-				<input type="file" name="slip2" id="hidden_slip2" style="display:none;" onchange="handleFileSelect(this, 2)">
-				<input type="file" name="slip3" id="hidden_slip3" style="display:none;" onchange="handleFileSelect(this, 3)">
-				<input type="file" name="slip4" id="hidden_slip4" style="display:none;" onchange="handleFileSelect(this, 4)">
-				<input type="file" name="slip5" id="hidden_slip5" style="display:none;" onchange="handleFileSelect(this, 5)">
+				<!-- Default: slip1 is reserved for payment proof; additional files use slip2-slip5. -->
+				<?php for ($attachSlot = 1; $attachSlot <= $attachSlots; $attachSlot++) { ?>
+					<input type="file" name="<?php echo so_saved_h($attachPrefix . $attachSlot); ?>" id="hidden_slip<?php echo $attachSlot; ?>" style="display:none;"<?php echo $attachAccept !== '' ? ' accept="' . so_saved_h($attachAccept) . '"' : ''; ?> onchange="handleFileSelect(this, <?php echo $attachSlot; ?>)">
+				<?php } ?>
 			<?php } else { ?>
 				<div class="so-section-title-container">
 					<h3 class="so-section-title">แนบไฟล์</h3>
@@ -305,4 +321,4 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 	<?php } ?>
 </div>
 <?php
-unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $productChecklists, $productChecklistRows, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showProductChecklists, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked, $productChecklistRow, $documentReturnLogRow);
+unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $productChecklists, $productChecklistRows, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showProductChecklists, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked, $productChecklistRow, $documentReturnLogRow, $attachPrefix, $attachSlots, $attachFirstSlot, $attachBaseUrl, $attachMaxBytes, $attachAllowedExt, $attachAccept, $attachHint, $attachSlot);

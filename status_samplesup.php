@@ -10,9 +10,9 @@ include "dbconnect_sale.php";
 <div class="w3-container w3-padding-large">
 <div class="w3-panel w3-light-grey"><h3>รายการใบเบิกสินค้าเพื่อสนับสนุนการขาย</h3></div>	
 <div class="w3-bar w3-quarter">
-วันที่ : <input name="start_date" class="w3-input" style="width:90%;" type="date" id="start_date" value = "<?php  echo $_GET["start_date"]; ?>"></div>
+วันที่ : <input name="start_date" class="w3-input" style="width:90%;" type="date" id="start_date" value = "<?php echo $_GET['start_date'] ?? ''; ?>"></div>
 <div class="w3-bar w3-quarter">
-ถึง :<input name="end_date" class="w3-input" style="width:90%;" type="date" id="end_date" value = "<?php  echo $_GET["end_date"]; ?>"></div>
+ถึง :<input name="end_date" class="w3-input" style="width:90%;" type="date" id="end_date" value = "<?php echo $_GET['end_date'] ?? ''; ?>"></div>
 
 
 
@@ -287,7 +287,9 @@ $sddd = "";
 }
 	
 	
-$strSQL = "SELECT *  FROM hos__smp  where send_sup = '1' $sddd";
+/* Draft (status_sup='Draft', send_sup=0) แสดงเฉพาะผู้สร้างเอง — เอกสารที่ส่งแล้วยังกรองตามเขตการขายเหมือนเดิม */
+$draftOwner = mysqli_real_escape_string($conn, trim($_SESSION['name'] . ' ' . $_SESSION['surname']));
+$strSQL = "SELECT *  FROM hos__smp  where ((send_sup = '1' $sddd) OR (status_sup = 'Draft' AND add_by = '".$draftOwner."'))";
 
 if($start_date !=""){ 
     $strSQL .= ' AND smp_date >= "'.$start_date.'"'; 
@@ -406,7 +408,9 @@ $objResult11 = mysqli_fetch_array($objQuery11);
 	<td><div align="left"><?php echo $objResult["ref_no"];?></p><?php echo $objResult["ref_no1"];?></div></td>
 				<td><div align="left"><?php echo $objResult["sale_code"];?></div></td>
 				
-				<?php if($objResult["status_sup"]=='Rejected'){	?>
+				<?php if($objResult["status_sup"]=='Draft'){	?>
+						<td bgcolor="#F1E1FF"><a href="register_supsmp.php?ref_idsmp=<?php echo urlencode($objResult["ref_idsmp"]);?>">Draft</a></td>
+				<?php }else if($objResult["status_sup"]=='Rejected'){	?>
 						<td bgcolor="#FF3030"><?php echo $objResult["status_sup"];?></td>
 				<?php }else if ($objResult["status_sup"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_sup"];?></td>
@@ -420,27 +424,29 @@ $objResult11 = mysqli_fetch_array($objQuery11);
 					<td ><?php echo "รอกดส่งหัวหน้าอนุมัติ";?></td>
 				<?php } ?>
 				<td>
-				<?php if($objResult["chang_ckk"]=='1'){ ?>
-				<a href="register_chang426_edit.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>	
+				<?php if($objResult["status_sup"]=='Draft'){ ?>
+				<a href="register_supsmp.php?ref_idsmp=<?php echo urlencode($objResult["ref_idsmp"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<?php }else if($objResult["chang_ckk"]=='1'){ ?>
+				<a href="register_chang426_edit.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET['start_date'] ?? ''; ?>&end_date=<?php echo $_GET['end_date'] ?? ''; ?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 				<?php }else{ ?>		
-				<a href="register_supsmp_edit.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_supsmp_edit.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>&start_date=<?php echo $_GET['start_date'] ?? ''; ?>&end_date=<?php echo $_GET['end_date'] ?? ''; ?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 				<?php } ?>								
 				</td>
 				
 				<td>
-						<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใบเบิกสินค้าใช่หรือไม่')==true){window.location='register_supsmp_createnew.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>';}><img src="img/create.png" width="23" height="23" border="0" /></a>
+						<?php if($objResult["status_sup"]!='Draft'){ ?><a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใบเบิกสินค้าใช่หรือไม่')==true){window.location='register_supsmp_createnew.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>';}><img src="img/create.png" width="23" height="23" border="0" /></a><?php } ?>
 						
 				
 					</td>
 				
 				<td>
 
-<a href="report_sample.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a>
+<?php if($objResult["status_sup"]!='Draft'){ ?><a href="report_sample.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a><?php } ?>
 				
 				</td>
 
 <td>
-<a href=javascript:if(confirm('!!!ต้องการคืนสินค้าใช่หรือไม่')==true){window.location='register_receive_smp.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>		</td>
+<?php if($objResult["status_sup"]!='Draft'){ ?><a href=javascript:if(confirm('!!!ต้องการคืนสินค้าใช่หรือไม่')==true){window.location='register_receive_smp.php?ref_idsmp=<?php echo $objResult["ref_idsmp"];?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a><?php } ?>		</td>
 			</tr>
 			<?php 
 			$i++; 

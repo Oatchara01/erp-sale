@@ -1,565 +1,572 @@
-<?php include('head.php'); ?>
-<?php include('dbconnect_sale.php'); ?>
+<?php
+require_once __DIR__ . '/includes/so_saved_helpers.php';
+require_once __DIR__ . '/includes/smp_repo.php';
 
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-
-<link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
-<script type="text/javascript" src="js/autocomplete.js"></script>
-<script type="text/javascript" src="js/jquery.min.js"></script>
-
-<style type="text/css">
-<!--
-.style15 {
-	font-size: 18px; color: #000000;
-}
-.style30 {font-size: 12; }
-.style32 {font-size: 11px}
-.style33 {font-size: 12px; }
-.style34 {color: #FF0000}
-.style35 {font-size: 14px; color: #f2f2f2; }
-.style37 {color: #FF0000; font-size: 14px; }
-.style38 {color: #f2f2f2}
-.style39 {font-size: 14px; color: #000000;}
-.style40 {font-size: 14px; color: #FF0000; }
--->
-
-.button {
-    background-color: #339900;
-    border: none;
-    color: white;
-    padding: 14px 16px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
-}
-
-.button1 {border-radius: 2px;}
-.button2 {border-radius: 4px;}
-.button3 {border-radius: 8px;}
-.button4 {border-radius: 12px;}
-.button5 {border-radius: 50%;}
-</style>
-
-	
-<style>
-	.none {
-    display:none;
+/* ด่านตัดสินใจก่อน head.php (head.php พ่น HTML ทันที header() จึงใช้หลังจากนั้นไม่ได้)
+   หน้านี้ครอบคลุมสร้างใหม่ + Draft + Request — สถานะอื่น (Approve/ยกเลิก/Rejected) ใช้หน้าแก้ไขเดิม */
+$smpRequestedRef = trim((string)($_GET['ref_idsmp'] ?? ''));
+if ($smpRequestedRef !== '') {
+	include __DIR__ . '/dbconnect.php';
+	$smpPreloaded = smp_load_document($conn, $smpRequestedRef);
+	if ($smpPreloaded !== null && !in_array((string)$smpPreloaded['status_sup'], array('Draft', 'Request'), true)) {
+		header('Location: register_supsmp_edit.php?ref_idsmp=' . rawurlencode($smpRequestedRef));
+		exit();
 	}
-</style>
-
-<div class="w3-white w3-container">
-	<div class="w3-panel w3-light-grey"><h3>ใบเบิกสินค้าเพื่อสนับสนุนการขาย</h3></p>	
-	<h5>(Sample Request)</h5>
-	</div>
-	<form action="register_supsmp1.php" method="post" name="frmMain" enctype="multipart/form-data"  onSubmit="JavaScript:return fncSubmit();" >
-		
-<script language="javascript">
-function fncSubmit()   //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
-{
-	
-	if(document.frmMain.start_time.value == ""){
-			
-		alert('กรุณาใส่เวลาส่ง');
-		document.frmMain.start_time.focus();
-		return false;
-		}
-	
-		if(document.frmMain.customer_name1.value == ""){
-		alert('กรุณาใส่ชื่อลูกค้า');
-		document.frmMain.customer_name1.focus();
-		return false;
-		}
-	
-	if(document.frmMain.customer_tel.value == ""){
-		alert('กรุณาใส่เบอร์โทรลูกค้า');
-		document.frmMain.customer_tel.focus();
-		return false;
-		}
-	if(document.frmMain.address_1.value == ""){
-		alert('กรุณาใส่สถานที่ส่งสินค้า');
-		document.frmMain.address_1.focus();
-		return false;
-		}
-	
-		if(document.frmMain.address_name.value == ""){
-		alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-		document.frmMain.address_name.focus();
-		return false;
-		}
-	
-	if(document.frmMain.address_send.value == ""){
-		alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-		document.frmMain.address_send.focus();
-		return false;
-		}
-		
-		if(document.frmMain.province_name.value == ""){
-		alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-		document.frmMain.province_name.focus();
-		return false;
-		}
-		
-	document.frmMain.submit();
-}
-
-
-</script>
-	<div class="w3-bar">
-		
-		<?php
-			include('dbconnect.php');
-
-			$yearMonth = substr(date("Y")+543, -2).date("m");
-$sql = "SELECT MAX(ref_idsmp) AS MAXID FROM hos__smp";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
-
-$maxId1 = substr($maxId3,0,-4);
-$so = "RSMP";
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -4);
-$nextId = $yearMonth.$maxId2;
-}
-else 
-{
-$maxId1 = "0001"; 
-$nextId = $yearMonth.$maxId1;
-
-}
-
-
-		
-date_default_timezone_set("Asia/Bangkok");
-
-$month = date('m');
-$day = date('d');
-$year = date('Y');
-
-$today = $year . '-' . $month . '-' . $day;
-
-		?>
-		<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php echo $so; echo $nextId; ?></span>
-		<input type="hidden" name="ref_idsmp" class="w3-input" value="<?php echo $so; echo $nextId; ?>">
-	</div>
-
-	<div class="w3-bar w3-padding-small"></div><!-- bar -->
-		<div class="w3-half 1">
-	<div class="w3-bar w3-margin-bottom">
-			<input type="radio" name="type_company"  checked ='checked' value="1">&nbsp;AWL
-
-				</div>		
-	
-		<div class="w3-bar w3-margin-bottom">
-			วันที่คลัง  :<input type="date" name="smp_date" value = "<?php echo $today; ?>" style="width:30%;" class="w3-input"  required>
-</div>
-			<div class="w3-bar w3-margin-bottom">
-ที่อยุ่ :<textarea name="address_name" id="address_name" class="w3-input" style="width:90%;"  required></textarea>
-</div>
-
-<div class="w3-bar w3-margin-bottom">
-เขตการขาย :
-<?php 
-	if ($_SESSION['code']=='SS1'){
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input"  required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
 }
 ?>
-</select>
+<?php include('head.php'); ?>
 <?php
-}else 	if ($_SESSION['code']=='SS2'){
+include('dbconnect_sale.php');
+include('dbconnect.php');
+date_default_timezone_set('Asia/Bangkok');
 
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input" required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+$smpDoc = null;
+$smpRegister = null;
+$smpTransaction = null;
+$smpItems = array();
+$smpCustomer = null;
+if ($smpRequestedRef !== '') {
+	$smpDoc = smp_load_document($conn, $smpRequestedRef);
+	if ($smpDoc === null) {
+		echo '<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;"><p>ไม่พบเอกสารเลขที่ ' . so_saved_h($smpRequestedRef) . '</p></div>';
+		include 'foot.php';
+		exit();
+	}
+	$smpRegister = smp_load_row($conn, 'tb_register_data', 'ref_id', $smpDoc['ref_idsmp']);
+	$smpTransaction = smp_load_row($conn, 'tb_transaction', 'ref_id', $smpDoc['ref_idsmp']);
+	$smpItems = smp_load_items($conn, $smpDoc['ref_idsmp']);
+	if (trim((string)$smpDoc['bill_id']) !== '') {
+		$custStmt = mysqli_prepare($conn, 'SELECT c.customer_id, c.customer_name, c.bill_name, c.cus_tel, c.bill_tel, c.credit_thb, c.credit_ckk, c.status_cus, c.vip_ckk, t.type_name
+			FROM tb_customer c LEFT JOIN tb_typecustomer t ON c.type_customer = t.type_id WHERE c.customer_id = ? LIMIT 1');
+		mysqli_stmt_bind_param($custStmt, 's', $smpDoc['bill_id']);
+		mysqli_stmt_execute($custStmt);
+		$smpCustomer = mysqli_fetch_assoc(mysqli_stmt_get_result($custStmt)) ?: null;
+		mysqli_stmt_close($custStmt);
+	}
 }
-?>
-</select>
-<?php
-}else 	if ($_SESSION['code']=='SS3'){
+$smpHasDocument = ($smpDoc !== null);
+$smpIsDraft = $smpHasDocument && (string)$smpDoc['status_sup'] === 'Draft';
+$smpIsRequest = $smpHasDocument && (string)$smpDoc['status_sup'] === 'Request';
 
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input" required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+/* ใบสั่งขายอ้างอิง (หมายเลขคำสั่งซื้อ): Draft ใช้ค่าที่บันทึกไว้ก่อนเสมอ; เอกสารใหม่ค่อย lookup จาก ?ref_id=; เปิดตรงไม่มี ref_id = ว่าง */
+$smpSaleRef = '';
+$smpOrderId = '';
+if ($smpDoc !== null) {
+	$smpSaleRef = trim((string)$smpDoc['ref_idsale']);
+	$smpOrderId = trim((string)$smpDoc['order_id']);
+} elseif (trim((string)($_GET['ref_id'] ?? '')) !== '') {
+	$smpRequestedSale = trim((string)$_GET['ref_id']);
+	$smpSaleOrder = smp_lookup_sale_order($conn, $smpRequestedSale);
+	if ($smpSaleOrder === null) {
+		echo '<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;"><p>ไม่พบใบสั่งขายเลขที่อ้างอิง ' . so_saved_h($smpRequestedSale) . ' — กรุณาตรวจสอบลิงก์ หรือเปิดหน้านี้โดยไม่ระบุใบสั่งขาย</p></div>';
+		include 'foot.php';
+		exit();
+	}
+	$smpSaleRef = $smpSaleOrder['ref_idsale'];
+	$smpOrderId = $smpSaleOrder['order_id'];
 }
-?>
-</select>	
-	
-<?php
-}else 	if ($_SESSION['code']=='SS5'){
+$referenceId = $smpHasDocument ? $smpDoc['ref_idsmp'] : smp_next_ref_id($conn);
 
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input" required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+/* ค่าที่เติมกลับเข้าฟอร์มตอนเปิด Draft — key = name ของ input (JS เติมให้ทั้ง text/select/radio/checkbox) */
+$blankDate = function ($v) {
+	$v = trim((string)$v);
+	return ($v === '' || strpos($v, '0000-00-00') === 0) ? '' : substr($v, 0, 10);
+};
+/* ช่องเวลาเป็น type=time รับเฉพาะ HH:MM — Draft เก่าเก็บเป็น text อิสระ (เช่น "9.30") จึงแปลงถ้าอ่านได้ ไม่งั้นเว้นว่าง */
+$smpTimeOf = function ($v) {
+	return preg_match('/(?<!\d)([01]?\d|2[0-3])[:.]([0-5]\d)(?!\d)/', (string)$v, $m) ? sprintf('%02d:%s', $m[1], $m[2]) : '';
+};
+$smpPrefill = array();
+if ($smpDoc !== null) {
+	$smpPrefill = array(
+		'type_company'  => (string)$smpDoc['type_company'],
+		'sale_code'     => (string)$smpDoc['sale_code'],
+		'smp_date'      => $blankDate($smpDoc['smp_date']) ?: date('Y-m-d'), /* ช่องซ่อนอยู่ — ห้ามว่าง ไม่งั้น validate ผ่านไม่ได้ */
+		'comment_sale'  => (string)$smpDoc['comment_sale'],
+		'comment_sup'   => (string)$smpDoc['comment_sup'],
+		'brnp_ckk'      => (string)$smpDoc['brnp_ckk'],
+		'brnp_no'       => (string)$smpDoc['brnp_no'],
+		'crm_ckk'       => (string)$smpDoc['crm_ckk'] === '1' ? '1' : '0',
+		'crm_ref'       => (string)$smpDoc['crm_ref'],
+		'have_order'    => (string)$smpDoc['have_order'] === '1' ? '1' : '0',
+		'customer_id'   => (string)$smpDoc['bill_id'],
+		'customer_name' => (string)$smpDoc['customer_name'],
+		'cus_tel'       => (string)$smpDoc['customer_tel'],
+		'address_name'  => (string)$smpDoc['address_name'],
+		'cus_province'  => (string)($smpDoc['customer_province'] ?? ''),
+		'cus_ampher'    => (string)($smpDoc['customer_ampher'] ?? ''),
+		'cus_postcode'  => (string)($smpDoc['customer_postcode'] ?? ''),
+		'delivery_type' => (string)$smpDoc['delivery_type'],
+		'start_date'    => $blankDate($smpDoc['delivery_date']),
+		'between_date'  => (string)$smpDoc['date_send_key'],
+		'shipping_date' => $blankDate($smpDoc['date_ker']),
+		'shipping_cost' => ((float)$smpDoc['ker_bath'] > 0) ? (string)$smpDoc['ker_bath'] : '',
+		'shipping_ref1' => (string)$smpDoc['ref_no'],
+		'shipping_ref2' => (string)$smpDoc['ref_no1'],
+	);
 }
-?>
-</select>		
-<?php
-}else 	if ($_SESSION['code']=='SUP_MK'){
-
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input"  required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_allwell ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+if ($smpRegister !== null) {
+	$smpPrefill += array(
+		'start_time'        => $smpTimeOf($smpRegister['start_time']),
+		'end_time'          => $smpTimeOf($smpRegister['end_time']),
+		'status'            => (string)$smpRegister['status'],
+		'fix_datetime'      => (string)$smpRegister['fix_date'],
+		'on_time'           => (string)$smpRegister['on_time'],
+		'call_customer'     => (string)$smpRegister['call_customer'],
+		'call_back'         => (string)$smpRegister['call_employee'],
+		'no_money'          => (string)$smpRegister['no_price'],
+		'want_bus'          => (string)$smpRegister['want_bus'],
+		'status_comment'    => (string)$smpRegister['status_comment'],
+		'customer_name1'    => (string)$smpRegister['customer_name'],
+		'customer_tel'      => (string)$smpRegister['customer_tel'],
+		/* ช่องที่อยู่ส่งสินค้ามีช่องเดียว (hidden address_1/address_name1 ถูก JS copy ให้) — Draft เก่าที่สองค่าไม่ตรงกันใช้ address_name ก่อน ไม่งั้นถอยไป address_1 */
+		'address_merged_ui' => trim((string)$smpRegister['address_name']) !== '' ? (string)$smpRegister['address_name'] : (string)$smpRegister['address_1'],
+		'address_send'      => (string)$smpRegister['address_send'],
+		'province_name'     => (string)$smpRegister['province_name'],
+		'location_link'     => (string)$smpRegister['location_link'],
+		'transport_company' => (string)$smpRegister['transport_company'],
+		'customer_typename' => (string)$smpRegister['type_customer'],
+		'employee_tel'      => (string)$smpRegister['employee_tel'],
+	);
 }
-?>
-</select>
-
-
-		<?php
-}else 	if ($_SESSION['code']=='SUP_EN'){
-
-	?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input"  required>
-<option value="">**Please Select**</option>
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+if ($smpTransaction !== null) {
+	$split = function ($v) {
+		$parts = array_map('trim', explode(' x ', (string)$v));
+		return array_pad($parts, 3, '');
+	};
+	$stairs = $split($smpTransaction['bundai_big']);
+	$elevDoor = $split($smpTransaction['lip_big']);
+	$elevRoom = $split($smpTransaction['lip_long']);
+	$smpPrefill += array(
+		'park_front'       => (string)$smpTransaction['car_home'] === '1' ? '1' : '0',
+		'park_location'    => (string)$smpTransaction['car_park'],
+		'is_high_roof'     => (string)$smpTransaction['height_ltd'],
+		'entrance_type'    => (string)$smpTransaction['bundai'] === '1' ? '2' : '1',
+		'stair_count'      => (string)$smpTransaction['unit_bundai'],
+		'install_floor'    => (string)$smpTransaction['install'],
+		'room_type'        => (string)$smpTransaction['install_room'] !== '' ? (string)$smpTransaction['install_room'] : '1',
+		'door_width'       => (string)$smpTransaction['room_bigger'],
+		'door_height'      => (string)$smpTransaction['room_longer'],
+		'stair_width'      => $stairs[0],
+		'stair_height'     => $stairs[1],
+		'elev_door_width'  => $elevDoor[0],
+		'elev_door_height' => $elevDoor[1],
+		'elev_width'       => $elevRoom[0],
+		'elev_height'      => $elevRoom[1],
+		'elev_depth'       => $elevRoom[2],
+		'elev_capacity'    => (string)$smpTransaction['lip_weight'],
+		'move_furn'        => (string)$smpTransaction['want_employee'] === '1' ? '1' : '0',
+		'move_furn_count'  => (string)$smpTransaction['employee_unit'],
+		'move_furn_detail' => (string)$smpTransaction['ferniger_name'],
+		'addr_note'        => (string)$smpTransaction['description'],
+	);
 }
-?>
-</select>
-	
-<?php
-}else 	if ($_SESSION['code']=='HR'){
 
-	?>	
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input"  required>
-<option value="HR">HR</option>
-
-</select>	
-
-
-		<?php
-}else 	{
-			?>
-<select name="sale_code" id="sale_code" style="width:330px" class="w3-input"  required>
-<option value="">**Please Select**</option>
-
-<?php
-
-$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-//echo $strSQL5;
-//exit();
-$objQuery5 = mysqli_query($com,$strSQL5);
-while($objResuut5 = mysqli_fetch_array($objQuery5))
-{
-?>
-<option value="<?php echo $objResuut5["sale_code"];?>"><?php echo $objResuut5["sale_code"];?> - <?php echo $objResuut5["sale_name"];?></option>
-<?php
+$smpSavedItems = array();
+foreach ($smpItems as $row) {
+	$smpSavedItems[] = array(
+		'product_id'   => (string)$row['product_id'],
+		'access_code'  => (string)$row['access_code'],
+		'product_name' => (string)$row['sol_name'],
+		'unit_name'    => (string)$row['unit_name'],
+		'sale_count'   => (string)(float)$row['sale_count'],
+		'unit_price'   => (string)$row['unit_price'],
+		'waranty'      => (string)$row['waranty'],
+		'sn'           => (string)$row['sn'],
+		'sale_remark'  => (string)$row['sale_remark'],
+		'br_no'        => (string)$row['br_no'],
+		'clear_br'     => (string)$row['clear_br'],
+	);
 }
-?>
-</select>
-
-
-				<?php
+$smpSavedFiles = array();
+if ($smpDoc !== null) {
+	for ($i = 1; $i <= 3; $i++) {
+		$smpSavedFiles[$i] = trim((string)$smpDoc['up_img' . $i]);
+	}
 }
-			
-?>
-</div>
-			
-<div class="w3-bar w3-margin-bottom">			
-			แนบไฟล์
-<input name="up_img1" style="width:90%;"  class="w3-input"  type="file">
-</div>
 
-<div class="w3-bar w3-margin-bottom">			
-			
-<input name="up_img2" style="width:90%;"  class="w3-input"  type="file">
-</div>
-<div class="w3-bar w3-margin-bottom">			
-			
-<input name="up_img3" style="width:90%;"  class="w3-input"  type="file">
-</div>				
-			
-			
-</div>
-<div class="w3-half 1">
-<div class="w3-bar w3-margin-bottom">
-			ชื่อลูกค้า 
-			<input type="text" name="customer_name" id="customer_name" class="w3-input" style="width:90%;"  required>
-</div>
-
-<div class="w3-bar w3-margin-bottom">
-			Comment Sale:&nbsp;
-			<textarea name="comment_sale" id="comment_sale" class="w3-input" style="width:90%;"  required></textarea>
-</div>
-<div class="w3-bar w3-margin-bottom">
-			Comment Sup :&nbsp;
-			<textarea name="comment_sup" id="comment_sup" class="w3-input" style="width:90%;"  required></textarea>
-</div>
-<div class="w3-bar w3-margin-bottom">
-	<input type="checkbox" name="brnp_ckk" id="brnp_ckk"  value ='1'>
-			เคลียร์ใบยืม เลขที่  
-			<input type="text" name="brnp_no" id="brnp_no" class="w3-input" style="width:90%;"  >
-</div>			
-	
-	
-</div>
-		
-		
-
-	</p>
-	<div class="w3-bar w3-light-grey w3-border">
-  <a class="w3-bar-item w3-button" onclick="openCity1('pd')"><font color="#404040"><b>รายการสินค้า</b></font></a>
- <a class="w3-bar-item w3-button" onclick="openCity1('cs')"><font color="#404040"><b>รายละเอียดการจัดส่ง</b></font></a>
-</div>
-
-
-<div id="pd" class="w3-container city1">
-<?php
-	if($_SESSION["department"]=='วิศวกรรม'){
-		include ('detail_engsmp.php');
-	}else{	
-	include ('detail_salesmp.php');
-		}
-		?>
-</div>
-
-<div id="cs" class="w3-container city1" style="display:none">
-
-<input type="radio" name="delivery_type" value="1"  >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2" checked='checked'>&nbsp;บริษัทจัดส่ง 
-
-</p>
-
-
-
-
- วันที่ รับ-ส่ง :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <input name="start_date" type='date' id="start_date"   class="button4" style="width:20%" /></p>
-
-
-วันที่ต้องการโดยประมาณ :
-	  <input name="between_date"  class="button4" type='text' id="between_date" style="width:20%" />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
- เวลา :&nbsp;&nbsp;&nbsp;&nbsp;
-<input id="start_time"  name="start_time"  class="button4" type="text" style="width:10%"/>
-ถึง
-<input id="end_time" name="end_time"  class="button4" type="text" style="width:10%"/></p>
-
-
-
-สถานะการทำงาน : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-<input type='radio'  name='status' id = 'status' value='ส่ง' checked='checked'/>ส่ง
-&nbsp; <input type='radio'  name='status' id = 'status' value='รับ' />รับ
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-สถานะ :&nbsp;&nbsp;
-      <input name="status_comment" type='text' id="status_comment"  style="width:22%" class="button4"/></p>
-
-
-<input type="checkbox"  name="fix_datetime" id = "fix_datetime" value="1">นัดวันและเวลาเรียบร้อยแล้ว &nbsp;&nbsp;
-<input type="checkbox"  id = "on_time" name="on_time" value="1">งานสำคัญต้องตรงเวลา&nbsp;&nbsp;
-
-
-<input type="checkbox"  id = "call_customer" name="call_customer" value="1">โทรแจ้งลูกค้าก่อนไป
-		
-&nbsp;&nbsp;<input type="checkbox"  id = "call_back" name="call_back" value="1">ต้องการให้โทรกลับเมื่อส่งสินค้าเสร็จแล้ว&nbsp;&nbsp;
-<input type="checkbox"  id = "no_money" name="no_money" value="1">ไม่ต้องเก็บเงิน&nbsp;&nbsp;
-<input type="checkbox"   name="want_bus" value="1">ต้องการรถใหญ่</p>
-		
-	 
-
-
-<?php
-if($_SESSION['department']=="วิศวกรรม"){
-	$department="ฝ่ายวิศวกรรม";
-}else{
-	$department="ฝ่ายขาย";	
+$teamTable = 'tb_team_adm';
+$teamWhere = '';
+switch ($_SESSION['code'] ?? '') {
+	case 'SS1': $teamTable = 'tb_team_ss1'; break;
+	case 'SS2': $teamTable = 'tb_team_ss2'; break;
+	case 'SS3': $teamTable = 'tb_team_ss3'; break;
+	case 'SS5': $teamTable = 'tb_team_ss3'; $teamWhere = " WHERE sale_code IN ('S31','S32')"; break;
+	case 'SUP_MK': $teamTable = 'tb_team_allwell'; break;
+	case 'SUP_EN': $teamTable = 'tb_team_en'; break;
 }
-?>
-
-แผนก - ฝ่าย :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input name="department_show" value="<?php echo $department; ?>" class="button4" type='text' id="department_show">
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-       ประเภทลูกค้า :
-<select name="customer_typename" id="customer_typename" class="button4"   >
-<option value="">**Please Select Item**</option>
-<?php
-$strSQL4 = "SELECT * FROM tb_typecustomer ORDER BY type_name ASC";
-$objQuery4 = mysqli_query($conn,$strSQL4);
-while($objResuut4 = mysqli_fetch_array($objQuery4))
-{
-?>
-<option value="<?php echo $objResuut4["type_name"];?>"><?php echo $objResuut4["type_name"];?></option>
-<?php
+$saleOptions = array();
+if (($_SESSION['code'] ?? '') === 'HR') {
+	$saleOptions[] = array('sale_code' => 'HR', 'sale_name' => 'HR');
+} else {
+	$q = mysqli_query($com, "SELECT sale_code, sale_name FROM {$teamTable}{$teamWhere} ORDER BY sale_code ASC");
+	if ($q) while ($row = mysqli_fetch_assoc($q)) $saleOptions[] = $row;
 }
+$provinces = array();
+$q = mysqli_query($conn, 'SELECT province_name FROM tb_province ORDER BY province_ID');
+if ($q) while ($row = mysqli_fetch_assoc($q)) $provinces[] = $row['province_name'];
+
+$isEngineer = ($_SESSION['department'] ?? '') === 'วิศวกรรม';
+$department = $isEngineer ? 'ฝ่ายวิศวกรรม' : 'ฝ่ายขาย';
+$workType = $isEngineer ? 'วิศวกรรม' : 'Sale';
+$employeeName = $smpRegister !== null ? (string)$smpRegister['employee_name'] : (string)($_SESSION['name'] ?? '');
+$assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 ?>
-</select></p>
 
+<link rel="stylesheet" href="css/so-core.css?v=<?php echo $assetVersion('css/so-core.css'); ?>">
+<link rel="stylesheet" href="css/register-suphos.css?v=<?php echo $assetVersion('css/register-suphos.css'); ?>">
+<link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo $assetVersion('css/register-supbrcshos.css'); ?>">
+<link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo $assetVersion('css/credit-term-modal.css'); ?>">
+<link rel="stylesheet" href="css/register-supsmp.css?v=<?php echo $assetVersion('css/register-supsmp.css'); ?>">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/customer-popup.js?v=<?php echo $assetVersion('js/customer-popup.js'); ?>"></script>
+<script src="js/credit-term-modal.js?v=<?php echo $assetVersion('js/credit-term-modal.js'); ?>"></script>
 
-       หน่วยงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-	<input name="company_name" value="<?php echo 'ออลล์เวล ไลฟ์ บจก.'; ?>" class="button4" type='text' id="company_name">
-
-&nbsp;&nbsp;&nbsp;&nbsp;
-<?php
-if($_SESSION['department']=="วิศวกรรม"){
-$sale='วิศวกรรม';
-	}else{
-$sale='Sale';	
-}
-?>
-       ประเภทงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	   <input name="department_name" value="<?php echo $sale; ?>"  class="button4" type='text' id="department_name">
-
-</p>
-
-
-
-ชื่อพนักงาน :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input name="employee_name"  class="button4" type='text' value="<?php echo $_SESSION['name']; ?>" id="employee_name" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
- เบอร์โทรพนักงาน :&nbsp;
-<input name="employee_tel"  class="button4" type='text' id="employee_tel" >
-<input name="add_by" value="<?php echo $_SESSION['name']; ?>&nbsp;<?php echo $_SESSION['surname']; ?>" type='hidden' class="button4" >
-
-</p>
-จังหวัด :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  
-<select name="province_name" id ="province_name" class="button4" style="width:30%" >
-<option value="">**Please Select Item**</option>
-<?php
-$strSQL5 = "select * from tb_province order by province_ID ";
-$objQuery5 = mysqli_query($conn,$strSQL5);
-if (!$objQuery5) {
-	echo "Failed to fetch to MySQL: " . mysqli_error();
-}
-while ($objResuut5 = mysqli_fetch_array($objQuery5,MYSQLI_ASSOC)) {
-?>
-<option class="w3-bar-item w3-button"  value="<?php echo $objResuut5['province_name']; ?>"><?php echo $objResuut5['province_name']; ?></option>
+<?php if (($_GET['saved'] ?? '') === '1' || ($_GET['submitted'] ?? '') === '1' || ($_GET['updated'] ?? '') === '1') { ?>
+	<script>document.addEventListener('DOMContentLoaded', function () { window.history.replaceState({}, document.title, 'register_supsmp.php?ref_idsmp=<?php echo rawurlencode($referenceId); ?>'); });</script>
 <?php } ?>
-</select>
-</p>
-สถานที่ส่งสินค้า :</p>
-   <textarea  class="button4" name="address_1" style="width:50%" > </textarea>           
-</p>
-ที่อยู่ในการส่งสินค้า :</p>
-       
-<textarea  class="button4" name="address_name1" style="width:50%" > </textarea>
-</p>
 
-  สถานที่ติดตั้งเครื่อง :</p>
-<textarea   class="button4" name="address_send"  style="width:50%" rows="2"></textarea>
-</p>
-</p>
-ชื่อผู้ติดต่อ  :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input name="customer_name1"  class="button4" type='text' id="customer_name1">
+<form action="<?php echo $smpIsRequest ? 'register_supsmp_update1.php' : 'register_supsmp1.php'; ?>" method="post" name="frmMain" id="smp-form" enctype="multipart/form-data" novalidate>
+	<input type="hidden" name="ref_idsmp" id="ref_idsmp" value="<?php echo $smpHasDocument ? so_saved_h($referenceId) : ''; ?>">
+	<input type="hidden" name="ref_idsmp_preview" value="<?php echo so_saved_h($referenceId); ?>">
+	<input type="hidden" name="add_by" value="<?php echo so_saved_h(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')); ?>">
+	<input type="hidden" name="brnp_ckk" id="brnp_ckk" value="0">
+	<input type="hidden" name="department_show" value="<?php echo so_saved_h($department); ?>">
+	<input type="hidden" name="department_name" value="<?php echo so_saved_h($workType); ?>">
 
+	<div class="smp-layout">
+		<div class="so-header-container">
+			<div class="so-header-left">
+				<h1 class="so-title">สร้างใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP)</h1>
+				<div class="so-ref-info">
+					<span class="so-ref-label">เลขที่อ้างอิง</span>
+					<span class="so-ref-value"><?php echo so_saved_h($referenceId); ?></span>
+				</div>
+			</div>
+			<div class="so-header-right">
+				<button type="button" class="btn-so-secondary" onclick="smpOpenClearLoanModal();">เคลียร์ยืม</button>
+				<button type="button" class="btn-preview-so" onclick="smpOpenPreview();"><i class="far fa-file-alt"></i> Preview</button>
+			</div>
+		</div>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
- เบอร์โทรลูกค้า :
-<input name="customer_tel"  class="button4" type='text' id="customer_tel" >
-</p>
-เลขที่เอกสาร/เลขที่เครื่อง : </p>
-<textarea name="product_sn"  class="button4" id="product_sn" style="width:50%" rows="2"></textarea>
-</p>
-สินค้า/เอกสาร :</p>
-<textarea name="product"  class="button4" id="product" style="width:50%" rows="2"></textarea>
+		<!-- ===================== ข้อมูลเอกสาร ===================== -->
+		<div class="so-card smp-doc-card">
+			<div class="so-grid-3 smp-doc-top">
+				<div class="so-field-group"><label class="so-label" for="type_company">บริษัท<span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="type_company" id="type_company"><option value="1">AWL</option><option value="2">NBM</option></select></div></div>
+				<div class="so-field-group"><label class="so-label" for="sale_code">แผนก/เขตการขาย<span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="sale_code" id="sale_code"><option value="">Select</option><?php foreach ($saleOptions as $opt) { ?><option value="<?php echo so_saved_h($opt['sale_code']); ?>"><?php echo so_saved_h($opt['sale_code'] . ' - ' . $opt['sale_name']); ?></option><?php } ?></select></div></div>
+			</div>
+			<div class="so-section-title-container"><h2 class="so-section-title">ข้อมูลเอกสาร</h2><hr class="so-divider"></div>
+			<div class="so-grid-3 smp-align-end">
+				<div class="so-field-group"><label class="so-label" for="order_id">หมายเลขคำสั่งซื้อ</label><input class="so-input" type="text" id="order_id" value="<?php echo so_saved_h($smpOrderId); ?>" readonly tabindex="-1" placeholder="-"><input type="hidden" name="ref_idsale" id="ref_idsale" value="<?php echo so_saved_h($smpSaleRef); ?>"></div>
+				<div class="so-field-group"><label class="smp-pill-toggle"><input type="checkbox" name="crm_ckk" id="crm_ckk" value="1" aria-controls="crm_ref"><span>แลกสินค้า CRM</span></label></div>
+				<div class="so-field-group"><label class="so-label" for="crm_ref">เลขที่อ้างอิง (CRM)<span class="required" id="crm_ref_required" hidden>*</span></label><input class="so-input" type="text" name="crm_ref" id="crm_ref" maxlength="300" placeholder="เลขที่อ้างอิง" autocomplete="off" disabled></div>
+			</div>
+			<div class="so-grid-3 smp-doc-bottom">
+				<div class="so-field-group"><label class="smp-pill-toggle"><input type="checkbox" name="have_order" id="have_order" value="1"><span>ออเดอร์ฝาก</span></label></div>
+			</div>
+			<!-- ฟิลด์เดิมที่ไม่แสดงใน UI แต่ยังทำงาน: วันที่เอกสาร (ตรวจเดือนปิดเอกสาร), ความเห็นฝ่ายสนับสนุน, เลขที่ใบยืม (flow เคลียร์ยืม) -->
+			<input type="hidden" name="smp_date" id="smp_date" value="<?php echo date('Y-m-d'); ?>">
+			<input type="hidden" name="comment_sup" id="comment_sup" value="">
+			<input type="hidden" name="brnp_no" id="brnp_no" value="">
+		</div>
 
+		<!-- ===================== หมายเหตุ ===================== -->
+		<div class="so-card smp-note-card">
+			<div class="so-section-title-container"><h2 class="so-section-title">หมายเหตุ</h2><hr class="so-divider"></div>
+			<div class="smp-note-grid">
+				<div class="so-field-group"><span class="so-label">พนักงาน</span><span class="smp-employee-text"><?php echo so_saved_h($employeeName); ?></span><input type="hidden" name="employee_name" id="employee_name" value="<?php echo so_saved_h($employeeName); ?>"></div>
+				<div class="so-field-group"><label class="so-label" for="comment_sale">หมายเหตุ</label><input class="so-input" type="text" name="comment_sale" id="comment_sale" placeholder="ใส่รายละเอียดเพิ่มเติม" autocomplete="off"></div>
+			</div>
+		</div>
 
-</p>
-รายละเอียดเพิ่มเติม :</p> 
-     <textarea name="description"  class="button4" id="description" style="width:50%" rows="2"></textarea>
+		<!-- ===================== ข้อมูลลูกค้า ===================== -->
+		<div class="so-card">
+			<div class="so-section-title-container"><h2 class="so-section-title">ข้อมูลลูกค้า</h2><hr class="so-divider"></div>
+			<input type="hidden" name="customer_id" id="customer_id" value="">
+			<input type="hidden" name="customer_typename" id="customer_typename" value="">
+			<!-- ไม่แสดงช่องเบอร์เจ้าหน้าที่แล้ว แต่คงค่าเดิมของ Draft ไว้ (หน้า edit/approve ยังใช้ tb_register_data.employee_tel) -->
+			<input type="hidden" name="employee_tel" id="employee_tel" value="">
+			<input type="hidden" id="bill_id" value=""><input type="hidden" id="h_bill_id" value=""><input type="hidden" id="credit_thb" value="">
+			<div class="so-customer-top-grid">
+				<div class="so-customer-top-left">
+					<div class="so-customer-pills-row">
+						<button type="button" class="btn-add-customer-pill" onclick="smpOpenCustomerPopup('customer');"><img src="img/icons/add_user.png" alt="add_user" style="width: 23px;"> ข้อมูลลูกค้า</button>
+					</div>
+					<div class="so-field-group" style="margin-bottom: 0;">
+						<label class="so-label" for="customer_name">ชื่อลูกค้า<span class="required">*</span></label>
+						<div class="so-input-wrapper"><input type="text" name="customer_name" id="customer_name" class="so-input" placeholder="ระบุชื่อลูกค้า"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('customer_name').value='';" aria-label="ล้างค่า"></button></div>
+					</div>
+				</div>
+				<div class="so-customer-top-right">
+					<div class="so-field-group" style="height: 100%; margin-bottom: 0;">
+						<label class="so-label">ข้อมูลลูกค้า</label>
+						<div class="customer-info-display-card">
+							<div class="cidc-col">
+								<div class="cidc-row"><div class="cidc-label">รหัสลูกค้า</div><div class="cidc-value"><span id="display_customer_id" class="cidc-display-text"></span></div></div>
+								<div class="cidc-row"><div class="cidc-label">เบอร์โทรศัพท์</div><div class="cidc-value"><span id="display_customer_tel" class="cidc-display-text"></span></div></div>
+								<div class="cidc-row"><div class="cidc-label">สถานะลูกค้า</div><div class="cidc-value"><img src="img/icons/vip.png" class="cidc-status-icon" id="display_vip_icon" alt="VIP" style="display: none;"><span id="display_mode_name" class="cidc-display-text"></span></div></div>
+							</div>
+							<div class="cidc-col">
+								<div class="cidc-row"><div class="cidc-label">ชื่อลูกค้า</div><div class="cidc-value"><span id="display_customer_name" class="cidc-display-text"></span></div></div>
+								<div class="cidc-row"><div class="cidc-label">ประเภทลูกค้า</div><div class="cidc-value"><span id="display_customer_typename" class="cidc-display-text"></span></div></div>
+								<div class="cidc-row"><div class="cidc-label">เครดิตเทอม</div><div class="cidc-value">
+									<button type="button" class="credit-term-trigger is-empty" id="display_credit_thb_trigger" aria-haspopup="dialog" aria-controls="creditTermPopupModal" aria-disabled="true" disabled onclick="if (typeof window.openCreditTermPopup === 'function') window.openCreditTermPopup();">
+										<span id="display_credit_thb" class="credit-term-trigger-text"></span><img src="img/icons/edit.png" class="credit-term-trigger-icon" alt="แก้ไข">
+									</button>
+								</div></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="so-grid-3-custom smp-cust-block">
+				<div class="so-field-group"><label class="so-label" for="cus_tel">เบอร์โทรศัพท์<span class="required">*</span></label><div class="so-input-wrapper"><input type="text" name="cus_tel" id="cus_tel" class="so-input" inputmode="tel" placeholder="ใส่เฉพาะตัวเลข"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('cus_tel').value='';" aria-label="ล้างค่า"></button></div></div>
+				<div class="so-field-group"><label class="so-label" for="address_name">ที่อยู่ลูกค้า<span class="required">*</span></label><div class="so-input-wrapper"><input type="text" name="address_name" id="address_name" class="so-input" placeholder="กรอกที่อยู่ลูกค้า"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_name').value='';" aria-label="ล้างค่า"></button></div></div>
+			</div>
+			<div class="so-grid-3 smp-cust-block">
+				<div class="so-field-group"><label class="so-label" for="cus_province">จังหวัด<span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="cus_province" id="cus_province"><option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo so_saved_h($province); ?>"><?php echo so_saved_h($province); ?></option><?php } ?></select></div></div>
+				<div class="so-field-group"><label class="so-label" for="cus_ampher">เขต/อำเภอ<span class="required">*</span></label><div class="so-input-wrapper"><input type="text" name="cus_ampher" id="cus_ampher" class="so-input" maxlength="150" placeholder="ระบุเขต/อำเภอ" autocomplete="off"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('cus_ampher').value='';" aria-label="ล้างค่า"></button></div></div>
+				<div class="so-field-group"><label class="so-label" for="cus_postcode">รหัสไปรษณีย์<span class="required">*</span></label><div class="so-input-wrapper"><input type="text" name="cus_postcode" id="cus_postcode" class="so-input" inputmode="numeric" maxlength="5" placeholder="รหัสไปรษณีย์ 5 หลัก" autocomplete="off"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('cus_postcode').value='';" aria-label="ล้างค่า"></button></div></div>
+			</div>
+		</div>
 
+		<!-- ===================== รายการสินค้า ===================== -->
+		<div class="so-card smp-items-card">
+			<div class="so-section-title-container smp-items-title-row"><h2 class="so-section-title">รายการสินค้า</h2><span class="smp-items-count" id="smp_item_count">0 รายการ</span><hr class="so-divider"></div>
+			<div class="smp-summary-panel" aria-label="สรุปรายการสินค้า">
+				<div class="smp-summary-item"><span class="smp-summary-label">จำนวนรวม(ชิ้น)</span><strong class="smp-summary-value" id="smp_qty_total">0</strong></div>
+				<div class="smp-summary-divider" aria-hidden="true"></div>
+				<div class="smp-summary-item"><span class="smp-summary-label">ยอดรวม</span><strong class="smp-summary-value" id="smp_grand_total">0.00</strong></div>
+			</div>
+			<div class="cs-product-toolbar-row">
+				<div class="so-field-group cs-product-search-wrap smp-product-search">
+					<label class="so-label" for="smp_product_search">ค้นหารายการสินค้า</label>
+					<div class="cs-product-search-bar"><i class="fas fa-search" aria-hidden="true"></i><input type="text" id="smp_product_search" placeholder="ค้นหาด้วยรหัส / ชื่อสินค้า" autocomplete="off"></div>
+				</div>
+				<div class="cs-product-header-row">
+					<button type="button" class="cs-delete-selected-btn" id="smp_delete_selected_btn" onclick="smpDeleteSelectedRows();"><i class="far fa-trash-alt"></i> ลบรายการที่เลือก</button>
+				</div>
+			</div>
+			<div class="so-product-table-wrap">
+				<table class="so-product-table smp-product-table" id="smp_table">
+					<thead><tr><th class="smp-drag-cell" aria-label="จัดเรียงลำดับ"></th><th class="smp-select-cell"><label class="so-row-checkbox-wrap" aria-label="เลือกทุกรายการ"><input type="checkbox" id="smp_select_all" class="so-row-checkbox" onchange="smpToggleAllRows(this);"><span class="so-row-checkbox-dot" aria-hidden="true"></span></label></th><th>รหัสสินค้า</th><th>รายการสินค้า</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>ยอดรวม</th><th>หมายเลข SN</th><th aria-label="จัดการรายการ"></th></tr></thead>
+					<tbody id="smp_tbody"></tbody>
+				</table>
+			</div>
+			<div class="breg-empty-state" id="smp_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน หรือกด "เคลียร์ยืม" เพื่อนำเข้ารายการจากใบยืม</div>
+		</div>
 
+		<!-- ===================== ข้อมูลการจัดส่ง / ค่าจัดส่ง ===================== -->
+		<?php
+		$deliveryTab = array(
+			'open_fn' => 'openDelTab',
+			'grid_fields' => array(
+				array('type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => 'วิธีการจัดส่ง', 'required' => true, 'options' => smp_delivery_type_options()),
+				array('type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => array('' => 'เลือกบริษัทขนส่ง', '1' => 'Kerry', '2' => 'Flash', '3' => 'J&T', '4' => 'ไปรษณีย์ไทย')),
+				array('type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true),
+				array('type' => 'select', 'span' => 1, 'name' => 'time_range_ui', 'label' => 'เลือกช่วงเวลา', 'options' => array('' => 'เลือกช่วงเวลา', 'morning' => 'ช่วงเช้า', 'afternoon' => 'ช่วงบ่าย', 'allday' => 'ทั้งวัน', 'specific' => 'กำหนดเวลา')),
+				array('type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true),
+				array('type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'วันที่ต้องการโดยประมาณ', 'clearable' => true),
+				array('type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true),
+			),
+			'toggle_buttons' => array(
+				array('name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'),
+				array('name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)'),
+			),
+			'cost_fields' => array(
+				array('type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'),
+				array('type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'),
+				array('type' => 'text', 'name' => 'shipping_ref2', 'label' => 'รหัสอ้างอิง 2'),
+				array('type' => 'text', 'name' => 'shipping_cost', 'label' => 'ค่าจัดส่ง'),
+			),
+		);
+		include __DIR__ . '/partials/delivery_info_tab.php';
+		?>
+		<!-- ไม่แสดงใน UI แล้ว (หน้าตาตาม Change Order) แต่ต้องยังถูก POST: smp_register_data_from_post() และ Preview (report_sample.php) อ่านค่าเหล่านี้,
+		     Draft เดิมที่เคยติ๊กไว้ต้องไม่ถูกรีเซ็ตตอน Save ซ้ำ, และหน้า edit/approve เดิมยังให้ติ๊กต่อได้ — end_time ถูกเติมโดย dropdown เลือกช่วงเวลา -->
+		<input type="hidden" name="end_time" id="end_time" value="">
+		<input type="hidden" name="status" id="status" value="ส่ง">
+		<input type="hidden" name="fix_datetime" id="fix_datetime" value="0">
+		<input type="hidden" name="on_time" id="on_time" value="0">
+		<input type="hidden" name="call_back" id="call_back" value="0">
+		<input type="hidden" name="want_bus" id="want_bus" value="0">
 
-	
-</div><!-- cs -->
+		<!-- ===================== ที่อยู่ / รายละเอียดที่อยู่ ===================== -->
+		<div class="so-tabs-container" style="margin-top: 24px;">
+			<button type="button" class="so-tab-btn active" onclick="smpOpenAddrTab('smp_addr_main', this)">ที่อยู่</button>
+			<button type="button" class="so-tab-btn" onclick="smpOpenAddrTab('smp_addr_detail', this)">รายละเอียดที่อยู่</button>
+		</div>
+		<div class="so-card" style="padding: clamp(16px, 3vw, 24px);">
+			<div id="smp_addr_main" class="smp-addr-tab">
+				<div class="so-section-title-container"><h3 class="so-section-title">ที่อยู่จัดส่ง</h3><hr class="so-divider"></div>
+				<div class="so-address-actions"><button type="button" class="smp-pill-btn smp-pill-btn--outline" onclick="smpOpenCustomerPopup('address');"><img src="img/icons/database.png" alt="database"> เพิ่มจากฐานลูกค้า</button></div>
+				<div class="so-grid-3">
+					<div class="so-field-group"><label class="so-label" for="customer_name1">ชื่อผู้ติดต่อ <span class="required">*</span></label><div class="so-input-wrapper"><input class="so-input" name="customer_name1" id="customer_name1" placeholder="ชื่อผู้ติดต่อ"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('customer_name1').value='';" aria-label="ล้างค่า"></button></div></div>
+					<div class="so-field-group"><label class="so-label" for="customer_tel">เบอร์โทรศัพท์ <span class="required">*</span></label><input class="so-input" name="customer_tel" id="customer_tel" inputmode="tel" placeholder="ใส่เฉพาะตัวเลข"></div>
+					<div class="so-field-group"><label class="so-label" for="province_name">จังหวัด <span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="province_name" id="province_name"><option value="">เลือกจังหวัด</option><?php foreach ($provinces as $province) { ?><option value="<?php echo so_saved_h($province); ?>"><?php echo so_saved_h($province); ?></option><?php } ?></select></div></div>
+				</div>
+				<!-- ช่องที่อยู่ส่งสินค้ามีช่องเดียว (เหมือน Change Order) — hidden address_1 / address_name1 ถูก JS (syncDeliveryAddress) copy ค่าให้ เพราะ backend และหน้า edit ยังอ่านทั้งสองค่า -->
+				<div class="so-field-group smp-addr-gap"><label class="so-label" for="address_merged_ui">ที่อยู่ในการส่งสินค้า <span class="required">*</span></label><div class="so-input-wrapper"><input class="so-input" name="address_merged_ui" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" autocomplete="off"><button type="button" class="fas fa-times so-clear-icon" onclick="var i=document.getElementById('address_merged_ui'); i.value=''; i.dispatchEvent(new Event('input', {bubbles: true}));" aria-label="ล้างค่า"></button></div><input type="hidden" name="address_1" id="address_1"><input type="hidden" name="address_name1" id="address_name1"></div>
+				<div class="so-grid-2 smp-addr-gap">
+					<div class="so-field-group"><label class="so-label" for="address_send">สถานที่ติดตั้งเครื่อง <span class="required">*</span></label><div class="so-input-wrapper"><input class="so-input" name="address_send" id="address_send" placeholder="สถานที่ติดตั้งเครื่อง"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_send').value='';" aria-label="ล้างค่า"></button></div></div>
+					<div class="so-field-group"><label class="so-label" for="location_link">Location Link</label><div class="so-input-wrapper"><input class="so-input" name="location_link" id="location_link" placeholder="วางลิงก์ Google Maps หรือพิกัด"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link').value='';" aria-label="ล้างค่า"></button></div></div>
+				</div>
+			</div>
 
+			<div id="smp_addr_detail" class="smp-addr-tab" style="display:none;">
+				<div class="so-section-title-container"><h3 class="so-section-title">รายละเอียดที่อยู่</h3><hr class="so-divider"></div>
+				<div class="so-grid-3 smp-align-end">
+					<div class="so-field-group"><label class="so-label">จอดรถหน้าบ้าน</label><div class="smp-radio-row"><label><input type="radio" name="park_front" value="1" checked> ได้</label><label><input type="radio" name="park_front" value="0"> ไม่ได้</label></div></div>
+					<div class="so-field-group"><label class="so-label" for="park_location">สถานที่จอดรถ</label><input class="so-input" name="park_location" id="park_location" placeholder="สถานที่จอดรถ"></div>
+					<div class="so-field-group"><label class="smp-pill-toggle"><input type="checkbox" name="is_high_roof" value="1"><span>รถหลังคาสูงเข้าได้</span></label></div>
+				</div>
+				<div class="so-grid-3 smp-addr-gap">
+					<div class="so-field-group"><label class="so-label">ทางเข้าบ้าน</label><div class="smp-radio-row"><label><input type="radio" name="entrance_type" value="1" checked> ทางราบ</label><label><input type="radio" name="entrance_type" value="2"> บันไดก่อนเข้าบ้าน</label></div></div>
+					<div class="so-field-group"><label class="so-label" for="stair_count">จำนวนขั้นบันได</label><input class="so-input" name="stair_count" id="stair_count" inputmode="numeric" placeholder="ใส่เฉพาะตัวเลข"></div>
+					<div class="so-field-group"><label class="so-label" for="install_floor">ชั้นที่ติดตั้ง</label><input class="so-input" name="install_floor" id="install_floor" inputmode="numeric" placeholder="ใส่เฉพาะตัวเลข"></div>
+				</div>
+				<div class="so-grid-3 smp-addr-gap">
+					<div class="so-field-group"><label class="so-label">ห้องที่ติดตั้ง</label><div class="smp-radio-row"><label><input type="radio" name="room_type" value="1" checked> ห้องโถง</label><label><input type="radio" name="room_type" value="2"> ห้องนอน</label></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดประตูห้อง</label><div class="smp-pair"><input class="so-input" name="door_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="door_height" placeholder="ความสูง (ซม.)"></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดบันได</label><div class="smp-pair"><input class="so-input" name="stair_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="stair_height" placeholder="ความสูง (ซม.)"></div></div>
+				</div>
+				<div class="so-grid-3 smp-addr-gap">
+					<div class="so-field-group"><label class="so-label">ประตูลิฟต์</label><div class="smp-pair"><input class="so-input" name="elev_door_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="elev_door_height" placeholder="ความสูง (ซม.)"></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดห้องลิฟต์</label><div class="smp-pair"><input class="so-input" name="elev_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="elev_height" placeholder="ความสูง (ซม.)"><input class="so-input" name="elev_depth" placeholder="ความลึก (ซม.)"></div></div>
+					<div class="so-field-group"><label class="so-label" for="elev_capacity">ขนาดบรรทุกของลิฟต์</label><input class="so-input" name="elev_capacity" id="elev_capacity" placeholder="น้ำหนัก (กก.)"></div>
+				</div>
+				<div class="so-grid-3 smp-addr-gap">
+					<div class="so-field-group"><label class="so-label">การย้ายเฟอร์นิเจอร์</label><div class="smp-radio-row"><label><input type="radio" name="move_furn" value="0" checked> ไม่</label><label><input type="radio" name="move_furn" value="1"> ย้าย</label></div></div>
+					<div class="so-field-group"><label class="so-label" for="move_furn_count">จำนวนชิ้นที่ย้าย</label><input class="so-input" name="move_furn_count" id="move_furn_count" inputmode="numeric" placeholder="ใส่เฉพาะตัวเลข"></div>
+					<div class="so-field-group"><label class="so-label" for="move_furn_detail">รายละเอียดเฟอร์นิเจอร์</label><input class="so-input" name="move_furn_detail" id="move_furn_detail" placeholder="รายละเอียดเฟอร์นิเจอร์"></div>
+				</div>
+				<div class="so-field-group smp-addr-gap"><label class="so-label" for="addr_note">หมายเหตุเพิ่มเติม</label><input class="so-input" name="addr_note" id="addr_note" placeholder="รายละเอียดเพิ่มเติม"></div>
+			</div>
+		</div>
 
-	<div class="w3-bar w3-center">
-			<input type="submit" name="submit" class="w3-button w3-teal be-border" value="บันทึกข้อมูล">
-	</div><br>
+		<!-- ===================== แนบไฟล์ (partial กลางเดียวกับ Change Order — posts เข้า up_img1-3 เดิม) ===================== -->
+		<?php
+		$docTabsCard = array(
+			'open_fn' => 'smpOpenAttachTab',
+			'attach_file' => array(
+				'enabled' => true,
+				'file_prefix' => 'up_img',
+				'slots' => 3,
+				'first_slot' => 1,
+				'base_url' => 'smp_up/',
+				'max_bytes' => 1048576,
+				'allowed_ext' => 'jpg,jpeg,png,pdf',
+				'accept' => '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf',
+			),
+		);
+		include __DIR__ . '/partials/doc_tabs_card.php';
+		?>
+		<!-- ไฟล์เดิมของ Draft (ไม่มี name — ให้ JS แสดง "ไฟล์เดิม"); ถังขยะตั้ง remove_up_img{i}=1 ให้ smp_plan_uploads() ลบไฟล์ -->
+		<?php for ($i = 1; $i <= 3; $i++) { ?>
+			<input type="hidden" id="hidden_slip_val<?php echo $i; ?>" value="<?php echo so_saved_h($smpSavedFiles[$i] ?? ''); ?>">
+			<input type="hidden" name="remove_up_img<?php echo $i; ?>" id="hidden_remove_val<?php echo $i; ?>" value="0">
+		<?php } ?>
 	</div>
-	</form>
+
+	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
+		<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
+			<?php if (!$smpIsRequest) { ?>
+			<button type="submit" name="submit" id="smp_btn_submit" value="submit" style="background-color: #612989; color: #fff; border: 1px solid #612989; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); height: 40px;">
+				<i class="far fa-paper-plane"></i> Submit
+			</button>
+			<?php } ?>
+			<button type="<?php echo $smpIsRequest ? 'submit' : 'button'; ?>" name="save_draft" id="smp_btn_draft" <?php echo $smpIsRequest ? '' : 'onclick="smpSaveDraft();"'; ?> style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+				<i class="far fa-save"></i> <?php echo $smpHasDocument ? 'Update' : 'Save Draft'; ?>
+			</button>
+			<button type="button" name="cancel_edit" onclick="window.location.href='main_suphos_smp.php';" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
+				ย้อนกลับ
+			</button>
+		</div>
+	</div>
+</form>
+
+<!-- ===================== Modal: ข้อมูลรายการสินค้าเพิ่มเติม ===================== -->
+<div id="smp_edit_modal" class="cs-modal-overlay" style="display:none;">
+	<div class="cs-modal-card smp-remark-modal-card" role="dialog" aria-modal="true" aria-labelledby="smp_edit_modal_title">
+		<div class="cs-modal-header"><h3 class="cs-modal-title" id="smp_edit_modal_title">ข้อมูลรายการสินค้าเพิ่มเติม</h3><button type="button" class="cs-modal-close-btn" onclick="smpCloseEditModal();" aria-label="ปิด">&times;</button></div>
+		<div class="cs-modal-body smp-modal-body">
+			<div class="smp-modal-fields">
+				<div class="so-field-group"><label class="so-label" for="smp_modal_waranty">รับประกัน(ปี)<span class="required">*</span></label><input type="text" id="smp_modal_waranty" class="so-input" placeholder="ใส่จำนวนปีรับประกัน" inputmode="numeric" autocomplete="off"></div>
+				<div class="so-field-group"><label class="so-label" for="smp_modal_br_no">เลขที่ใบยืม</label><div class="so-input-wrapper"><input type="text" id="smp_modal_br_no" class="so-input" placeholder="กรอกเลขที่ใบยืม" autocomplete="off"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('smp_modal_br_no').value='';" aria-label="ล้างเลขที่ใบยืม"></button></div></div>
+				<div class="so-field-group"><label class="so-label" for="smp_modal_remark">หมายเหตุสินค้า</label><div class="so-input-wrapper"><input type="text" id="smp_modal_remark" class="so-input" placeholder="กรอกหมายเหตุสินค้า" autocomplete="off"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('smp_modal_remark').value='';" aria-label="ล้างหมายเหตุสินค้า"></button></div></div>
+			</div>
+		</div>
+		<div class="cs-modal-footer"><button type="button" class="cs-modal-btn-update" onclick="smpSaveEditModal();">อัพเดท</button><button type="button" class="cs-modal-btn-cancel" onclick="smpCloseEditModal();">ยกเลิก</button></div>
+	</div>
 </div>
-<div id="cr_bar"> <?php include "foot.php"; ?></div>		
 
+<!-- ===================== Popup: เคลียร์ยืม (reuse .clear-loan-* ของ register-suphos.css) ===================== -->
+<div id="smpClearLoanModal" class="customer-popup-modal" aria-hidden="true" style="display:none;">
+	<div class="customer-popup-box clear-loan-popup-box" role="dialog" aria-modal="true" aria-labelledby="smpClearLoanTitle">
+		<button type="button" class="customer-popup-close" onclick="smpCloseClearLoanModal()" aria-label="Close">&times;</button>
+		<div class="clear-loan-header"><h2 id="smpClearLoanTitle" class="clear-loan-title">เคลียร์ยืม — ค้นหาใบยืมที่ต้องการเคลียร์</h2></div>
+		<div class="clear-loan-top-controls"><div class="clear-loan-search-wrap">
+			<label class="clear-loan-search-label" for="smpClearLoanSearch">ค้นหาด้วยเลขที่ใบยืม / ชื่อลูกค้า</label>
+			<div class="clear-loan-search"><i class="fas fa-search" aria-hidden="true"></i><input type="text" id="smpClearLoanSearch" placeholder="ระบุเลขที่ใบยืมหรือชื่อลูกค้า" autocomplete="off"></div>
+		</div></div>
+		<div class="clear-loan-table-wrap"><div class="clear-loan-table-container">
+			<table class="clear-loan-table">
+				<thead><tr><th aria-label="ขยาย"></th><th aria-label="เลือก"></th><th>เลขที่ใบยืม</th><th>วันที่</th><th>ชื่อลูกค้า</th><th>จำนวนรายการ</th></tr></thead>
+				<tbody id="smpClearLoanRows"><tr class="clear-loan-state-row"><td colspan="6">พิมพ์คำค้นหาหรือรอผลค้นหาอัตโนมัติ</td></tr></tbody>
+			</table>
+		</div></div>
+		<div class="clear-loan-actions"><div class="clear-loan-action-container">
+			<button type="button" class="clear-loan-btn clear-loan-btn-secondary" onclick="smpCloseClearLoanModal()">ยกเลิก</button>
+			<button type="button" class="clear-loan-btn clear-loan-btn-primary" id="smpClearLoanImportBtn" disabled onclick="smpImportClearLoanSelection()">นำเข้ารายการที่เลือก</button>
+		</div></div>
+	</div>
+</div>
 
+<!-- ===================== Popup: ข้อมูลลูกค้า / เครดิตเทอม (ใช้ร่วมกับ js/customer-popup.js, js/credit-term-modal.js) ===================== -->
+<div id="customerPopupModal" class="customer-popup-modal" aria-hidden="true" style="display: none;">
+	<div class="customer-popup-box" role="dialog" aria-modal="true" aria-labelledby="customerPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeCustomerPopup()" aria-label="Close">&times;</button>
+		<div class="customer-popup-header">
+			<h2 id="customerPopupTitle">ข้อมูลลูกค้า</h2>
+			<div class="customer-popup-toolbar" style="margin-top: 18px;">
+				<div class="customer-popup-search-wrap"><label for="customerPopupSearch">ค้นหาลูกค้า</label><div class="customer-popup-search"><i class="fas fa-search" aria-hidden="true"></i><input type="text" id="customerPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร"></div></div>
+				<button type="button" class="customer-popup-add" onclick="window.open('customer_add.php', '_blank');"><i class="fas fa-sliders-h" aria-hidden="true"></i> เพิ่มข้อมูลลูกค้า</button>
+			</div>
+		</div>
+		<div class="customer-popup-table-wrap"><table class="customer-popup-table">
+			<thead><tr><th scope="col">ชื่อลูกค้า</th><th scope="col">เบอร์โทร</th><th scope="col">ที่อยู่</th><th scope="col" aria-label="เลือก"></th></tr></thead>
+			<tbody id="customerPopupRows"><tr><td colspan="4" class="customer-popup-empty">พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา</td></tr></tbody>
+		</table></div>
+		<div class="customer-popup-pagination" id="customerPopupPagination" style="display:none;"><button type="button" class="customer-popup-loadmore" id="customerPopupLoadMore" onclick="loadMoreCustomerPopupRows()">โหลดเพิ่ม</button></div>
+		<div class="customer-popup-actions"><button type="button" class="customer-popup-confirm" onclick="confirmCustomerPopupSelection()">ตกลง</button><button type="button" class="customer-popup-cancel" onclick="closeCustomerPopup()">ยกเลิก</button></div>
+	</div>
+</div>
 
+<div id="creditTermPopupModal" class="customer-popup-modal" aria-hidden="true">
+	<div class="customer-popup-box credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
+		<button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
+		<div class="clear-loan-header"><h2 id="creditTermPopupTitle">เครดิตเทอม</h2></div>
+		<div class="credit-term-popup-content">
+			<div class="credit-term-summary">
+				<div class="credit-term-summary-item"><p class="credit-term-summary-label">เครดิต (วัน)</p><p class="credit-term-summary-value" id="creditTermSummaryDay">-</p></div>
+				<div class="credit-term-summary-item"><p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p><p class="credit-term-summary-value" id="creditTermSummaryAmount">0.00</p></div>
+				<div class="credit-term-summary-item"><p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p><p class="credit-term-summary-value" id="creditTermSummaryOutstanding">0.00</p></div>
+				<div class="credit-term-summary-item is-highlight"><p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p><p class="credit-term-summary-value" id="creditTermSummaryRemaining">0.00</p></div>
+			</div>
+			<div class="credit-term-table-panel"><div class="credit-term-table-wrap"><table class="credit-term-table">
+				<thead><tr><th scope="col" aria-label="เลือก"></th><th scope="col">เลขที่ใบสั่งขาย</th><th scope="col">รายการสินค้า</th><th scope="col">ยอดที่ต้องชำระ</th><th scope="col">ยอดชำระแล้ว</th><th scope="col">ยอดหนี้คงค้าง</th></tr></thead>
+				<tbody id="creditTermTableBody"><tr class="credit-term-empty-row"><td><span class="credit-term-caret" aria-hidden="true"></span></td><td colspan="5">เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล</td></tr></tbody>
+			</table></div></div>
+		</div>
+	</div>
+</div>
 
-        </script>
-
-		<script>
-$('#more').click(function() {
-  if($(this).is(":checked")){
-   $("#more-2").show();
-  }
-  else{
-   $("#more-2").hide();
-  }
-});
+<script>
+	window.SMP_PREFILL = <?php echo json_encode($smpPrefill, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+	window.SMP_SAVED_ITEMS = <?php echo json_encode($smpSavedItems, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+	window.SMP_SAVED_CUSTOMER = <?php echo json_encode($smpCustomer, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+	window.SMP_IS_DRAFT = <?php echo $smpIsDraft ? 'true' : 'false'; ?>;
+	window.SMP_IS_REQUEST = <?php echo $smpIsRequest ? 'true' : 'false'; ?>;
 </script>
+<script src="js/doc-tabs-attach.js?v=<?php echo $assetVersion('js/doc-tabs-attach.js'); ?>"></script>
+<script src="js/register-supsmp.js?v=<?php echo $assetVersion('js/register-supsmp.js'); ?>"></script>

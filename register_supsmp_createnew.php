@@ -449,17 +449,10 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 <div id="cs" class="w3-container city1" style="display:none">
 
 
-<?php if($ffirst["delivery_type"]=='1') { ?>
-<input type="radio" name="delivery_type" value="1" checked='checked' >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2"  >&nbsp;บริษัทจัดส่ง <br />
-
-
-<?php }else if ($ffirst["delivery_type"]=='2') { ?>
-
-<input type="radio" name="delivery_type" value="1"  >&nbsp;Sale รับเอง
-<input type="radio" name="delivery_type" value="2" checked='checked' >&nbsp;บริษัทจัดส่ง 
-
-<?php } ?>
+<?php require_once __DIR__ . '/includes/smp_repo.php'; ?>
+<?php foreach (smp_delivery_type_options() as $dtValue => $dtLabel) { ?>
+<input type="radio" name="delivery_type" value="<?php echo $dtValue; ?>"<?php echo (string)$ffirst["delivery_type"] === (string)$dtValue ? " checked='checked'" : ''; ?> >&nbsp;<?php echo $dtLabel . ' '; ?>
+<?php } ?><br />
 
 
 

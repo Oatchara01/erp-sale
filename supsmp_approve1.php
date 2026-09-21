@@ -26,10 +26,15 @@ $customer_tel = $_POST["customer_tel"];
 $brnp_ckk =$_POST["brnp_ckk"];
 $brnp_no =$_POST["brnp_no"];
 $bill_id = $_POST["bill_id"];
-$crm_ref = $_POST["crm_ref"];
-$crm_ckk = $_POST["crm_ckk"];
+$crm_ckk = isset($_POST["crm_ckk"]) && $_POST["crm_ckk"] == '1' ? '1' : '0';
+$crm_ref = $crm_ckk == '1' ? trim((string)$_POST["crm_ref"]) : '';
+$have_order = isset($_POST["have_order"]) && $_POST["have_order"] == '1' ? '1' : '0';
+if($crm_ckk == '1' && $crm_ref === ''){
+	echo "<script language=\"JavaScript\">alert('กรุณาระบุเลขที่อ้างอิง (CRM) เมื่อเลือกแลกสินค้า CRM');window.history.back();</script>";
+	exit();
+}
+$crm_ref = mysqli_real_escape_string($conn, $crm_ref);
 $delivery_type = $_POST["delivery_type"];
-$order_id = $_POST["order_id"];	
 	
 if($_FILES['up_img1']['name']!=''){
  move_uploaded_file($_FILES['up_img1']['tmp_name'],"smp_up/".iconv("UTF-8", "TIS-620",$_FILES['up_img1']['name']));
@@ -58,7 +63,7 @@ if($_FILES['up_img3']['name']!=''){
 	
 
 $save="Update  hos__smp set
-smp_date = '".$smp_date."',address_name ='".$address_name."',customer_name ='".$customer_name."',comment_sale = '".$comment_sale."',sup_name = '".$sup_name."',sale_code = '".$sale_code."',comment_sup='".$comment_sup."',delivery_date='".$delivery_date."',date_send_key='".$date_send_key."',brnp_no='".$brnp_no."',brnp_ckk='".$brnp_ckk."',up_img1='".$up_img1."',up_img2='".$up_img2."',up_img3='".$up_img3."',customer_tel='".$customer_tel."',bill_id='".$bill_id."',crm_ckk='".$crm_ckk."',crm_ref='".$crm_ref."',delivery_type='".$delivery_type."',order_id='".$order_id."'	  where ref_idsmp = '".$ref_idsmp."'";
+smp_date = '".$smp_date."',address_name ='".$address_name."',customer_name ='".$customer_name."',comment_sale = '".$comment_sale."',sup_name = '".$sup_name."',sale_code = '".$sale_code."',comment_sup='".$comment_sup."',delivery_date='".$delivery_date."',date_send_key='".$date_send_key."',brnp_no='".$brnp_no."',brnp_ckk='".$brnp_ckk."',up_img1='".$up_img1."',up_img2='".$up_img2."',up_img3='".$up_img3."',customer_tel='".$customer_tel."',bill_id='".$bill_id."',crm_ckk='".$crm_ckk."',crm_ref='".$crm_ref."',have_order='".$have_order."',delivery_type='".$delivery_type."'	  where ref_idsmp = '".$ref_idsmp."'";
 
 $qsave=mysqli_query($conn,$save);
 

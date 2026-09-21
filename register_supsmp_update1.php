@@ -1,9 +1,8 @@
 <?php
 
 /**
- * Submit ใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP) จาก register_supsmp.php
- * บันทึกสถานะ Request (สร้างใหม่ หรือส่งต่อจาก Draft เดิมด้วยเลขเดิม) แล้ว redirect (PRG) กลับ register_supsmp.php
- * เส้นทาง Save Draft อยู่ที่ register_supsmp_draft1.php
+ * Update ใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP) สถานะ Request จาก register_supsmp.php
+ * validate เต็ม คงสถานะ/ข้อมูลส่งอนุมัติเดิม แล้ว redirect (PRG) กลับ register_supsmp.php
  */
 
 session_start();
@@ -28,12 +27,12 @@ include __DIR__ . '/dbconnect.php';
 require_once __DIR__ . '/includes/smp_repo.php';
 
 try {
-	$result = smp_persist_from_post($conn, 'submit', $_SESSION);
-	header('Location: register_supsmp.php?ref_idsmp=' . rawurlencode($result['ref_id']) . '&submitted=1');
+	$result = smp_persist_from_post($conn, 'update', $_SESSION);
+	header('Location: register_supsmp.php?ref_idsmp=' . rawurlencode($result['ref_id']) . '&updated=1');
 	exit();
 } catch (SmpValidationException $e) {
 	smp_submit_fail($e->getMessage());
 } catch (Throwable $e) {
-	error_log('[register_supsmp1] ' . $e->getMessage());
+	error_log('[register_supsmp_update1] ' . $e->getMessage());
 	smp_submit_fail('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง หากยังไม่ได้กรุณาแจ้งผู้ดูแลระบบ');
 }
