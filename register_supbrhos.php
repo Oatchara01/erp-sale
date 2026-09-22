@@ -1869,6 +1869,10 @@ $adminInfoTab = [
 			{
 				if (brSubmitting) return false;
 
+				if (!validateTransportCompanyRequirement()) {
+					return false;
+				}
+
 				brWriteObjectiveDesHidden();
 
 				var objVal = document.getElementById('objective') ? document.getElementById('objective').value : '';
@@ -2438,17 +2442,13 @@ $adminInfoTab = [
 			'open_fn' => 'brOpenDelTab',
 			'grid_fields' => [
 				['type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => 'วิธีการจัดส่ง', 'required' => true, 'options' => [
-					'1' => 'Sale รับเอง',
-					'2' => 'ช่างรับเอง',
-					'3' => 'ลูกค้ารับเอง',
-					'4' => 'บริษัทจัดส่ง',
+					'3' => 'พนักงานรับ/ลูกค้ารับ',
+					'5' => 'บริษัทจัดส่ง(AllWell)',
+					'4' => 'บริษัทขนส่งภายนอก',
 				]],
 				['type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => [
+					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
-					'1' => 'Kerry',
-					'2' => 'Flash',
-					'3' => 'J&T',
-					'4' => 'ไปรษณีย์ไทย',
 				]],
 				['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true],
 				['type' => 'select', 'span' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'options' => [
@@ -2476,6 +2476,7 @@ $adminInfoTab = [
 		];
 		include __DIR__ . '/partials/delivery_info_tab.php';
 		?>
+		<script src="js/delivery-transport.js?v=<?php echo filemtime(__DIR__ . '/js/delivery-transport.js'); ?>"></script>
 		<input type="hidden" name="end_time" id="end_time" value="<?php echo so_saved_h($savedEndTime ?? ''); ?>">
 		<script>
 			function syncDeliveryTimeRange() {
@@ -3487,6 +3488,11 @@ $adminInfoTab = [
 						bubbles: true
 					}));
 				});
+
+				// ตัวเลือก transport_company สร้างตาม delivery_type -> คืนค่าที่บันทึกไว้หลังตั้ง delivery_type แล้ว
+				if (typeof updateTransportCompanyRequirement === 'function') {
+					updateTransportCompanyRequirement(String(brPrefill.transport_company || ''));
+				}
 
 				var highRoofEl = document.querySelector('input[name="is_high_roof"]');
 				if (highRoofEl) {
