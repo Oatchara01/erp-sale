@@ -332,9 +332,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	// Backend validation กันกรณีปิด JS หรือยิง POST ตรงเข้ามาโดยไม่ผ่านฟอร์ม (เดิมพึ่ง JS validation ใน fncSubmit() ฝั่งเดียว)
 	// ข้ามการตรวจนี้เมื่อเป็น Draft เพราะ "Save Draft" ตั้งใจให้บันทึกข้อมูลไม่ครบได้ (saveDraft() ใน register_suphos.php ไม่เรียก fncSubmit())
 	if (!$isDraftRequest) {
-		// ออกใบสั่งขาย (IV) จากใบเช่า: ไม่บังคับกรอกช่องทางการชำระเงิน (เหมือนฝั่ง JS ใน fncSubmit())
-		$isRentalIvConversion = trim((string)($_POST['ref_ren'] ?? '')) !== '' && trim((string)($_POST['type'] ?? '')) === 'IV';
-
 		$requiredFieldLabels = array(
 			'start_time' => 'กรุณาใส่เวลาส่ง',
 			'customer_name' => 'กรุณาใส่ชื่อลูกค้า',
@@ -344,9 +341,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			'address_send' => 'กรุณาใส่สถานที่ติดตั้งเครื่อง',
 			'province_name' => 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง',
 		);
-		if (!$isRentalIvConversion) {
-			$requiredFieldLabels['payment'] = 'กรุณาเลือกช่องทางการชำระเงิน';
-		}
 
 		$validationErrors = array();
 		foreach ($requiredFieldLabels as $requiredField => $requiredMessage) {

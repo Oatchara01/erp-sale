@@ -1683,15 +1683,6 @@ include("head.php"); ?>
 					document.frmMain.sale_code.focus();
 					return false;
 				}
-				if (!window.soIsRentalIvConversion && getMainFormFieldValue('payment') == "") {
-					alert('กรุณาเลือกช่องทางการชำระเงิน');
-					var visiblePayment = document.getElementById('payment_cash_select') || document.getElementById('payment_method') || document.getElementById('pay_mode_cash');
-					if (visiblePayment) {
-						visiblePayment.focus();
-					}
-					return false;
-				}
-
 				if (getMainFormFieldValue('payment') != "") {
 					if (getMainFormFieldValue('payment') == "7") {
 
