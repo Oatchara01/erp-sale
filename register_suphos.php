@@ -1612,6 +1612,9 @@ include("head.php"); ?>
 
 		<script language="javascript">
 			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
+			// สถานะที่บันทึกจริงในฐานข้อมูล ณ ตอนโหลดหน้า ใช้แยก "Save Draft ของเอกสาร Draft จริง" ออกจาก
+			// "Update เอกสารที่เคย Submit แล้ว" เพราะปุ่มเดียวกันส่ง is_draft=1 เหมือนกันทั้งคู่
+			window.soPersistedStatusDoc = <?php echo json_encode((string)($savedSo['status_doc'] ?? ''), JSON_UNESCAPED_UNICODE); ?>;
 			window.soIsRentalIvConversion = <?php echo $isRentalIvConversion ? 'true' : 'false'; ?>;
 			window.soSavedHaveProduct = <?php echo json_encode((string)($savedSo['have_product'] ?? ''), JSON_UNESCAPED_UNICODE); ?>;
 			<?php if ($fromRentalError !== null): ?>
@@ -1659,6 +1662,10 @@ include("head.php"); ?>
 				}
 				updateDeliveryContractRequirement();
 				if (!validateDeliveryContractRequirement()) {
+					return false;
+				}
+
+				if (!validateEmailFieldRequired()) {
 					return false;
 				}
 
@@ -1826,6 +1833,15 @@ include("head.php"); ?>
 				// เหมือนปุ่มบันทึกหลัก — ส่วน "Save Draft" ของเอกสารใหม่/คัดลอกใบเดิมปล่อยผ่านเหมือนเดิม
 				if (window.soIsEditMode && isCreditOverLimitBlocking()) {
 					return;
+				}
+
+				// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" (เอกสารใหม่/persisted Draft จริง ปล่อยว่าง E-Mail ได้)
+				// และ "Update" (เอกสาร persisted ที่ไม่ใช่ Draft แล้ว เช่น Request ต้องบังคับ E-Mail เมื่อเป็น E-Tax)
+				// แยกด้วย soPersistedStatusDoc เพราะ is_draft=1 ถูกส่งเหมือนกันทั้งสองกรณี
+				if (window.soIsEditMode && window.soPersistedStatusDoc !== 'Draft') {
+					if (!validateEmailFieldRequired()) {
+						return;
+					}
 				}
 
 				var form = document.forms['frmMain'];
@@ -2108,6 +2124,7 @@ include("head.php"); ?>
 									if(this.value == '2') document.getElementById('et_ckk').checked = true;
 									if(this.value == '3') document.getElementById('ic_ckk').checked = true;
 									if(typeof window.checkCreditLimitOnChange === 'function') window.checkCreditLimitOnChange();
+									if(typeof syncEmailFieldVisibility === 'function') syncEmailFieldVisibility();
 								">
 										<option value="1">ใบสั่งขาย</option>
 										<option value="2">ใบสั่งขาย E-Tax</option>
@@ -2120,15 +2137,48 @@ include("head.php"); ?>
 								</div>
 							</div>
 
-							<!-- E-Mail* -->
-							<div class="so-field-group">
+							<!-- E-Mail* (แสดง/บังคับเฉพาะใบสั่งขาย E-Tax; ซ่อนแล้วยังเก็บค่าไว้เมื่อสลับประเภทอื่น) -->
+							<div class="so-field-group" id="email_field_group">
 								<label class="so-label" for="email">E-Mail<span class="required">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="email" id="email" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['email'] ?? '') : ''; ?>" placeholder="example@email.com" style="padding-right: 32px;">
+									<input type="email" name="email" id="email" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['email'] ?? '') : ''; ?>" placeholder="example@email.com" style="padding-right: 32px;">
 									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('email').value=''"></i>
 								</div>
 							</div>
 						</div>
+
+						<script>
+							// E-Mail แสดง/บังคับกรอกเฉพาะเมื่อเลือกใบสั่งขาย E-Tax (doc_type_select value=2) เท่านั้น
+							// ค่า 4 (ใบกำกับอิเล็กทรอนิกส์) ไม่เข้ากฎนี้ตามที่ตกลงกับผู้ใช้
+							function syncEmailFieldVisibility() {
+								var docTypeSel = document.getElementById('doc_type_select');
+								var emailGroup = document.getElementById('email_field_group');
+								var emailInput = document.getElementById('email');
+								if (!docTypeSel || !emailGroup || !emailInput) return;
+								var isETax = docTypeSel.value === '2';
+								emailGroup.style.display = isETax ? '' : 'none';
+								emailInput.required = isETax;
+							}
+							document.addEventListener('DOMContentLoaded', syncEmailFieldVisibility);
+
+							// คืน true ถ้าผ่าน (ไม่ใช่ E-Tax หรือกรอกอีเมลถูกต้อง), false แล้ว alert+focus ถ้าไม่ผ่าน
+							function validateEmailFieldRequired() {
+								var docTypeSel = document.getElementById('doc_type_select');
+								var emailInput = document.getElementById('email');
+								if (!docTypeSel || !emailInput) return true;
+								if (docTypeSel.value !== '2') return true;
+
+								var emailVal = (emailInput.value || '').trim();
+								emailInput.value = emailVal;
+								var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+								if (!emailVal || !emailPattern.test(emailVal)) {
+									alert('กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax');
+									emailInput.focus();
+									return false;
+								}
+								return true;
+							}
+						</script>
 
 						<div class="so-grid-3">
 							<!-- แผนก/เขตการขาย* -->
@@ -7371,6 +7421,7 @@ include("head.php"); ?>
 					} else {
 						docTypeSel.value = '1';
 					}
+					if (typeof syncEmailFieldVisibility === 'function') syncEmailFieldVisibility();
 				})();
 
 				// 3. Handle type_type radio buttons (รูปแบบการพิมพ์)

@@ -310,6 +310,29 @@ if ($_POST["submit"] = "submit") {
 	$time_range = $_POST["time_range"] ?? '';
 	$status_comment = $_POST["status_comment"] ?? '';
 
+	// ใบสั่งขาย E-Tax (et_ckk=1) ต้องมี E-Mail รูปแบบถูกต้องก่อน Update — ยกเว้นเฉพาะเอกสารที่ยังเป็น
+	// Draft จริงอยู่ในฐานข้อมูล (persisted status_doc='Draft') เพราะ is_draft=1 ถูกส่งมาเหมือนกันทั้ง
+	// "Save Draft" และ "Update" เอกสารที่เคย Submit แล้ว (ปุ่มเดียวกันใน register_suphos.php) จึงต้อง
+	// query สถานะจริงจาก DB มาตัดสิน ใช้ flag นี้อย่างเดียวไม่ได้
+	$soPersistedStatusQuery = mysqli_query($conn, "SELECT status_doc FROM hos__so WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "' LIMIT 1");
+	$soPersistedStatusRow = $soPersistedStatusQuery ? mysqli_fetch_assoc($soPersistedStatusQuery) : null;
+	$soPersistedStatusDoc = $soPersistedStatusRow['status_doc'] ?? '';
+	$soIsDraftPostFlag = (($_POST['is_draft'] ?? '') === '1');
+	$soSkipEmailValidation = $soIsDraftPostFlag && $soPersistedStatusDoc === 'Draft';
+
+	if ($et_ckk === '1' && !$soSkipEmailValidation) {
+		$soEmailValue = trim((string)$email);
+		if ($soEmailValue === '' || !filter_var($soEmailValue, FILTER_VALIDATE_EMAIL)) {
+			if ($soIsDraftPostFlag) {
+				header('Content-Type: application/json; charset=utf-8');
+				echo json_encode(array('success' => false, 'message' => 'กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax'));
+				exit();
+			}
+			echo "<script>alert('กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax');history.back();</script>";
+			exit();
+		}
+	}
+
 	/*if($po_no!=''){	
 $strSQL23 = "SELECT * FROM hos__so WHERE po_no = '".$po_no."'";
 $objQuery23 = mysqli_query($conn,$strSQL23);

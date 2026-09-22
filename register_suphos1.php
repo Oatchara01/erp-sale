@@ -374,6 +374,16 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		// 	$validationErrors[] = 'กรุณาใส่วันที่โอน';
 		// }
 
+		// ใบสั่งขาย E-Tax (et_ckk=1) ต้องมี E-Mail รูปแบบถูกต้องก่อนบันทึกจริง (ไม่ใช่ Draft)
+		// เช็คจาก $_POST ตรง ๆ เพราะ $et_ckk normalize ไว้ทีหลัง (บรรทัดถัดลงไป)
+		$isEtaxDoc = isset($_POST['et_ckk']) && $_POST['et_ckk'] !== '';
+		if ($isEtaxDoc) {
+			$emailValue = trim((string)($_POST['email'] ?? ''));
+			if ($emailValue === '' || !filter_var($emailValue, FILTER_VALIDATE_EMAIL)) {
+				$validationErrors[] = 'กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax';
+			}
+		}
+
 		if (!empty($validationErrors)) {
 			$validationText = implode("\\n", array_map(function ($msg) {
 				return str_replace(array("\\", "'", "\r", "\n"), array("\\\\", "\\'", " ", " "), $msg);
