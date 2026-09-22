@@ -110,6 +110,7 @@ include("head.php"); ?>
 	function updateDeliveryContractRequirement() {
 		var haveOrderCheckbox = document.getElementById('have_order');
 		var deliveryContractInput = document.getElementById('delivery_contract');
+		var deliveryContractGroup = document.getElementById('delivery_contract_field_group');
 		if (!haveOrderCheckbox || !deliveryContractInput) {
 			return;
 		}
@@ -118,6 +119,10 @@ include("head.php"); ?>
 		deliveryContractInput.required = isRequired;
 		if (!isRequired) {
 			deliveryContractInput.setCustomValidity('');
+		}
+		// ซ่อนตอนไม่ได้เลือกออเดอร์ฝาก แต่ไม่ล้าง .value เพื่อให้ค่าเดิมยังอยู่ถ้าติ๊กกลับมา
+		if (deliveryContractGroup) {
+			deliveryContractGroup.style.display = isRequired ? '' : 'none';
 		}
 	}
 
@@ -2300,8 +2305,8 @@ include("head.php"); ?>
 								<input name="po_no" id="po_no" class="so-input" placeholder="เช่น lv58945820965">
 							</div>
 
-							<!-- วันที่กำหนดส่งตามสัญญา* -->
-							<div class="so-field-group">
+							<!-- วันที่กำหนดส่งตามสัญญา* (แสดง/บังคับเฉพาะออเดอร์ฝาก; ซ่อนแล้วยังเก็บค่าไว้เมื่อยกเลิกเลือก) -->
+							<div class="so-field-group" id="delivery_contract_field_group" style="<?php echo so_saved_checked($savedSo, 'have_order') ? '' : 'display: none;'; ?>">
 								<label class="so-label" for="delivery_contract">วันที่กำหนดส่งตามสัญญา<span class="required">*</span></label>
 								<div class="so-input-wrapper calendar-wrapper">
 									<input name="delivery_contract" type='date' id="delivery_contract" class="so-input" placeholder="กรุณาระบุเป็นวันที่เท่านั้น !!!">
