@@ -166,9 +166,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<?php } ?>
 				<td>
 				<?php if($user_type=='Engineer'){ ?>
-				<a href="register_breng_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_breng_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 				<?php }else{ ?>
-				<a href="register_brhos_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>	
+				<a href="register_brhos_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 					<?php } ?>
 				</td>
 				<td>
@@ -179,9 +179,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 
 <td>
 <?php if($user_type=='Engineer'){ ?>	
-<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_breng_createnew_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>		
+<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_breng_createnew_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>
 	<?php }else{ ?>
-<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_brhos_createnew_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>	
+<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_brhos_createnew_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>
 	<?php } ?>
 </td>
 
@@ -196,7 +196,7 @@ while($objResult = mysqli_fetch_array($objQuery))
       <strong>รายการ<span class="style14"> :</span>จำนวน</strong>
       <?=$Num_Pages;?>
       <strong>หน้า<span class="style14"> :</span></strong>
-      <?
+      <?php
 	if($Prev_Page)
 	{
 		echo " <a href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date'><font color='black'><< Back</font></a> ";

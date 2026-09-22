@@ -49,10 +49,10 @@ if (mysqli_connect_errno())
 mysqli_set_charset($news,"utf8");*/
 
 
-/*$stock_out = mysqli_connect("27.254.145.133","allwell_stock","Pass@2020","allwell_stock");
+$new = mysqli_connect("localhost","root","","allwell_stock_test");
 
 if (mysqli_connect_errno())
   {
   echo "Failed to connect to MySQL: " . mysqli_connect_error();
   }
-mysqli_set_charset($stock_out,"utf8");*/
+mysqli_set_charset($new,"utf8");

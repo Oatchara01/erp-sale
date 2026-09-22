@@ -1,7 +1,28 @@
 <?php 
 include('head.php');
 include('dbconnect.php');
-$po_no = $_GET['po_no'];
+$po_no = isset($_GET['po_no']) ? trim((string) $_GET['po_no']) : '';
+
+// Older versions of this page expected a separate stock connection in $new.
+// Fall back to the active SOL connection, and verify the required stock tables
+// before running any queries so a partially imported local database does not
+// cause a fatal error.
+$stockConnection = (isset($new) && $new instanceof mysqli) ? $new : $conn;
+$stockTablesAvailable = true;
+foreach (array('in__main', 'in__sbmain') as $requiredTable) {
+	$tableName = mysqli_real_escape_string($stockConnection, $requiredTable);
+	$tableResult = mysqli_query(
+		$stockConnection,
+		"SELECT 1 FROM information_schema.tables " .
+		"WHERE table_schema = DATABASE() AND table_name = '".$tableName."' LIMIT 1"
+	);
+
+	if (!$tableResult || mysqli_num_rows($tableResult) === 0) {
+		$stockTablesAvailable = false;
+		break;
+	}
+}
+
 if($po_no == ''){ ?>
 <script>alert('โปรดเลือกเลขที่ใบสั่งซื้อ PO เป็นลำดับแรก !!');</script>
 <?php } ?>
@@ -77,11 +98,12 @@ $today = $year . '-' . $month . '-' . $day;
 
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id_br) AS MAXID FROM in__br ";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
+$qry = mysqli_query($conn,$sql) or die(mysqli_error($conn));
 $rs = mysqli_fetch_assoc($qry);
 
-$maxId = substr($rs['MAXID'], -5);
-$maxId3 = substr($rs['MAXID'],-9);
+$maxRefId = (string) ($rs['MAXID'] ?? '');
+$maxId = $maxRefId !== '' ? (int) substr($maxRefId, -5) : 0;
+$maxId3 = $maxRefId !== '' ? substr($maxRefId, -9) : '';
 
 $maxId1 = substr($maxId3,0,-5);
 
@@ -100,53 +122,74 @@ $nextId = $yearMonth.$maxId1;
 
 }
 
-$strSQL_pomain = "SELECT customer_id FROM po__main WHERE po_no = '".$po_no."' ";
-$objQuery_pomain = mysqli_query($inter,$strSQL_pomain);
-$objResult_pomain = mysqli_fetch_array($objQuery_pomain);
+$customerId = '';
+$customerAddress = '';
 
+if ($po_no !== '') {
+	// po__main belongs to allwell_inter. Use the existing server connection
+	// instead of the removed/undefined $inter connection variable.
+	$stmtPo = mysqli_prepare($conn, "SELECT customer_id FROM allwell_inter.po__main WHERE po_no = ? LIMIT 1");
+	if ($stmtPo) {
+		mysqli_stmt_bind_param($stmtPo, 's', $po_no);
+		mysqli_stmt_execute($stmtPo);
+		mysqli_stmt_bind_result($stmtPo, $customerId);
+		mysqli_stmt_fetch($stmtPo);
+		mysqli_stmt_close($stmtPo);
+	}
 
-$strSQLcus = "SELECT customer_name,cus_address FROM tb_customer WHERE customer_id = '".$objResult_pomain['customer_id']."' ";
-$objQuerycus = mysqli_query($conn,$strSQLcus) or die ("Error Query [".$strSQLcus."]");
-$objResultcus = mysqli_fetch_array($objQuerycus);
+	if ($customerId !== '') {
+		$stmtCustomer = mysqli_prepare($conn, "SELECT cus_address FROM tb_customer WHERE customer_id = ? LIMIT 1");
+		if ($stmtCustomer) {
+			mysqli_stmt_bind_param($stmtCustomer, 's', $customerId);
+			mysqli_stmt_execute($stmtCustomer);
+			mysqli_stmt_bind_result($stmtCustomer, $customerAddress);
+			mysqli_stmt_fetch($stmtCustomer);
+			mysqli_stmt_close($stmtCustomer);
+		}
+	}
+}
 
-$strSQL1 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$po_no."' and iv_no LIKE '%IO%' and close_br='0' ORDER BY po_no DESC ";	//echo $strSQL_po01;
-$objQuery1 = mysqli_query($new,$strSQL1);
-while($objResult1 = mysqli_fetch_array($objQuery1)) {
+if ($po_no !== '' && $stockTablesAvailable) {
+$poNoSql = mysqli_real_escape_string($stockConnection, $po_no);
+$strSQL1 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$poNoSql."' and iv_no LIKE '%IO%' and close_br='0' ORDER BY po_no DESC ";	//echo $strSQL_po01;
+$objQuery1 = mysqli_query($stockConnection,$strSQL1);
+while($objQuery1 && $objResult1 = mysqli_fetch_array($objQuery1)) {
 	
 $strSQL4 = "SELECT * FROM  in__sbmain  WHERE ref_idd = '".$objResult1['ref_id']."' and ckk_check ='0'";
-$objQuery4 = mysqli_query($new,$strSQL4) or die ("Error Query [".$strSQL4."]");
+$objQuery4 = mysqli_query($stockConnection,$strSQL4) or die ("Error Query [".$strSQL4."]");
 $Num_Rows4 = mysqli_num_rows($objQuery4);
 	
 if($Num_Rows4=='0'){	
 
 $strSQL =  "Update in__main set close_br='1'  where ref_id='".$objResult1['ref_id']."'";
-$objQuery = mysqli_query($new,$strSQL) or die(mysqli_error());	
+$objQuery = mysqli_query($stockConnection,$strSQL) or die(mysqli_error($stockConnection));
 	
 }
 	
 while($objResult4 = mysqli_fetch_array($objQuery4)) {
 		
-    $strSQL31 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$po_no."' and product_id = '".$objResult4['product_id']."' ";
+    $poNoCoreSql = mysqli_real_escape_string($conn, $po_no);
+    $productIdCoreSql = mysqli_real_escape_string($conn, $objResult4['product_id']);
+    $strSQL31 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$poNoCoreSql."' and product_id = '".$productIdCoreSql."' ";
     $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
     $objResult31 = mysqli_fetch_array($objQuery31);
 
     $count_item = $objResult4['sale_count']-$objResult31['sum_count'];
         if($count_item < 1){
             $strSQL11 =  "Update in__sbmain set ckk_check = '1'  where ref_idd='".$objResult1['ref_id']."' and product_id = '".$objResult4['product_id']."' ";
-            $objQuery11 = mysqli_query($new,$strSQL11);
-            echo $strSQL11;
+            $objQuery11 = mysqli_query($stockConnection,$strSQL11);
         }
     
 	}
   }
+}
 
 
 	 ?>
 
 <div class="w3-white w3-container">
 	<div class="w3-panel w3-light-grey"><h3>Register Borrow Order</h3></div>
-	<form action="register_breng1_breq.php" method="post" name="frmMain" enctype="multipart/form-data" 
-		   onSubmit="JavaScript:return fncSubmit();" >
+	<form action="register_breng1_breq.php" method="post" name="frmMain" enctype="multipart/form-data">
   
 	<div class="w3-bar">
 		<input type="radio" name="company" value="1" checked='checked' required>ใบยืม AWL <br>
@@ -158,9 +201,9 @@ while($objResult4 = mysqli_fetch_array($objQuery4)) {
 	
 	<div class="w3-bar w3-padding-small"></div><!-- bar -->
 	<div class="w3-half 1">
-		<div class="w3-bar w3-margin-bottom" style="display: none;"><span>รหัสลูกค้า</span> <input type="text" name="customer_id" id="customer_id" class="w3-input" style="width:90%;"  value="<?php if($po_no != ''){ echo $objResult_pomain['customer_id']; } ?>" placeholder="Search ชื่อลูกค้า..." ><input type ='hidden' name="h_customer"  id="h_customer" class="w3-input" value="<?php echo $objResult_pomain['customer_id'];?>"></div>
+		<div class="w3-bar w3-margin-bottom" style="display: none;"><span>รหัสลูกค้า</span> <input type="text" name="customer_id" id="customer_id" class="w3-input" style="width:90%;" value="<?php echo htmlspecialchars($customerId, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Search ชื่อลูกค้า..." ><input type="hidden" name="h_customer" id="h_customer" class="w3-input" value="<?php echo htmlspecialchars($customerId, ENT_QUOTES, 'UTF-8'); ?>"></div>
 		<div class="w3-bar w3-margin-bottom"><span>ชื่อลูกค้า/รพ.</span> <input type="text" name="customer" id="customer" class="w3-input" style="width:90%;" value="<?php echo $_SESSION['name'].' '.$_SESSION['surname'];?>" required></div>
-		<div class="w3-bar w3-margin-bottom"><span>ที่อยู่</span> <textarea name="address" id="address" class="w3-input" style="width:90%;" rows="2"><?php if($po_no != ''){ echo $objResultcus["cus_address"]; } ?></textarea></div>
+		<div class="w3-bar w3-margin-bottom"><span>ที่อยู่</span> <textarea name="address" id="address" class="w3-input" style="width:90%;" rows="2"><?php echo htmlspecialchars($customerAddress, ENT_QUOTES, 'UTF-8'); ?></textarea></div>
 		<div class="w3-bar w3-margin-bottom"><span>Sale Comment</span> <textarea name="sale_comment" id="sale_comment" class="w3-input" style="width:90%;" rows="2"></textarea></div>
 		
 		 &nbsp;ต้องการเอกสารแนบบิล<br>
@@ -189,21 +232,33 @@ while($objResult4 = mysqli_fetch_array($objQuery4)) {
 
 เลขที่ใบสั่งซื้อ PO <font color="red">*</font>
 <select name="po_no" id="po_no" class="w3-select w3-border w3-round-xxlarge" onchange="location = this.value;" required>
-<?php if($po_no == ''){?><option value="">select</option><?php } else { ?><option value="<?=$po_no;?>"><?=$po_no;?></option><?php } ?>
+<?php if($po_no == ''){?><option value="">select</option><?php } else { ?><option value="<?=htmlspecialchars($po_no, ENT_QUOTES, 'UTF-8');?>"><?=htmlspecialchars($po_no, ENT_QUOTES, 'UTF-8');?></option><?php } ?>
 <?php
+if ($stockTablesAvailable) {
 $strSQL_po = "SELECT DISTINCT po_no FROM in__main  where close_br ='0' ORDER BY po_no DESC ";
-$objQuery_po = mysqli_query($new,$strSQL_po);
-while($objResult_po = mysqli_fetch_array($objQuery_po)){
-    $strSQL_cpny = "SELECT company FROM po__main WHERE po_no = '".$objResult_po['po_no']."' and  company = '1' ";
-	$objQuery_cpny = mysqli_query($inter,$strSQL_cpny);
-    $num_cpny = mysqli_num_rows($objQuery_cpny);
-	$objResult_cpny = mysqli_fetch_array($objQuery_cpny);
+$objQuery_po = mysqli_query($stockConnection,$strSQL_po);
+while($objQuery_po && $objResult_po = mysqli_fetch_array($objQuery_po)){
+	$optionPoNo = (string) $objResult_po['po_no'];
+	$stmtCompany = mysqli_prepare($conn, "SELECT 1 FROM allwell_inter.po__main WHERE po_no = ? AND company = '1' LIMIT 1");
+	$num_cpny = 0;
+	if ($stmtCompany) {
+		mysqli_stmt_bind_param($stmtCompany, 's', $optionPoNo);
+		mysqli_stmt_execute($stmtCompany);
+		mysqli_stmt_store_result($stmtCompany);
+		$num_cpny = mysqli_stmt_num_rows($stmtCompany);
+		mysqli_stmt_close($stmtCompany);
+	}
 if($num_cpny >= 1){
 ?>
-	<option value="register_breng_brgq.php?po_no=<?=$objResult_po['po_no'];?>"><?=$objResult_po['po_no'];?></option>
+	<option value="register_breng_brgq.php?po_no=<?=urlencode($optionPoNo);?>"><?=htmlspecialchars($optionPoNo, ENT_QUOTES, 'UTF-8');?></option>
 <?php 
 } // num_cpny
 } // while
+} else {
+?>
+	<option value="" disabled>ไม่พบตารางข้อมูลรับเข้า in__main / in__sbmain</option>
+<?php
+}
  ?>
 </select>
 
@@ -240,19 +295,26 @@ if($num_cpny >= 1){
 		<th style="width: 15%;">หมายเหตุ</th>
 	</tr>
 <?php
-$strSQL_po01 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$po_no."' and iv_no LIKE '%IO%' ORDER BY po_no DESC ";	//echo $strSQL_po01;
-$objQuery_po01 = mysqli_query($new,$strSQL_po01);
-$objResult_po01 = mysqli_fetch_array($objQuery_po01);
 $num0 = 1;
-	$strSQL_item01 = "SELECT * FROM  in__sbmain  WHERE ref_idd = '".$objResult_po01['ref_id']."' and ckk_check ='0' ";
-    $objQuery_item01 = mysqli_query($new,$strSQL_item01) or die ("Error Query [".$strSQL_item01."]");
+if ($po_no !== '' && $stockTablesAvailable) {
+	$poNoSql = mysqli_real_escape_string($stockConnection, $po_no);
+	$strSQL_po01 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$poNoSql."' and iv_no LIKE '%IO%' ORDER BY po_no DESC ";	//echo $strSQL_po01;
+	$objQuery_po01 = mysqli_query($stockConnection,$strSQL_po01);
+	$objResult_po01 = $objQuery_po01 ? mysqli_fetch_array($objQuery_po01) : null;
+	$stockRefId = $objResult_po01['ref_id'] ?? '';
+	$stockRefIdSql = mysqli_real_escape_string($stockConnection, $stockRefId);
+	$strSQL_item01 = "SELECT * FROM  in__sbmain  WHERE ref_idd = '".$stockRefIdSql."' and ckk_check ='0' ";
+    $objQuery_item01 = mysqli_query($stockConnection,$strSQL_item01) or die ("Error Query [".$strSQL_item01."]");
     while($objResult_item01 = mysqli_fetch_array($objQuery_item01)) {
     
-	$strSQL2 = "SELECT sol_name,sol_code,access_code,express_code,unit_name,war_hc FROM  tb_product  WHERE product_ID = '".$objResult_item01['product_id']."' ";
-    $objQuery2 = mysqli_query($new,$strSQL2) or die ("Error Query [".$strSQL2."]");
+	$productIdSql = mysqli_real_escape_string($conn, $objResult_item01['product_id']);
+	$strSQL2 = "SELECT sol_name,sol_code,access_code,express_code,unit_name,war_hc FROM  tb_product  WHERE product_ID = '".$productIdSql."' ";
+    $objQuery2 = mysqli_query($conn,$strSQL2) or die ("Error Query [".$strSQL2."]");
     $objResult2 = mysqli_fetch_array($objQuery2);
 
-	$strSQL3 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$po_no."' and product_id = '".$objResult_item01['product_id']."' ";
+	$poNoCoreSql = mysqli_real_escape_string($conn, $po_no);
+	$productIdCoreSql = mysqli_real_escape_string($conn, $objResult_item01['product_id']);
+	$strSQL3 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$poNoCoreSql."' and product_id = '".$productIdCoreSql."' ";
     $objQuery3 = mysqli_query($conn,$strSQL3) or die ("Error Query [".$strSQL3."]");
     $objResult3 = mysqli_fetch_array($objQuery3);
     
@@ -262,7 +324,6 @@ $integer1 = (int) $string1;
 $integer2 = (int) $string2;
 
 ?>
-</form>
 <tr>
 <td>
     <input type="checkbox" name="check_in[<?=$num0;?>]" id="check_in[<?=$num0;?>]" value="1" checked>
@@ -301,9 +362,14 @@ $integer2 = (int) $string2;
 <?php 
 $num0++;
 } // objResult_item01
+}
 ?> 
 </table>
-<br><center><input type="submit" name="submit" class="w3-button w3-teal be-border" value="บันทึก"></center><br>
+<?php if (!$stockTablesAvailable) { ?>
+<div class="w3-panel w3-pale-red w3-border">ไม่สามารถโหลดรายการ PO ได้: กรุณาติดตั้งหรือกู้คืนตาราง in__main และ in__sbmain ในฐานข้อมูล Stock</div>
+<?php } ?>
+<br><center><input type="submit" name="submit" class="w3-button w3-teal be-border" value="บันทึก" <?php echo $stockTablesAvailable ? '' : 'disabled'; ?>></center><br>
+</form>
 <script>
 	function calc1() {
     let num1 = Number(document.querySelector("#sale_count1").value);
