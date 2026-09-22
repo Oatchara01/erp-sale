@@ -1613,32 +1613,32 @@ include("head.php"); ?>
 		<script language="javascript">
 			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
 			window.soIsRentalIvConversion = <?php echo $isRentalIvConversion ? 'true' : 'false'; ?>;
+			window.soSavedHaveProduct = <?php echo json_encode((string)($savedSo['have_product'] ?? ''), JSON_UNESCAPED_UNICODE); ?>;
 			<?php if ($fromRentalError !== null): ?>
 			document.addEventListener('DOMContentLoaded', function() {
 				Swal.fire('แจ้งเตือน', <?php echo json_encode($fromRentalError, JSON_UNESCAPED_UNICODE); ?>, 'error');
 			});
 			<?php endif; ?>
 
-			// return true = ยังไม่มีวงเงิน/วงเงินไม่พอ ต้อง block การบันทึก (โชว์ modal เตือนให้แล้วในตัว)
+			// return true = ลูกค้ามีวงเงินแต่วงเงินไม่พอ ต้อง block การบันทึก
 			function isCreditOverLimitBlocking() {
+				if (!isCreditCheckRequiredForCurrentDocument()) return false;
+
 				var remainingInput = document.getElementById('remaining_credit_thb');
 				if (!remainingInput || remainingInput.value === '') return false;
 
 				var creditLimitElem = document.getElementById('credit_thb');
 				var status = buildCreditStatus({
 					isCreditCustomer: isCurrentCustomerCreditMode(),
+					shouldCheckCredit: isCreditCheckRequiredForCurrentDocument(),
 					creditAmount: creditLimitElem ? creditLimitElem.value : 0,
 					remaining: remainingInput.value,
 					netTotal: getCurrentNetTotal()
 				});
 
-				if (status.isNoCreditLimit || status.isInsufficientCredit) {
+				if (status.isInsufficientCredit) {
 					var customerName = getCurrentCustomerName();
-					if (status.isNoCreditLimit) {
-						showCreditWarningModal('no-limit', customerName, 0, status.creditAmount, status.remaining);
-					} else {
-						showCreditWarningModal('limit', customerName, 0, status.creditAmount, status.remaining);
-					}
+					showCreditWarningModal('limit', customerName, 0, status.creditAmount, status.remaining);
 					return true;
 				}
 				return false;
@@ -2102,11 +2102,12 @@ include("head.php"); ?>
 							<div class="so-field-group">
 								<label class="so-label" for="doc_type_select">ประเภท<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-									<select class="so-select" id="doc_type_select" onchange="
+					<select class="so-select" id="doc_type_select" onchange="
 									document.getElementById('ic_ckk').checked = false;
 									document.getElementById('et_ckk').checked = false;
 									if(this.value == '2') document.getElementById('et_ckk').checked = true;
 									if(this.value == '3') document.getElementById('ic_ckk').checked = true;
+									if(typeof window.checkCreditLimitOnChange === 'function') window.checkCreditLimitOnChange();
 								">
 										<option value="1">ใบสั่งขาย</option>
 										<option value="2">ใบสั่งขาย E-Tax</option>
@@ -5176,8 +5177,7 @@ include("head.php"); ?>
 
 		// เช็คยอดเครดิตคงเหลือของลูกค้า custId แล้วอัปเดต remaining_credit_thb + เด้ง
 		// --- Credit status helpers ---
-		// รวม logic ตรวจสถานะเครดิตไว้ที่เดียว เพื่อแยก 3 กรณีให้ชัดเจน:
-		// 1) มีหนี้ค้างจริง 2) ลูกค้าเครดิตแต่ยังไม่มีวงเงิน 3) มีวงเงินแต่คงเหลือไม่พอ
+		// ตรวจเฉพาะลูกค้าที่มีวงเงินเครดิต และไม่ใช่ IC/ออเดอร์ฝากที่ยังไม่ถูกดึงออกมารอส่ง
 		function parseMoneyValue(value) {
 			var parsed = parseFloat(String(value === null || value === undefined ? '' : value).replace(/,/g, ''));
 			return isNaN(parsed) ? 0 : parsed;
@@ -5198,30 +5198,43 @@ include("head.php"); ?>
 			return getResolvedCustomerPaymentMode() === 'credit';
 		}
 
+		function isCreditCheckRequiredForCurrentDocument() {
+			var icCheckbox = document.getElementById('ic_ckk');
+			var documentType = document.getElementById('doc_type_select');
+			var isIcDocument = (icCheckbox && icCheckbox.checked) || (documentType && documentType.value === '3');
+			if (isIcDocument) return false;
+
+			var haveOrderCheckbox = document.getElementById('have_order');
+			var isDepositOrder = !!(haveOrderCheckbox && haveOrderCheckbox.checked);
+			var isReleasedDepositOrder = String(window.soSavedHaveProduct || '') === '2';
+			return !isDepositOrder || isReleasedDepositOrder;
+		}
+
 		function buildCreditStatus(values) {
 			values = values || {};
 			var isCreditCustomer = !!values.isCreditCustomer;
+			var shouldCheckCredit = values.shouldCheckCredit !== false;
 			var creditAmount = parseMoneyValue(values.creditAmount);
 			var remaining = parseMoneyValue(values.remaining);
 			var totalOutstanding = parseMoneyValue(values.totalOutstanding);
 			var netTotal = parseMoneyValue(values.netTotal);
 
-			var hasDebt = totalOutstanding > 0;
 			var hasCreditLimit = creditAmount > 0;
-			var isNoCreditLimit = isCreditCustomer && !hasCreditLimit;
-			var isInsufficientCredit = isCreditCustomer && hasCreditLimit && (netTotal > remaining);
+			var isEligibleForCreditCheck = shouldCheckCredit && isCreditCustomer && hasCreditLimit;
+			var hasDebt = isEligibleForCreditCheck && totalOutstanding > 0;
+			var isInsufficientCredit = isEligibleForCreditCheck && (netTotal > remaining);
 
 			return {
 				isCreditCustomer: isCreditCustomer,
+				shouldCheckCredit: shouldCheckCredit,
 				creditAmount: creditAmount,
 				remaining: remaining,
 				totalOutstanding: totalOutstanding,
 				netTotal: netTotal,
 				hasDebt: hasDebt,
 				hasCreditLimit: hasCreditLimit,
-				isNoCreditLimit: isNoCreditLimit,
 				isInsufficientCredit: isInsufficientCredit,
-				shouldBlock: isNoCreditLimit || isInsufficientCredit
+				shouldBlock: isInsufficientCredit
 			};
 		}
 
@@ -5251,6 +5264,7 @@ include("head.php"); ?>
 
 						var status = buildCreditStatus({
 							isCreditCustomer: isCurrentCustomerCreditMode(),
+							shouldCheckCredit: isCreditCheckRequiredForCurrentDocument(),
 							creditAmount: creditAmount,
 							remaining: remaining,
 							totalOutstanding: totalOutstanding,
@@ -5262,11 +5276,8 @@ include("head.php"); ?>
 						// กรณีที่ 1: มียอดหนี้คงค้างจริง (totalOutstanding > 0) เตือนสีแดง
 						if (status.hasDebt) {
 							showCreditWarningModal('debt', customerName, status.totalOutstanding, status.creditAmount, status.remaining);
-						} else if (status.isNoCreditLimit) {
-							// กรณีที่ 2: ลูกค้าเครดิตแต่ยังไม่มีวงเงินเครดิต
-							showCreditWarningModal('no-limit', customerName, 0, status.creditAmount, status.remaining);
 						} else if (status.isInsufficientCredit) {
-							// กรณีที่ 3: มีวงเงินแต่คงเหลือไม่พอ
+							// มีวงเงินแต่คงเหลือไม่พอ
 							showCreditWarningModal('limit', customerName, 0, status.creditAmount, status.remaining);
 						}
 					}
@@ -5326,35 +5337,8 @@ include("head.php"); ?>
 				if (actionBtn) {
 					actionBtn.style.display = "inline-flex";
 				}
-			} else if (type === 'no-limit') {
-				// 2. แบบลูกค้าเครดิตแต่ยังไม่มีวงเงินเครดิต
-				if (icon) {
-					icon.className = "fas fa-exclamation-triangle";
-					icon.style.color = "#FFA726";
-					icon.style.fontSize = "80px";
-					icon.style.background = "linear-gradient(to bottom, #FFD54F, #F57C00)";
-					icon.style.webkitBackgroundClip = "text";
-					icon.style.webkitTextFillColor = "transparent";
-					icon.style.filter = "drop-shadow(0 4px 8px rgba(245, 124, 0, 0.2))";
-				}
-				if (titleElem) {
-					titleElem.textContent = "ยังไม่มีวงเงินเครดิต";
-				}
-				if (descElem) {
-					descElem.textContent = "กรุณาติดต่อแผนกบัญชีเพื่อกำหนดวงเงินเครดิต";
-				}
-				if (detailsWrap) {
-					detailsWrap.innerHTML =
-						'<div style="display: flex; justify-content: space-between; font-size: 16px; color: #4A4A4A; font-family: \'Prompt\', sans-serif;">' +
-						'<span>วงเงิน :</span>' +
-						'<span style="color: #EF5350; font-weight: 600;">' + formatVal(0) + ' บาท</span>' +
-						'</div>';
-				}
-				if (actionBtn) {
-					actionBtn.style.display = "inline-flex";
-				}
 			} else {
-				// 3. แบบมีวงเงินแต่คงเหลือไม่พอ
+				// แบบมีวงเงินแต่คงเหลือไม่พอ
 				if (icon) {
 					icon.className = "fas fa-exclamation-triangle";
 					icon.style.color = "#FFA726";
@@ -5420,6 +5404,12 @@ include("head.php"); ?>
 		}
 
 		window.checkCreditLimitOnChange = function() {
+			if (!isCreditCheckRequiredForCurrentDocument()) {
+				updateSubmitButtonState(false);
+				window.closeCreditWarningPopup(false);
+				return;
+			}
+
 			var remainingInput = document.getElementById('remaining_credit_thb');
 			if (!remainingInput || remainingInput.value === '') {
 				updateSubmitButtonState(false);
@@ -5429,6 +5419,7 @@ include("head.php"); ?>
 			var creditLimitElem = document.getElementById('credit_thb');
 			var status = buildCreditStatus({
 				isCreditCustomer: isCurrentCustomerCreditMode(),
+				shouldCheckCredit: true,
 				creditAmount: creditLimitElem ? creditLimitElem.value : 0,
 				remaining: remainingInput.value,
 				netTotal: getCurrentNetTotal()
@@ -5436,15 +5427,11 @@ include("head.php"); ?>
 
 			updateSubmitButtonState(status.shouldBlock);
 
-			if (status.isNoCreditLimit || status.isInsufficientCredit) {
+			if (status.isInsufficientCredit) {
 				var modal = document.getElementById('creditWarningPopupModal');
 				if (modal && modal.style.display !== 'flex') {
 					var customerName = getCurrentCustomerName();
-					if (status.isNoCreditLimit) {
-						showCreditWarningModal('no-limit', customerName, 0, status.creditAmount, status.remaining);
-					} else {
-						showCreditWarningModal('limit', customerName, 0, status.creditAmount, status.remaining);
-					}
+					showCreditWarningModal('limit', customerName, 0, status.creditAmount, status.remaining);
 				}
 			}
 		};
@@ -5545,7 +5532,10 @@ include("head.php"); ?>
 			var haveOrderCheckbox = document.getElementById('have_order');
 			var deliveryContractInput = document.getElementById('delivery_contract');
 			if (haveOrderCheckbox && deliveryContractInput) {
-				haveOrderCheckbox.addEventListener('change', updateDeliveryContractRequirement);
+				haveOrderCheckbox.addEventListener('change', function() {
+					updateDeliveryContractRequirement();
+					window.checkCreditLimitOnChange();
+				});
 				deliveryContractInput.addEventListener('input', function() {
 					if (deliveryContractInput.value !== '') {
 						deliveryContractInput.setCustomValidity('');

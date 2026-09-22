@@ -112,6 +112,14 @@ $strSQL1 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product ON hos__subso.produc
 $objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
 $Num_Rows1 = mysqli_num_rows($objQuery1);
 
+$orderTotal = 0.0;
+$orderTotalSql = "SELECT COALESCE(SUM(amount), 0) AS order_total FROM hos__subso WHERE ref_idd = '" . mysqli_real_escape_string($conn, $ref_id) . "'";
+$orderTotalQuery = mysqli_query($conn, $orderTotalSql);
+if ($orderTotalQuery) {
+	$orderTotalRow = mysqli_fetch_assoc($orderTotalQuery);
+	$orderTotal = (float)($orderTotalRow['order_total'] ?? 0);
+}
+
 
 	 ?>
 
@@ -200,9 +208,9 @@ $today = $year . '-' . $month . '-' . $day;
 	<?php } ?>
 &nbsp;<input type="text" name = "order_no" id="date_so" value="<?php echo $rs["order_no"];?>" class = "button4"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<?php if($rs["have_product"]=='2'){ ?>
-				<input type="checkbox" name="have_product" checked='checked' value="2" > มีสินค้า
+				<input type="checkbox" name="have_product" id="have_product" checked='checked' value="2" > มีสินค้า
 				<?php }else{ ?>
-				<input type="checkbox" name="have_product" value="1" > มีสินค้า
+				<input type="checkbox" name="have_product" id="have_product" value="1" > มีสินค้า
 	<?php } 
 		
 	?>
@@ -647,7 +655,7 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 
 
 <center>
-	<input type="button" name ="Submit" value="บันทึก" class = "button button4" onClick="this.form.action='register_stockhos_jong1.php'; submit()">
+	<input type="button" name ="Submit" id="btn_release_deposit_order" value="บันทึก" class = "button button4" onClick="submitDepositOrderRelease(this.form)">
 
 	
 
@@ -655,6 +663,54 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 
 
 </form>
+<script>
+function submitDepositOrderRelease(form) {
+	var haveProduct = document.getElementById('have_product');
+	var isIcDocument = <?php echo (($rs['ic_ckk'] ?? '') === '1') ? 'true' : 'false'; ?>;
+	var billId = <?php echo json_encode(trim((string)($rs['bill_id'] ?? '')), JSON_UNESCAPED_UNICODE); ?>;
+	var orderTotal = <?php echo json_encode($orderTotal); ?>;
+	var submitButton = document.getElementById('btn_release_deposit_order');
+
+	form.action = 'register_stockhos_jong1.php';
+	if (!haveProduct || !haveProduct.checked || isIcDocument || !billId) {
+		HTMLFormElement.prototype.submit.call(form);
+		return;
+	}
+
+	if (submitButton) submitButton.disabled = true;
+	fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(billId), {
+		credentials: 'same-origin',
+		cache: 'no-store'
+	})
+		.then(function(response) {
+			if (!response.ok) throw new Error('Network response not ok');
+			return response.json();
+		})
+		.then(function(data) {
+			if (!data || !data.success || !data.summary) {
+				throw new Error('Invalid credit response');
+			}
+
+			var creditAmount = parseFloat(data.summary.credit_amount || 0);
+			var remainingCredit = parseFloat(data.summary.remaining_credit || 0);
+
+			// ลูกค้าที่ไม่มีวงเงินเครดิตไม่ต้องตรวจหรือแจ้งเตือน
+			if (creditAmount <= 0 || orderTotal <= remainingCredit) {
+				HTMLFormElement.prototype.submit.call(form);
+				return;
+			}
+
+			alert('วงเงินไม่เพียงพอ\nวงเงินคงเหลือ: ' + remainingCredit.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' บาท\nยอดออเดอร์: ' + Number(orderTotal).toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' บาท');
+		})
+		.catch(function(error) {
+			console.error('Unable to check credit before releasing deposit order:', error);
+			alert('ไม่สามารถตรวจสอบวงเงินเครดิตได้ กรุณาลองใหม่อีกครั้ง');
+		})
+		.finally(function() {
+			if (submitButton) submitButton.disabled = false;
+		});
+}
+</script>
 <div id="cr_bar"> Copyright © 2019 phar trillion co., ltd. </div>
   </div>
   <!--/div-->
