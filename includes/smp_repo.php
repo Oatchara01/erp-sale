@@ -776,7 +776,7 @@ function smp_is_awaiting_sup(array $doc)
 function smp_user_has_sup_role(array $session)
 {
 	$type = (string)($session['type_login'] ?? '');
-	if ($type === 'Sup_Sale' || $type === 'Sup_AllWell') {
+	if ($type === 'Sup_en' || $type === 'owner') {
 		return true;
 	}
 	return $type === 'It' && in_array((string)($session['name'] ?? ''), array('ชลชินี', 'อัจฉรา'), true);
