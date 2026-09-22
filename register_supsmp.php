@@ -706,8 +706,7 @@ if (!empty($_SESSION['smp_flash']) && is_array($_SESSION['smp_flash'])) {
 	<script>
 		document.addEventListener('DOMContentLoaded', function () {
 			var flash = <?php echo json_encode($smpFlash, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
-			if (typeof Swal === 'undefined') { alert(flash.title + '
-' + flash.text); return; }
+			if (typeof Swal === 'undefined') { alert(flash.title + '\n' + flash.text); return; }
 			var body = document.createElement('div');
 			body.style.whiteSpace = 'pre-line';
 			body.textContent = flash.text || '';

@@ -43,11 +43,17 @@ try {
 		throw new SmpValidationException('รูปแบบคำขอไม่ถูกต้อง');
 	}
 	$smpResult = smp_run_document_action($conn, $smpRefId, $smpAction, $smpReason, $_SESSION);
+	$smpIsApproveSuccess = in_array($smpResult['outcome'], array('approved', 'forwarded'), true)
+		&& $smpResult['warning'] === '';
 
 	$smpFlash = array(
 		'icon'  => $smpResult['warning'] !== '' ? 'warning' : 'success',
-		'title' => $smpDoneMessages[$smpResult['outcome']] ?? 'ดำเนินการเรียบร้อยแล้ว',
-		'text'  => 'เลขที่อ้างอิง: ' . $smpResult['ref_id'] . ($smpResult['warning'] !== '' ? "\n" . $smpResult['warning'] : ''),
+		'title' => $smpIsApproveSuccess
+			? 'บันทึกข้อมูลเรียบร้อยแล้ว'
+			: ($smpDoneMessages[$smpResult['outcome']] ?? 'ดำเนินการเรียบร้อยแล้ว'),
+		'text'  => $smpIsApproveSuccess
+			? 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว'
+			: 'เลขที่อ้างอิง: ' . $smpResult['ref_id'] . ($smpResult['warning'] !== '' ? "\n" . $smpResult['warning'] : ''),
 	);
 } catch (SmpValidationException $e) {
 	$smpFlash = array('icon' => 'error', 'title' => 'ดำเนินการไม่สำเร็จ', 'text' => $e->getMessage());

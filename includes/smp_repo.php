@@ -803,7 +803,7 @@ function smp_is_awaiting_dm(array $doc)
 		&& (string)($doc['send_admin'] ?? '') === '0';
 }
 
-/** ชื่อผู้ใช้ที่เข้าคิว DM ได้ — menu_it.php:70,79 (คิว status_smpapprove.php แสดงเฉพาะ It ชื่อเหล่านี้) */
+/** ผู้ใช้ที่เข้าคิว DM ได้ — role It/owner และต้องมีชื่ออยู่ในรายชื่อที่กำหนด */
 function smp_dm_role_names()
 {
 	return array('ชลชินี', 'อัจฉรา', 'สมบัติ');
@@ -811,7 +811,7 @@ function smp_dm_role_names()
 
 function smp_user_has_dm_role(array $session)
 {
-	return (string)($session['type_login'] ?? '') === 'It'
+	return in_array((string)($session['type_login'] ?? ''), array('It', 'owner'), true)
 		&& in_array((string)($session['name'] ?? ''), smp_dm_role_names(), true);
 }
 
