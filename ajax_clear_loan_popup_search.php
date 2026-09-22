@@ -167,7 +167,10 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
             d.product_id,
             d.`count` AS qty,
             p.sol_name,
-            p.access_code
+            p.access_code,
+            p.war_hc,
+            p.unit_hc,
+            p.remark_hc
         FROM hos__subjongpro d
         LEFT JOIN tb_product p ON d.product_ID = p.product_id
         WHERE d.ref_idd = '" . clearLoanEscape($conn, $referenceNo) . "'";
@@ -183,6 +186,9 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
                 'product_name' => clearLoanNormalizeText($detail['sol_name']),
                 'product_code' => clearLoanNormalizeText($detail['access_code']),
                 'quantity' => (string)$detail['qty'],
+                'warranty' => clearLoanNormalizeText($detail['war_hc']),
+                'warranty_unit' => clearLoanNormalizeText($detail['unit_hc']),
+                'warranty_remark' => clearLoanNormalizeText($detail['remark_hc']),
                 'sn' => ''
             );
             $itemIndex++;

@@ -6346,6 +6346,10 @@ include("head.php"); ?>
 			var productCode = item.product_code || productId || '';
 			var productName = item.product_name || productId || productCode || '';
 			var productSn = item.sn || '';
+			var warrantyUnit = String(item.warranty_unit || '').trim();
+			if (!warrantyUnit || !isNaN(warrantyUnit)) {
+				warrantyUnit = 'ปี';
+			}
 			var row = document.getElementById('product_row_' + rowIndex);
 			if (row) {
 				row.style.display = '';
@@ -6365,6 +6369,8 @@ include("head.php"); ?>
 			setClearLoanRowField('sum_amount', rowIndex, '');
 			setClearLoanRowField('unit_name', rowIndex, '');
 			setClearLoanRowField('warranty', rowIndex, item.warranty || '');
+			setClearLoanRowField('warranty_unit', rowIndex, warrantyUnit);
+			setClearLoanRowField('remark_hc', rowIndex, item.warranty_remark || '');
 			setClearLoanRowField('cal', rowIndex, '');
 			setClearLoanRowField('pm', rowIndex, '');
 			setClearLoanRowField('pm_year', rowIndex, '');
