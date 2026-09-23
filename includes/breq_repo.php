@@ -187,6 +187,7 @@ if (!function_exists('breq_po_stock_row')) {
 if (!function_exists('breq_po_remaining')) {
 	/**
 	 * คงเหลือให้ยืม = ยอดรับเข้าของ lot − ยอดยืมของ PO+สินค้าในเอกสารอื่น (รวม Draft — Draft จองของไว้)
+	 * ไม่นับใบ Rejected (ไม่อนุมัติ/ยกเลิก) — คืนยอดให้ยืมทันทีที่ใบถูกปิด (ต้องตรงกับ ajax_breq_po_items.php)
 	 * ตัดแถวของ $excludeRefId เพื่อให้เอกสารที่กำลังแก้ไม่หักตัวเอง
 	 * คืน null ถ้าไม่พบแถวรับเข้า
 	 */
@@ -198,7 +199,10 @@ if (!function_exists('breq_po_remaining')) {
 		}
 		$sumRow = breq_fetch_one(
 			$conn,
-			"SELECT SUM(count) AS sum_count FROM in__subbr WHERE po_no = ? AND product_id = ? AND ref_idd_br <> ?",
+			"SELECT SUM(s.count) AS sum_count
+			 FROM in__subbr s
+			 INNER JOIN in__br b ON b.ref_id_br = s.ref_idd_br
+			 WHERE s.po_no = ? AND s.product_id = ? AND s.ref_idd_br <> ? AND b.status_doc <> 'Rejected'",
 			'sss',
 			array($poNo, $productId, (string)$excludeRefId)
 		);
@@ -398,7 +402,7 @@ if (!function_exists('breq_insert_submit_side_tables')) {
 	 * tb_other_bill + tb_register_data ตอน Submit ครั้งแรก — ค่าตามโค้ดเดิม
 	 * (ฟิลด์ส่วนใหญ่มาจาก hidden ค่าว่างของ compatibility layer ในหน้าฟอร์ม)
 	 */
-	function breq_insert_submit_side_tables($conn, $refId, array $post, $company, $addBy, $emId, $addDate)
+	function breq_insert_submit_side_tables($conn, $refId, array $post, $company, $addBy, $emId, $addDate, $withOtherBill = true, $withRegister = true)
 	{
 		$v = function ($key) use ($post) {
 			return breq_post_value($post, $key);
@@ -408,12 +412,17 @@ if (!function_exists('breq_insert_submit_side_tables')) {
 			return $value !== '' ? $value : '0';
 		};
 
-		$otherBill = array('ref_id' => $refId, 'head_1' => $v('head_1'));
-		for ($i = 1; $i <= 11; $i++) {
-			$otherBill['ref_' . $i] = $v('ref_' . $i);
+		if ($withOtherBill) {
+			$otherBill = array('ref_id' => $refId, 'head_1' => $v('head_1'));
+			for ($i = 1; $i <= 11; $i++) {
+				$otherBill['ref_' . $i] = $v('ref_' . $i);
+			}
+			$otherBill['ref_des'] = $v('ref_des');
+			breq_insert_row($conn, 'tb_other_bill', $otherBill);
 		}
-		$otherBill['ref_des'] = $v('ref_des');
-		breq_insert_row($conn, 'tb_other_bill', $otherBill);
+		if (!$withRegister) {
+			return;
+		}
 
 		$typeCompany = $company === '1' ? 'ออลล์เวล ไลฟ์ บจก.' : ($company === '2' ? 'โนเบิล เมด บจก.' : '');
 		breq_insert_row($conn, 'tb_register_data', array(
@@ -467,18 +476,173 @@ if (!function_exists('breq_insert_submit_side_tables')) {
 	}
 }
 
+if (!function_exists('breq_insert_submit_side_tables_once')) {
+	/** Submit ซ้ำ (หลังถูกส่งกลับ / ใบเก่าที่ยังไม่ส่ง Sup) ไม่ insert tb_other_bill / tb_register_data ซ้ำ — มีแถวแล้วข้าม */
+	function breq_insert_submit_side_tables_once($conn, $refId, array $post, $company, $addBy, $emId, $addDate)
+	{
+		$hasOtherBill = breq_fetch_one($conn, "SELECT 1 AS hit FROM tb_other_bill WHERE ref_id = ? LIMIT 1", 's', array($refId)) !== null;
+		$hasRegister = breq_fetch_one($conn, "SELECT 1 AS hit FROM tb_register_data WHERE ref_id = ? LIMIT 1", 's', array($refId)) !== null;
+		breq_insert_submit_side_tables($conn, $refId, $post, $company, $addBy, $emId, $addDate, !$hasOtherBill, !$hasRegister);
+	}
+}
+
+/* ===================== สิทธิ์ / สถานะ =====================
+ * ตรวจฝั่ง server ทุกครั้ง (การซ่อน/แสดงปุ่มในหน้าเป็นแค่ UX) — ใช้ชุดเดียวกันทั้งหน้าใบ หน้าคิว และ endpoint
+ *
+ *   Draft                     → เจ้าของแก้ได้  / Submit, Save Draft, ยกเลิก
+ *   Returned                  → เจ้าของแก้ได้  / Submit ใหม่, Update, ยกเลิก
+ *   Request + send_sup <> 1   → เจ้าของแก้ได้  / ส่ง Sup (Submit), Update, ยกเลิก  (ใบเก่าจาก flow ที่ต้องกดส่ง Sup แยก)
+ *   Request + send_sup = 1    → Sup แก้ได้     / อนุมัติ, ส่งกลับ, ไม่อนุมัติ, ยกเลิก
+ *   Approve                   → Admin แก้ได้เฉพาะเลขที่/วันที่เอกสาร (แท็บ Admin)
+ *   Rejected                  → ดูอย่างเดียว
+ */
+
+if (!function_exists('breq_sup_approver_names')) {
+	/** ผู้อนุมัติ BREQ (ด่าน Sup) — ตามชื่อเหมือนเมนูเดิม menu_suphos.php ที่แสดง "อนุมัติใบยืม BREQ" */
+	function breq_sup_approver_names()
+	{
+		return array('บรรเทิง');
+	}
+}
+
+if (!function_exists('breq_user_is_sup')) {
+	function breq_user_is_sup(array $session)
+	{
+		return in_array(trim((string)($session['name'] ?? '')), breq_sup_approver_names(), true);
+	}
+}
+
+if (!function_exists('breq_user_is_admin')) {
+	function breq_user_is_admin(array $session)
+	{
+		return (string)($session['type_login'] ?? '') === 'Admin';
+	}
+}
+
+if (!function_exists('breq_is_awaiting_sup')) {
+	/** ใบอยู่ในคิว Sup — เงื่อนไขเดียวกับ status_approvebrsup_breq.php */
+	function breq_is_awaiting_sup(array $doc)
+	{
+		return (string)($doc['status_doc'] ?? '') === 'Request' && (string)($doc['send_sup'] ?? '') === '1';
+	}
+}
+
+if (!function_exists('breq_is_owner_stage')) {
+	/** ใบอยู่ในมือเจ้าของ (ยังไม่ส่ง Sup / ถูกส่งกลับ) */
+	function breq_is_owner_stage(array $doc)
+	{
+		$status = (string)($doc['status_doc'] ?? '');
+		return $status === 'Draft' || $status === 'Returned' || ($status === 'Request' && !breq_is_awaiting_sup($doc));
+	}
+}
+
+if (!function_exists('breq_user_can_edit_document')) {
+	/** แก้ค่าในฟอร์มได้หรือไม่ (Save Draft / Update / Submit / ค่าที่ส่งมากับอนุมัติ) */
+	function breq_user_can_edit_document(array $doc, array $session)
+	{
+		if (breq_is_owner_stage($doc)) {
+			return breq_can_edit_owner($doc, $session);
+		}
+		if (breq_is_awaiting_sup($doc)) {
+			return breq_user_is_sup($session);
+		}
+		return false;
+	}
+}
+
+if (!function_exists('breq_user_can_act_as_sup')) {
+	/** อนุมัติ / ส่งกลับ / ไม่อนุมัติ */
+	function breq_user_can_act_as_sup(array $doc, array $session)
+	{
+		return breq_is_awaiting_sup($doc) && breq_user_is_sup($session);
+	}
+}
+
+if (!function_exists('breq_user_can_cancel')) {
+	/** ยกเลิกเอกสาร: ใบในมือเจ้าของ → เจ้าของหรือ Sup / ใบในคิว Sup → Sup */
+	function breq_user_can_cancel(array $doc, array $session)
+	{
+		if (breq_is_owner_stage($doc)) {
+			return breq_can_edit_owner($doc, $session) || breq_user_is_sup($session);
+		}
+		return breq_user_can_act_as_sup($doc, $session);
+	}
+}
+
+if (!function_exists('breq_user_can_admin_edit')) {
+	/** Admin เติม/แก้เลขที่และวันที่เอกสารของใบที่อนุมัติแล้ว (Sup ไม่ออกเลขให้ตอนอนุมัติ) */
+	function breq_user_can_admin_edit(array $doc, array $session)
+	{
+		return (string)($doc['status_doc'] ?? '') === 'Approve' && breq_user_is_admin($session);
+	}
+}
+
 if (!function_exists('breq_lock_document')) {
-	/** ต้องเรียกภายในทรานแซกชัน — ล็อกแถวหัวเอกสารและตรวจสิทธิ์เจ้าของ */
-	function breq_lock_document($conn, $refId, array $session)
+	/** ต้องเรียกภายในทรานแซกชัน — ล็อกแถวหัวเอกสาร (สิทธิ์ตรวจแยกตาม action) */
+	function breq_lock_document($conn, $refId)
 	{
 		$doc = breq_fetch_one($conn, "SELECT * FROM in__br WHERE ref_id_br = ? LIMIT 1 FOR UPDATE", 's', array($refId));
 		if ($doc === null) {
 			throw new BreqValidationException('ไม่พบเอกสาร ' . $refId);
 		}
-		if (!breq_can_edit_owner($doc, $session)) {
-			throw new BreqValidationException('เอกสาร ' . $refId . ' เป็นของผู้ใช้อื่น ไม่สามารถแก้ไขได้');
-		}
 		return $doc;
+	}
+}
+
+if (!function_exists('breq_header_fields_from_post')) {
+	/** คอลัมน์หัวเอกสารที่ฟอร์มแก้ได้ */
+	function breq_header_fields_from_post(array $post)
+	{
+		$ivDate = breq_post_value($post, 'admin_doc_date');
+		return array(
+			'company'      => breq_post_value($post, 'company'),
+			'ref_id_stock' => breq_post_value($post, 'ref_id_stock'),
+			'po_no'        => breq_post_value($post, 'po_no'),
+			'customer_id'  => (int)breq_post_value($post, 'customer_id'),
+			'address'      => breq_post_value($post, 'address'),
+			'sale_comment' => breq_post_value($post, 'sale_comment'),
+			'iv_no'        => breq_post_value($post, 'admin_doc_no'),
+			'iv_date'      => $ivDate !== '' ? $ivDate : '0000-00-00',
+		);
+	}
+}
+
+if (!function_exists('breq_update_header')) {
+	/**
+	 * UPDATE in__br ตาม array คอลัมน์ => ค่า
+	 * $statusGuard (SQL คงที่ ไม่มีค่าจากผู้ใช้) ใส่เมื่อเปลี่ยนสถานะ — ไม่มีแถวถูกแก้ = มีคนเปลี่ยนสถานะไปก่อนแล้ว
+	 */
+	function breq_update_header($conn, $refId, array $set, $statusGuard = '')
+	{
+		$assignments = array();
+		foreach (array_keys($set) as $column) {
+			$assignments[] = '`' . $column . '` = ?';
+		}
+		$values = array_map('strval', array_values($set));
+		$values[] = $refId;
+		$affected = breq_execute(
+			$conn,
+			'UPDATE in__br SET ' . implode(', ', $assignments) . ' WHERE ref_id_br = ?' . ($statusGuard !== '' ? ' AND ' . $statusGuard : ''),
+			str_repeat('s', count($values)),
+			$values
+		);
+		if ($statusGuard !== '' && $affected < 1) {
+			throw new BreqValidationException('เอกสารถูกเปลี่ยนสถานะไปแล้ว กรุณาโหลดหน้าใหม่');
+		}
+	}
+}
+
+if (!function_exists('breq_log_status')) {
+	/** ประวัติลง tb_document_status_log — เรียกในทรานแซกชันเดียวกับการเปลี่ยนสถานะ */
+	function breq_log_status($conn, $refId, $statusLabel, $reason, array $session)
+	{
+		breq_insert_row($conn, 'tb_document_status_log', array(
+			'ref_id'    => $refId,
+			'status_doc' => $statusLabel,
+			'reason'    => $reason,
+			'user_id'   => (string)($session['UserID'] ?? ''),
+			'user_name' => breq_session_add_by($session),
+		));
 	}
 }
 
@@ -486,8 +650,10 @@ if (!function_exists('breq_persist')) {
 	/**
 	 * @param string $mode draft | submit | update
 	 *   draft  : สร้างใหม่หรือบันทึกทับ Draft เดิม (status_doc = 'Draft')
-	 *   submit : สร้างใหม่หรือ Draft → Request + ส่ง Sup อนุมัติ (send_sup = 1) + side effect เดิม (sale_ckk, tb_other_bill, tb_register_data)
-	 *   update : แก้เอกสาร Request โดยไม่เปลี่ยนสถานะ (ต้องครบเหมือน submit) — Draft ใช้ mode draft
+	 *   submit : สร้างใหม่ / Draft / Returned / Request ที่ยังไม่ส่ง Sup → Request + ส่ง Sup อนุมัติ (send_sup = 1)
+	 *            + side effect เดิม (sale_ckk, tb_other_bill, tb_register_data — ไม่ insert ซ้ำถ้ามีแล้ว)
+	 *   update : แก้ Returned / Request โดยไม่เปลี่ยนสถานะ (ต้องครบเหมือน submit) — Draft ใช้ mode draft
+	 * สิทธิ์ตาม breq_user_can_edit_document (เจ้าของ = ใบในมือเจ้าของ, Sup = ใบในคิว Sup)
 	 * @return array{ref_id: string, created: bool}
 	 */
 	function breq_persist($conn, $stockConn, array $post, $mode, array $session)
@@ -507,17 +673,7 @@ if (!function_exists('breq_persist')) {
 
 		breq_validate($conn, $stockConn, $mode, $company, $poNo, $items, $refId);
 
-		$ivDate = breq_post_value($post, 'admin_doc_date');
-		$headerFields = array(
-			'company'      => $company,
-			'ref_id_stock' => breq_post_value($post, 'ref_id_stock'),
-			'po_no'        => $poNo,
-			'customer_id'  => (int)breq_post_value($post, 'customer_id'),
-			'address'      => breq_post_value($post, 'address'),
-			'sale_comment' => breq_post_value($post, 'sale_comment'),
-			'iv_no'        => breq_post_value($post, 'admin_doc_no'),
-			'iv_date'      => $ivDate !== '' ? $ivDate : '0000-00-00',
-		);
+		$headerFields = breq_header_fields_from_post($post);
 
 		$addBy = breq_session_add_by($session);
 		$addDate = date('Y-m-d H:i:s');
@@ -546,11 +702,20 @@ if (!function_exists('breq_persist')) {
 		mysqli_begin_transaction($conn);
 		try {
 			if (!$created) {
-				$doc = breq_lock_document($conn, $refId, $session);
+				$doc = breq_lock_document($conn, $refId);
 				$previousStatus = (string)$doc['status_doc'];
-				$allowedStatus = ($mode === 'update') ? 'Request' : 'Draft';
-				if ($previousStatus !== $allowedStatus) {
-					throw new BreqValidationException('เอกสาร ' . $refId . ' อยู่ในสถานะ ' . $previousStatus . ' แล้ว ไม่สามารถบันทึกได้');
+				if ($mode === 'draft') {
+					$statusOk = ($previousStatus === 'Draft');
+				} elseif ($mode === 'submit') {
+					$statusOk = breq_is_owner_stage($doc);
+				} else {
+					$statusOk = ($previousStatus === 'Returned' || $previousStatus === 'Request');
+				}
+				if (!$statusOk) {
+					throw new BreqValidationException('เอกสาร ' . $refId . ' อยู่ในสถานะ ' . $previousStatus . ' แล้ว ไม่สามารถบันทึกได้ กรุณาโหลดหน้าใหม่');
+				}
+				if (!breq_user_can_edit_document($doc, $session)) {
+					throw new BreqValidationException('คุณไม่มีสิทธิ์แก้ไขเอกสาร ' . $refId . ' ในสถานะปัจจุบัน');
 				}
 
 				$set = $headerFields;
@@ -558,18 +723,7 @@ if (!function_exists('breq_persist')) {
 					$set['status_doc'] = 'Request';
 					$set = array_merge($set, $sendSupFields);
 				}
-				$assignments = array();
-				foreach (array_keys($set) as $column) {
-					$assignments[] = '`' . $column . '` = ?';
-				}
-				$values = array_map('strval', array_values($set));
-				$values[] = $refId;
-				breq_execute(
-					$conn,
-					'UPDATE in__br SET ' . implode(', ', $assignments) . ' WHERE ref_id_br = ?',
-					str_repeat('s', count($values)),
-					$values
-				);
+				breq_update_header($conn, $refId, $set);
 			}
 
 			breq_replace_items($conn, $refId, $poNo, $items);
@@ -579,7 +733,7 @@ if (!function_exists('breq_persist')) {
 				breq_mark_sn_products($conn, $items);
 			}
 			if ($mode === 'submit') {
-				breq_insert_submit_side_tables($conn, $refId, $post, $company, $addBy, (string)($session['emid'] ?? ''), $addDate);
+				breq_insert_submit_side_tables_once($conn, $refId, $post, $company, $addBy, (string)($session['emid'] ?? ''), $addDate);
 			}
 
 			mysqli_commit($conn);
@@ -597,5 +751,147 @@ if (!function_exists('breq_persist')) {
 		}
 
 		return array('ref_id' => $refId, 'created' => $created);
+	}
+}
+
+/* ===================== ขั้นอนุมัติ (แทน breng_approve_breq.php / brhos_rejected_breq.php ที่รับ GET) ===================== */
+
+if (!function_exists('breq_run_document_action')) {
+	/**
+	 * @param string $action approve | return | reject | cancel
+	 *   approve : Sup — บันทึกค่าฟอร์มล่าสุด (ตรวจครบเหมือน submit) แล้ว status_doc = 'Approve', send_admin = 1
+	 *             ไม่ออกเลขที่เอกสาร (iv_no) ให้ — Sup กด Run ในแท็บ Admin เอง หรือ Admin เติมภายหลัง
+	 *   return  : Sup — status_doc = 'Returned', send_sup = 0 ให้เจ้าของแก้แล้ว Submit ใหม่
+	 *   reject  : Sup — status_doc = 'Rejected'
+	 *   cancel  : เจ้าของ (ใบในมือเจ้าของ) หรือ Sup — status_doc = 'Rejected' แยกจาก reject ด้วย log 'Cancelled'
+	 * return/reject/cancel ต้องมีเหตุผล (log + in__br.remark_cancel) และไม่บันทึกค่าฟอร์ม
+	 * reject/cancel รีเซ็ต tb_register_data.start_date เหมือน brhos_rejected_breq.php — ไม่คืน tb_product.sale_ckk (ตามของเดิม)
+	 * @return array{ref_id: string, outcome: string}
+	 */
+	function breq_run_document_action($conn, $stockConn, $refId, $action, $reason, array $post, array $session)
+	{
+		$refId = trim((string)$refId);
+		$reason = trim((string)$reason);
+		if ($refId === '') {
+			throw new BreqValidationException('ไม่พบเลขที่เอกสาร');
+		}
+		if (!in_array($action, array('approve', 'return', 'reject', 'cancel'), true)) {
+			throw new BreqValidationException('คำสั่งไม่ถูกต้อง');
+		}
+		if ($action !== 'approve' && $reason === '') {
+			throw new BreqValidationException('กรุณาระบุเหตุผล');
+		}
+
+		$actorName = (string)($session['name'] ?? '');
+		$actorCode = (string)($session['code'] ?? '');
+		$today = date('Y-m-d');
+		$outcomes = array('approve' => 'approved', 'return' => 'returned', 'reject' => 'rejected', 'cancel' => 'cancelled');
+
+		mysqli_begin_transaction($conn);
+		try {
+			$doc = breq_lock_document($conn, $refId);
+
+			if ($action === 'cancel') {
+				if (!breq_is_owner_stage($doc) && !breq_is_awaiting_sup($doc)) {
+					throw new BreqValidationException('เอกสาร ' . $refId . ' อยู่ในสถานะ ' . $doc['status_doc'] . ' แล้ว ไม่สามารถยกเลิกได้');
+				}
+				if (!breq_user_can_cancel($doc, $session)) {
+					throw new BreqValidationException('คุณไม่มีสิทธิ์ยกเลิกเอกสารนี้');
+				}
+			} else {
+				if (!breq_is_awaiting_sup($doc)) {
+					throw new BreqValidationException('เอกสารไม่ได้อยู่ในสถานะรออนุมัติแล้ว กรุณาโหลดหน้าใหม่');
+				}
+				if (!breq_user_is_sup($session)) {
+					throw new BreqValidationException('คุณไม่มีสิทธิ์อนุมัติเอกสารนี้');
+				}
+			}
+
+			$awaitingGuard = "status_doc = 'Request' AND send_sup = '1'";
+			if ($action === 'approve') {
+				$company = breq_post_value($post, 'company');
+				$poNo = breq_post_value($post, 'po_no');
+				$items = breq_items_from_post($post);
+				breq_validate($conn, $stockConn, 'submit', $company, $poNo, $items, $refId);
+
+				breq_update_header($conn, $refId, array_merge(breq_header_fields_from_post($post), array(
+					'status_doc'   => 'Approve',
+					'approve'      => $actorName,
+					'approve_code' => $actorCode,
+					'approve_date' => $today,
+					'approve_time' => date('H:i:s'),
+					'send_admin'   => '1',
+				)), $awaitingGuard);
+				breq_replace_items($conn, $refId, $poNo, $items);
+				breq_mark_sn_products($conn, $items);
+				breq_log_status($conn, $refId, 'Sup Approved', '', $session);
+			} elseif ($action === 'return') {
+				breq_update_header($conn, $refId, array(
+					'status_doc'    => 'Returned',
+					'send_sup'      => '0',
+					'remark_cancel' => $reason,
+				), $awaitingGuard);
+				breq_log_status($conn, $refId, 'Returned', $reason, $session);
+			} else {
+				$set = array('status_doc' => 'Rejected', 'remark_cancel' => $reason);
+				if ($action === 'reject') {
+					$set['approve'] = $actorName;
+					$set['approve_code'] = $actorCode;
+					$set['approve_date'] = $today;
+				}
+				breq_update_header($conn, $refId, $set, $action === 'reject' ? $awaitingGuard : "status_doc IN ('Draft', 'Returned', 'Request')");
+				breq_execute($conn, "UPDATE tb_register_data SET start_date = '0000-00-00' WHERE ref_id = ?", 's', array($refId));
+				breq_log_status($conn, $refId, $action === 'reject' ? 'Rejected' : 'Cancelled', $reason, $session);
+			}
+
+			mysqli_commit($conn);
+		} catch (Throwable $e) {
+			mysqli_rollback($conn);
+			throw $e;
+		}
+
+		return array('ref_id' => $refId, 'outcome' => $outcomes[$action]);
+	}
+}
+
+if (!function_exists('breq_admin_save_doc_no')) {
+	/** Admin บันทึกเลขที่/วันที่เอกสารของใบที่อนุมัติแล้ว (แก้ซ้ำได้) — เขียน admin / admin_code / admin_date แบบหน้าอนุมัติเดิม */
+	function breq_admin_save_doc_no($conn, $refId, array $post, array $session)
+	{
+		$refId = trim((string)$refId);
+		$docNo = breq_post_value($post, 'admin_doc_no');
+		$docDate = breq_post_value($post, 'admin_doc_date');
+		if ($refId === '') {
+			throw new BreqValidationException('ไม่พบเลขที่เอกสาร');
+		}
+		if ($docNo === '') {
+			throw new BreqValidationException('กรุณาระบุเลขที่เอกสาร หรือกด Run เอกสาร');
+		}
+		if ($docDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $docDate)) {
+			throw new BreqValidationException('วันที่ออกเอกสารไม่ถูกต้อง');
+		}
+
+		mysqli_begin_transaction($conn);
+		try {
+			$doc = breq_lock_document($conn, $refId);
+			if (!breq_user_can_admin_edit($doc, $session)) {
+				throw new BreqValidationException('คุณไม่มีสิทธิ์แก้ไขเลขที่เอกสารของใบนี้');
+			}
+			breq_update_header($conn, $refId, array(
+				'iv_no'      => $docNo,
+				'iv_date'    => $docDate !== '' ? $docDate : date('Y-m-d'),
+				'iv_time'    => date('H:i:s'),
+				'admin'      => (string)($session['name'] ?? ''),
+				'admin_code' => (string)($session['code'] ?? ''),
+				'admin_date' => date('Y-m-d H:i:s'),
+			));
+			breq_log_status($conn, $refId, 'Admin Doc No', $docNo, $session);
+			mysqli_commit($conn);
+		} catch (Throwable $e) {
+			mysqli_rollback($conn);
+			throw $e;
+		}
+
+		return array('ref_id' => $refId, 'outcome' => 'admin_saved');
 	}
 }

@@ -3,8 +3,10 @@
 /**
  * ปลายทาง AJAX ของแถบปุ่มใน register_breng_brgq.php (ใบยืมตรวจเช็คสินค้า BREQ)
  *   action=draft    → Save Draft / Update ของเอกสาร Draft (ไม่บังคับมีรายการ)
- *   action=update   → Update เอกสาร Request (ตรวจครบเหมือน Submit, ไม่เปลี่ยนสถานะ)
+ *   action=update   → Update เอกสาร Returned / Request (ตรวจครบเหมือน Submit, ไม่เปลี่ยนสถานะ)
+ *                     ผู้แก้ได้ตาม breq_user_can_edit_document: เจ้าของ (ใบในมือเจ้าของ) / Sup (ใบในคิว Sup)
  * การส่ง Sup อนุมัติรวมอยู่ใน Submit แล้ว (register_breng1_breq.php)
+ * อนุมัติ / ส่งกลับ / ไม่อนุมัติ / ยกเลิก อยู่ที่ register_breng_action_breq.php
  * ตอบกลับเป็น JSON เสมอ
  */
 

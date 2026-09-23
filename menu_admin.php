@@ -233,6 +233,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 				<button type="button" class="sidebar-group-btn"><span class="sidebar-icon"><i class="fa fa-undo"></i></span><span class="sidebar-label">ใบยืม Hospital</span><span class="sidebar-caret"><i class="fa fa-angle-down"></i></span></button>
 				<div class="sidebar-submenu">
 					<a href="status_adminbrhos.php">Status (BR)</a>
+					<a href="status_brhos_breq.php">Status ใบยืมตรวจเช็คสินค้า (BREQ)</a>
 					<a href="status_clearbr_adm.php">Status ใบยืมค้างเคลียร์</a>
 				</div>
 			</div>
@@ -605,6 +606,7 @@ $token = encryptData($em_id, 'mySecretKey123456789');
 				<div class="sidebar-submenu">
 					<a href="status_brkang_br.php">Status (BR) ค้างเลขที่ใบยืม<?php if ($Num_Rows2 > 0) { ?> (<?php echo $Num_Rows2; ?>)<?php } ?></a>
 					<a href="status_adminbrhos.php">Status (BR)</a>
+					<a href="status_brhos_breq.php">Status ใบยืมตรวจเช็คสินค้า (BREQ)</a>
 					<a href="status_adminbr_que.php">Status (BR) ด่วน</a>
 					<a href="status_hosbrdoc.php">Status BR (เตรียมเอกสาร)</a>
 					<a href="status_clearbr_adm.php">Status ใบยืมค้างเคลียร์</a>

@@ -132,7 +132,8 @@ foreach ($stockRows as $row) {
     $borrowedKey = $poNo . '|' . $productId;
     if (!array_key_exists($borrowedKey, $borrowedCache)) {
         $sumBorrowed = 0;
-        $stmtSum = mysqli_prepare($conn, "SELECT SUM(count) AS sum_count FROM in__subbr WHERE po_no = ? AND product_id = ?");
+        // ไม่นับใบ Rejected (ไม่อนุมัติ/ยกเลิก) — ตรงกับ breq_po_remaining() ใน includes/breq_repo.php
+        $stmtSum = mysqli_prepare($conn, "SELECT SUM(s.count) AS sum_count FROM in__subbr s INNER JOIN in__br b ON b.ref_id_br = s.ref_idd_br WHERE s.po_no = ? AND s.product_id = ? AND b.status_doc <> 'Rejected'");
         if ($stmtSum) {
             mysqli_stmt_bind_param($stmtSum, 'ss', $poNo, $productId);
             mysqli_stmt_execute($stmtSum);

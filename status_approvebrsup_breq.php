@@ -1,7 +1,15 @@
-<?php include('head.php'); 
+<?php include('head.php');
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
+require_once __DIR__ . '/includes/breq_repo.php';
+
+// คิวอนุมัติ BREQ — เดิมซ่อนแค่เมนู (menu_suphos.php) ตรวจสิทธิ์ซ้ำฝั่ง server ด้วยฟังก์ชันเดียวกับหน้าใบ
+if (!breq_user_is_sup($_SESSION)) {
+	echo '<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;"><p>คุณไม่มีสิทธิ์เข้าถึงคิวอนุมัติใบยืม BREQ</p></div>';
+	include "foot.php";
+	exit();
+}
 
 ?>
 <body>
@@ -121,7 +129,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<td  >
 				<?php if($objResult["status_doc"] !='Rejected' or $objResult["status_doc"] !='Approve'){	?> 
 
-				<a href="register_supbrin_approve_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>"><img src="img/sticker.png" width="23" height="23" border="0" /></a>
+				<a href="register_breng_brgq.php?ref_id_br=<?php echo urlencode($objResult["ref_id_br"]);?>"><img src="img/sticker.png" width="23" height="23" border="0" /></a>
 				<?php } ?>
 								
 				</td>

@@ -31,15 +31,39 @@ if ($breqRefParam !== '') {
 $breqHeader = $breqDoc ? $breqDoc['header'] : array();
 $breqStatus = (string)($breqHeader['status_doc'] ?? '');
 
-// new = ใบใหม่ / draft, request = เจ้าของแก้ได้ / readonly = สถานะอื่นหรือไม่ใช่เจ้าของ
-if (!$breqDoc) {
-	$breqMode = 'new';
-} elseif (breq_can_edit_owner($breqHeader, $_SESSION) && in_array($breqStatus, array('Draft', 'Request'), true)) {
-	$breqMode = $breqStatus === 'Draft' ? 'draft' : 'request';
-} else {
-	$breqMode = 'readonly';
+// ปุ่ม/การล็อกฟอร์มคำนวณจากฟังก์ชันชุดเดียวกับฝั่ง server (includes/breq_repo.php) — ซ่อนปุ่มเป็นแค่ UX
+// ทุก action ตรวจสิทธิ์ + สถานะซ้ำที่ register_breng_save_breq.php / register_breng1_breq.php / register_breng_action_breq.php
+$breqHasDoc = ($breqDoc !== null);
+$breqCanEdit = !$breqHasDoc || breq_user_can_edit_document($breqHeader, $_SESSION);
+$breqCanSubmit = $breqCanEdit && (!$breqHasDoc || breq_is_owner_stage($breqHeader));
+$breqCanAct = $breqHasDoc && breq_user_can_act_as_sup($breqHeader, $_SESSION);
+$breqCanCancel = $breqHasDoc && breq_user_can_cancel($breqHeader, $_SESSION);
+$breqAdminEdit = $breqHasDoc && breq_user_can_admin_edit($breqHeader, $_SESSION);
+$breqReadonly = !$breqCanEdit;
+// Save Draft ใช้กับใบใหม่/Draft (ไม่บังคับครบ) — Returned / Request ใช้ update (ตรวจครบ คงสถานะ)
+$breqSaveAction = (!$breqHasDoc || $breqStatus === 'Draft') ? 'draft' : 'update';
+$breqSubmitLabel = ($breqStatus === 'Request') ? 'ส่ง Sup' : 'Submit';
+$breqBackUrl = $breqCanAct ? 'status_approvebrsup_breq.php' : 'status_brhos_breq.php';
+
+// ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — แบนเนอร์เหตุผลล่าสุด + ตารางประวัติ
+$breqLogLabels = array('Returned' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร');
+$breqLogClasses = array('Returned' => 'is-returned', 'Rejected' => 'is-rejected', 'Cancelled' => 'is-cancelled');
+$breqLogTitles = array('Returned' => 'เหตุผลในการส่งกลับ', 'Rejected' => 'เหตุผลที่ไม่อนุมัติ', 'Cancelled' => 'เหตุผลในการยกเลิก');
+$breqLogRows = array();
+if ($breqHasDoc) {
+	$breqLogStmt = mysqli_prepare($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log
+		WHERE ref_id = ? AND status_doc IN ('Returned','Rejected','Cancelled') ORDER BY created_at DESC, id DESC");
+	if ($breqLogStmt) {
+		mysqli_stmt_bind_param($breqLogStmt, 's', $breqHeader['ref_id_br']);
+		mysqli_stmt_execute($breqLogStmt);
+		$breqLogResult = mysqli_stmt_get_result($breqLogStmt);
+		while ($breqLogRow = mysqli_fetch_assoc($breqLogResult)) {
+			$breqLogRows[] = $breqLogRow;
+		}
+		mysqli_stmt_close($breqLogStmt);
+	}
 }
-$breqReadonly = ($breqMode === 'readonly');
+$breqLatestLog = $breqLogRows[0] ?? null;
 
 // ใบใหม่แสดงเลขโดยประมาณ (เลขจริงจองตอน Save Draft / Submit ใน breq_reserve_ref_id)
 $breqDisplayRefId = $breqDoc ? (string)$breqHeader['ref_id_br'] : breq_next_ref_id($conn);
@@ -92,6 +116,13 @@ $breqCompatHiddenFields = array(
 		</div>
 	</div>
 
+		<?php if ($breqLatestLog !== null && trim((string)$breqLatestLog['reason']) !== '') { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($breqLogClasses[$breqLatestLog['status_doc']] ?? 'is-cancelled'); ?>" role="status">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($breqLogTitles[$breqLatestLog['status_doc']] ?? ''); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($breqLatestLog['reason'])); ?></div>
+			</div>
+		<?php } ?>
 
 		<!-- ref_id_br ว่าง = ใบใหม่ (จองเลขตอนบันทึก) / มีค่า = บันทึกทับเอกสารนี้ — พรีวิวใช้ ref_id_preview แทนเมื่อว่าง -->
 		<input type="hidden" name="ref_id_br" id="ref_id_br" value="<?php echo $breqDoc ? so_saved_h($breqDisplayRefId) : ''; ?>">
@@ -181,6 +212,47 @@ $breqCompatHiddenFields = array(
 				</div>
 				<div class="breq-empty-state" id="breq_item_empty">ยังไม่มีรายการ — กด "ค้นหาเอกสาร PO" เพื่อเลือกสินค้า</div>
 			</div>
+
+			<?php if (!empty($breqLogRows)) { ?>
+				<!-- ===================== การ์ด: ประวัติส่งกลับ / ไม่อนุมัติ / ยกเลิก ===================== -->
+				<div class="so-card">
+					<div class="so-section-title-container">
+						<h2 class="so-section-title">ประวัติการส่งกลับ / ไม่อนุมัติ / ยกเลิก</h2>
+						<hr class="so-divider">
+					</div>
+					<div style="overflow-x:auto;">
+						<table class="so-document-status-table">
+							<thead>
+								<tr>
+									<th>สถานะ</th>
+									<th>เหตุผล</th>
+									<th>ผู้ดำเนินการ</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ($breqLogRows as $breqLogRow) {
+									$breqLogTime = strtotime((string)$breqLogRow['created_at']);
+								?>
+									<tr>
+										<td class="so-document-log-status-cell">
+											<span class="so-document-status-pill <?php echo so_saved_h($breqLogClasses[$breqLogRow['status_doc']] ?? 'is-cancelled'); ?>">
+												<?php echo so_saved_h($breqLogLabels[$breqLogRow['status_doc']] ?? $breqLogRow['status_doc']); ?>
+											</span>
+										</td>
+										<td class="so-document-log-reason-cell"><?php echo so_saved_h($breqLogRow['reason']); ?></td>
+										<td class="so-document-log-user-cell">
+											<div><?php echo so_saved_h((string)$breqLogRow['user_name'] !== '' ? $breqLogRow['user_name'] : '-'); ?></div>
+											<?php if ($breqLogTime !== false) { ?>
+												<div class="so-document-log-time"><?php echo so_saved_h(date('d-m-Y H:i', $breqLogTime)); ?></div>
+											<?php } ?>
+										</td>
+									</tr>
+								<?php } ?>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			<?php } ?>
 		</div>
 
 		<?php
@@ -201,13 +273,31 @@ $breqCompatHiddenFields = array(
 
 	<div class="so-sticky-actions breq-sticky-actions">
 		<div class="so-sticky-actions-inner">
-			<?php if ($breqMode === 'new' || $breqMode === 'draft') { ?>
-				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
-				<button type="button" id="btn_breq_save" class="btn-so-draft" onclick="breqSave('draft');"><i class="far fa-save"></i> <?php echo $breqMode === 'draft' ? 'Update' : 'Save Draft'; ?></button>
-			<?php } elseif ($breqMode === 'request') { ?>
-				<button type="button" id="btn_breq_save" class="btn-so-draft" onclick="breqSave('update');"><i class="far fa-save"></i> Update</button>
+			<?php if ($breqCanAct) { ?>
+				<!-- แถบอนุมัติของ Sup — ส่งไป register_breng_action_breq.php (ตรวจสิทธิ์/สถานะซ้ำที่ server) -->
+				<div class="so-approve-actions">
+					<button type="button" class="so-overflow-menu-trigger" id="breq_btn_approve_overflow" onclick="breqToggleApproveMenu();" aria-label="เมนูเพิ่มเติม"><i class="fas fa-ellipsis-v"></i></button>
+					<div id="breqApproveOverflowMenu" class="so-overflow-menu">
+						<button type="button" onclick="breqRunReasonAction('return');" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
+						<button type="button" class="so-menu-danger" onclick="breqRunReasonAction('reject');" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+						<button type="button" onclick="breqRunReasonAction('cancel');"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+					</div>
+					<button type="button" class="btn-so-approve" id="btn_breq_approve" onclick="breqApprove();"><i class="far fa-check-circle"></i> อนุมัติ</button>
+				</div>
 			<?php } ?>
-			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_brhos_breq.php';">ย้อนกลับ</button>
+			<?php if ($breqCanSubmit) { ?>
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> <?php echo so_saved_h($breqSubmitLabel); ?></button>
+			<?php } ?>
+			<?php if ($breqCanEdit) { ?>
+				<button type="button" id="btn_breq_save" class="btn-so-draft" onclick="breqSave(<?php echo so_saved_h(json_encode($breqSaveAction)); ?>);"><i class="far fa-save"></i> <?php echo $breqHasDoc ? 'Update' : 'Save Draft'; ?></button>
+			<?php } ?>
+			<?php if ($breqAdminEdit) { ?>
+				<button type="button" id="btn_breq_admin_save" class="btn-so-draft" onclick="breqAdminSave();"><i class="far fa-save"></i> บันทึกเลขที่เอกสาร</button>
+			<?php } ?>
+			<?php if ($breqCanCancel && !$breqCanAct) { ?>
+				<button type="button" id="btn_breq_cancel_doc" class="btn-so-cancel-nav" style="color:#FF0000;" onclick="breqRunReasonAction('cancel');"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px; vertical-align: middle;"> ยกเลิกเอกสาร</button>
+			<?php } ?>
+			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href=<?php echo so_saved_h(json_encode($breqBackUrl)); ?>;">ย้อนกลับ</button>
 		</div>
 	</div>
 </form>
@@ -383,8 +473,13 @@ $breqCompatHiddenFields = array(
 		sel.setAttribute('data-prev', sel.value);
 	}
 
-	// โหมดของหน้า (คำนวณฝั่ง PHP): new / draft / request / readonly
-	var BREQ_MODE = <?php echo json_encode($breqMode); ?>;
+	// สิทธิ์ของผู้ใช้กับใบนี้ (คำนวณฝั่ง PHP ด้วยฟังก์ชันชุดเดียวกับ server — ซ่อน/แสดงเป็นแค่ UX)
+	var BREQ_STATE = <?php echo json_encode(array(
+		'isNew'     => !$breqHasDoc,
+		'readonly'  => $breqReadonly,
+		'canSubmit' => $breqCanSubmit,
+		'adminEdit' => $breqAdminEdit,
+	)); ?>;
 	var breqSubmitting = false;
 
 	function breqNotify(title, text, icon) {
@@ -406,28 +501,56 @@ $breqCompatHiddenFields = array(
 		form.querySelectorAll('.so-clear-icon, #breq_po_field button, #btn_run_doc_no').forEach(function(el) {
 			el.style.display = 'none';
 		});
+		// Admin ของใบที่อนุมัติแล้ว: เปิดเฉพาะเลขที่/วันที่เอกสาร + ปุ่ม Run เอกสาร
+		if (BREQ_STATE.adminEdit) {
+			form.querySelectorAll('input[name="admin_doc_no"], input[name="admin_doc_date"]').forEach(function(el) {
+				el.disabled = false;
+			});
+			var runButton = document.getElementById('btn_run_doc_no');
+			if (runButton) runButton.style.display = '';
+		}
 	}
+
+	// ข้อความหลัง redirect กลับมาหน้านี้ (?saved= จากการบันทึก / ?done= จาก action อนุมัติ)
+	var BREQ_DONE_MESSAGES = {
+		approved: 'อนุมัติเอกสารเรียบร้อยแล้ว',
+		returned: 'ส่งกลับเอกสารเรียบร้อยแล้ว',
+		rejected: 'ไม่อนุมัติเอกสารเรียบร้อยแล้ว',
+		cancelled: 'ยกเลิกเอกสารเรียบร้อยแล้ว',
+		admin_saved: 'บันทึกเลขที่เอกสารเรียบร้อยแล้ว'
+	};
 
 	document.addEventListener('DOMContentLoaded', function() {
 		if (typeof window.breqHydrateRows === 'function') {
-			window.breqHydrateRows(<?php echo json_encode($breqDoc ? $breqDoc['items'] : array(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, BREQ_MODE === 'readonly');
+			window.breqHydrateRows(<?php echo json_encode($breqDoc ? $breqDoc['items'] : array(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, BREQ_STATE.readonly);
 		}
-		if (BREQ_MODE === 'readonly') breqApplyReadonly();
+		if (BREQ_STATE.readonly) breqApplyReadonly();
 
 		var companySelect = document.getElementById('company_select');
 		if (companySelect) companySelect.setAttribute('data-prev', companySelect.value);
 
-		// ?saved= มาจาก redirect หลัง Submit / Save Draft / Update — ลบออกจาก URL กัน modal เด้งซ้ำตอน refresh
+		// ลบ ?saved= / ?done= ออกจาก URL กัน modal เด้งซ้ำตอน refresh
 		var saved = <?php echo json_encode((string)($_GET['saved'] ?? '')); ?>;
+		var done = <?php echo json_encode((string)($_GET['done'] ?? '')); ?>;
+		var title = '';
+		var text = '';
 		if (['submit', 'draft', 'update'].indexOf(saved) !== -1) {
+			title = 'บันทึกข้อมูลเรียบร้อยแล้ว';
+			text = 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว';
+		} else if (Object.prototype.hasOwnProperty.call(BREQ_DONE_MESSAGES, done)) {
+			title = BREQ_DONE_MESSAGES[done];
+			text = 'เลขที่อ้างอิง: ' + document.getElementById('ref_id_br').value;
+		}
+		if (title !== '') {
 			var cleanUrl = new URL(window.location.href);
 			cleanUrl.searchParams.delete('saved');
+			cleanUrl.searchParams.delete('done');
 			window.history.replaceState({}, document.title, cleanUrl);
 
 			if (typeof Swal !== 'undefined') {
 				Swal.fire({
-					title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-					text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+					title: title,
+					text: text,
 					icon: 'success',
 					confirmButtonColor: '#612989',
 					confirmButtonText: 'ตกลง'
@@ -445,7 +568,7 @@ $breqCompatHiddenFields = array(
 	// ก่อน submit จริง ต้องมีรายการสินค้าอย่างน้อย 1 รายการ (ซึ่งหมายความว่า po_no ถูกล็อกแล้วด้วย)
 	// Submit = ส่งให้ Sup อนุมัติด้วย จึงถามยืนยันก่อน แล้วค่อยส่งฟอร์มเองใน breqDoSubmit()
 	function breqValidateSubmit() {
-		if (BREQ_MODE !== 'new' && BREQ_MODE !== 'draft') return false; // Enter ในช่องกรอกของโหมดอื่น
+		if (!BREQ_STATE.canSubmit) return false; // Enter ในช่องกรอกของใบที่ Submit ไม่ได้ (เช่น Sup กำลังตรวจ)
 		if (breqSubmitting) return false;
 		if (!breqHasItems()) return false;
 
@@ -492,10 +615,13 @@ $breqCompatHiddenFields = array(
 		HTMLFormElement.prototype.submit.call(form);
 	}
 
-	function breqPostAction(action, button, loadingText) {
+	// POST ฟอร์มแบบ AJAX แล้ว reload หน้านี้ของเลขที่ที่ได้กลับมา (ปลายทางตอบ {success, ref_id, message, ...})
+	function breqPostForm(url, fields, button, loadingText, buildQuery) {
 		var form = document.forms.frmMain;
 		var formData = new FormData(form);
-		formData.set('action', action);
+		Object.keys(fields).forEach(function(key) {
+			formData.set(key, fields[key]);
+		});
 
 		var defaultHtml = button ? button.innerHTML : '';
 		breqSubmitting = true;
@@ -512,28 +638,143 @@ $breqCompatHiddenFields = array(
 			}
 		}
 
-		fetch('register_breng_save_breq.php', { method: 'POST', body: formData, credentials: 'same-origin' })
+		fetch(url, { method: 'POST', body: formData, credentials: 'same-origin' })
 			.then(function(res) { return res.json(); })
 			.then(function(data) {
 				if (data && data.success) {
-					window.location.href = 'register_breng_brgq.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=' + action;
+					window.location.href = 'register_breng_brgq.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&' + buildQuery(data);
 					return;
 				}
 				unlock();
-				breqNotify('บันทึกไม่สำเร็จ', (data && data.message) ? data.message : 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+				breqNotify('ดำเนินการไม่สำเร็จ', (data && data.message) ? data.message : 'เกิดข้อผิดพลาดในการบันทึก', 'error');
 			})
 			.catch(function(err) {
 				unlock();
-				breqNotify('บันทึกไม่สำเร็จ', String(err), 'error');
+				breqNotify('ดำเนินการไม่สำเร็จ', String(err), 'error');
 			});
 	}
 
 	// action = 'draft' (Save Draft / Update ของ Draft — ไม่บังคับมีรายการ)
-	//        | 'update' (Update ของเอกสาร Request — ต้องมีรายการเหมือน Submit)
+	//        | 'update' (Update ของ Returned / Request — ต้องมีรายการเหมือน Submit)
 	function breqSave(action) {
 		if (breqSubmitting) return;
 		if (action === 'update' && !breqHasItems()) return;
-		breqPostAction(action, document.getElementById('btn_breq_save'), 'Saving...');
+		breqPostForm('register_breng_save_breq.php', { action: action }, document.getElementById('btn_breq_save'), 'Saving...', function() {
+			return 'saved=' + action;
+		});
+	}
+
+	/* ===================== แถบอนุมัติ (Sup) / ยกเลิก / Admin — ไป register_breng_action_breq.php ===================== */
+
+	function breqRunDocAction(action, reason, button, loadingText) {
+		breqPostForm('register_breng_action_breq.php', { breq_action: action, breq_reason: reason }, button, loadingText, function(data) {
+			return 'done=' + encodeURIComponent(data.outcome);
+		});
+	}
+
+	function breqToggleApproveMenu() {
+		var menu = document.getElementById('breqApproveOverflowMenu');
+		if (menu) menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+	}
+
+	document.addEventListener('click', function(e) {
+		var menu = document.getElementById('breqApproveOverflowMenu');
+		var trigger = document.getElementById('breq_btn_approve_overflow');
+		if (!menu || !menu.style.display || menu.style.display === 'none') return;
+		if (trigger && (e.target === trigger || trigger.contains(e.target))) return;
+		if (!menu.contains(e.target)) menu.style.display = 'none';
+	});
+
+	function breqEscapeHtml(value) {
+		var div = document.createElement('div');
+		div.textContent = value == null ? '' : String(value);
+		return div.innerHTML;
+	}
+
+	// popup กรอกเหตุผล — หน้าตาเดียวกับ openReasonPopup ของ js/register-supsmp.js (class จาก so-core.css)
+	var BREQ_REASON_CONFIG = {
+		'return': { title: 'ส่งกลับเอกสารนี้ ?', subtitle: 'ส่งกลับเอกสารเลขที่', label: 'ระบุเหตุผลการส่งกลับ', iconBg: '#FFF4E5', iconSrc: 'img/icons/send_back.png' },
+		'reject': { title: 'ไม่อนุมัติเอกสารนี้ ?', subtitle: 'ไม่อนุมัติเอกสารเลขที่', label: 'ระบุเหตุผลที่ไม่อนุมัติ', iconBg: '#FEECEB', iconSrc: 'img/icons/reject.png' },
+		'cancel': { title: 'ยกเลิกเอกสารนี้ ?', subtitle: 'ต้องการยกเลิกเอกสารเลขที่', label: 'ระบุเหตุผลในการยกเลิก', iconBg: '#F4F5F7', iconSrc: 'img/icons/cancel_document.png' }
+	};
+
+	function breqRunReasonAction(action) {
+		var config = BREQ_REASON_CONFIG[action];
+		if (breqSubmitting || !config) return;
+		var menu = document.getElementById('breqApproveOverflowMenu');
+		if (menu) menu.style.display = 'none';
+
+		var refId = document.getElementById('ref_id_br').value;
+		var button = document.getElementById(action === 'cancel' && document.getElementById('btn_breq_cancel_doc') ? 'btn_breq_cancel_doc' : 'btn_breq_approve');
+		var run = function(reason) {
+			if (!breqSubmitting) breqRunDocAction(action, reason, button, 'กำลังดำเนินการ...');
+		};
+		if (typeof Swal === 'undefined') {
+			var fallback = (window.prompt(config.label) || '').trim();
+			if (fallback !== '') run(fallback);
+			return;
+		}
+		Swal.fire({
+			title: config.title,
+			html: '<p class="so-reason-subtitle">' + breqEscapeHtml(config.subtitle) + ' "' + breqEscapeHtml(refId) + '"</p>' +
+				'<label class="so-reason-label">' + breqEscapeHtml(config.label) + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: config.label,
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + config.iconBg + '"><img src="' + config.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true, showCloseButton: true, reverseButtons: false,
+			confirmButtonText: 'ตกลง', cancelButtonText: 'ยกเลิก', buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup', title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html', confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn', actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon', input: 'so-reason-textarea', closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function(value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') { Swal.showValidationMessage('กรุณาระบุเหตุผล'); return false; }
+				return trimmed;
+			}
+		}).then(function(result) {
+			if (result.isConfirmed) run(result.value);
+		});
+	}
+
+	// อนุมัติ — ส่งค่าฟอร์มปัจจุบันไปด้วย server บันทึกก่อน (ตรวจครบเหมือน Submit) แล้วอนุมัติในทรานแซกชันเดียวกัน
+	function breqApprove() {
+		if (breqSubmitting || !breqHasItems()) return;
+		var refId = document.getElementById('ref_id_br').value;
+		var approve = function() {
+			breqRunDocAction('approve', '', document.getElementById('btn_breq_approve'), 'กำลังอนุมัติ...');
+		};
+		var message = 'ต้องการอนุมัติเอกสารเลขที่ "' + refId + '" ใช่หรือไม่? (ข้อมูลที่แก้ไขในหน้านี้จะถูกบันทึกด้วย)';
+		if (typeof Swal === 'undefined') {
+			if (confirm(message)) approve();
+			return;
+		}
+		Swal.fire({
+			icon: 'question',
+			title: 'ยืนยันการอนุมัติเอกสาร',
+			text: message,
+			showCancelButton: true,
+			confirmButtonText: 'ยืนยันอนุมัติ',
+			cancelButtonText: 'ยกเลิก',
+			reverseButtons: true,
+			confirmButtonColor: '#612989',
+			cancelButtonColor: '#6c757d'
+		}).then(function(result) {
+			if (result.isConfirmed) approve();
+		});
+	}
+
+	// Admin บันทึกเลขที่/วันที่เอกสารของใบที่อนุมัติแล้ว
+	function breqAdminSave() {
+		if (breqSubmitting) return;
+		var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+		if (!docNoInput || docNoInput.value.trim() === '') {
+			breqNotify('แจ้งเตือน', 'กรุณาระบุเลขที่เอกสาร หรือกด Run เอกสารในแท็บ Admin', 'warning');
+			return;
+		}
+		breqRunDocAction('admin_save', '', document.getElementById('btn_breq_admin_save'), 'Saving...');
 	}
 
 	// ช่องที่ disabled (โหมดอ่านอย่างเดียว) ไม่ถูกส่งไปกับฟอร์ม — ปลดชั่วคราวระหว่างส่งพรีวิว
@@ -594,7 +835,7 @@ $breqCompatHiddenFields = array(
 		else form.setAttribute('enctype', originalEnctype);
 		previewFlag.remove();
 
-		if (BREQ_MODE === 'new' && typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+		if (BREQ_STATE.isNew && typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
 			Swal.fire({
 				toast: true,
 				position: 'top-end',
