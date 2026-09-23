@@ -29,6 +29,27 @@ if ($breqRefParam !== '') {
 	}
 }
 $breqHeader = $breqDoc ? $breqDoc['header'] : array();
+$breqItems = $breqDoc ? $breqDoc['items'] : array();
+
+// ?copy_from= คัดลอกใบเดิมเป็นใบใหม่ (เฉพาะตอนไม่มี ref_id_br) — ยกหัวเอกสาร + รายการพร้อมจำนวน
+// ไม่ยกเลขที่/วันที่เอกสารของ Admin และสถานะ ผู้สร้างใบใหม่คือคนที่ login อยู่
+// คัดลอกได้ทุกสถานะที่มองเห็นใน status_brhos_breq.php — Draft ของคนอื่นมองไม่เห็นจึงปฏิเสธเหมือนไม่พบ
+$breqCopyNotice = '';
+$breqCopyFromRefId = $breqDoc === null ? trim((string)($_GET['copy_from'] ?? '')) : '';
+if ($breqCopyFromRefId !== '') {
+	$breqCopySource = breq_load_document($conn, $breqStockConn, $breqCopyFromRefId, '');
+	$breqCopyHidden = $breqCopySource !== null
+		&& (string)$breqCopySource['header']['status_doc'] === 'Draft'
+		&& (string)$breqCopySource['header']['sale_code'] !== (string)($_SESSION['code'] ?? '');
+	if ($breqCopySource === null || $breqCopyHidden) {
+		$breqCopyNotice = 'ไม่พบเอกสารต้นทาง ' . $breqCopyFromRefId . ' — เปิดเป็นใบใหม่แทน';
+	} else {
+		$breqHeader = array_intersect_key($breqCopySource['header'], array_flip(array(
+			'company', 'po_no', 'ref_id_stock', 'customer_id', 'address', 'sale_comment',
+		)));
+		$breqItems = $breqCopySource['items'];
+	}
+}
 $breqStatus = (string)($breqHeader['status_doc'] ?? '');
 
 // ปุ่ม/การล็อกฟอร์มคำนวณจากฟังก์ชันชุดเดียวกับฝั่ง server (includes/breq_repo.php) — ซ่อนปุ่มเป็นแค่ UX
@@ -513,7 +534,7 @@ $breqCompatHiddenFields = array(
 
 	document.addEventListener('DOMContentLoaded', function() {
 		if (typeof window.breqHydrateRows === 'function') {
-			window.breqHydrateRows(<?php echo json_encode($breqDoc ? $breqDoc['items'] : array(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, BREQ_STATE.readonly);
+			window.breqHydrateRows(<?php echo json_encode($breqItems, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, BREQ_STATE.readonly);
 		}
 		if (BREQ_STATE.readonly) breqApplyReadonly();
 
@@ -547,6 +568,11 @@ $breqCompatHiddenFields = array(
 					confirmButtonText: 'ตกลง'
 				});
 			}
+		}
+
+		var copyNotice = <?php echo json_encode($breqCopyNotice, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+		if (copyNotice !== '') {
+			breqNotify('คัดลอกใบเดิมไม่สำเร็จ', copyNotice, 'warning');
 		}
 	});
 

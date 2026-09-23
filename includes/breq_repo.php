@@ -217,9 +217,13 @@ if (!function_exists('breq_load_document')) {
 	/**
 	 * หัวเอกสาร + รายการสินค้าในรูปที่ js/breq-item-table.js (breqHydrateRows) ใช้ได้ทันที
 	 * คืน null ถ้าไม่พบ
+	 * $remainingExcludeRefId: เอกสารที่ไม่หักออกจากคงเหลือ (ค่าเริ่มต้น = ตัวเอง) — คัดลอกใบส่ง '' เพราะใบใหม่ต้องนับยอดของใบต้นทางด้วย
 	 */
-	function breq_load_document($conn, $stockConn, $refId)
+	function breq_load_document($conn, $stockConn, $refId, $remainingExcludeRefId = null)
 	{
+		if ($remainingExcludeRefId === null) {
+			$remainingExcludeRefId = $refId;
+		}
 		$header = breq_fetch_one($conn, "SELECT * FROM in__br WHERE ref_id_br = ? LIMIT 1", 's', array($refId));
 		if ($header === null) {
 			return null;
@@ -244,7 +248,7 @@ if (!function_exists('breq_load_document')) {
 			$productId = (string)$row['product_id'];
 			$lotNo = (string)$row['lot'];
 			$stockRow = breq_po_stock_row($stockConn, $poNo, $productId, $lotNo);
-			$remaining = breq_po_remaining($conn, $stockConn, $poNo, $productId, $lotNo, $refId);
+			$remaining = breq_po_remaining($conn, $stockConn, $poNo, $productId, $lotNo, $remainingExcludeRefId);
 
 			$items[] = array(
 				'product_id'        => $productId,
