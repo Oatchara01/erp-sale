@@ -166,6 +166,9 @@ while($objResult = mysqli_fetch_array($objQuery))
 					else if ($objResult["status_doc"]=='Approve'){ ?>
 				<td bgcolor="#00FF00"><?php echo $objResult["status_doc"];?></td>
 				<?php }
+					else if ($objResult["status_doc"]=='Returned' || $objResult["status_doc"]=='ส่งกลับ'){ ?>
+				<td bgcolor="#FF830F"><?php echo $objResult["status_doc"];?></td>
+				<?php }
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>

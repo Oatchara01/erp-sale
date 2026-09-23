@@ -37,7 +37,6 @@ $breqHasDoc = ($breqDoc !== null);
 $breqCanEdit = !$breqHasDoc || breq_user_can_edit_document($breqHeader, $_SESSION);
 $breqCanSubmit = $breqCanEdit && (!$breqHasDoc || breq_is_owner_stage($breqHeader));
 $breqCanAct = $breqHasDoc && breq_user_can_act_as_sup($breqHeader, $_SESSION);
-$breqCanCancel = $breqHasDoc && breq_user_can_cancel($breqHeader, $_SESSION);
 $breqAdminEdit = $breqHasDoc && breq_user_can_admin_edit($breqHeader, $_SESSION);
 $breqReadonly = !$breqCanEdit;
 // Save Draft ใช้กับใบใหม่/Draft (ไม่บังคับครบ) — Returned / Request ใช้ update (ตรวจครบ คงสถานะ)
@@ -46,13 +45,14 @@ $breqSubmitLabel = ($breqStatus === 'Request') ? 'ส่ง Sup' : 'Submit';
 $breqBackUrl = $breqCanAct ? 'status_approvebrsup_breq.php' : 'status_brhos_breq.php';
 
 // ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — แบนเนอร์เหตุผลล่าสุด + ตารางประวัติ
-$breqLogLabels = array('Returned' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร');
-$breqLogClasses = array('Returned' => 'is-returned', 'Rejected' => 'is-rejected', 'Cancelled' => 'is-cancelled');
-$breqLogTitles = array('Returned' => 'เหตุผลในการส่งกลับ', 'Rejected' => 'เหตุผลที่ไม่อนุมัติ', 'Cancelled' => 'เหตุผลในการยกเลิก');
+// BREQ เขียนแค่ค่าอังกฤษ แต่ map ค่าไทย (ส่งกลับ / ยกเลิก) ไว้ด้วยตาม pattern กลางของ log
+$breqLogLabels = array('Returned' => 'ส่งกลับ', 'ส่งกลับ' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร', 'ยกเลิก' => 'ยกเลิกเอกสาร');
+$breqLogClasses = array('Returned' => 'is-returned', 'ส่งกลับ' => 'is-returned', 'Rejected' => 'is-rejected', 'Cancelled' => 'is-cancelled', 'ยกเลิก' => 'is-cancelled');
+$breqLogTitles = array('Returned' => 'เหตุผลในการส่งกลับ', 'ส่งกลับ' => 'เหตุผลในการส่งกลับ', 'Rejected' => 'เหตุผลที่ไม่อนุมัติ', 'Cancelled' => 'เหตุผลในการยกเลิก', 'ยกเลิก' => 'เหตุผลในการยกเลิก');
 $breqLogRows = array();
 if ($breqHasDoc) {
 	$breqLogStmt = mysqli_prepare($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log
-		WHERE ref_id = ? AND status_doc IN ('Returned','Rejected','Cancelled') ORDER BY created_at DESC, id DESC");
+		WHERE ref_id = ? AND status_doc IN ('Returned','ส่งกลับ','Rejected','Cancelled','ยกเลิก') ORDER BY created_at DESC, id DESC");
 	if ($breqLogStmt) {
 		mysqli_stmt_bind_param($breqLogStmt, 's', $breqHeader['ref_id_br']);
 		mysqli_stmt_execute($breqLogStmt);
@@ -213,46 +213,30 @@ $breqCompatHiddenFields = array(
 				<div class="breq-empty-state" id="breq_item_empty">ยังไม่มีรายการ — กด "ค้นหาเอกสาร PO" เพื่อเลือกสินค้า</div>
 			</div>
 
-			<?php if (!empty($breqLogRows)) { ?>
-				<!-- ===================== การ์ด: ประวัติส่งกลับ / ไม่อนุมัติ / ยกเลิก ===================== -->
-				<div class="so-card">
-					<div class="so-section-title-container">
-						<h2 class="so-section-title">ประวัติการส่งกลับ / ไม่อนุมัติ / ยกเลิก</h2>
-						<hr class="so-divider">
-					</div>
-					<div style="overflow-x:auto;">
-						<table class="so-document-status-table">
-							<thead>
-								<tr>
-									<th>สถานะ</th>
-									<th>เหตุผล</th>
-									<th>ผู้ดำเนินการ</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ($breqLogRows as $breqLogRow) {
-									$breqLogTime = strtotime((string)$breqLogRow['created_at']);
-								?>
-									<tr>
-										<td class="so-document-log-status-cell">
-											<span class="so-document-status-pill <?php echo so_saved_h($breqLogClasses[$breqLogRow['status_doc']] ?? 'is-cancelled'); ?>">
-												<?php echo so_saved_h($breqLogLabels[$breqLogRow['status_doc']] ?? $breqLogRow['status_doc']); ?>
-											</span>
-										</td>
-										<td class="so-document-log-reason-cell"><?php echo so_saved_h($breqLogRow['reason']); ?></td>
-										<td class="so-document-log-user-cell">
-											<div><?php echo so_saved_h((string)$breqLogRow['user_name'] !== '' ? $breqLogRow['user_name'] : '-'); ?></div>
-											<?php if ($breqLogTime !== false) { ?>
-												<div class="so-document-log-time"><?php echo so_saved_h(date('d-m-Y H:i', $breqLogTime)); ?></div>
-											<?php } ?>
-										</td>
-									</tr>
-								<?php } ?>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			<?php } ?>
+			<?php
+			// แท็บ "การส่งกลับเอกสาร" (partials/doc_tabs_card.php) — แสดงทุกกรณี ใบใหม่ได้ empty_text
+			$breqLogRowsForTabs = array();
+			foreach ($breqLogRows as $breqLogRow) {
+				$breqLogTime = strtotime((string)$breqLogRow['created_at']);
+				$breqLogRowsForTabs[] = array(
+					'status_label' => $breqLogLabels[$breqLogRow['status_doc']] ?? $breqLogRow['status_doc'],
+					'status_class' => $breqLogClasses[$breqLogRow['status_doc']] ?? 'is-cancelled',
+					'reason'       => $breqLogRow['reason'],
+					'user_name'    => $breqLogRow['user_name'],
+					'created_at'   => $breqLogTime !== false ? date('d-m-Y H:i', $breqLogTime) : '',
+				);
+			}
+			$docTabsCard = array(
+				'open_fn' => 'breqOpen3Tab',
+				'document_return_log' => array(
+					'enabled' => true,
+					'rows' => $breqLogRowsForTabs,
+					'empty_text' => 'ยังไม่มีรายการส่งกลับเอกสาร',
+				),
+			);
+			include __DIR__ . '/partials/doc_tabs_card.php';
+			unset($docTabsCard);
+			?>
 		</div>
 
 		<?php
@@ -280,7 +264,7 @@ $breqCompatHiddenFields = array(
 					<div id="breqApproveOverflowMenu" class="so-overflow-menu">
 						<button type="button" onclick="breqRunReasonAction('return');" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
 						<button type="button" class="so-menu-danger" onclick="breqRunReasonAction('reject');" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
-						<button type="button" onclick="breqRunReasonAction('cancel');"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+						<button type="button" onclick="breqRunReasonAction('cancel');" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 					</div>
 					<button type="button" class="btn-so-approve" id="btn_breq_approve" onclick="breqApprove();"><i class="far fa-check-circle"></i> อนุมัติ</button>
 				</div>
@@ -293,9 +277,6 @@ $breqCompatHiddenFields = array(
 			<?php } ?>
 			<?php if ($breqAdminEdit) { ?>
 				<button type="button" id="btn_breq_admin_save" class="btn-so-draft" onclick="breqAdminSave();"><i class="far fa-save"></i> บันทึกเลขที่เอกสาร</button>
-			<?php } ?>
-			<?php if ($breqCanCancel && !$breqCanAct) { ?>
-				<button type="button" id="btn_breq_cancel_doc" class="btn-so-cancel-nav" style="color:#FF0000;" onclick="breqRunReasonAction('cancel');"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px; vertical-align: middle;"> ยกเลิกเอกสาร</button>
 			<?php } ?>
 			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href=<?php echo so_saved_h(json_encode($breqBackUrl)); ?>;">ย้อนกลับ</button>
 		</div>
@@ -396,6 +377,16 @@ $breqCompatHiddenFields = array(
 			tabs[i].classList.remove('active');
 		}
 		el.classList.add('active');
+	}
+
+	/* สลับแท็บของ partials/doc_tabs_card.php — pattern เดียวกับ bregOpen3Tab ของ register_bregawl.php */
+	function breqOpen3Tab(tabId, element) {
+		var contents = document.getElementsByClassName('so-3tab-content');
+		for (var i = 0; i < contents.length; i++) contents[i].style.display = 'none';
+		var btns = element.parentElement.getElementsByClassName('so-tab-btn');
+		for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+		document.getElementById(tabId).style.display = 'block';
+		element.classList.add('active');
 	}
 
 	// Run เอกสาร — ported จาก register_supbrcshos.php:1096-1159 เปลี่ยน doc_type เป็น 9 (prefix BREQ)
@@ -705,7 +696,7 @@ $breqCompatHiddenFields = array(
 		if (menu) menu.style.display = 'none';
 
 		var refId = document.getElementById('ref_id_br').value;
-		var button = document.getElementById(action === 'cancel' && document.getElementById('btn_breq_cancel_doc') ? 'btn_breq_cancel_doc' : 'btn_breq_approve');
+		var button = document.getElementById('btn_breq_approve');
 		var run = function(reason) {
 			if (!breqSubmitting) breqRunDocAction(action, reason, button, 'กำลังดำเนินการ...');
 		};
