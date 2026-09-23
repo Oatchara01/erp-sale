@@ -187,11 +187,17 @@ $today=DateThai($today1);
 
 $ref_id_br=$objResult["ref_id_br"];
 $dep_no =$objResult["dep_no"];
+$deposit_no = $dep_no != '' ? $dep_no : ($objResult["deposit_no"] ?? '');
 $job_no =$objResult["job_no"];
+$job_id = $job_no != '' ? $job_no : ($objResult["job_id"] ?? '');
 $iv_no =$objResult["iv_no"];
 $company = $objResult["company"];
 $customer=$objResult["customer"];
 $address =$objResult["address"];
+$province_id = $objResult["province_id"] ?? ($objResult["province"] ?? ($objResult3["province"] ?? ($objResult3["province_id"] ?? '')));
+$zip_code = $objResult["zip_code"] ?? ($objResult["postcode"] ?? ($objResult3["postcode"] ?? ($objResult3["zip_code"] ?? '')));
+$maps = $objResult["maps"] ?? ($objResult3["maps"] ?? '');
+$ref_id = $objResult["ref_id"] ?? ($ref_id_br ?? '');
 $delivery_name =$objResult["delivery_name"];
 $delivery_address =$objResult["delivery_address"];
 $delivery_contact =$objResult["delivery_contact"];
@@ -339,7 +345,7 @@ $ref_10 ="";
 	<tr>
 		<td>ฝากสินค้าเลขที่ <u><?php echo $deposit_no; ?></u></td>
 		<td>เลขที่ลงงาน <u><?php echo $job_id; ?></u></td>
-		<td><div align="right" class="style38"><?php echo $iv_no;?></div><div align="right"><?php echo barcode($iv_no);?></div></td>
+		<td><div align="right" class="style38"><?php echo $iv_no;?></div><div align="right"><?php echo !empty($iv_no) ? barcode($iv_no) : '';?></div></td>
 	</tr>
 </table>
 
@@ -686,31 +692,45 @@ if ($returns =='1'){ ?>
 </p>
 	<?php
 
+$ffirst = array();
+$ffirst1 = array();
+$ffirst2 = array();
+
 $qfirst = "select * from st__signature where ref_id = '".$ref_id."'";
 $first = mysqli_query($new,$qfirst);
-$ffirst = mysqli_fetch_array($first);
+if ($first) {
+	$ffirst = mysqli_fetch_array($first) ?: array();
+}
 
-$qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
-$first1 = mysqli_query($conn,$qfirst1);
-$ffirst1 = mysqli_fetch_array($first1);
+if (!empty($ffirst["en_code"])) {
+	$qfirst1 = "select name,surname from tb_user where em_id = '".$ffirst["en_code"]."'";
+	$first1 = mysqli_query($conn,$qfirst1);
+	if ($first1) {
+		$ffirst1 = mysqli_fetch_array($first1) ?: array();
+	}
+}
 
-$qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
-$first2 = mysqli_query($conn,$qfirst2);
-$ffirst2 = mysqli_fetch_array($first2);
+if (!empty($ffirst["cs_code"])) {
+	$qfirst2 = "select name,surname from tb_user where em_id = '".$ffirst["cs_code"]."'";
+	$first2 = mysqli_query($conn,$qfirst2);
+	if ($first2) {
+		$ffirst2 = mysqli_fetch_array($first2) ?: array();
+	}
+}
 
 	?>
 
 		<table style="width:100%;">
 	
 	<tr>
-	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"]; echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; echo $ffirst["st_name"] ?? ''; echo ")";  ?></td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["en_name"]!=''){ ?>
+		<?php if(!empty($ffirst["en_name"])){ ?>
 		<img src="data:<?php echo $ffirst["en_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
 	<td style="width:33%;text-align:center;">
-		<?php if($ffirst["cs_name"]!=''){ ?>
+		<?php if(!empty($ffirst["cs_name"])){ ?>
 		<img src="data:<?php echo $ffirst["cs_name"];?>" width="150" align="center" height="60" />
 		<?php } ?>
 		</td>
@@ -718,8 +738,8 @@ $ffirst2 = mysqli_fetch_array($first2);
 			
 	<tr>
 	<td style="width:33%;text-align:center;"></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"]; ?> <?php echo $ffirst1["surname"]; ?>  <?php echo ")";  ?></td>
-	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"]; ?> <?php echo $ffirst2["surname"]; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst1["name"] ?? ''; ?> <?php echo $ffirst1["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
+	<td style="width:33%;text-align:center;"><?php echo "("; ?>  <?php echo $ffirst2["name"] ?? ''; ?> <?php echo $ffirst2["surname"] ?? ''; ?>  <?php echo ")";  ?></td>
 	</tr>			
 			
 	<tr>
@@ -729,9 +749,9 @@ $ffirst2 = mysqli_fetch_array($first2);
 	</tr>
 		
 		<tr>
-		<td style="width:33%;text-align:center;"><span>วันที่ <?php echo $ffirst["stock_dt"]; ?></span></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"]; ?></td>
-		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"]; ?></td>
+		<td style="width:33%;text-align:center;"><span>วันที่ <?php echo $ffirst["stock_dt"] ?? ''; ?></span></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["en_dt"] ?? ''; ?></td>
+		<td style="width:33%;text-align:center;">วันที่ <?php echo $ffirst["cs_dt"] ?? ''; ?></td>
 		</tr>
 </table>
 
