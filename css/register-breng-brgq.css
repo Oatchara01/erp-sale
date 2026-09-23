@@ -176,3 +176,24 @@
 	#breq_edit_modal .cs-modal-btn-update,
 	#breq_edit_modal .cs-modal-btn-cancel { width: 100%; }
 }
+
+/* แถบปุ่มท้ายฟอร์ม — form ครอบ container 1096px แล้ว (ดู register_breng_brgq.php) แถบจึงกว้างเต็มพื้นที่เนื้อหา
+   และให้ form สูงอย่างน้อยเท่าจอ (หัก padding-top ของ body) แล้วดันแถบไปท้ายสุดด้วย margin-top: auto
+   เนื้อหาสั้นแถบก็ยังชิดล่างจอ เนื้อหายาวแถบอยู่ท้ายหน้าตามปกติ — ไม่ลอย (ไม่ใช่ position: sticky) */
+.breq-page-form {
+	display: flex;
+	flex-direction: column;
+	min-height: calc(100vh - 20px); /* body { padding-top: 20px } ของ so-core.css */
+}
+
+body.has-sidebar .breq-page-form {
+	min-height: calc(100vh - 64px); /* body.has-sidebar { padding-top: 64px } ของ sidebar.css */
+}
+
+.breq-page-form > .register-so-main {
+	flex: 0 0 auto;
+}
+
+.breq-page-form > .breq-sticky-actions {
+	margin-top: auto;
+}

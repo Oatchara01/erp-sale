@@ -35,12 +35,15 @@
 		return null;
 	}
 
-	function buildRowHtml(item, rowIndex) {
+	/* opts (ใช้ตอนโหลดเอกสารที่บันทึกไว้ผ่าน breqHydrateRows): count / br_period / sale_remark / readonly */
+	function buildRowHtml(item, rowIndex, opts) {
+		opts = opts || {};
 		var remaining = toNumber(item.remaining);
 		var price = toNumber(item.product_price);
-		var defaultCount = remaining > 0 ? 1 : 0;
+		var defaultCount = opts.count !== undefined ? toNumber(opts.count) : (remaining > 0 ? 1 : 0);
 		var sumAmount = price * defaultCount;
 		var codeText = item.access_code || item.product_codesame || '';
+		var disabledAttr = opts.readonly ? ' disabled' : '';
 
 		var html = '<tr class="breq-item-row">';
 
@@ -55,7 +58,7 @@
 			'<input type="hidden" name="sum_amount[' + rowIndex + ']" class="breq-f-sum_amount" value="' + sumAmount + '">' +
 			'<input type="hidden" name="warranty[' + rowIndex + ']" value="' + escapeHtml(item.war_hc) + '">' +
 			'<input type="hidden" name="lot[' + rowIndex + ']" class="breq-f-lot" value="' + escapeHtml(item.lot_no) + '">' +
-			'<input type="hidden" name="sale_remarkk[' + rowIndex + ']" class="breq-f-remark" value="">' +
+			'<input type="hidden" name="sale_remarkk[' + rowIndex + ']" class="breq-f-remark" value="' + escapeHtml(opts.sale_remark) + '">' +
 			'<input type="hidden" name="product_nameother[' + rowIndex + ']" class="breq-f-nameother" value="' + escapeHtml(item.product_nameother) + '">' +
 			'</td>';
 
@@ -63,7 +66,7 @@
 
 		html += '<td><div class="cs-cell-pill">' +
 			'<input type="number" name="sale_count[' + rowIndex + ']" class="so-input breq-f-count" min="1" max="' + remaining + '"' +
-			' value="' + defaultCount + '" data-remaining="' + remaining + '" onchange="window.breqOnCountChange(this);">' +
+			' value="' + defaultCount + '" data-remaining="' + remaining + '" onchange="window.breqOnCountChange(this);"' + disabledAttr + '>' +
 			'</div></td>';
 
 		html += '<td><div class="cs-cell-pill">' +
@@ -71,12 +74,12 @@
 			'</div></td>';
 
 		html += '<td><div class="cs-cell-pill">' +
-			'<input type="text" name="br_period[' + rowIndex + ']" class="so-input" placeholder="ระยะเวลายืม">' +
+			'<input type="text" name="br_period[' + rowIndex + ']" class="so-input" placeholder="ระยะเวลายืม" value="' + escapeHtml(opts.br_period) + '"' + disabledAttr + '>' +
 			'</div></td>';
 
-		html += '<td class="cs-row-actions-cell">' +
+		html += '<td class="cs-row-actions-cell">' + (opts.readonly ? '' :
 			'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" onclick="window.breqOpenEditModal(this);"><i class="far fa-edit" aria-hidden="true"></i></button>' +
-			'<button type="button" class="so-product-remove-btn" title="ลบรายการ" onclick="window.breqRemoveRow(this);"><i class="far fa-trash-alt" aria-hidden="true"></i></button>' +
+			'<button type="button" class="so-product-remove-btn" title="ลบรายการ" onclick="window.breqRemoveRow(this);"><i class="far fa-trash-alt" aria-hidden="true"></i></button>') +
 			'</td>';
 
 		html += '</tr>';
@@ -118,6 +121,22 @@
 		}
 		refreshCount();
 		return true;
+	};
+
+	/* โหลดแถวของเอกสารที่บันทึกไว้ (Draft / Request) — items มาจาก breq_load_document() ใน includes/breq_repo.php */
+	window.breqHydrateRows = function(items, readonly) {
+		(items || []).forEach(function(item) {
+			breqRowSeq += 1;
+			if (tbody()) {
+				tbody().insertAdjacentHTML('beforeend', buildRowHtml(item, breqRowSeq, {
+					count: item.count,
+					br_period: item.br_period,
+					sale_remark: item.sale_remark,
+					readonly: !!readonly
+				}));
+			}
+		});
+		refreshCount();
 	};
 
 	window.breqOnCountChange = function(input) {

@@ -13,36 +13,48 @@ include('dbconnect.php');
 <script src="js/breq-item-table.js?v=<?php echo filemtime(__DIR__ . '/js/breq-item-table.js'); ?>"></script>
 
 <?php
-// เลขที่อ้างอิงโดยประมาณ (ตัวจริงถูกคำนวณใหม่อีกครั้งฝั่ง register_breng1_breq.php ตอนบันทึก
-// แนวเดียวกับ register_bregawl.php — เลขนี้ใช้แสดงผล/พรีวิวเท่านั้น)
-$month = date('m');
-$day = date('d');
-$year = date('Y');
-$today = $year . '-' . $month . '-' . $day;
+require_once __DIR__ . '/includes/breq_repo.php';
 
-$yearMonth = substr(date("Y") + 543, -2) . date("m");
-$sql = "SELECT MAX(ref_id_br) AS MAXID FROM in__br ";
-$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
-$rs = mysqli_fetch_assoc($qry);
+$today = date('Y-m-d');
+$breqStockConn = (isset($new) && $new instanceof mysqli) ? $new : $conn;
 
-$maxRefId = (string) ($rs['MAXID'] ?? '');
-$maxId = $maxRefId !== '' ? (int) substr($maxRefId, -5) : 0;
-$maxId3 = $maxRefId !== '' ? substr($maxRefId, -9) : '';
-$maxId1 = substr($maxId3, 0, -5);
-
-$so = "BQ";
-if ($maxId1 == $yearMonth) {
-	$maxId1 = ($maxId + 1);
-	$maxId2 = substr("00000" . $maxId1, -5);
-	$nextId = $yearMonth . $maxId2;
-} else {
-	$maxId1 = "00001";
-	$nextId = $yearMonth . $maxId1;
+// ?ref_id_br= เปิดเอกสารที่บันทึกไว้ (Draft / Request / อื่น ๆ) — ไม่มี = สร้างใบใหม่
+$breqRefParam = trim((string)($_GET['ref_id_br'] ?? ''));
+$breqDoc = null;
+if ($breqRefParam !== '') {
+	$breqDoc = breq_load_document($conn, $breqStockConn, $breqRefParam);
+	if ($breqDoc === null) {
+		echo "<script>alert(" . json_encode('ไม่พบเอกสาร ' . $breqRefParam, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) . ");window.location='status_brhos_breq.php';</script>";
+		exit;
+	}
 }
-$breqDisplayRefId = $so . $nextId;
+$breqHeader = $breqDoc ? $breqDoc['header'] : array();
+$breqStatus = (string)($breqHeader['status_doc'] ?? '');
 
-// ฟิลด์เดิมที่ Figma ตัดออกจากหน้าจอ (Q2=ข) ยังต้องส่งไปให้ register_breng1_breq.php อ่านได้
-// โดยไม่แก้ handler — ใส่เป็น hidden ค่าว่างไว้เพื่อกัน PHP notice (ดูแผน §2 "hidden ค่าว่าง")
+// new = ใบใหม่ / draft, request = เจ้าของแก้ได้ / readonly = สถานะอื่นหรือไม่ใช่เจ้าของ
+if (!$breqDoc) {
+	$breqMode = 'new';
+} elseif (breq_can_edit_owner($breqHeader, $_SESSION) && in_array($breqStatus, array('Draft', 'Request'), true)) {
+	$breqMode = $breqStatus === 'Draft' ? 'draft' : 'request';
+} else {
+	$breqMode = 'readonly';
+}
+$breqReadonly = ($breqMode === 'readonly');
+
+// ใบใหม่แสดงเลขโดยประมาณ (เลขจริงจองตอน Save Draft / Submit ใน breq_reserve_ref_id)
+$breqDisplayRefId = $breqDoc ? (string)$breqHeader['ref_id_br'] : breq_next_ref_id($conn);
+$breqCompany = (string)($breqHeader['company'] ?? '1');
+$breqPoNo = (string)($breqHeader['po_no'] ?? '');
+$breqEmployeeName = $breqDoc
+	? (string)$breqHeader['customer']
+	: trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''));
+$breqIvDate = (string)($breqHeader['iv_date'] ?? '');
+if ($breqIvDate === '0000-00-00') {
+	$breqIvDate = '';
+}
+
+// ฟิลด์เดิมที่ Figma ตัดออกจากหน้าจอ (Q2=ข) — ยังส่งเป็น hidden ค่าว่าง เพราะ breq_insert_submit_side_tables()
+// (includes/breq_repo.php) อ่านคีย์เหล่านี้ไปเขียน tb_register_data / tb_other_bill ตอน Submit
 $breqCompatHiddenFields = array(
 	'address_1', 'address_name', 'address_send', 'province_name',
 	'start_date', 'between_date', 'start_time', 'end_time',
@@ -61,6 +73,8 @@ $breqCompatHiddenFields = array(
 );
 ?>
 
+<!-- form ครอบ container (แบบ register_bregawl.php) เพื่อให้แถบปุ่มด้านล่างอยู่นอกกรอบ 1096px และกว้างเต็มพื้นที่เนื้อหา -->
+<form action="register_breng1_breq.php" method="post" name="frmMain" class="breq-page-form" enctype="multipart/form-data" onsubmit="return breqValidateSubmit();">
 <div class="w3-container register-so-main" style="max-width:1096px;margin:0 auto;">
 
 	<div class="so-header-container">
@@ -78,17 +92,17 @@ $breqCompatHiddenFields = array(
 		</div>
 	</div>
 
-	<form action="register_breng1_breq.php" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return breqValidateSubmit();">
 
-		<input type="hidden" name="ref_id_br" value="<?php echo so_saved_h($breqDisplayRefId); ?>">
+		<!-- ref_id_br ว่าง = ใบใหม่ (จองเลขตอนบันทึก) / มีค่า = บันทึกทับเอกสารนี้ — พรีวิวใช้ ref_id_preview แทนเมื่อว่าง -->
+		<input type="hidden" name="ref_id_br" id="ref_id_br" value="<?php echo $breqDoc ? so_saved_h($breqDisplayRefId) : ''; ?>">
 		<input type="hidden" name="ref_id_preview" value="<?php echo so_saved_h($breqDisplayRefId); ?>">
 		<input type="hidden" name="type_breng" value="2">
-		<input type="hidden" name="date_br" value="<?php echo so_saved_h($today); ?>">
-		<input type="hidden" name="po_no" id="po_no" value="">
-		<input type="hidden" name="ref_id_stock" id="ref_id_stock" value="">
-		<input type="hidden" name="customer_id" id="customer_id" value="">
+		<input type="hidden" name="date_br" value="<?php echo so_saved_h($breqDoc ? (string)$breqHeader['date_br'] : $today); ?>">
+		<input type="hidden" name="po_no" id="po_no" value="<?php echo so_saved_h($breqPoNo); ?>">
+		<input type="hidden" name="ref_id_stock" id="ref_id_stock" value="<?php echo so_saved_h($breqHeader['ref_id_stock'] ?? ''); ?>">
+		<input type="hidden" name="customer_id" id="customer_id" value="<?php echo so_saved_h($breqHeader['customer_id'] ?? ''); ?>">
 		<input type="hidden" name="h_customer" id="h_customer" value="">
-		<input type="hidden" name="address" id="address" value="">
+		<input type="hidden" name="address" id="address" value="<?php echo so_saved_h($breqHeader['address'] ?? ''); ?>">
 
 		<!-- Compatibility layer: ฟิลด์เดิมที่ Figma ตัดออก แต่ register_breng1_breq.php ยังอ่านคีย์เหล่านี้อยู่
 		     (เขียนลง tb_register_data / in__br) ส่งค่าว่างไปกันแค่ PHP notice ไม่ได้ลบทิ้งจริง (มติ Q2=ข) -->
@@ -115,20 +129,20 @@ $breqCompatHiddenFields = array(
 						<label class="so-label" for="company_select">บริษัท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
 							<select name="company" id="company_select" class="so-select" required onchange="breqHandleCompanyChange(this);">
-								<option value="1" selected>AWL</option>
-								<option value="2">NBM</option>
+								<option value="1"<?php echo $breqCompany !== '2' ? ' selected' : ''; ?>>AWL</option>
+								<option value="2"<?php echo $breqCompany === '2' ? ' selected' : ''; ?>>NBM</option>
 							</select>
 						</div>
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="customer">พนักงาน</label>
 						<input type="text" name="customer" id="customer" class="so-input" readonly
-							value="<?php echo so_saved_h(trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''))); ?>">
+							value="<?php echo so_saved_h($breqEmployeeName); ?>">
 					</div>
 					<div class="so-field-group breq-po-field-cell" id="breq_po_field">
 						<button type="button" class="btn-add-customer-pill" onclick="breqOpenPoModal();">
 							<img src="img\icons\preview.png" alt="search" style="width: 20px;">
-							<span id="breq_po_display" class="breq-po-display">ค้นหาเอกสาร PO</span>
+							<span id="breq_po_display" class="breq-po-display"><?php echo $breqPoNo !== '' ? so_saved_h($breqPoNo) : 'ค้นหาเอกสาร PO'; ?></span>
 						</button>
 					</div>
 				</div>
@@ -136,7 +150,7 @@ $breqCompatHiddenFields = array(
 				<div class="so-field-group" style="margin-bottom: 0;">
 					<label class="so-label" for="sale_comment">หมายเหตุ</label>
 					<div class="so-input-wrapper">
-						<input type="text" name="sale_comment" id="sale_comment" class="so-input" placeholder="ระบุหมายเหตุ">
+						<input type="text" name="sale_comment" id="sale_comment" class="so-input" placeholder="ระบุหมายเหตุ" value="<?php echo so_saved_h($breqHeader['sale_comment'] ?? ''); ?>">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('sale_comment').value='';" aria-label="ล้างค่า"></button>
 					</div>
 				</div>
@@ -174,20 +188,29 @@ $breqCompatHiddenFields = array(
 			'tab_id' => 'tab-admin-info',
 			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
 			'rows'   => array(array(
-				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => ''),
+				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => (string)($breqHeader['iv_no'] ?? '')),
 				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
-				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'),
+				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt'),
 			)),
 		);
 		include __DIR__ . '/partials/admin_info_tab.php';
 		unset($adminInfoTab);
 		?>
 
-		<div style="text-align:center; margin: 24px 0;">
-			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+	</div>
+
+	<div class="so-sticky-actions breq-sticky-actions">
+		<div class="so-sticky-actions-inner">
+			<?php if ($breqMode === 'new' || $breqMode === 'draft') { ?>
+				<button type="submit" name="submit" id="btn_submit_form" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+				<button type="button" id="btn_breq_save" class="btn-so-draft" onclick="breqSave('draft');"><i class="far fa-save"></i> <?php echo $breqMode === 'draft' ? 'Update' : 'Save Draft'; ?></button>
+			<?php } elseif ($breqMode === 'request') { ?>
+				<button type="button" id="btn_breq_save" class="btn-so-draft" onclick="breqSave('update');"><i class="far fa-save"></i> Update</button>
+			<?php } ?>
+			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_brhos_breq.php';">ย้อนกลับ</button>
 		</div>
-	</form>
-</div>
+	</div>
+</form>
 
 <!-- ===================== Modal: ค้นหาเอกสาร PO (js/breq-po-modal.js) ===================== -->
 <div id="breqPoModal" class="customer-popup-modal" aria-hidden="true" style="display:none;">
@@ -360,23 +383,169 @@ $breqCompatHiddenFields = array(
 		sel.setAttribute('data-prev', sel.value);
 	}
 
+	// โหมดของหน้า (คำนวณฝั่ง PHP): new / draft / request / readonly
+	var BREQ_MODE = <?php echo json_encode($breqMode); ?>;
+	var breqSubmitting = false;
+
+	function breqNotify(title, text, icon) {
+		if (typeof Swal !== 'undefined') {
+			Swal.fire({ title: title, text: text, icon: icon, confirmButtonColor: '#612989' });
+		} else {
+			alert(title + (text ? '\n' + text : ''));
+		}
+	}
+
+	// อ่านอย่างเดียว: ล็อกทุกช่องในฟอร์ม ซ่อนปุ่มเลือก PO / ล้างค่า / Run เอกสาร
+	// (พรีวิวปลดล็อกชั่วคราวตอนส่ง — ดู breqWithDisabledFieldsEnabled)
+	function breqApplyReadonly() {
+		var form = document.forms.frmMain;
+		if (!form) return;
+		form.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(function(el) {
+			el.disabled = true;
+		});
+		form.querySelectorAll('.so-clear-icon, #breq_po_field button, #btn_run_doc_no').forEach(function(el) {
+			el.style.display = 'none';
+		});
+	}
+
 	document.addEventListener('DOMContentLoaded', function() {
+		if (typeof window.breqHydrateRows === 'function') {
+			window.breqHydrateRows(<?php echo json_encode($breqDoc ? $breqDoc['items'] : array(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, BREQ_MODE === 'readonly');
+		}
+		if (BREQ_MODE === 'readonly') breqApplyReadonly();
+
 		var companySelect = document.getElementById('company_select');
 		if (companySelect) companySelect.setAttribute('data-prev', companySelect.value);
+
+		// ?saved= มาจาก redirect หลัง Submit / Save Draft / Update — ลบออกจาก URL กัน modal เด้งซ้ำตอน refresh
+		var saved = <?php echo json_encode((string)($_GET['saved'] ?? '')); ?>;
+		if (['submit', 'draft', 'update'].indexOf(saved) !== -1) {
+			var cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete('saved');
+			window.history.replaceState({}, document.title, cleanUrl);
+
+			if (typeof Swal !== 'undefined') {
+				Swal.fire({
+					title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+					text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+					icon: 'success',
+					confirmButtonColor: '#612989',
+					confirmButtonText: 'ตกลง'
+				});
+			}
+		}
 	});
 
+	function breqHasItems() {
+		if (document.querySelectorAll('#breq_item_tbody tr.breq-item-row').length > 0) return true;
+		breqNotify('แจ้งเตือน', 'กรุณาเลือกสินค้าจากเอกสาร PO อย่างน้อย 1 รายการ', 'warning');
+		return false;
+	}
+
 	// ก่อน submit จริง ต้องมีรายการสินค้าอย่างน้อย 1 รายการ (ซึ่งหมายความว่า po_no ถูกล็อกแล้วด้วย)
+	// Submit = ส่งให้ Sup อนุมัติด้วย จึงถามยืนยันก่อน แล้วค่อยส่งฟอร์มเองใน breqDoSubmit()
 	function breqValidateSubmit() {
-		var rowCount = document.querySelectorAll('#breq_item_tbody tr.breq-item-row').length;
-		if (rowCount === 0) {
-			if (typeof Swal !== 'undefined') {
-				Swal.fire('แจ้งเตือน', 'กรุณาเลือกสินค้าจากเอกสาร PO อย่างน้อย 1 รายการ', 'warning');
-			} else {
-				alert('กรุณาเลือกสินค้าจากเอกสาร PO อย่างน้อย 1 รายการ');
-			}
+		if (BREQ_MODE !== 'new' && BREQ_MODE !== 'draft') return false; // Enter ในช่องกรอกของโหมดอื่น
+		if (breqSubmitting) return false;
+		if (!breqHasItems()) return false;
+
+		var message = 'ต้องการส่งเอกสารนี้ให้ Sup อนุมัติใช่หรือไม่ ?';
+		if (typeof Swal === 'undefined') {
+			if (confirm(message)) breqDoSubmit();
 			return false;
 		}
-		return true;
+		// หน้าตาเดียวกับ popup ยืนยันบันทึกของ register_suphos.php
+		Swal.fire({
+			title: 'ยืนยันการบันทึกข้อมูล',
+			text: 'ตรวจสอบข้อมูลเรียบร้อยแล้ว ต้องการบันทึกข้อมูลนี้ใช่หรือไม่?',
+			icon: 'question',
+			showCancelButton: true,
+			confirmButtonColor: '#612989',
+			cancelButtonColor: '#8a8a8a',
+			confirmButtonText: 'ยืนยันบันทึก',
+			cancelButtonText: 'ยกเลิก'
+		}).then(function(result) {
+			if (result.isConfirmed) breqDoSubmit();
+		});
+		return false;
+	}
+
+	// ส่งฟอร์มแบบ programmatic ไม่มี submitter — เติม submit=submit ที่ register_breng1_breq.php ตรวจเอง
+	// แล้วล็อกปุ่มกันกดซ้ำ (กดซ้ำระหว่างรอจะได้เอกสาร BQ สองใบ)
+	function breqDoSubmit() {
+		if (breqSubmitting) return;
+		breqSubmitting = true;
+
+		var form = document.forms.frmMain;
+		var submitFlag = document.createElement('input');
+		submitFlag.type = 'hidden';
+		submitFlag.name = 'submit';
+		submitFlag.value = 'submit';
+		form.appendChild(submitFlag);
+
+		var button = document.getElementById('btn_submit_form');
+		if (button) {
+			button.disabled = true;
+			button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+		}
+		// ปุ่ม name="submit" บัง form.submit() — เรียกผ่าน prototype แทน
+		HTMLFormElement.prototype.submit.call(form);
+	}
+
+	function breqPostAction(action, button, loadingText) {
+		var form = document.forms.frmMain;
+		var formData = new FormData(form);
+		formData.set('action', action);
+
+		var defaultHtml = button ? button.innerHTML : '';
+		breqSubmitting = true;
+		if (button) {
+			button.disabled = true;
+			button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + loadingText;
+		}
+
+		function unlock() {
+			breqSubmitting = false;
+			if (button) {
+				button.disabled = false;
+				button.innerHTML = defaultHtml;
+			}
+		}
+
+		fetch('register_breng_save_breq.php', { method: 'POST', body: formData, credentials: 'same-origin' })
+			.then(function(res) { return res.json(); })
+			.then(function(data) {
+				if (data && data.success) {
+					window.location.href = 'register_breng_brgq.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=' + action;
+					return;
+				}
+				unlock();
+				breqNotify('บันทึกไม่สำเร็จ', (data && data.message) ? data.message : 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+			})
+			.catch(function(err) {
+				unlock();
+				breqNotify('บันทึกไม่สำเร็จ', String(err), 'error');
+			});
+	}
+
+	// action = 'draft' (Save Draft / Update ของ Draft — ไม่บังคับมีรายการ)
+	//        | 'update' (Update ของเอกสาร Request — ต้องมีรายการเหมือน Submit)
+	function breqSave(action) {
+		if (breqSubmitting) return;
+		if (action === 'update' && !breqHasItems()) return;
+		breqPostAction(action, document.getElementById('btn_breq_save'), 'Saving...');
+	}
+
+	// ช่องที่ disabled (โหมดอ่านอย่างเดียว) ไม่ถูกส่งไปกับฟอร์ม — ปลดชั่วคราวระหว่างส่งพรีวิว
+	function breqWithDisabledFieldsEnabled(callback) {
+		var form = document.forms.frmMain;
+		var locked = Array.prototype.filter.call(form.querySelectorAll('[name]'), function(el) { return el.disabled; });
+		locked.forEach(function(el) { el.disabled = false; });
+		try {
+			callback();
+		} finally {
+			locked.forEach(function(el) { el.disabled = true; });
+		}
 	}
 
 	// เปิดพรีวิวใบพิมพ์ในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ report_loanhosptl1_breq.php
@@ -411,7 +580,9 @@ $breqCompatHiddenFields = array(
 		form.method = 'post';
 		form.target = previewTarget;
 		form.enctype = 'application/x-www-form-urlencoded';
-		HTMLFormElement.prototype.submit.call(form);
+		breqWithDisabledFieldsEnabled(function() {
+			HTMLFormElement.prototype.submit.call(form);
+		});
 
 		if (originalAction === null) form.removeAttribute('action');
 		else form.setAttribute('action', originalAction);
@@ -423,7 +594,7 @@ $breqCompatHiddenFields = array(
 		else form.setAttribute('enctype', originalEnctype);
 		previewFlag.remove();
 
-		if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+		if (BREQ_MODE === 'new' && typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
 			Swal.fire({
 				toast: true,
 				position: 'top-end',

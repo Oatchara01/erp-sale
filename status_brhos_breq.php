@@ -30,18 +30,23 @@ if($user_type=='Engineer'){
 $strSQL = "SELECT *  FROM in__br where 1 ";
 }
 
+// Draft เห็นได้เฉพาะคนสร้าง (in__br.sale_code) — ดู includes/breq_repo.php
+$strSQL .= " AND (status_doc <> 'Draft' OR sale_code = '".mysqli_real_escape_string($conn, (string)$sale_code)."')";
+
 if($start_date !=""){ 
-    $strSQL .= ' AND iv_date >= "'.$start_date.'"'; 
+    $strSQL .= " AND iv_date >= '".mysqli_real_escape_string($conn, $start_date)."'"; 
 }
 if($end_date !=""){ 
-    $strSQL .= ' AND iv_date <= "'.$end_date.'"'; 
+    $strSQL .= " AND iv_date <= '".mysqli_real_escape_string($conn, $end_date)."'"; 
 }
 
 if($Keyword !=""){ //แสดงว่ามีค่า end_date ส่งมา หรือมีการค้นหา ก็ใหเต่อ String query
-	$strSQL .= ' AND customer  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or iv_no  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or status_doc  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or ref_id_br  LIKE "%'.$Keyword.'%"'; 
+	// ครอบวงเล็บ ไม่งั้น OR หลุดออกจากเงื่อนไขช่วงวันที่/Draft ด้านบน
+	$keywordLike = "'%".mysqli_real_escape_string($conn, $Keyword)."%'";
+	$strSQL .= " AND (customer LIKE ".$keywordLike
+		." OR iv_no LIKE ".$keywordLike
+		." OR status_doc LIKE ".$keywordLike
+		." OR ref_id_br LIKE ".$keywordLike.")"; 
 
 }
 $objQuery = mysqli_query($conn,$strSQL) or die ("Error Query [".$strSQL."]");
@@ -166,7 +171,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<?php } ?>
 				<td>
 				<?php if($user_type=='Engineer'){ ?>
-				<a href="register_breng_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_breng_brgq.php?ref_id_br=<?php echo urlencode($objResult["ref_id_br"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 				<?php }else{ ?>
 				<a href="register_brhos_edit_breq.php?ref_id_br=<?php echo $objResult["ref_id_br"];?>&start_date=<?php echo $start_date;  ?>&end_date=<?php echo $end_date;?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 					<?php } ?>

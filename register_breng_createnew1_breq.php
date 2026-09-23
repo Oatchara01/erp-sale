@@ -103,9 +103,10 @@ $type_breng = $_POST["type_breng"];
 
 
 $save="insert into in__br
-(company,ref_id_br,po_no,date_br,customer,customer_id,address,sale_comment,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,return_date_bet,type_breng)
+(company,ref_id_br,po_no,date_br,customer,customer_id,address,sale_comment,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,return_date_bet,type_breng,send_sup,send_supname,send_supdate)
 values
-('".$company."','".$ref_id_br."','".$po_no."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$sn_ckk."','".$sn."','".$objective."','".$objective_des1."','".$objective_des2."','".$objective_des4."','".$objective_des5."','".$returns."','".$returns_date."','".$returns_time."','".$returns_name."','".$returns_address."','".$returns_contact."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by."','".$return_date_bet."','".$type_breng."')";
+('".$company."','".$ref_id_br."','".$po_no."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$sn_ckk."','".$sn."','".$objective."','".$objective_des1."','".$objective_des2."','".$objective_des4."','".$objective_des5."','".$returns."','".$returns_date."','".$returns_time."','".$returns_name."','".$returns_address."','".$returns_contact."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by."','".$return_date_bet."','".$type_breng."','1','".$add_by."','".$add_date."')";
+// send_sup = 1 — Submit ของ BREQ ส่ง Sup อนุมัติในตัวแล้ว (ดู breq_persist ใน includes/breq_repo.php)
 
 
 $qsave=mysqli_query($conn,$save);
@@ -400,7 +401,7 @@ values('".$ref_id_br."','".$start_date."','".$between_date."','".$start_time."',
 	
  if($qsave){
    echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_brhos_edit.php?ref_id_br=$ref_id_br';";
+echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_breng_brgq.php?ref_id_br=$ref_id_br';";
 echo "</script>";
   } else {
    echo "Cannot";
