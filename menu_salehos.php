@@ -294,7 +294,7 @@ $sale_home_href = ($_SESSION['user_type'] == "Inter" or $_SESSION['user_type'] =
 					<?php if ($_SESSION['user_type'] == "Engineer") { ?>
 						<a href="main_eng_br.php">Borrow (BR)</a>
 						<a href="main_eng_breg.php">ใบขอเบิกอะไหล่สินค้าขาย (BREG)</a>
-						<a href="main_eng_br.php?key=breq">ใบยืมสินค้าตรวจเช็ค (BREQ).</a>
+						<a href="register_breng_brgq.php">ใบยืมสินค้าตรวจเช็ค (BREQ).</a>
 						<a href="status_brhos_breq.php">Status (BREQ).</a>
 					<?php } else { ?>
 						<a href="main_salehos_br.php">Borrow (BR)</a>

@@ -1,560 +1,438 @@
-<?php 
+<?php
+require_once __DIR__ . '/includes/so_saved_helpers.php';
 include('head.php');
 include('dbconnect.php');
-$po_no = isset($_GET['po_no']) ? trim((string) $_GET['po_no']) : '';
-
-// Older versions of this page expected a separate stock connection in $new.
-// Fall back to the active SOL connection, and verify the required stock tables
-// before running any queries so a partially imported local database does not
-// cause a fatal error.
-$stockConnection = (isset($new) && $new instanceof mysqli) ? $new : $conn;
-$stockTablesAvailable = true;
-foreach (array('in__main', 'in__sbmain') as $requiredTable) {
-	$tableName = mysqli_real_escape_string($stockConnection, $requiredTable);
-	$tableResult = mysqli_query(
-		$stockConnection,
-		"SELECT 1 FROM information_schema.tables " .
-		"WHERE table_schema = DATABASE() AND table_name = '".$tableName."' LIMIT 1"
-	);
-
-	if (!$tableResult || mysqli_num_rows($tableResult) === 0) {
-		$stockTablesAvailable = false;
-		break;
-	}
-}
-
-if($po_no == ''){ ?>
-<script>alert('โปรดเลือกเลขที่ใบสั่งซื้อ PO เป็นลำดับแรก !!');</script>
-<?php } ?>
-<script>
-function object() {
-		if (document.getElementById('object1').checked) {
-			document.getElementById('dt1').style.display = 'block';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt4').style.display = 'none';
-			document.getElementById('dt5').style.display = 'none';
-		}
-		else if (document.getElementById('object2').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'block';
-			document.getElementById('dt4').style.display = 'none';
-			document.getElementById('dt5').style.display = 'none';
-		}
-		else if (document.getElementById('object3').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt4').style.display = 'none';
-			document.getElementById('dt5').style.display = 'none';
-		}
-		else if (document.getElementById('object4').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt4').style.display = 'block';
-			document.getElementById('dt5').style.display = 'none';
-		}
-		else if (document.getElementById('object5').checked) {
-			document.getElementById('dt1').style.display = 'none';
-			document.getElementById('dt2').style.display = 'none';
-			document.getElementById('dt4').style.display = 'none';
-			document.getElementById('dt5').style.display = 'block';
-		}
-	}
-</script>
-
-<style type="text/css">
-
-.button {
-    background-color: #339900;
-    border: none;
-    color: white;
-    padding: 8px 10px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
-}
-
-.button1 {border-radius: 2px;}
-.button2 {border-radius: 4px;}
-.button3 {border-radius: 8px;}
-.button4 {border-radius: 12px;}
-.button5 {border-radius: 50%;}
-.main_item td{
- font-size: 12px;
-}
-</style>
-
+?>
+<link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
+<link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
+<link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
+<link rel="stylesheet" href="css/register-breng-brgq.css?v=<?php echo filemtime(__DIR__ . '/css/register-breng-brgq.css'); ?>">
+<link rel="stylesheet" href="css/breq-po-modal.css?v=<?php echo filemtime(__DIR__ . '/css/breq-po-modal.css'); ?>">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/breq-po-modal.js?v=<?php echo filemtime(__DIR__ . '/js/breq-po-modal.js'); ?>"></script>
+<script src="js/breq-item-table.js?v=<?php echo filemtime(__DIR__ . '/js/breq-item-table.js'); ?>"></script>
 
 <?php
-
+// เลขที่อ้างอิงโดยประมาณ (ตัวจริงถูกคำนวณใหม่อีกครั้งฝั่ง register_breng1_breq.php ตอนบันทึก
+// แนวเดียวกับ register_bregawl.php — เลขนี้ใช้แสดงผล/พรีวิวเท่านั้น)
 $month = date('m');
 $day = date('d');
 $year = date('Y');
-
 $today = $year . '-' . $month . '-' . $day;
 
-
-$yearMonth = substr(date("Y")+543, -2).date("m");
+$yearMonth = substr(date("Y") + 543, -2) . date("m");
 $sql = "SELECT MAX(ref_id_br) AS MAXID FROM in__br ";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error($conn));
+$qry = mysqli_query($conn, $sql) or die(mysqli_error($conn));
 $rs = mysqli_fetch_assoc($qry);
 
 $maxRefId = (string) ($rs['MAXID'] ?? '');
 $maxId = $maxRefId !== '' ? (int) substr($maxRefId, -5) : 0;
 $maxId3 = $maxRefId !== '' ? substr($maxRefId, -9) : '';
-
-$maxId1 = substr($maxId3,0,-5);
+$maxId1 = substr($maxId3, 0, -5);
 
 $so = "BQ";
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -5);
-$nextId = $yearMonth.$maxId2;
+if ($maxId1 == $yearMonth) {
+	$maxId1 = ($maxId + 1);
+	$maxId2 = substr("00000" . $maxId1, -5);
+	$nextId = $yearMonth . $maxId2;
+} else {
+	$maxId1 = "00001";
+	$nextId = $yearMonth . $maxId1;
 }
-else 
-{
-$maxId1 = "00001"; 
-$nextId = $yearMonth.$maxId1;
+$breqDisplayRefId = $so . $nextId;
 
-}
+// ฟิลด์เดิมที่ Figma ตัดออกจากหน้าจอ (Q2=ข) ยังต้องส่งไปให้ register_breng1_breq.php อ่านได้
+// โดยไม่แก้ handler — ใส่เป็น hidden ค่าว่างไว้เพื่อกัน PHP notice (ดูแผน §2 "hidden ค่าว่าง")
+$breqCompatHiddenFields = array(
+	'address_1', 'address_name', 'address_send', 'province_name',
+	'start_date', 'between_date', 'start_time', 'end_time',
+	'status', 'status_comment', 'fix_datetime', 'on_time', 'no_money',
+	'call_customer', 'call_back', 'credit_card', 'cash', 'check_paper', 'bill',
+	'tran', 'dep', 'dept', 'want_bus', 'more', 'have_map',
+	'unit_cash', 'unit_check', 'unit_credit', 'unit_bill', 'unit_tran',
+	'department_name', 'department_show', 'customer_typename',
+	'customer_name', 'customer_tel', 'customer_contact',
+	'employee_name', 'employee_tel', 'product_sn', 'add_by', 'que_ckk',
+	'returns', 'returns_date', 'returns_time', 'returns_name', 'returns_address', 'returns_contact', 'return_date_bet',
+	'objective', 'objective_des1', 'objective_des2', 'objective_des4', 'objective_des5',
+	'sn_ckk', 'sn', 'cm_no',
+	'ref_1', 'ref_2', 'ref_3', 'ref_4', 'ref_5', 'ref_6', 'ref_7', 'ref_8', 'ref_9', 'ref_10', 'ref_11', 'ref_des',
+	'head_1', 'amphur_name',
+);
+?>
 
-$customerId = '';
-$customerAddress = '';
+<div class="w3-container register-so-main" style="max-width:1096px;margin:0 auto;">
 
-if ($po_no !== '') {
-	// po__main belongs to allwell_inter. Use the existing server connection
-	// instead of the removed/undefined $inter connection variable.
-	$stmtPo = mysqli_prepare($conn, "SELECT customer_id FROM allwell_inter.po__main WHERE po_no = ? LIMIT 1");
-	if ($stmtPo) {
-		mysqli_stmt_bind_param($stmtPo, 's', $po_no);
-		mysqli_stmt_execute($stmtPo);
-		mysqli_stmt_bind_result($stmtPo, $customerId);
-		mysqli_stmt_fetch($stmtPo);
-		mysqli_stmt_close($stmtPo);
+	<div class="so-header-container">
+		<div class="so-header-left">
+			<h1 class="so-title">ใบยืมตรวจเช็คสินค้า (BREQ)</h1>
+			<div class="so-ref-info">
+				<span class="so-ref-label">เลขที่อ้างอิง</span>
+				<span class="so-ref-value"><?php echo so_saved_h($breqDisplayRefId); ?></span>
+			</div>
+		</div>
+		<div class="so-header-right">
+			<button type="button" class="btn-preview-so" onclick="breqOpenPreview();">
+				<img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview
+			</button>
+		</div>
+	</div>
+
+	<form action="register_breng1_breq.php" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return breqValidateSubmit();">
+
+		<input type="hidden" name="ref_id_br" value="<?php echo so_saved_h($breqDisplayRefId); ?>">
+		<input type="hidden" name="ref_id_preview" value="<?php echo so_saved_h($breqDisplayRefId); ?>">
+		<input type="hidden" name="type_breng" value="2">
+		<input type="hidden" name="date_br" value="<?php echo so_saved_h($today); ?>">
+		<input type="hidden" name="po_no" id="po_no" value="">
+		<input type="hidden" name="ref_id_stock" id="ref_id_stock" value="">
+		<input type="hidden" name="customer_id" id="customer_id" value="">
+		<input type="hidden" name="h_customer" id="h_customer" value="">
+		<input type="hidden" name="address" id="address" value="">
+
+		<!-- Compatibility layer: ฟิลด์เดิมที่ Figma ตัดออก แต่ register_breng1_breq.php ยังอ่านคีย์เหล่านี้อยู่
+		     (เขียนลง tb_register_data / in__br) ส่งค่าว่างไปกันแค่ PHP notice ไม่ได้ลบทิ้งจริง (มติ Q2=ข) -->
+		<?php foreach ($breqCompatHiddenFields as $breqCompatField) { ?>
+			<input type="hidden" name="<?php echo so_saved_h($breqCompatField); ?>" value="">
+		<?php } ?>
+
+		<div class="so-tabs-container">
+			<button type="button" class="so-tab-btn active" onclick="switchBrMainTab(this, 'tab-document-info')">ข้อมูลเอกสาร</button>
+			<button type="button" class="so-tab-btn" onclick="switchBrMainTab(this, 'tab-admin-info')">Admin</button>
+		</div>
+
+		<div id="tab-document-info" class="so-tab-content active">
+
+			<!-- ===================== การ์ด: ข้อมูลเอกสาร ===================== -->
+			<div class="so-card">
+				<div class="so-section-title-container">
+					<h2 class="so-section-title">ข้อมูลเอกสาร</h2>
+					<hr class="so-divider">
+				</div>
+
+				<div class="so-grid-3 breq-doc-row">
+					<div class="so-field-group">
+						<label class="so-label" for="company_select">บริษัท <span style="color:red;">*</span></label>
+						<div class="so-select-wrapper">
+							<select name="company" id="company_select" class="so-select" required onchange="breqHandleCompanyChange(this);">
+								<option value="1" selected>AWL</option>
+								<option value="2">NBM</option>
+							</select>
+						</div>
+					</div>
+					<div class="so-field-group">
+						<label class="so-label" for="customer">พนักงาน</label>
+						<input type="text" name="customer" id="customer" class="so-input" readonly
+							value="<?php echo so_saved_h(trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''))); ?>">
+					</div>
+					<div class="so-field-group breq-po-field-cell" id="breq_po_field">
+						<button type="button" class="btn-add-customer-pill" onclick="breqOpenPoModal();">
+							<img src="img\icons\preview.png" alt="search" style="width: 20px;">
+							<span id="breq_po_display" class="breq-po-display">ค้นหาเอกสาร PO</span>
+						</button>
+					</div>
+				</div>
+
+				<div class="so-field-group" style="margin-bottom: 0;">
+					<label class="so-label" for="sale_comment">หมายเหตุ</label>
+					<div class="so-input-wrapper">
+						<input type="text" name="sale_comment" id="sale_comment" class="so-input" placeholder="ระบุหมายเหตุ">
+						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('sale_comment').value='';" aria-label="ล้างค่า"></button>
+					</div>
+				</div>
+			</div>
+
+			<!-- ===================== การ์ด: รายการสินค้า ===================== -->
+			<div class="so-card">
+				<div class="so-section-title-container">
+					<h2 class="so-section-title">รายการสินค้า</h2>
+					<span class="breq-item-count" id="breq_item_count">0 รายการ</span>
+					<hr class="so-divider">
+				</div>
+
+				<div class="so-product-table-wrap">
+					<table class="so-product-table breq-item-table">
+						<thead>
+							<tr>
+								<th>รหัสสินค้า</th>
+								<th>รายการสินค้า</th>
+								<th>จำนวนยืม</th>
+								<th>จำนวนคงเหลือให้ยืม</th>
+								<th>ระยะเวลายืม(วัน)</th>
+								<th aria-label="แก้ไข / ลบ"></th>
+							</tr>
+						</thead>
+						<tbody id="breq_item_tbody"></tbody>
+					</table>
+				</div>
+				<div class="breq-empty-state" id="breq_item_empty">ยังไม่มีรายการ — กด "ค้นหาเอกสาร PO" เพื่อเลือกสินค้า</div>
+			</div>
+		</div>
+
+		<?php
+		$adminInfoTab = array(
+			'tab_id' => 'tab-admin-info',
+			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
+			'rows'   => array(array(
+				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => ''),
+				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
+				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => '', 'icon' => 'far fa-calendar-alt'),
+			)),
+		);
+		include __DIR__ . '/partials/admin_info_tab.php';
+		unset($adminInfoTab);
+		?>
+
+		<div style="text-align:center; margin: 24px 0;">
+			<button type="submit" name="submit" value="submit" class="btn-so-submit"><i class="fas fa-paper-plane"></i> Submit</button>
+		</div>
+	</form>
+</div>
+
+<!-- ===================== Modal: ค้นหาเอกสาร PO (js/breq-po-modal.js) ===================== -->
+<div id="breqPoModal" class="customer-popup-modal" aria-hidden="true" style="display:none;">
+	<div class="customer-popup-box breq-po-box" role="dialog" aria-modal="true" aria-labelledby="breqPoModalTitle">
+		<button type="button" class="customer-popup-close" onclick="breqClosePoModal()" aria-label="Close">&times;</button>
+
+		<div class="customer-popup-header">
+			<h2 id="breqPoModalTitle">ค้นหาเอกสาร PO</h2>
+			<div class="customer-popup-toolbar" style="margin-top:18px;">
+				<div class="customer-popup-search-wrap">
+					<label for="breqPoModalSearch">ค้นหาด้วยเลขที่ PO / ชื่อสินค้า / Lot</label>
+					<div class="customer-popup-search">
+						<i class="fas fa-search" aria-hidden="true"></i>
+						<input type="text" id="breqPoModalSearch" placeholder="พิมพ์คำค้นหา...">
+					</div>
+				</div>
+			</div>
+			<p class="breq-po-lock-note" id="breqPoLockNote" style="display:none;"></p>
+		</div>
+
+		<div class="customer-popup-table-wrap">
+			<table class="customer-popup-table breq-po-table">
+				<thead>
+					<tr>
+						<th scope="col">เลขที่ PO</th>
+						<th scope="col">รายการสินค้า</th>
+						<th scope="col">ยอดรับเข้า</th>
+						<th scope="col">คงเหลือ</th>
+						<th scope="col">วันที่รับเข้า</th>
+						<th scope="col">Lot</th>
+					</tr>
+				</thead>
+				<tbody id="breqPoModalRows">
+					<tr>
+						<td colspan="6" class="customer-popup-empty">พิมพ์คำค้นหาหรือกดค้นหาเพื่อแสดงรายการ</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="customer-popup-actions">
+			<button type="button" class="customer-popup-confirm" onclick="breqConfirmPoModal();">ตกลง</button>
+			<button type="button" class="customer-popup-cancel" onclick="breqClosePoModal();">ย้อนกลับ</button>
+		</div>
+	</div>
+</div>
+
+<!-- ===================== Modal: รายการสินค้าเพิ่มเติม (Figma 1011:4913) ===================== -->
+<div id="breq_edit_modal" class="cs-modal-overlay" style="display:none;">
+	<div class="cs-modal-card breq-remark-modal-card">
+		<div class="cs-modal-header">
+			<h3 class="cs-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
+			<button type="button" class="cs-modal-close-btn" onclick="breqCloseEditModal();" aria-label="ปิด">&times;</button>
+		</div>
+		<div class="cs-modal-body breq-modal-body">
+			<div class="breq-modal-fields">
+				<div class="so-field-group">
+					<label class="so-label" for="breq_modal_remark">หมายเหตุสินค้า</label>
+					<div class="so-input-wrapper">
+						<input type="text" id="breq_modal_remark" class="so-input" placeholder="ระบุหมายเหตุสินค้า" autocomplete="off"
+							onkeydown="if (event.key === 'Enter') { event.preventDefault(); }">
+						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('breq_modal_remark').value='';" aria-label="ล้างค่าหมายเหตุสินค้า"></button>
+					</div>
+				</div>
+				<div class="so-field-group">
+					<label class="so-label" for="breq_modal_nameother">ชื่อที่แสดงในใบส่งสินค้า</label>
+					<div class="so-input-wrapper">
+						<input type="text" id="breq_modal_nameother" class="so-input" placeholder="ระบุชื่อที่แสดงในใบส่งสินค้า" autocomplete="off"
+							onkeydown="if (event.key === 'Enter') { event.preventDefault(); }">
+						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('breq_modal_nameother').value='';" aria-label="ล้างค่าชื่อที่แสดงในใบส่งสินค้า"></button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="cs-modal-footer">
+			<button type="button" class="cs-modal-btn-update" onclick="breqSaveEditModal();">อัพเดท</button>
+			<button type="button" class="cs-modal-btn-cancel" onclick="breqCloseEditModal();">ยกเลิก</button>
+		</div>
+	</div>
+</div>
+
+<script>
+	// แท็บ ข้อมูลเอกสาร / Admin — pure UI toggle, ported verbatim from register_supbrhos.php:780-792
+	function switchBrMainTab(el, tabId) {
+		var contents = document.getElementsByClassName('so-tab-content');
+		for (var i = 0; i < contents.length; i++) {
+			contents[i].classList.remove('active');
+		}
+		document.getElementById(tabId).classList.add('active');
+
+		var tabs = el.parentElement.getElementsByClassName('so-tab-btn');
+		for (var i = 0; i < tabs.length; i++) {
+			tabs[i].classList.remove('active');
+		}
+		el.classList.add('active');
 	}
 
-	if ($customerId !== '') {
-		$stmtCustomer = mysqli_prepare($conn, "SELECT cus_address FROM tb_customer WHERE customer_id = ? LIMIT 1");
-		if ($stmtCustomer) {
-			mysqli_stmt_bind_param($stmtCustomer, 's', $customerId);
-			mysqli_stmt_execute($stmtCustomer);
-			mysqli_stmt_bind_result($stmtCustomer, $customerAddress);
-			mysqli_stmt_fetch($stmtCustomer);
-			mysqli_stmt_close($stmtCustomer);
+	// Run เอกสาร — ported จาก register_supbrcshos.php:1096-1159 เปลี่ยน doc_type เป็น 9 (prefix BREQ)
+	function runDocumentNo() {
+		var companySelect = document.getElementById('company_select');
+		var docNoInput = document.querySelector('input[name="admin_doc_no"]');
+		var docDateInput = document.querySelector('input[name="admin_doc_date"]');
+		var runButton = document.getElementById('btn_run_doc_no');
+
+		if (!companySelect || !docNoInput) {
+			return;
+		}
+
+		if (docNoInput.value.trim() !== '') {
+			if (!confirm('เอกสารนี้มีเลขที่ ' + docNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
+				return;
+			}
+		}
+
+		// ajax_run_doc_no.php ใช้เลข AWL=3/NBM=4 คนละชุดกับ in__br.company ที่เป็น 1/2
+		var companyMapToAjax = { '1': '3', '2': '4' };
+		var payload = new URLSearchParams();
+		payload.append('company', companyMapToAjax[companySelect.value] || companySelect.value);
+		payload.append('doc_type', '9');
+		payload.append('doc_date', docDateInput ? docDateInput.value : '');
+
+		if (runButton) {
+			runButton.disabled = true;
+		}
+
+		fetch('ajax_run_doc_no.php', {
+				method: 'POST',
+				credentials: 'same-origin',
+				cache: 'no-store',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+				body: payload.toString()
+			})
+			.then(function(response) {
+				return response.json().then(function(data) {
+					return { ok: response.ok, data: data };
+				});
+			})
+			.then(function(result) {
+				if (!result.ok || !result.data || !result.data.success) {
+					alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่เอกสารได้');
+					return;
+				}
+				docNoInput.value = result.data.doc_no;
+			})
+			.catch(function() {
+				alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่เอกสารได้ กรุณาลองใหม่อีกครั้ง');
+			})
+			.then(function() {
+				if (runButton) {
+					runButton.disabled = false;
+				}
+			});
+	}
+
+	// เปลี่ยนบริษัท (AWL/NBM) — ถ้ามีรายการสินค้าอยู่แล้วต้องล้างทิ้งก่อน เพราะ PO ที่ล็อกไว้
+	// (po_no/ref_id_stock) ผูกกับบริษัทเดิม สลับบริษัทแล้วเลขที่ PO เดิมจะใช้ไม่ได้อีกต่อไป
+	// ported pattern จาก register_suphos.php:2109-2114 (handleCompanyChange)
+	function breqHandleCompanyChange(sel) {
+		var hasItems = document.querySelectorAll('#breq_item_tbody tr.breq-item-row').length > 0;
+		if (hasItems) {
+			if (!confirm('การเปลี่ยนบริษัทจะล้างรายการสินค้าและเอกสาร PO ที่เลือกไว้ทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
+				sel.value = sel.getAttribute('data-prev');
+				return;
+			}
+			if (typeof window.breqClearAllItems === 'function') window.breqClearAllItems();
+		}
+		// ล้าง PO ที่ล็อกไว้เสมอ แม้ตารางว่าง (ไม่มีอะไรให้เสีย จึงไม่ต้องถาม) — ถ้าปล่อยค้าง
+		// modal จะแสดง PO ของบริษัทใหม่แต่ทุกแถวถูก disable เพราะไม่ตรงกับ po_no เดิม
+		if (typeof window.breqResetPoLock === 'function') window.breqResetPoLock();
+		sel.setAttribute('data-prev', sel.value);
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		var companySelect = document.getElementById('company_select');
+		if (companySelect) companySelect.setAttribute('data-prev', companySelect.value);
+	});
+
+	// ก่อน submit จริง ต้องมีรายการสินค้าอย่างน้อย 1 รายการ (ซึ่งหมายความว่า po_no ถูกล็อกแล้วด้วย)
+	function breqValidateSubmit() {
+		var rowCount = document.querySelectorAll('#breq_item_tbody tr.breq-item-row').length;
+		if (rowCount === 0) {
+			if (typeof Swal !== 'undefined') {
+				Swal.fire('แจ้งเตือน', 'กรุณาเลือกสินค้าจากเอกสาร PO อย่างน้อย 1 รายการ', 'warning');
+			} else {
+				alert('กรุณาเลือกสินค้าจากเอกสาร PO อย่างน้อย 1 รายการ');
+			}
+			return false;
+		}
+		return true;
+	}
+
+	// เปิดพรีวิวใบพิมพ์ในแท็บใหม่ โดยยิงค่าปัจจุบันในฟอร์มไปให้ report_loanhosptl1_breq.php
+	// (report มี preview path อ่านจาก POST อยู่ใน report_loanhosptl_breq_preview_helper.php)
+	function breqOpenPreview() {
+		var form = document.forms.frmMain;
+		if (!form) return;
+
+		var previewTarget = 'breq_preview_' + Date.now();
+		var previewWindow = window.open('', previewTarget);
+		if (!previewWindow) {
+			if (typeof Swal !== 'undefined') {
+				Swal.fire('เปิด Preview ไม่ได้', 'เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง', 'warning');
+			} else {
+				alert('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง');
+			}
+			return;
+		}
+
+		var previewFlag = document.createElement('input');
+		previewFlag.type = 'hidden';
+		previewFlag.name = '_report_preview';
+		previewFlag.value = '1';
+		form.appendChild(previewFlag);
+
+		var originalAction = form.getAttribute('action');
+		var originalMethod = form.getAttribute('method');
+		var originalTarget = form.getAttribute('target');
+		var originalEnctype = form.getAttribute('enctype');
+
+		form.action = 'report_loanhosptl1_breq.php';
+		form.method = 'post';
+		form.target = previewTarget;
+		form.enctype = 'application/x-www-form-urlencoded';
+		HTMLFormElement.prototype.submit.call(form);
+
+		if (originalAction === null) form.removeAttribute('action');
+		else form.setAttribute('action', originalAction);
+		if (originalMethod === null) form.removeAttribute('method');
+		else form.setAttribute('method', originalMethod);
+		if (originalTarget === null) form.removeAttribute('target');
+		else form.setAttribute('target', originalTarget);
+		if (originalEnctype === null) form.removeAttribute('enctype');
+		else form.setAttribute('enctype', originalEnctype);
+		previewFlag.remove();
+
+		if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+			Swal.fire({
+				toast: true,
+				position: 'top-end',
+				icon: 'info',
+				title: 'เลขที่อ้างอิงในพรีวิวเป็นค่าประมาณการ อาจไม่ตรงกับเลขที่บันทึกจริง',
+				showConfirmButton: false,
+				timer: 3500,
+				timerProgressBar: true
+			});
 		}
 	}
-}
-
-if ($po_no !== '' && $stockTablesAvailable) {
-$poNoSql = mysqli_real_escape_string($stockConnection, $po_no);
-$strSQL1 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$poNoSql."' and iv_no LIKE '%IO%' and close_br='0' ORDER BY po_no DESC ";	//echo $strSQL_po01;
-$objQuery1 = mysqli_query($stockConnection,$strSQL1);
-while($objQuery1 && $objResult1 = mysqli_fetch_array($objQuery1)) {
-	
-$strSQL4 = "SELECT * FROM  in__sbmain  WHERE ref_idd = '".$objResult1['ref_id']."' and ckk_check ='0'";
-$objQuery4 = mysqli_query($stockConnection,$strSQL4) or die ("Error Query [".$strSQL4."]");
-$Num_Rows4 = mysqli_num_rows($objQuery4);
-	
-if($Num_Rows4=='0'){	
-
-$strSQL =  "Update in__main set close_br='1'  where ref_id='".$objResult1['ref_id']."'";
-$objQuery = mysqli_query($stockConnection,$strSQL) or die(mysqli_error($stockConnection));
-	
-}
-	
-while($objResult4 = mysqli_fetch_array($objQuery4)) {
-		
-    $poNoCoreSql = mysqli_real_escape_string($conn, $po_no);
-    $productIdCoreSql = mysqli_real_escape_string($conn, $objResult4['product_id']);
-    $strSQL31 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$poNoCoreSql."' and product_id = '".$productIdCoreSql."' ";
-    $objQuery31 = mysqli_query($conn,$strSQL31) or die ("Error Query [".$strSQL31."]");
-    $objResult31 = mysqli_fetch_array($objQuery31);
-
-    $count_item = $objResult4['sale_count']-$objResult31['sum_count'];
-        if($count_item < 1){
-            $strSQL11 =  "Update in__sbmain set ckk_check = '1'  where ref_idd='".$objResult1['ref_id']."' and product_id = '".$objResult4['product_id']."' ";
-            $objQuery11 = mysqli_query($stockConnection,$strSQL11);
-        }
-    
-	}
-  }
-}
-
-
-	 ?>
-
-<div class="w3-white w3-container">
-	<div class="w3-panel w3-light-grey"><h3>Register Borrow Order</h3></div>
-	<form action="register_breng1_breq.php" method="post" name="frmMain" enctype="multipart/form-data">
-  
-	<div class="w3-bar">
-		<input type="radio" name="company" value="1" checked='checked' required>ใบยืม AWL <br>
-		<input type="hidden" name="type_breng" id="type_breng" value="2"  required> <!-- ใบยืมสินค้าตรวจเช็ค (BREQ)  -->
-		<br>
-		<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php echo $so; echo $nextId; ?></span>
-		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo $so; echo $nextId; ?>">
-	</div>
-	
-	<div class="w3-bar w3-padding-small"></div><!-- bar -->
-	<div class="w3-half 1">
-		<div class="w3-bar w3-margin-bottom" style="display: none;"><span>รหัสลูกค้า</span> <input type="text" name="customer_id" id="customer_id" class="w3-input" style="width:90%;" value="<?php echo htmlspecialchars($customerId, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Search ชื่อลูกค้า..." ><input type="hidden" name="h_customer" id="h_customer" class="w3-input" value="<?php echo htmlspecialchars($customerId, ENT_QUOTES, 'UTF-8'); ?>"></div>
-		<div class="w3-bar w3-margin-bottom"><span>ชื่อลูกค้า/รพ.</span> <input type="text" name="customer" id="customer" class="w3-input" style="width:90%;" value="<?php echo $_SESSION['name'].' '.$_SESSION['surname'];?>" required></div>
-		<div class="w3-bar w3-margin-bottom"><span>ที่อยู่</span> <textarea name="address" id="address" class="w3-input" style="width:90%;" rows="2"><?php echo htmlspecialchars($customerAddress, ENT_QUOTES, 'UTF-8'); ?></textarea></div>
-		<div class="w3-bar w3-margin-bottom"><span>Sale Comment</span> <textarea name="sale_comment" id="sale_comment" class="w3-input" style="width:90%;" rows="2"></textarea></div>
-		
-		 &nbsp;ต้องการเอกสารแนบบิล<br>
-
-<input type="checkbox" name="ref_1"  id="ref_1" value="1"> &nbsp;เตรียมเอกสาร N-Health&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_2"  id="ref_2" value="1"> &nbsp;เตรียมเอกสารตามสเปคใบเสนอราคา&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_3"  id="ref_3" value="1"> &nbsp;ใบ อย.&nbsp;&nbsp;&nbsp;<br>
-
-<input type="checkbox" name="ref_4"  id="ref_4" value="1">&nbsp;ใบตัวแทนจำหน่าย&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_5"  id="ref_5" value="1"> &nbsp;ใบช่างอบรม&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_6"  id="ref_6" value="1"> &nbsp;ใบนำเข้าสินค้า&nbsp;&nbsp;&nbsp;<br>
-
-<input type="checkbox" name="ref_7"  id="ref_7" value="1"> &nbsp;ใบ CER เครื่องมือที่ใช้ทดสอบ&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_8"  id="ref_8" value="1"> &nbsp;ใบ PM&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="checkbox" name="ref_9"  id="ref_9" value="1"> &nbsp;ใบ CAL&nbsp;&nbsp;&nbsp;<br>
-<input type="checkbox" name="ref_11"  id="ref_11" value="1"> &nbsp;ใบประเมินสินค้า&nbsp;&nbsp;&nbsp;
-
-<input type="checkbox" name="ref_10"  id="ref_10" value="1"> &nbsp;อื่น ๆ&nbsp;&nbsp;&nbsp;&nbsp;
-<input name="ref_des" id="ref_des"   class="button4" style="width:30%">
-</p>
-		
-	</div>
-	<div class="w3-half 2">
-		<div class="w3-bar w3-half w3-margin-bottom">
-			<span>วันที่</span> <input type="date" name="date_br" id="date_br" value = "<?php echo $today; ?>" class="w3-input" style="width:90%;" required></p>
-
-เลขที่ใบสั่งซื้อ PO <font color="red">*</font>
-<select name="po_no" id="po_no" class="w3-select w3-border w3-round-xxlarge" onchange="location = this.value;" required>
-<?php if($po_no == ''){?><option value="">select</option><?php } else { ?><option value="<?=htmlspecialchars($po_no, ENT_QUOTES, 'UTF-8');?>"><?=htmlspecialchars($po_no, ENT_QUOTES, 'UTF-8');?></option><?php } ?>
-<?php
-if ($stockTablesAvailable) {
-$strSQL_po = "SELECT DISTINCT po_no FROM in__main  where close_br ='0' ORDER BY po_no DESC ";
-$objQuery_po = mysqli_query($stockConnection,$strSQL_po);
-while($objQuery_po && $objResult_po = mysqli_fetch_array($objQuery_po)){
-	$optionPoNo = (string) $objResult_po['po_no'];
-	$stmtCompany = mysqli_prepare($conn, "SELECT 1 FROM allwell_inter.po__main WHERE po_no = ? AND company = '1' LIMIT 1");
-	$num_cpny = 0;
-	if ($stmtCompany) {
-		mysqli_stmt_bind_param($stmtCompany, 's', $optionPoNo);
-		mysqli_stmt_execute($stmtCompany);
-		mysqli_stmt_store_result($stmtCompany);
-		$num_cpny = mysqli_stmt_num_rows($stmtCompany);
-		mysqli_stmt_close($stmtCompany);
-	}
-if($num_cpny >= 1){
-?>
-	<option value="register_breng_brgq.php?po_no=<?=urlencode($optionPoNo);?>"><?=htmlspecialchars($optionPoNo, ENT_QUOTES, 'UTF-8');?></option>
-<?php 
-} // num_cpny
-} // while
-} else {
-?>
-	<option value="" disabled>ไม่พบตารางข้อมูลรับเข้า in__main / in__sbmain</option>
-<?php
-}
- ?>
-</select>
-
-<input type="checkbox" name="sn_ckk" value="1">&nbsp;ต้องการ SN: <input name="sn" class="w3-input" >
-เลขที่ CM <input name="cm_no" id ="cm_no" class="w3-input" >
-แนบไฟล์ :</p>
-<input name="slip1"  type="file"></p>
-<input name="slip2"  type="file"></p>
-<input name="slip3"  type="file"></p>
-<input name="slip4"  type="file"></p>
-<input name="slip5"  type="file"></p>		
-		</div>
-		<div class="w3-bar w3-margin-bottom w3-half">
-			<span>วัตถุประสงค์การเบิก</span>
-			<div class="w3-panel"><input type="radio" onclick="javascript:object();" name="objective" value="1" id="object1" required> เป็นสินค้าสำรอง <div id="dt1" style="display:none"><input type="text" name="objective_des1" class="w3-input" placeholder="ใส่รายละเอียด" style="width:90%;"></div></div>
-			<div class="w3-panel"><input type="radio" onclick="javascript:object();" name="objective" value="2" id="object2" required> สำหรับลูกค้าทดลองใช้ <div id="dt2" style="display:none"><input type="text" name="objective_des2" class="w3-input" placeholder="ใส่จำนวนวัน" style="width:90%;"></div></div>
-			<div class="w3-panel"><input type="radio" onclick="javascript:object();" name="objective" value="3" id="object3" required> ส่งสินค้าล่วงหน้าเพื่อรอใบสั่งซื้อ </div>
-			<div class="w3-panel"><input type="radio" onclick="javascript:object();" name="objective" value="4" id="object4" required> แลกเปลี่ยนสินค้าตามใบงานบริการเลขที่
-			<div id="dt4" style="display:none"><input type="text" name="objective_des4" class="w3-input" placeholder="ใส่เลขที่ใบงานบริการ" style="width:90%;"></div></div>
-			<div class="w3-panel"><input type="radio" onclick="javascript:object();" name="objective" value="5" id="object5" required> อื่น ๆ<div id="dt5" style="display:none"><input type="text" name="objective_des5" class="w3-input" placeholder="ใส่รายละเอียดเพิ่มเติม" style="width:90%;"></div></div>
-		</div>
-	</div>
-	</p>
-<div class="w3-bar w3-light-grey"><font class="w3-bar-item w3-button" color="#404040"><b>รายการสินค้า</b></font></div>
-<section>
-<table class="w3-table w3-striped main_item" style="width: 100%;">
-	<tr>
-		<th style="width: 5%;"><input style="width:10px;height:10px;" type="checkbox" checked><small>=ยืม</small></th>
-		<th style="width: 25%;">Product</th>
-		<th style="width: 10%;">ยอดรับเข้า</th>
-		<th style="width: 15%;">Borrowing</th>
-		<th style="width: 15%;">Price</th>
-		<th style="width: 15%;">Time</th>
-		<th style="width: 15%;">หมายเหตุ</th>
-	</tr>
-<?php
-$num0 = 1;
-if ($po_no !== '' && $stockTablesAvailable) {
-	$poNoSql = mysqli_real_escape_string($stockConnection, $po_no);
-	$strSQL_po01 = "SELECT ref_id,po_no FROM in__main WHERE po_no = '".$poNoSql."' and iv_no LIKE '%IO%' ORDER BY po_no DESC ";	//echo $strSQL_po01;
-	$objQuery_po01 = mysqli_query($stockConnection,$strSQL_po01);
-	$objResult_po01 = $objQuery_po01 ? mysqli_fetch_array($objQuery_po01) : null;
-	$stockRefId = $objResult_po01['ref_id'] ?? '';
-	$stockRefIdSql = mysqli_real_escape_string($stockConnection, $stockRefId);
-	$strSQL_item01 = "SELECT * FROM  in__sbmain  WHERE ref_idd = '".$stockRefIdSql."' and ckk_check ='0' ";
-    $objQuery_item01 = mysqli_query($stockConnection,$strSQL_item01) or die ("Error Query [".$strSQL_item01."]");
-    while($objResult_item01 = mysqli_fetch_array($objQuery_item01)) {
-    
-	$productIdSql = mysqli_real_escape_string($conn, $objResult_item01['product_id']);
-	$strSQL2 = "SELECT sol_name,sol_code,access_code,express_code,unit_name,war_hc FROM  tb_product  WHERE product_ID = '".$productIdSql."' ";
-    $objQuery2 = mysqli_query($conn,$strSQL2) or die ("Error Query [".$strSQL2."]");
-    $objResult2 = mysqli_fetch_array($objQuery2);
-
-	$poNoCoreSql = mysqli_real_escape_string($conn, $po_no);
-	$productIdCoreSql = mysqli_real_escape_string($conn, $objResult_item01['product_id']);
-	$strSQL3 = "SELECT *,sum(count) as sum_count FROM  in__subbr  WHERE po_no = '".$poNoCoreSql."' and product_id = '".$productIdCoreSql."' ";
-    $objQuery3 = mysqli_query($conn,$strSQL3) or die ("Error Query [".$strSQL3."]");
-    $objResult3 = mysqli_fetch_array($objQuery3);
-    
-$string1 = $objResult_item01['sale_count']+$objResult3['sum_count'];
-$string2 = $objResult3['sum_count'];
-$integer1 = (int) $string1;
-$integer2 = (int) $string2;
-
-?>
-<tr>
-<td>
-    <input type="checkbox" name="check_in[<?=$num0;?>]" id="check_in[<?=$num0;?>]" value="1" checked>
-    <input type="hidden" name="key[<?=$num0;?>]" id="key[<?=$num0;?>]" value="<?=$num0;?>">
-    <input type="hidden" name="ref_id_stock" id="ref_id_stock" value="<?=$objResult_po01['ref_id'];?>">
-    <input type="hidden" name="product_codet[<?=$num0;?>]" id="product_codet[<?=$num0;?>]" value="<?php echo $objResult_item01['product_codesame'];?>">
-    <input type="hidden" name="product_id[<?=$num0;?>]" id="product_id[<?=$num0;?>]" value="<?php echo $objResult_item01['product_id'];?>">
-</td>
-
-<td style="text-align: left;">
-<b>รหัสสินค้า</b> : <br><font style="color: #FF8080;"><?php echo $objResult2['access_code'];?></font><br>
-<b>ชื่อสินค้า</b> : <br><font style="color: #FF8080;"><?php echo $objResult2['sol_name'];?></font><input type="hidden" name="product_name[<?=$num0;?>]" id="product_name[<?=$num0;?>]" value="<?php echo $objResult2['sol_name'];?>"><!-- ชื่อสินค้า --><br>
-<b>หน่วย</b> : <br><font style="color: #FF8080;"><?php echo $objResult2['unit_name'];?></font><input type="hidden" name="unit_name[<?=$num0;?>]" id="unit_name[<?=$num0;?>]" value="<?php echo $objResult2['unit_name'];?>"><!-- หน่วย -->
-</td>
-
-<td style="text-align: center;"><?php echo $objResult_item01['sale_count'];?><input type="hidden" name="sale_count_main[<?=$num0;?>]" id="sale_count_main[<?=$num0;?>]" value="<?php echo $objResult_item01['sale_count'];?>"></td><!-- จำนวนรับเข้า -->
-
-<td style="text-align: left;vertical-align: top;">
-<b>จำนวนที่ต้องการยืม</b> : <input style="text-align:right; width: 100%; background-color:#ffffdf ;" type="number" name="sale_count[<?=$num0;?>]" id="sale_count<?=$num0;?>" onchange="calc<?=$num0;?>()" max="<?php echo $objResult_item01['sale_count']-$objResult3['sum_count'];?>" placeholder="จำนวนที่ต้องการยืม"><br>
-<b>คงเหลือให้ยืม</b> : <br><input style="text-align:right; width: 100%; cursor: no-drop;" type="text" value="<?php echo $objResult_item01['sale_count']-$objResult3['sum_count'];?>" disabled><br>
-<b>ยืมไปก่อนหน้า</b> : <br><input style="text-align:right; width: 100%; cursor: no-drop;" type="text" value="<?php echo $objResult3['sum_count'];?>" disabled>
-</td><!-- Borrowing	 -->
-
-<td style="text-align: left;vertical-align: top;">
-<b>ราคาต่อหน่วย	</b> : <br><input style="text-align:right; width: 100%; background-color:#ffffdf ;" type="number" name="product_price[<?=$num0;?>]" id="product_price<?=$num0;?>" onchange="calc<?=$num0;?>()" placeholder="ราคาต่อหน่วย">
-<b>ราคารวม </b> : <input style="cursor: no-drop; text-align:right; width: 100%;" type="text" name="sum_amount[<?=$num0;?>]" id="sum_amount<?=$num0;?>" placeholder="ยอดรวม"  readonly>
-</td><!-- Price -->
-
-<td style="text-align: left; vertical-align: top;">
-    <b>ระยะเวลายืม</b> : <input style="width: 100%;text-align:right; background-color:#ffffdf ;" type="text" name="br_period[<?=$num0;?>]" id="br_period[<?=$num0;?>]" placeholder="ระยะเวลายืม">
-    <b>รับประกัน</b> : <input style="width: 100%;text-align:right; cursor: no-drop;" type="text" name="warranty[<?=$num0;?>]" id="warranty[<?=$num0;?>]" value="<?php echo $objResult2['war_hc'];?>" placeholder="ปี" readonly><!-- รับประกัน --><br>
-</td><!-- Warranty -->
-
-<td style="text-align: left; "><textarea style="width: 100%; height: 150px; background-color:#ffffdf ;" name="sale_remarkk[<?=$num0;?>]" id="sale_remarkk[<?=$num0;?>]" rows="2" placeholder="หมายเหตุ"></textarea></td><!-- หมายเหตุ -->
-</tr>
-<?php 
-$num0++;
-} // objResult_item01
-}
-?> 
-</table>
-<?php if (!$stockTablesAvailable) { ?>
-<div class="w3-panel w3-pale-red w3-border">ไม่สามารถโหลดรายการ PO ได้: กรุณาติดตั้งหรือกู้คืนตาราง in__main และ in__sbmain ในฐานข้อมูล Stock</div>
-<?php } ?>
-<br><center><input type="submit" name="submit" class="w3-button w3-teal be-border" value="บันทึก" <?php echo $stockTablesAvailable ? '' : 'disabled'; ?>></center><br>
-</form>
-<script>
-	function calc1() {
-    let num1 = Number(document.querySelector("#sale_count1").value);
-    let num2 = Number(document.querySelector("#product_price1").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount1").value = sum;
-}
-function calc2() {
-    let num1 = Number(document.querySelector("#sale_count2").value);
-    let num2 = Number(document.querySelector("#product_price2").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount2").value = sum;
-}
-function calc3() {
-    let num1 = Number(document.querySelector("#sale_count3").value);
-    let num2 = Number(document.querySelector("#product_price3").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount3").value = sum;
-}
-function calc4() {
-    let num1 = Number(document.querySelector("#sale_count4").value);
-    let num2 = Number(document.querySelector("#product_price4").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount4").value = sum;
-}
-function calc5() {
-    let num1 = Number(document.querySelector("#sale_count5").value);
-    let num2 = Number(document.querySelector("#product_price5").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount5").value = sum;
-}
-function calc6() {
-    let num1 = Number(document.querySelector("#sale_count6").value);
-    let num2 = Number(document.querySelector("#product_price6").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount6").value = sum;
-}
-function calc7() {
-    let num1 = Number(document.querySelector("#sale_count7").value);
-    let num2 = Number(document.querySelector("#product_price7").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount7").value = sum;
-}
-function calc8() {
-    let num1 = Number(document.querySelector("#sale_count8").value);
-    let num2 = Number(document.querySelector("#product_price8").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount8").value = sum;
-}
-function calc9() {
-    let num1 = Number(document.querySelector("#sale_count9").value);
-    let num2 = Number(document.querySelector("#product_price9").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount9").value = sum;
-}
-function calc10() {
-    let num1 = Number(document.querySelector("#sale_count10").value);
-    let num2 = Number(document.querySelector("#product_price10").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount10").value = sum;
-}
-function calc11() {
-    let num1 = Number(document.querySelector("#sale_count11").value);
-    let num2 = Number(document.querySelector("#product_price11").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount11").value = sum;
-}
-function calc12() {
-    let num1 = Number(document.querySelector("#sale_count12").value);
-    let num2 = Number(document.querySelector("#product_price12").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount12").value = sum;
-}
-function calc13() {
-    let num1 = Number(document.querySelector("#sale_count13").value);
-    let num2 = Number(document.querySelector("#product_price13").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount13").value = sum;
-}
-function calc14() {
-    let num1 = Number(document.querySelector("#sale_count14").value);
-    let num2 = Number(document.querySelector("#product_price14").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount14").value = sum;
-}
-function calc15() {
-    let num1 = Number(document.querySelector("#sale_count15").value);
-    let num2 = Number(document.querySelector("#product_price15").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount15").value = sum;
-}
-function calc16() {
-    let num1 = Number(document.querySelector("#sale_count16").value);
-    let num2 = Number(document.querySelector("#product_price16").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount16").value = sum;
-}
-function calc17() {
-    let num1 = Number(document.querySelector("#sale_count17").value);
-    let num2 = Number(document.querySelector("#product_price17").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount17").value = sum;
-}
-function calc18() {
-    let num1 = Number(document.querySelector("#sale_count18").value);
-    let num2 = Number(document.querySelector("#product_price18").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount18").value = sum;
-}
-function calc19() {
-    let num1 = Number(document.querySelector("#sale_count19").value);
-    let num2 = Number(document.querySelector("#product_price19").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount19").value = sum;
-}
-function calc20() {
-    let num1 = Number(document.querySelector("#sale_count20").value);
-    let num2 = Number(document.querySelector("#product_price20").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount20").value = sum;
-}
-function calc21() {
-    let num1 = Number(document.querySelector("#sale_count21").value);
-    let num2 = Number(document.querySelector("#product_price21").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount21").value = sum;
-}
-function calc22() {
-    let num1 = Number(document.querySelector("#sale_count22").value);
-    let num2 = Number(document.querySelector("#product_price22").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount22").value = sum;
-}
-function calc23() {
-    let num1 = Number(document.querySelector("#sale_count23").value);
-    let num2 = Number(document.querySelector("#product_price23").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount23").value = sum;
-}
-function calc24() {
-    let num1 = Number(document.querySelector("#sale_count24").value);
-    let num2 = Number(document.querySelector("#product_price24").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount24").value = sum;
-}
-function calc25() {
-    let num1 = Number(document.querySelector("#sale_count25").value);
-    let num2 = Number(document.querySelector("#product_price25").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount25").value = sum;
-}
-function calc26() {
-    let num1 = Number(document.querySelector("#sale_count26").value);
-    let num2 = Number(document.querySelector("#product_price26").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount26").value = sum;
-}
-function calc27() {
-    let num1 = Number(document.querySelector("#sale_count27").value);
-    let num2 = Number(document.querySelector("#product_price27").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount27").value = sum;
-}
-function calc28() {
-    let num1 = Number(document.querySelector("#sale_count28").value);
-    let num2 = Number(document.querySelector("#product_price28").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount28").value = sum;
-}
-function calc29() {
-    let num1 = Number(document.querySelector("#sale_count29").value);
-    let num2 = Number(document.querySelector("#product_price29").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount29").value = sum;
-}
-function calc30() {
-    let num1 = Number(document.querySelector("#sale_count30").value);
-    let num2 = Number(document.querySelector("#product_price30").value);
-    let sum = (num1 * num2);
-    document.getElementById("sum_amount30").value = sum;
-}
-
 </script>
-
-</section>
-
-</div>
-<div id="cr_bar"> <?php include "foot.php"; ?></div>

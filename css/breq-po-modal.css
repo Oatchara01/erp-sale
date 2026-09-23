@@ -1,0 +1,48 @@
+/* css/breq-po-modal.css
+ * Modal "ค้นหาเอกสาร PO" ของ register_breng_brgq.php — โครง/คลาสหลักยืมจาก .customer-popup-*
+ * (css/so-core.css) เหมือน customer-popup-modal ของ js/customer-popup.js ไฟล์นี้มีเฉพาะส่วนต่าง
+ * ของตาราง 6 คอลัมน์ + สถานะแถวที่คลิกไม่ได้ (คงเหลือ = 0 หรือ PO ไม่ตรงกับที่ล็อกไว้)
+ */
+
+.breq-po-box {
+	width: min(980px, 96vw);
+}
+
+.breq-po-lock-note {
+	margin: 10px 0 0 0;
+	padding: 8px 14px;
+	background: #FFF3CD;
+	color: #856404;
+	border-radius: 8px;
+	font-size: 13px;
+}
+
+.breq-po-table th:nth-child(1),
+.breq-po-table td:nth-child(1) { width: 16%; }
+.breq-po-table th:nth-child(2),
+.breq-po-table td:nth-child(2) { width: 30%; }
+.breq-po-table th:nth-child(3),
+.breq-po-table td:nth-child(3) { width: 13%; text-align: right; }
+.breq-po-table th:nth-child(4),
+.breq-po-table td:nth-child(4) { width: 13%; text-align: right; }
+.breq-po-table th:nth-child(5),
+.breq-po-table td:nth-child(5) { width: 15%; }
+.breq-po-table th:nth-child(6),
+.breq-po-table td:nth-child(6) { width: 13%; }
+
+/* แถวคงเหลือ <= 0 หรือ PO ไม่ตรงกับที่ล็อกไว้ — สีจาง คลิกไม่ได้ (มติ Q21/Q26=ก) */
+.breq-po-table tbody tr.is-disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	background: #F7F7F9 !important;
+}
+
+.breq-po-table tbody tr.is-disabled:hover {
+	background: #F7F7F9 !important;
+}
+
+@media (max-width: 768px) {
+	.breq-po-table {
+		min-width: 640px;
+	}
+}

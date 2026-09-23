@@ -131,37 +131,50 @@ function DateThai($strDate)
 		return "$strDay $strMonthThai $strYear";
 	}
 
-$ref_id_br=$_GET["ref_id_br"];
-
+require_once __DIR__ . '/report_loanhosptl_breq_preview_helper.php';
+$breqIsPreview = breq_report_is_preview_request();
 
 include"dbconnect.php";
 
-$strSQL = "SELECT * FROM  in__br WHERE ref_id_br = '".$ref_id_br."' ";
-//echo  $strSQL;
-//exit();
+if ($breqIsPreview) {
+	// โหมด Preview — ค่าปัจจุบันในฟอร์มมาจาก POST ล้วน ห้าม INSERT/UPDATE/DELETE ใด ๆ ที่นี่
+	$breqPreviewContext = breq_report_build_preview_context($conn);
+	$objResult = $breqPreviewContext['header'];
+	$objResult3 = $breqPreviewContext['header'];
+	$objResult11 = $breqPreviewContext['header'];
+	$breqPreviewItemRows = $breqPreviewContext['items'];
+	$summary_1 = $breqPreviewContext['amount_1'];
+	$summary = number_format($summary_1, 2) . "";
+} else {
+	$ref_id_br=$_GET["ref_id_br"];
 
-$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+	$strSQL = "SELECT * FROM  in__br WHERE ref_id_br = '".$ref_id_br."' ";
+	//echo  $strSQL;
+	//exit();
 
-$strSQL1 = "SELECT * FROM (in__subbr LEFT JOIN tb_product ON in__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
+	$objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
+	$objResult = mysqli_fetch_array($objQuery);
 
-$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_br."' ";
-$objQuery3 = mysqli_query($conn,$strSQL3);
-$objResult3 = mysqli_fetch_array($objQuery3);
+	$strSQL1 = "SELECT * FROM (in__subbr LEFT JOIN tb_product ON in__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$Num_Rows1 = mysqli_num_rows($objQuery1);
+
+	$strSQL3 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_br."' ";
+	$objQuery3 = mysqli_query($conn,$strSQL3);
+	$objResult3 = mysqli_fetch_array($objQuery3);
 
 
-$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM in__subbr WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery15 = mysqli_query($conn,$strSQL15);
-$objResult15= mysqli_fetch_array($objQuery15);
+	$strSQL15 = "SELECT SUM(amount) AS amount_1 FROM in__subbr WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery15 = mysqli_query($conn,$strSQL15);
+	$objResult15= mysqli_fetch_array($objQuery15);
 
-$summary_1=$objResult15['amount_1'];
-$summary= number_format( $summary_1,2)."";
+	$summary_1=$objResult15['amount_1'];
+	$summary= number_format( $summary_1,2)."";
 
-$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id_br."' ";
-$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
-$objResult11 = mysqli_fetch_array($objQuery11);
+	$strSQL11 = "SELECT * FROM tb_other_bill WHERE ref_id  = '".$ref_id_br."' ";
+	$objQuery11 = mysqli_query($conn,$strSQL11) or die(mysqli_error());
+	$objResult11 = mysqli_fetch_array($objQuery11);
+}
 
 
 $month = date('m');
@@ -425,14 +438,20 @@ $ref_10 ="";
 
 <?php
 
-$strSQL1 = "SELECT * FROM (in__subbr LEFT JOIN tb_product ON in__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
-$Num_Rows1 = mysqli_num_rows($objQuery1);
-
+if ($breqIsPreview) {
+	$breqItemRowsForLoop = $breqPreviewItemRows;
+} else {
+	$strSQL1 = "SELECT * FROM (in__subbr LEFT JOIN tb_product ON in__subbr.product_ID=tb_product.product_id) WHERE ref_idd_br = '".$ref_id_br."' ";
+	$objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
+	$Num_Rows1 = mysqli_num_rows($objQuery1);
+	$breqItemRowsForLoop = array();
+	while ($row = mysqli_fetch_array($objQuery1)) {
+		$breqItemRowsForLoop[] = $row;
+	}
+}
 
 $i=1;
-while($objResult1 = mysqli_fetch_array($objQuery1))
-{
+foreach ($breqItemRowsForLoop as $objResult1) {
 
 $sum_amount1  =$objResult1["amount"];
 $sum_amount= number_format( $sum_amount1,2)."";

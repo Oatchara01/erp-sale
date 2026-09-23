@@ -39,7 +39,8 @@ $delivery_address = $_POST["address_send"];
 $delivery_contact = $_POST["customer_name"];
 $delivery_tel = $_POST["customer_tel"];
 $date_send_key  = $_POST["between_date"];
-$iv_no = "";
+$iv_no = $_POST["admin_doc_no"] ?? "";
+$iv_date = ($_POST["admin_doc_date"] ?? "") !== "" ? $_POST["admin_doc_date"] : "0000-00-00";
 $que_ckk = $_POST["que_ckk"];
 $sale_date= date('Y-m-d');
 $sale =  $_SESSION['name'];
@@ -49,6 +50,29 @@ $em_id =  $_SESSION['emid'];
 $add_date = date('Y-m-d H:i:s');
 $surname =	$_SESSION['surname'];
 $add_by = "$name $surname";
+
+// กัน po_no ข้ามบริษัท — modal ฝั่ง client กรองตาม company แล้ว แต่ค่า POST แก้ได้จาก DevTools
+// เช็คก่อนเขียนอะไรลงฐานข้อมูลทั้งสิ้น (company: 1 = AWL, 2 = NBM ตาม allwell_inter.po__main)
+$breqGuardCompany = trim((string) $company);
+$breqGuardPoNo = trim((string) $po_no);
+if ($breqGuardPoNo === '' || !in_array($breqGuardCompany, array('1', '2'), true)) {
+	echo "<script>alert('กรุณาเลือกบริษัทและเอกสาร PO ให้ถูกต้อง');history.back();</script>";
+	exit;
+}
+$breqPoBelongs = false;
+$stmtBreqPo = mysqli_prepare($conn, "SELECT 1 FROM allwell_inter.po__main WHERE po_no = ? AND company = ? LIMIT 1");
+if ($stmtBreqPo) {
+	mysqli_stmt_bind_param($stmtBreqPo, 'ss', $breqGuardPoNo, $breqGuardCompany);
+	mysqli_stmt_execute($stmtBreqPo);
+	mysqli_stmt_store_result($stmtBreqPo);
+	$breqPoBelongs = mysqli_stmt_num_rows($stmtBreqPo) > 0;
+	mysqli_stmt_close($stmtBreqPo);
+}
+if (!$breqPoBelongs) {
+	$breqGuardMessage = json_encode('เอกสาร PO ' . $breqGuardPoNo . ' ไม่ใช่ของบริษัทที่เลือก กรุณาตรวจสอบอีกครั้ง', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+	echo "<script>alert(" . $breqGuardMessage . ");history.back();</script>";
+	exit;
+}
 
 $yearMonth = substr(date("Y")+543, -2).date("m");
 $sql = "SELECT MAX(ref_id_br) AS MAXID FROM in__br ";
@@ -142,8 +166,8 @@ $ref_11 = $_POST["ref_11"];
 $ref_des = $_POST["ref_des"];
 $type_breng = $_POST["type_breng"]; 
 
-$save="insert into in__br(company,ref_id_br,ref_id_stock,po_no,date_br,customer,customer_id,address,sale_comment,sale,sale_code,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,add_date,add_by,return_date_bet,slip1,slip2,slip3,slip4,slip5,iv_no,que_ckk,cm_no,type_breng)
-values('".$company."','".$ref_id_br."','".$ref_id_stock."','".$po_no."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$sale."','".$sale_code."','".$sn_ckk."','".$sn."','".$objective."','".$objective_des1."','".$objective_des2."','".$objective_des4."','".$objective_des5."','".$returns."','".$returns_date."','".$returns_time."','".$returns_name."','".$returns_address."','".$returns_contact."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$add_date."','".$add_by."','".$return_date_bet."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$que_ckk."','".$cm_no."','".$type_breng."')";
+$save="insert into in__br(company,ref_id_br,ref_id_stock,po_no,date_br,customer,customer_id,address,sale_comment,sale,sale_code,sn_ckk,sn,objective,objective_des1,objective_des2,objective_des4,objective_des5,returns,returns_date,returns_time,returns_name,returns_address,returns_contact,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,add_date,add_by,return_date_bet,slip1,slip2,slip3,slip4,slip5,iv_no,iv_date,que_ckk,cm_no,type_breng)
+values('".$company."','".$ref_id_br."','".$ref_id_stock."','".$po_no."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$sale."','".$sale_code."','".$sn_ckk."','".$sn."','".$objective."','".$objective_des1."','".$objective_des2."','".$objective_des4."','".$objective_des5."','".$returns."','".$returns_date."','".$returns_time."','".$returns_name."','".$returns_address."','".$returns_contact."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$add_date."','".$add_by."','".$return_date_bet."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$iv_date."','".$que_ckk."','".$cm_no."','".$type_breng."')";
 $qsave=mysqli_query($conn,$save);
 // echo $save.'<br>';
 
@@ -163,8 +187,10 @@ $product_price = $_POST["product_price"]; // ราคาต่อหน่ว�
 $sum_amount = $_POST["sum_amount"]; // ยอดรวม
 $sum_amountt = str_replace(',', '', $sum_amount);
 $br_period = $_POST["br_period"]; // รับประกัน
-$warranty = $_POST["warranty"]; // ระยะเวลายืม	
+$warranty = $_POST["warranty"]; // ระยะเวลายืม
 $sale_remarkk = $_POST["sale_remarkk"]; // หมายเหตุ
+$lot = $_POST["lot"] ?? []; // ล็อตสินค้า
+$product_nameother = $_POST["product_nameother"] ?? []; // ชื่อที่แสดงในใบส่งสินค้า
 
 foreach ($key_id as $key => $value) {
 $check_in_new = $check_in[$key];
@@ -180,6 +206,8 @@ $br_period_new = $br_period[$key];
 $warranty_new = $warranty[$key];
 $sale_remarkk_new = $sale_remarkk[$key];
 $ref_id_stock_new = $ref_id_stock[$key];
+$lot_new = $lot[$key] ?? '';
+$product_nameother_new = $product_nameother[$key] ?? '';
 
 // echo $check_in_new;
 //  echo $check_in_new.'<br>';
@@ -193,9 +221,9 @@ $ref_id_stock_new = $ref_id_stock[$key];
 
 
 		if ($check_in_new == 1) {
-			$strSQL1 = "insert into in__subbr(ref_idd_br,po_no,product_id,product_code,count,amount,price,sale_remark,br_periodd,warranty)
-			values ('".$ref_id_br."','".$po_no."','".$product_id_new."','".$product_id_new."','".$sale_count_new."','".$product_price_new."','".$sum_amountt_new."','".$sale_remarkk_new."','".$br_period_new."','".$warranty_new."')";
-			$objQuery1 = mysqli_query($conn,$strSQL1);	
+			$strSQL1 = "insert into in__subbr(ref_idd_br,po_no,product_id,product_code,count,amount,price,sale_remark,br_periodd,warranty,lot,product_nameother)
+			values ('".$ref_id_br."','".$po_no."','".$product_id_new."','".$product_id_new."','".$sale_count_new."','".$product_price_new."','".$sum_amountt_new."','".$sale_remarkk_new."','".$br_period_new."','".$warranty_new."','".$lot_new."','".$product_nameother_new."')";
+			$objQuery1 = mysqli_query($conn,$strSQL1);
 			// echo $strSQL1.'<br>';
 		}
 
@@ -301,10 +329,10 @@ $ref_id_stock_new = $ref_id_stock[$key];
 $department=$_POST["department_name"];
 $type_customer=$_POST["customer_typename"];
 	
-if($company=='3') {
+if($company=='1') {
 	$type_company='ออลล์เวล ไลฟ์ บจก.';
-} else if ($company=='4') {
-	$type_company='โนเบิล เมด บจก.';	
+} else if ($company=='2') {
+	$type_company='โนเบิล เมด บจก.';
 }
 
 $customer_name=$_POST["customer_name"];
