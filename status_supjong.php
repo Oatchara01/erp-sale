@@ -181,26 +181,26 @@ include "dbconnect_sale.php";
 					$emid = $_SESSION['code'];
 
 					if ($emid == 'SS1') {
-						$sddd = " AND sale_code IN ('S15','S16','S21','S22','S14')";
+						$sddd = "sale_code IN ('S15','S16','S21','S22','S14')";
 					} else if ($emid == 'SS2') {
-						$sddd = " AND sale_code IN ('S11','S12','S17','S24','S13')";
+						$sddd = "sale_code IN ('S11','S12','S17','S24','S13')";
 					} else if ($emid == 'SS3') {
-						$sddd = " AND sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
+						$sddd = "sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
 					} else if ($emid == 'SS5') {
-						$sddd = " AND sale_code IN ('S31','S32')";
+						$sddd = "sale_code IN ('S31','S32')";
 					} else if ($emid == 'SUP_MK') {
-						$sddd = " and sale_code IN ('SOL91','SOL92','SOL93','SOL94','MK') ";
+						$sddd = "sale_code IN ('SOL91','SOL92','SOL93','SOL94','MK') ";
 					} else if ($emid == 'SM1') {
-						$sddd = " AND sale_code IN ('S31','S32','S33','MM1','MM2','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
+						$sddd = "sale_code IN ('S31','S32','S33','MM1','MM2','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
 					} else if ($emid == 'SUP_EN') {
-						$sddd = " and sale_code LIKE '%EN%'";
+						$sddd = "sale_code LIKE '%EN%'";
 					} else {
-						$sddd = "";
+						$sddd = "1";
 					}
 
 
 
-					$strSQL = "SELECT *  FROM hos__jongproduct  where send_sup = '1' $sddd";
+					$strSQL = "SELECT *  FROM hos__jongproduct  where  $sddd";
 
 					if ($start_date != "") {
 						$strSQL .= ' AND date_jong >= "' . $start_date . '"';
