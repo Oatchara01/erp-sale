@@ -305,11 +305,7 @@ require_once __DIR__ . '/includes/breq_repo.php';
 										</button>
 										<div id="<?php echo htmlspecialchars($dropdown_id); ?>" class="so-dropdown-menu">
 											<a href="<?php echo htmlspecialchars($edit_url); ?>" class="so-dropdown-item">
-												<?php if ($canEdit) { ?>
-													<i class="fas fa-edit" style="width:16px;"></i> แก้ไข
-												<?php } else { ?>
-													<i class="fas fa-eye" style="width:16px;"></i> ดูเอกสาร
-												<?php } ?>
+												<i class="fas fa-edit" style="width:16px;"></i> แก้ไข
 											</a>
 											<a href="<?php echo htmlspecialchars($copy_url); ?>" class="so-dropdown-item">
 												<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม

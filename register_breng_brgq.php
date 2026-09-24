@@ -207,9 +207,24 @@ $breqCompatHiddenFields = array(
 					</div>
 				</div>
 			</div>
+		</div>
 
-			<!-- ===================== การ์ด: รายการสินค้า ===================== -->
-			<div class="so-card">
+		<?php
+		$adminInfoTab = array(
+			'tab_id' => 'tab-admin-info',
+			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
+			'rows'   => array(array(
+				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => (string)($breqHeader['iv_no'] ?? '')),
+				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
+				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt'),
+			)),
+		);
+		include __DIR__ . '/partials/admin_info_tab.php';
+		unset($adminInfoTab);
+		?>
+
+		<!-- ===================== การ์ด: รายการสินค้า (แสดงทั้งแท็บข้อมูลเอกสารและ Admin) ===================== -->
+		<div class="so-card">
 				<div class="so-section-title-container">
 					<h2 class="so-section-title">รายการสินค้า</h2>
 					<span class="breq-item-count" id="breq_item_count">0 รายการ</span>
@@ -232,10 +247,10 @@ $breqCompatHiddenFields = array(
 					</table>
 				</div>
 				<div class="breq-empty-state" id="breq_item_empty">ยังไม่มีรายการ — กด "ค้นหาเอกสาร PO" เพื่อเลือกสินค้า</div>
-			</div>
+		</div>
 
-			<?php
-			// แท็บ "การส่งกลับเอกสาร" (partials/doc_tabs_card.php) — แสดงทุกกรณี ใบใหม่ได้ empty_text
+		<?php
+		// แท็บ "การส่งกลับเอกสาร" (partials/doc_tabs_card.php) — แสดงทุกกรณีและแสดงร่วมกันทั้งสองแท็บ
 			$breqLogRowsForTabs = array();
 			foreach ($breqLogRows as $breqLogRow) {
 				$breqLogTime = strtotime((string)$breqLogRow['created_at']);
@@ -257,21 +272,6 @@ $breqCompatHiddenFields = array(
 			);
 			include __DIR__ . '/partials/doc_tabs_card.php';
 			unset($docTabsCard);
-			?>
-		</div>
-
-		<?php
-		$adminInfoTab = array(
-			'tab_id' => 'tab-admin-info',
-			'title'  => 'ข้อมูลเพิ่มเติม (Admin)',
-			'rows'   => array(array(
-				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => (string)($breqHeader['iv_no'] ?? '')),
-				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
-				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt'),
-			)),
-		);
-		include __DIR__ . '/partials/admin_info_tab.php';
-		unset($adminInfoTab);
 		?>
 
 	</div>
