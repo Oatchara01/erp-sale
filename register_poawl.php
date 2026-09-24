@@ -7,7 +7,10 @@ require_once __DIR__ . '/includes/po_repo.php';
  *   - ไม่มี ref_id        → ใบใหม่ (เลขบนหัวเป็นเลขคาดการณ์ จองจริงตอน Save Draft / Submit ครั้งแรก)
  *   - ref_id ของใบ Draft  → แก้ร่างเดิม เลขไม่เปลี่ยน
  *   - ref_id ที่ส่งแล้ว    → แก้ต่อได้ด้วยปุ่ม Update (คงสถานะเดิม) ถ้ายังไม่ยกเลิก/ยังไม่ออกใบสั่งขาย
- *                          ใบที่ล็อกแล้วชี้ไปหน้าแก้ไข PO เดิม (register_poadmin_edit.php)
+ *   - ใบที่ออกใบสั่งขายแล้ว → อ่านอย่างเดียว + ลิงก์ไปใบ SO
+ *   - ใบ Returned (Sale ส่งกลับ) → Admin แก้ + Update คง Returned / Submit ส่ง Sale ใหม่
+ *   - ใบยกเลิก            → อ่านอย่างเดียว (banner เหตุผล + แท็บประวัติ)
+ *   - ฝั่ง Sale/Engineer   → อ่านอย่างเดียว ส่งกลับได้ (เมนู ⋮) / ไปออกใบสั่งขาย
  * บันทึกทุกปุ่มผ่าน register_posave1.php (po_action) → includes/po_repo.php
  * =================================================================== */
 $poRequestedRefId = isset($_GET['ref_id']) && !is_array($_GET['ref_id']) ? trim((string)$_GET['ref_id']) : '';
@@ -30,7 +33,6 @@ $poStopPage = function ($message, array $links = array()) {
 		echo '<p><a href="' . so_saved_h($href) . '">' . so_saved_h($label) . '</a></p>';
 	}
 	echo '</div>';
-	include 'foot.php';
 	exit();
 };
 
@@ -38,36 +40,69 @@ if (!po_has_status_column($conn)) {
 	$poStopPage('ฐานข้อมูลยังไม่รองรับสถานะเอกสาร PO กรุณาแจ้งผู้ดูแลระบบให้รัน sql/po_status_doc.sql');
 }
 
+/* ฝั่ง Sale (Sale/Engineer) เปิดจาก status_po_sale.php แบบอ่านอย่างเดียว — ทำได้แค่ส่งกลับ / ไปออกใบสั่งขาย */
+$poIsSaleUser = po_is_sale_side_user($_SESSION);
+$poBackUrl = $poIsSaleUser ? 'status_po_sale.php' : 'status_adminpo.php';
+$poBackLabel = $poIsSaleUser ? 'กลับหน้า PO รอเปิดใบสั่งขาย' : 'กลับหน้าสถานะเอกสาร PO';
+if ($poIsSaleUser && $poRequestedRefId === '') {
+	$poStopPage('ฝั่ง Sale ไม่สามารถสร้างใบ PO ได้', array($poBackLabel => $poBackUrl));
+}
+
 $savedPo = null;
 $poSavedItemsForForm = array();
+$poIsCancelled = false;
+$poIsOpenedSo = false;
+$poOpenedSoRef = '';
 if ($poRequestedRefId !== '') {
 	$savedPo = po_load_document($conn, $poRequestedRefId);
 	if ($savedPo === null) {
-		$poStopPage('ไม่พบเอกสารเลขที่ ' . $poRequestedRefId, array('กลับหน้าสถานะเอกสาร PO' => 'status_adminpo.php'));
+		$poStopPage('ไม่พบเอกสารเลขที่ ' . $poRequestedRefId, array($poBackLabel => $poBackUrl));
 	}
-	if (!po_is_draft($savedPo)) {
-		$poBlockReason = po_edit_block_reason($savedPo);
-		if ($poBlockReason !== '') {
-			$poStopPage($poBlockReason . ' จึงแก้ไขในหน้านี้ไม่ได้', array(
-				'แก้ไขด้วยหน้าเดิม' => 'register_poadmin_edit.php?ref_id=' . rawurlencode($poRequestedRefId),
-				'กลับหน้าสถานะเอกสาร PO' => 'status_adminpo.php',
-			));
-		}
+	$poIsCancelled = ((string)($savedPo['cancel_ckk'] ?? '0') === '1');
+	// ออกใบสั่งขายแล้ว (ตรงกับ po_edit_block_reason) → เปิดดูแบบอ่านอย่างเดียว + ลิงก์ไปใบ SO
+	$poOpenedSoRef = trim((string)($savedPo['ref_so'] ?? ''));
+	$poIsOpenedSo = !po_is_draft($savedPo) && ((string)($savedPo['open_so'] ?? '0') === '1' || $poOpenedSoRef !== '');
+	if ($poIsSaleUser && (!po_sale_can_access($savedPo, $_SESSION) || po_is_draft($savedPo) || po_is_returned($savedPo) || $poIsCancelled)) {
+		$poStopPage('ไม่สามารถเปิดใบ PO เลขที่ ' . $poRequestedRefId . ' ได้ (ไม่ใช่ใบของเขตการขายคุณ หรือยังไม่ได้ส่งให้ Sale)', array($poBackLabel => $poBackUrl));
 	}
 	$poSavedItemsForForm = po_items_for_form(po_load_items($conn, $savedPo['ref_id']));
 }
 
-/* new = ใบใหม่ | draft = ร่าง | pending_send = ใบจริงที่ยังไม่ส่ง Sale (ใบเก่า) | submitted = ส่ง Sale แล้ว */
+/* new = ใบใหม่ | draft = ร่าง | cancelled = ยกเลิกแล้ว | opened = ออกใบสั่งขายแล้ว | returned = Sale ส่งกลับ
+ * pending_send = ใบจริงที่ยังไม่ส่ง Sale (ใบเก่า) | submitted = ส่ง Sale แล้ว
+ * cancelled / opened = อ่านอย่างเดียว (ลำดับเดียวกับ po_status_info) */
 if ($savedPo === null) {
 	$poMode = 'new';
 } else if (po_is_draft($savedPo)) {
 	$poMode = 'draft';
+} else if ($poIsCancelled) {
+	$poMode = 'cancelled';
+} else if ($poIsOpenedSo) {
+	$poMode = 'opened';
+} else if (po_is_returned($savedPo)) {
+	$poMode = 'returned';
 } else if ((string)$savedPo['send_sale'] === '1') {
 	$poMode = 'submitted';
 } else {
 	$poMode = 'pending_send';
 }
 $poIsExisting = ($savedPo !== null);
+$poReadOnly = $poIsSaleUser || $poMode === 'cancelled' || $poMode === 'opened';
+// ส่งกลับ: Sale ของเขตนี้ + ใบรอ Sale เปิดใบสั่งขาย (guard ด้านบนกรองสิทธิ์/สถานะอื่นไว้แล้ว)
+$poCanReturn = $poIsSaleUser && $poMode === 'submitted';
+// ยกเลิก: Admin + ใบจริงที่ยังไม่ยกเลิก/ยังไม่ออก SO
+$poCanCancel = !$poIsSaleUser && in_array($poMode, array('submitted', 'pending_send', 'returned'), true);
+
+/* ประวัติส่งกลับ/ยกเลิก (tb_document_status_log) — row แรก = banner เหตุผลล่าสุด */
+$poStatusLogRows = $poIsExisting ? po_load_status_log($conn, (string)$savedPo['ref_id']) : array();
+$poLatestLog = null;
+if (count($poStatusLogRows) > 0 && trim((string)$poStatusLogRows[0]['reason']) !== '') {
+	$poLatestLog = $poStatusLogRows[0] + po_status_log_display($poStatusLogRows[0]['status_doc']);
+}
+// ใบยกเลิกจาก register_poclose.php เดิมไม่มี log — ใช้ remark_cancel แทน
+if ($poLatestLog === null && $poMode === 'cancelled' && trim((string)($savedPo['remark_cancel'] ?? '')) !== '') {
+	$poLatestLog = array('reason' => (string)$savedPo['remark_cancel']) + po_status_log_display('Cancelled');
+}
 $poDisplayRefId = $poIsExisting ? (string)$savedPo['ref_id'] : po_peek_next_ref_id($conn);
 $poValue = function ($key, $default = '') use ($savedPo) {
 	return $savedPo !== null && isset($savedPo[$key]) ? (string)$savedPo[$key] : $default;
@@ -100,6 +135,7 @@ $poSuccessTitles = array(
 	'saved'     => 'บันทึกร่างเรียบร้อยแล้ว',
 	'submitted' => 'ส่งใบ PO ให้ Sale เรียบร้อยแล้ว',
 	'updated'   => 'อัปเดตใบ PO เรียบร้อยแล้ว',
+	'cancelled' => 'ยกเลิกใบ PO เรียบร้อยแล้ว',
 );
 $poSuccessParam = '';
 foreach ($poSuccessTitles as $poParam => $poTitle) {
@@ -126,7 +162,7 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 	</script>
 <?php } ?>
 
-<form action="register_posave1.php" method="post" name="frmMain" id="frmMain" enctype="multipart/form-data" class="po-page" onsubmit="return false;" novalidate>
+<form action="register_posave1.php" method="post" name="frmMain" id="frmMain" enctype="multipart/form-data" class="po-page<?php echo $poReadOnly ? ' is-readonly' : ''; ?>" onsubmit="return false;" novalidate>
 	<!-- ใบใหม่ส่ง ref_id ว่าง = ให้ตัวบันทึกจองเลขใหม่ -->
 	<input type="hidden" name="ref_id" id="ref_id" value="<?php echo $poIsExisting ? so_saved_h($savedPo['ref_id']) : ''; ?>">
 
@@ -140,13 +176,42 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 					<span class="so-ref-value"><?php echo so_saved_h($poDisplayRefId); ?></span>
 					<?php if ($poMode === 'draft') { ?>
 						<span class="po-status-pill is-draft">Draft</span>
+					<?php } else if ($poMode === 'returned') { ?>
+						<span class="po-status-pill is-returned">Returned</span>
+					<?php } else if ($poMode === 'cancelled') { ?>
+						<span class="po-status-pill is-cancelled">ยกเลิก</span>
+					<?php } else if ($poMode === 'opened') { ?>
+						<span class="po-status-pill is-opened">เปิดใบสั่งขายแล้ว</span>
 					<?php } ?>
 				</div>
 			</div>
 			<div class="so-header-right">
-				<button type="button" class="btn-so-draft po-action-btn" data-po-action="create_so" onclick="poSave('create_so', this);"><img src="img/icons/payment.png" alt=""> ออกใบสั่งขาย</button>
+				<?php if ($poMode === 'opened') { ?>
+					<?php if ($poOpenedSoRef !== '') { ?>
+						<!-- register_suphos.php ค้น hos__so ก่อน → เปิดใบสั่งขายที่ออกจาก PO นี้ -->
+						<a class="btn-so-draft po-link-btn" href="register_suphos.php?ref_id=<?php echo rawurlencode($poOpenedSoRef); ?>"><img src="img/icons/payment.png" alt=""> ดูใบสั่งขาย <?php echo so_saved_h($poOpenedSoRef); ?></a>
+					<?php } ?>
+				<?php } else if ($poIsSaleUser) { ?>
+					<!-- ฝั่ง Sale ไม่บันทึกทับ PO — ไปหน้าออกใบสั่งขายตรง ๆ -->
+					<a class="btn-so-draft po-action-btn po-link-btn" href="register_suphos.php?ref_id=<?php echo rawurlencode((string)$savedPo['ref_id']); ?>"><img src="img/icons/payment.png" alt=""> ออกใบสั่งขาย</a>
+				<?php } else if (!$poReadOnly) { ?>
+					<button type="button" class="btn-so-draft po-action-btn" data-po-action="create_so" onclick="poSave('create_so', this);"><img src="img/icons/payment.png" alt=""> ออกใบสั่งขาย</button>
+				<?php } ?>
 			</div>
 		</div>
+
+		<?php if ($poLatestLog !== null) { ?>
+			<div class="so-latest-reason-banner <?php echo so_saved_h($poLatestLog['class']); ?>" role="status">
+				<button type="button" class="so-latest-reason-close" aria-label="ปิด" onclick="this.closest('.so-latest-reason-banner').style.display='none';">&times;</button>
+				<div class="so-latest-reason-title"><?php echo so_saved_h($poLatestLog['title']); ?></div>
+				<div class="so-latest-reason-text"><?php echo nl2br(so_saved_h($poLatestLog['reason'])); ?></div>
+			</div>
+		<?php } ?>
+
+		<?php if ($poReadOnly) { ?>
+			<!-- อ่านอย่างเดียว: fieldset disabled ปิดทุก input/select/button ในการ์ด (ไม่ส่งค่าไปไหนอยู่แล้ว) -->
+			<fieldset class="po-readonly-fieldset" disabled>
+		<?php } ?>
 
 		<!-- ===================== การ์ด 1: ข้อมูลเอกสาร ===================== -->
 		<section class="so-card po-card" aria-labelledby="po_doc_title">
@@ -296,12 +361,22 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 			</div>
 		</section>
 
-		<!-- ===================== การ์ด 5: แนบไฟล์เพิ่มเติม (พฤติกรรมจาก js/doc-tabs-attach.js) ===================== -->
-		<!-- แท็บเดียว ใช้หน้าตา .so-tab-btn จาก register-suphos.css — เส้นม่วง (.active) ขึ้นเมื่อกดแท็บ -->
-		<div class="so-tabs-container po-attach-tabs">
-			<button type="button" class="so-tab-btn" aria-pressed="false" onclick="this.classList.add('active'); this.setAttribute('aria-pressed', 'true');"><span class="po-tab-dot" aria-hidden="true">●</span>แนบไฟล์</button>
+		<?php if ($poReadOnly) { ?>
+			</fieldset>
+		<?php } ?>
+
+		<!-- ===================== การ์ด 5: แนบไฟล์เพิ่มเติม (พฤติกรรมจาก js/doc-tabs-attach.js) + ประวัติการส่งกลับ ===================== -->
+		<!-- ใช้หน้าตา .so-tab-btn จาก register-suphos.css — เส้นม่วง (.active) ขึ้นที่แท็บที่เลือก -->
+		<div class="so-tabs-container po-attach-tabs" role="tablist">
+			<button type="button" class="so-tab-btn active" role="tab" aria-selected="true" aria-controls="po_tab_attach" data-po-tab="po_tab_attach" onclick="poSwitchTab(this);"><span class="po-tab-dot" aria-hidden="true">●</span>แนบไฟล์</button>
+			<?php if ($poIsExisting) { ?>
+				<button type="button" class="so-tab-btn" role="tab" aria-selected="false" aria-controls="po_tab_return_log" data-po-tab="po_tab_return_log" onclick="poSwitchTab(this);"><span class="po-tab-dot" aria-hidden="true">●</span>การส่งกลับเอกสาร</button>
+			<?php } ?>
 		</div>
-		<section class="so-card po-card" aria-labelledby="po_attach_title">
+		<?php if ($poReadOnly) { ?>
+			<fieldset class="po-readonly-fieldset" disabled>
+		<?php } ?>
+		<section class="so-card po-card po-tab-panel" id="po_tab_attach" role="tabpanel" aria-labelledby="po_attach_title">
 			<div class="so-section-title-container po-section-head">
 				<h2 class="so-section-title" id="po_attach_title">แนบไฟล์เพิ่มเติม</h2>
 				<hr class="so-divider">
@@ -327,21 +402,87 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 				<input type="hidden" name="img_po_remove<?php echo $slot; ?>" id="hidden_remove_val<?php echo $slot; ?>" value="0">
 			<?php } ?>
 		</section>
+		<?php if ($poReadOnly) { ?>
+			</fieldset>
+		<?php } ?>
+
+		<?php if ($poIsExisting) { ?>
+			<section class="so-card po-card po-tab-panel" id="po_tab_return_log" role="tabpanel" aria-labelledby="po_return_log_title" hidden>
+				<div class="so-section-title-container po-section-head">
+					<h2 class="so-section-title" id="po_return_log_title">การส่งกลับเอกสาร</h2>
+					<hr class="so-divider">
+				</div>
+				<div class="po-return-log-wrap">
+					<table class="so-document-status-table">
+						<thead>
+							<tr>
+								<th scope="col">สถานะ</th>
+								<th scope="col">เหตุผล</th>
+								<th scope="col">ผู้ดำเนินการ</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if (count($poStatusLogRows) > 0) { ?>
+								<?php foreach ($poStatusLogRows as $poLogRow) {
+									$poLogDisplay = po_status_log_display($poLogRow['status_doc']);
+									$poLogTime = strtotime((string)$poLogRow['created_at']);
+								?>
+									<tr>
+										<td class="so-document-log-status-cell">
+											<span class="so-document-status-pill <?php echo so_saved_h($poLogDisplay['class']); ?>"><?php echo so_saved_h($poLogDisplay['label']); ?></span>
+										</td>
+										<td class="so-document-log-reason-cell"><?php echo nl2br(so_saved_h($poLogRow['reason'])); ?></td>
+										<td class="so-document-log-user-cell">
+											<div><?php echo so_saved_h(trim((string)$poLogRow['user_name']) !== '' ? $poLogRow['user_name'] : '-'); ?></div>
+											<?php if ($poLogTime) { ?>
+												<div class="so-document-log-time"><?php echo so_saved_h(date('d-m-Y H:i', $poLogTime)); ?></div>
+											<?php } ?>
+										</td>
+									</tr>
+								<?php } ?>
+							<?php } else { ?>
+								<tr class="so-document-status-empty">
+									<td colspan="3">ยังไม่มีประวัติการส่งกลับเอกสาร</td>
+								</tr>
+							<?php } ?>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		<?php } ?>
 	</div>
 
 	<div class="so-sticky-actions po-sticky-actions">
 		<div class="so-sticky-actions-inner po-sticky-actions-inner">
 			<div class="po-actions-main">
-				<?php if ($poMode !== 'submitted') { ?>
-					<button type="button" class="btn-so-submit po-action-btn" data-po-action="submit" onclick="poSave('submit', this);"><i class="fas fa-paper-plane" aria-hidden="true"></i> Submit</button>
+				<?php if ($poCanReturn || $poCanCancel) { ?>
+					<!-- เมนู ⋮ รูปแบบเดียวกับแถบอนุมัติของ register_suphos.php — ทุกปุ่มเปิด popup เหตุผลก่อนส่ง -->
+					<div class="po-overflow-wrap">
+						<button type="button" class="so-overflow-menu-trigger po-overflow-trigger" id="btn_po_overflow" aria-haspopup="true" aria-expanded="false" aria-controls="poOverflowMenu" aria-label="เมนูเพิ่มเติม" onclick="poToggleOverflowMenu();">
+							<i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+						</button>
+						<div id="poOverflowMenu" class="so-overflow-menu po-overflow-menu" role="menu" hidden>
+							<?php if ($poCanReturn) { ?>
+								<button type="button" role="menuitem" class="po-overflow-item po-action-btn" data-po-action="return" onclick="poReturnDocument(this);"><img src="img/icons/send_back.png" alt=""> ส่งกลับ</button>
+							<?php } ?>
+							<?php if ($poCanCancel) { ?>
+								<button type="button" role="menuitem" class="po-overflow-item po-action-btn" data-po-action="cancel" onclick="poCancelDocument(this);"><img src="img/icons/cancel_document.png" alt=""> ยกเลิกเอกสาร</button>
+							<?php } ?>
+						</div>
+					</div>
 				<?php } ?>
-				<?php if ($poMode === 'new' || $poMode === 'draft') { ?>
-					<button type="button" class="btn-so-draft po-action-btn" data-po-action="draft" onclick="poSave('draft', this);"><i class="far fa-save" aria-hidden="true"></i> <?php echo $poMode === 'draft' ? 'Update Draft' : 'Save Draft'; ?></button>
-				<?php } else { ?>
-					<!-- ใบจริง: บันทึกทับโดยคงสถานะเดิม (ห้ามถอยกลับเป็นร่าง) -->
-					<button type="button" class="btn-so-draft po-action-btn" data-po-action="update" onclick="poSave('update', this);"><i class="far fa-save" aria-hidden="true"></i> Update</button>
+				<?php if (!$poReadOnly) { ?>
+					<?php if ($poMode !== 'submitted') { ?>
+						<button type="button" class="btn-so-submit po-action-btn" data-po-action="submit" onclick="poSave('submit', this);"><i class="fas fa-paper-plane" aria-hidden="true"></i> Submit</button>
+					<?php } ?>
+					<?php if ($poMode === 'new' || $poMode === 'draft') { ?>
+						<button type="button" class="btn-so-draft po-action-btn" data-po-action="draft" onclick="poSave('draft', this);"><i class="far fa-save" aria-hidden="true"></i> <?php echo $poMode === 'draft' ? 'Update Draft' : 'Save Draft'; ?></button>
+					<?php } else { ?>
+						<!-- ใบจริง: บันทึกทับโดยคงสถานะเดิม (ห้ามถอยกลับเป็นร่าง, ใบ Returned คง Returned) -->
+						<button type="button" class="btn-so-draft po-action-btn" data-po-action="update" onclick="poSave('update', this);"><i class="far fa-save" aria-hidden="true"></i> Update</button>
+					<?php } ?>
 				<?php } ?>
-				<button type="button" class="btn-so-cancel-nav po-btn-back" onclick="window.location.href='status_adminpo.php';">ย้อนกลับ</button>
+				<button type="button" class="btn-so-cancel-nav po-btn-back" onclick="window.location.href=<?php echo so_saved_h(json_encode($poBackUrl)); ?>;">ย้อนกลับ</button>
 			</div>
 		</div>
 	</div>
@@ -450,7 +591,9 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 		mode: <?php echo json_encode($poMode); ?>,
 		refId: <?php echo json_encode($poIsExisting ? (string)$savedPo['ref_id'] : '', JSON_UNESCAPED_UNICODE); ?>,
 		savedItems: <?php echo json_encode($poSavedItemsForForm, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>,
-		maxItems: <?php echo PO_MAX_ITEMS; ?>
+		maxItems: <?php echo PO_MAX_ITEMS; ?>,
+		readOnly: <?php echo $poReadOnly ? 'true' : 'false'; ?>,
+		isSale: <?php echo $poIsSaleUser ? 'true' : 'false'; ?>
 	};
 </script>
 <script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>

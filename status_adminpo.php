@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/po_repo.php';
 $poStatusFilters = array(
 	'' => 'ทั้งหมด',
 	'draft' => 'Draft',
+	'returned' => 'ส่งกลับ',
 	'waiting_send' => 'รอส่งข้อมูลให้ Sale',
 	'waiting_so' => 'รอ Sale เปิดใบสั่งขาย',
 	'opened' => 'เปิดใบสั่งขายแล้ว',
@@ -136,10 +137,12 @@ if ($status_filter === 'draft') {
 	$strSQL .= $poNotDraft . " AND cancel_ckk = '1'";
 } else if ($status_filter === 'opened') {
 	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so = '1'";
+} else if ($status_filter === 'returned') {
+	$strSQL .= $poHasStatusColumn ? " AND status_doc = 'Returned' AND cancel_ckk <> '1' AND open_so <> '1'" : " AND 0";
 } else if ($status_filter === 'waiting_so') {
 	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so <> '1' AND send_sale = '1'";
 } else if ($status_filter === 'waiting_send') {
-	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so <> '1' AND send_sale <> '1'";
+	$strSQL .= $poNotDraft . ($poHasStatusColumn ? " AND status_doc <> 'Returned'" : '') . " AND cancel_ckk <> '1' AND open_so <> '1' AND send_sale <> '1'";
 }
 		
 

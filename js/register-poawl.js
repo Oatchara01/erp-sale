@@ -288,7 +288,9 @@
 		draft: { busy: 'กำลังบันทึก...', fail: 'บันทึกร่างไม่สำเร็จ' },
 		submit: { busy: 'กำลังส่ง...', fail: 'Submit ไม่สำเร็จ' },
 		create_so: { busy: 'กำลังบันทึก...', fail: 'ออกใบสั่งขายไม่สำเร็จ' },
-		update: { busy: 'กำลังบันทึก...', fail: 'อัปเดตไม่สำเร็จ' }
+		update: { busy: 'กำลังบันทึก...', fail: 'อัปเดตไม่สำเร็จ' },
+		return: { busy: 'กำลังส่งกลับ...', fail: 'ส่งกลับไม่สำเร็จ' },
+		cancel: { busy: 'กำลังยกเลิก...', fail: 'ยกเลิกเอกสารไม่สำเร็จ' }
 	};
 
 	function setButtonsBusy(isBusy, activeButton) {
@@ -309,10 +311,12 @@
 	}
 
 	function send(action, button) {
-		var form = document.forms.frmMain;
-		var formData = new FormData(form);
+		var formData = new FormData(document.forms.frmMain);
 		formData.set('po_action', action);
+		post(action, formData, button);
+	}
 
+	function post(action, formData, button) {
 		busy = true;
 		setButtonsBusy(true, button);
 
@@ -374,6 +378,120 @@
 		});
 	};
 
+	/* ===================== ส่งกลับ / ยกเลิกเอกสาร (popup เหตุผล — pattern soOpenReasonPopup ของ register_suphos.php) ===================== */
+	function openReasonPopup(opts) {
+		var refId = config.refId || '';
+		if (typeof Swal === 'undefined') {
+			var fallback = (window.prompt(opts.label) || '').trim();
+			if (fallback !== '') opts.onConfirm(fallback);
+			return;
+		}
+		Swal.fire({
+			title: opts.title,
+			html: '<p class="so-reason-subtitle">' + escapeHtml(opts.subtitleText + ' "' + refId + '"') + '</p>' +
+				'<label class="so-reason-label">' + escapeHtml(opts.label) + '<span class="so-reason-required">*</span></label>',
+			input: 'textarea',
+			inputPlaceholder: opts.label,
+			inputAttributes: { maxlength: '1000' },
+			iconHtml: '<div class="so-reason-icon-circle" style="background:' + opts.iconBg + '"><img src="' + opts.iconSrc + '" alt="" style="width: 36px; height: 36px;"></div>',
+			showCancelButton: true,
+			showCloseButton: true,
+			confirmButtonText: 'ตกลง',
+			cancelButtonText: 'ยกเลิก',
+			buttonsStyling: false,
+			customClass: {
+				popup: 'figma-delete-popup so-reason-popup',
+				title: 'figma-delete-title so-reason-title',
+				htmlContainer: 'figma-delete-html so-reason-html',
+				confirmButton: 'figma-delete-confirm-btn so-reason-confirm-btn',
+				cancelButton: 'figma-delete-cancel-btn so-reason-cancel-btn',
+				actions: 'figma-delete-actions so-reason-actions',
+				icon: 'figma-delete-icon so-reason-icon',
+				input: 'so-reason-textarea',
+				closeButton: 'so-reason-close-btn'
+			},
+			preConfirm: function(value) {
+				var trimmed = (value || '').trim();
+				if (trimmed === '') {
+					Swal.showValidationMessage('กรุณาระบุเหตุผล');
+					return false;
+				}
+				return trimmed;
+			}
+		}).then(function(result) {
+			if (result.isConfirmed) opts.onConfirm(result.value);
+		});
+	}
+
+	/* ส่งแค่ ref_id + เหตุผล ไม่ส่งข้อมูลฟอร์ม → ไม่ต้องผ่าน validation ของ Submit */
+	function runReasonAction(action, button, popup) {
+		if (busy) return;
+		closeOverflowMenu();
+		openReasonPopup(Object.assign({}, popup, {
+			onConfirm: function(reason) {
+				if (busy) return;
+				var formData = new FormData();
+				formData.set('po_action', action);
+				formData.set('ref_id', config.refId || '');
+				formData.set('reason', reason);
+				post(action, formData, button);
+			}
+		}));
+	}
+
+	window.poReturnDocument = function(button) {
+		runReasonAction('return', button, {
+			title: 'ส่งกลับเอกสารนี้ ?',
+			subtitleText: 'ส่งกลับใบ PO เลขที่',
+			label: 'ระบุเหตุผลการส่งกลับ',
+			iconBg: '#FFF4E5',
+			iconSrc: 'img/icons/send_back.png'
+		});
+	};
+
+	window.poCancelDocument = function(button) {
+		runReasonAction('cancel', button, {
+			title: 'ยกเลิกเอกสารนี้ ?',
+			subtitleText: 'ต้องการยกเลิกใบ PO เลขที่',
+			label: 'ระบุเหตุผลในการยกเลิก',
+			iconBg: '#F4F5F7',
+			iconSrc: 'img/icons/cancel_document.png'
+		});
+	};
+
+	function closeOverflowMenu() {
+		var menu = byId('poOverflowMenu');
+		var trigger = byId('btn_po_overflow');
+		if (menu) menu.hidden = true;
+		if (trigger) trigger.setAttribute('aria-expanded', 'false');
+	}
+
+	window.poToggleOverflowMenu = function() {
+		var menu = byId('poOverflowMenu');
+		var trigger = byId('btn_po_overflow');
+		if (!menu) return;
+		var open = menu.hidden;
+		menu.hidden = !open;
+		if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+		if (open) {
+			var first = menu.querySelector('button');
+			if (first) first.focus();
+		}
+	};
+
+	/* ===================== แท็บ แนบไฟล์ / การส่งกลับเอกสาร ===================== */
+	window.poSwitchTab = function(tab) {
+		var targetId = tab.getAttribute('data-po-tab');
+		Array.prototype.forEach.call(document.querySelectorAll('.po-attach-tabs .so-tab-btn'), function(button) {
+			var isActive = (button === tab);
+			button.classList.toggle('active', isActive);
+			button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+		});
+		Array.prototype.forEach.call(document.querySelectorAll('.po-tab-panel'), function(panel) {
+			panel.hidden = (panel.id !== targetId);
+		});
+	};
+
 	/* ===================== เริ่มต้นหน้า ===================== */
 	document.addEventListener('DOMContentLoaded', function() {
 		bindCompanySwitch();
@@ -397,8 +515,20 @@
 			});
 		}
 
+		document.addEventListener('click', function(event) {
+			var wrap = document.querySelector('.po-overflow-wrap');
+			if (wrap && !wrap.contains(event.target)) closeOverflowMenu();
+		});
+
 		document.addEventListener('keydown', function(event) {
 			if (event.key !== 'Escape') return;
+			var overflowMenu = byId('poOverflowMenu');
+			if (overflowMenu && !overflowMenu.hidden) {
+				closeOverflowMenu();
+				var overflowTrigger = byId('btn_po_overflow');
+				if (overflowTrigger) overflowTrigger.focus();
+				return;
+			}
 			if (creditModal && creditModal.style.display === 'flex') {
 				window.poCloseCreditTermModal();
 				return;

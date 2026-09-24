@@ -9,6 +9,10 @@ include "dbconnect_sale.php";
 <div class="w3-white" >
 <div class="w3-container w3-padding-large">
 <div class="w3-panel w3-light-grey"><h3>Status เอกสาร PO รอเปิดใบสั่งขาย</h3></div>
+<?php if (isset($_GET['returned']) && !is_array($_GET['returned']) && trim($_GET['returned']) !== '') { ?>
+<!-- ผลจาก register_poawl.php → ส่งกลับ (register_posave1.php po_action=return) -->
+<div class="w3-panel w3-pale-green w3-leftbar w3-border-green" role="status"><p>ส่งกลับใบ PO เลขที่ <?php echo htmlspecialchars($_GET['returned'], ENT_QUOTES, 'UTF-8'); ?> ให้ Admin เรียบร้อยแล้ว</p></div>
+<?php } ?>
 	
 <div class="w3-bar w3-quarter">
 
@@ -182,7 +186,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 				<td ><div align="left"><?php echo $objResult["sale_code"];?></div></td>
 				
 <td><a href="edit_po.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>				
-<td><a href="veiw_po.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/preview.jpg" width="23" height="23" border="0" /></a></td>			
+<td><a href="register_poawl.php?ref_id=<?php echo urlencode($objResult["ref_id"]);?>" title="ดูรายละเอียด / ส่งกลับ"><img src="img/preview.jpg" width="23" height="23" border="0" alt="ดูรายละเอียด" /></a></td>
 				
 <td><a href="register_poso_create.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/create.png" width="23" height="23" border="0" /></a>						
 				</td>

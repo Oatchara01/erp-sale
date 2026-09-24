@@ -4,6 +4,7 @@
  * ตัวบันทึกใบ PO — ทุกเส้นทางผ่าน includes/po_repo.php (prepared statement + transaction)
  *
  *   po_action = draft | submit | create_so | update  → จาก register_poawl.php (fetch) ตอบกลับ JSON เสมอ
+ *   po_action = return (Sale ส่งกลับ) | cancel (Admin ยกเลิก) → ต้องมี reason, ลง tb_document_status_log
  *   ไม่มี po_action                         → ฟอร์มเดิม register_ponbm.php (submit ปกติ) ตอบ alert + redirect แบบเดิม
  *
  * po_action ถูกส่งมาทั้งใน query string และ body — ถ้าไฟล์ใหญ่เกิน post_max_size PHP จะทิ้ง $_POST ทั้งก้อน
@@ -37,11 +38,41 @@ if ($poAction !== '') {
 	if (count($_POST) === 0 && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
 		$respond(array('success' => false, 'message' => 'ข้อมูลหรือไฟล์แนบมีขนาดใหญ่เกินกำหนด (ไฟล์ละไม่เกิน 1 MB)'), 413);
 	}
-	if (!in_array($poAction, array('draft', 'submit', 'create_so', 'update'), true)) {
+	if (!in_array($poAction, array('draft', 'submit', 'create_so', 'update', 'return', 'cancel'), true)) {
 		$respond(array('success' => false, 'message' => 'ไม่รู้จักคำสั่งบันทึก'), 400);
+	}
+	// ฝั่ง Sale เปิดใบ PO แบบอ่านอย่างเดียว — ทำได้แค่ส่งกลับ
+	if (po_is_sale_side_user($_SESSION) && $poAction !== 'return') {
+		$respond(array('success' => false, 'message' => 'คุณไม่มีสิทธิ์แก้ไขใบ PO'), 403);
 	}
 
 	include __DIR__ . '/dbconnect.php';
+
+	/* ส่งกลับ / ยกเลิก — ไม่ใช้ข้อมูลฟอร์ม อ่านแค่ ref_id + เหตุผล จึงไม่ผ่าน validation ของการบันทึก */
+	if ($poAction === 'return' || $poAction === 'cancel') {
+		$refId = po_post_value($_POST, 'ref_id');
+		$reason = isset($_POST['reason']) && !is_array($_POST['reason']) ? (string)$_POST['reason'] : '';
+		try {
+			if ($refId === '') {
+				throw new PoValidationException('ไม่พบเลขที่เอกสาร');
+			}
+			if ($poAction === 'return') {
+				po_return_document($conn, $refId, $reason, $_SESSION);
+				$message = 'ส่งกลับใบ PO ให้ Admin เรียบร้อยแล้ว';
+				$redirect = 'status_po_sale.php?returned=' . rawurlencode($refId);
+			} else {
+				po_cancel_document($conn, $refId, $reason, $_SESSION);
+				$message = 'ยกเลิกใบ PO เรียบร้อยแล้ว';
+				$redirect = 'register_poawl.php?ref_id=' . rawurlencode($refId) . '&cancelled=1';
+			}
+			$respond(array('success' => true, 'ref_id' => $refId, 'message' => $message, 'redirect' => $redirect));
+		} catch (PoValidationException $e) {
+			$respond(array('success' => false, 'message' => $e->getMessage()), 422);
+		} catch (Throwable $e) {
+			error_log('[register_posave1 ' . $poAction . '] ' . $e->getMessage());
+			$respond(array('success' => false, 'message' => 'ไม่สามารถบันทึกได้ กรุณาลองใหม่อีกครั้ง หากยังไม่ได้กรุณาแจ้งผู้ดูแลระบบ'), 500);
+		}
+	}
 
 	try {
 		$result = po_persist($conn, $poAction, $_POST, $_FILES, $_SESSION);

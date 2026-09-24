@@ -33,9 +33,102 @@
 	font-weight: 500;
 }
 
-.po-status-pill.is-draft {
+.po-status-pill.is-draft,
+.po-status-pill.is-returned {
 	background: #FFF4E5;
 	color: #B25E00;
+}
+
+.po-status-pill.is-cancelled {
+	background: #FEECEB;
+	color: #C62828;
+}
+
+.po-status-pill.is-opened {
+	background: #E8F9EE;
+	color: #1E7A3F;
+}
+
+/* ปุ่ม "ออกใบสั่งขาย" ฝั่ง Sale เป็นลิงก์ (ไม่บันทึกทับ PO) */
+.po-link-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	text-decoration: none;
+}
+
+/* banner เหตุผลล่าสุด (.so-latest-reason-banner จาก register-suphos.css) ให้แนวเดียวกับการ์ด */
+.po-layout .so-latest-reason-banner {
+	margin: 0 0 24px;
+}
+
+/* ===== อ่านอย่างเดียว (ฝั่ง Sale / ใบยกเลิก) — fieldset disabled ปิด control, ที่เหลือซ่อนด้วย CSS ===== */
+.po-readonly-fieldset {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
+}
+
+.po-page.is-readonly .po-items-card .action-icon,
+.po-page.is-readonly .po-items-card #btn_delete_selected,
+.po-page.is-readonly .po-attach-btn,
+.po-page.is-readonly .po-attach-hint,
+.po-page.is-readonly .po-attach-list button {
+	display: none !important;
+}
+
+.po-page.is-readonly .so-input:disabled,
+.po-page.is-readonly .so-select:disabled {
+	color: var(--so-text, #4A4A4A);
+	-webkit-text-fill-color: var(--so-text, #4A4A4A);
+	opacity: 1;
+}
+
+/* ===== แท็บประวัติการส่งกลับ ===== .so-card ตั้ง display เอง จึงต้องบังคับ [hidden] */
+.po-tab-panel[hidden] {
+	display: none !important;
+}
+
+.po-return-log-wrap {
+	overflow-x: auto;
+}
+
+/* ===== เมนู ⋮ (ส่งกลับ / ยกเลิกเอกสาร) ===== */
+.po-overflow-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+	margin-right: auto;
+}
+
+.po-overflow-menu:not([hidden]) {
+	display: block;
+}
+
+.po-page .po-sticky-actions .po-overflow-trigger {
+	min-height: 44px;
+	width: 44px;
+	height: 44px;
+}
+
+.po-page .po-sticky-actions .po-overflow-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: flex-start;
+	white-space: nowrap;
+}
+
+.po-overflow-item img {
+	width: 20px;
+	height: 20px;
+}
+
+.po-overflow-item:focus-visible,
+.po-overflow-trigger:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.45);
+	outline-offset: -2px;
 }
 .po-section-head {
 	margin-bottom: 20px;
@@ -132,7 +225,7 @@
 	outline-offset: 2px;
 }
 
-/* แท็บ "แนบไฟล์" เหนือการ์ด 5 — แท็บเดียว จึงคงขนาดตามเนื้อหาและโค้งมุมบนทั้งสองข้างทุกความกว้าง
+/* แท็บ "แนบไฟล์" / "การส่งกลับเอกสาร" เหนือการ์ด 5 — คงขนาดตามเนื้อหาและโค้งมุมบนทั้งสองข้างทุกความกว้าง
    (register-suphos.css ยืดแท็บเต็มแถว/โค้งทุกมุมใน @container 860px และ @media 768px) */
 .po-page .po-attach-tabs {
 	padding-left: 20px;
@@ -257,6 +350,10 @@
 	.po-actions-main > button,
 	.po-btn-back {
 		flex: 1 1 100%;
+	}
+
+	.po-overflow-wrap {
+		margin-right: 0;
 	}
 }
 

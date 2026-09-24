@@ -20,6 +20,10 @@ if (!defined('PO_STATUS_DRAFT')) {
 	define('PO_MAX_ATTACHMENTS', 5);
 	define('PO_MAX_ATTACHMENT_BYTES', 1048576); // 1 MB
 }
+if (!defined('PO_STATUS_RETURNED')) {
+	// Sale ส่งกลับให้ Admin แก้ (send_sale 0) — Update คงสถานะนี้, Submit ใหม่ → Submitted
+	define('PO_STATUS_RETURNED', 'Returned');
+}
 
 if (!class_exists('PoValidationException')) {
 	/**
@@ -226,6 +230,13 @@ if (!function_exists('po_is_draft')) {
 	}
 }
 
+if (!function_exists('po_is_returned')) {
+	function po_is_returned(array $row)
+	{
+		return po_document_status($row) === PO_STATUS_RETURNED;
+	}
+}
+
 if (!function_exists('po_status_info')) {
 	/**
 	 * สถานะที่แสดงบนหน้า status — คำนวณจาก status_doc + flag เดิม ลำดับเดียวกับ status_adminpo.php เดิม
@@ -241,6 +252,9 @@ if (!function_exists('po_status_info')) {
 		}
 		if ((string)($row['open_so'] ?? '0') === '1') {
 			return array('key' => 'opened', 'label' => 'เปิดใบสั่งขายแล้ว', 'color' => '#00FF00');
+		}
+		if (po_is_returned($row)) {
+			return array('key' => 'returned', 'label' => 'ส่งกลับ', 'color' => '#FFB74D');
 		}
 		if ((string)($row['send_sale'] ?? '0') === '1') {
 			return array('key' => 'waiting_so', 'label' => 'รอ Sale เปิดใบสั่งขาย', 'color' => '#FFFF00');
@@ -991,6 +1005,8 @@ if (!function_exists('po_persist_existing')) {
 				}
 				$wasSent = ((string)$original['send_sale'] === '1');
 				if ($mode === 'update') {
+					// Update ห้ามเปลี่ยนสถานะเอง — ใบ Returned ต้องคง Returned จนกว่าจะกด Submit
+					$header['status_doc'] = po_document_status($original);
 					$header['send_sale'] = $wasSent ? 1 : 0;
 					$header['send_saledate'] = (string)$original['send_saledate'];
 				} else if ($wasSent) {
@@ -1110,6 +1126,9 @@ if (!function_exists('po_load_for_sale_order')) {
 		if (po_is_draft($po)) {
 			return array('po' => $po, 'error' => 'ใบ PO เลขที่ ' . $refId . ' ยังเป็น Draft อยู่ ต้อง Submit ก่อนจึงออกใบสั่งขายได้');
 		}
+		if (po_is_returned($po) && (string)($po['cancel_ckk'] ?? '0') !== '1') {
+			return array('po' => $po, 'error' => 'ใบ PO เลขที่ ' . $refId . ' ถูกส่งกลับให้ Admin แก้ไข ต้อง Submit ใหม่ก่อนจึงออกใบสั่งขายได้');
+		}
 		return array('po' => $po, 'error' => po_edit_block_reason($po));
 	}
 }
@@ -1145,10 +1164,204 @@ if (!function_exists('po_mark_sale_order_opened')) {
 		$affected = po_stmt_exec(
 			$conn,
 			"UPDATE hos__po SET open_so = 1, open_sodate = ?, ref_so = ?, name_open = ?
-			WHERE ref_id = ? AND open_so = 0 AND ref_so = '' AND cancel_ckk = 0" . po_not_draft_sql($conn),
+			WHERE ref_id = ? AND open_so = 0 AND ref_so = '' AND cancel_ckk = 0" . po_not_draft_sql($conn)
+				. (po_has_status_column($conn) ? " AND status_doc <> '" . PO_STATUS_RETURNED . "'" : ''),
 			'ssss',
 			array($when, $soRefId, $actorName, $poRefId)
 		);
 		return $affected > 0;
+	}
+}
+
+/* ===================================================================
+ * ส่งกลับ / ยกเลิก พร้อมเหตุผล (register_poawl.php → register_posave1.php po_action=return|cancel)
+ * ประวัติเก็บที่ tb_document_status_log ตารางกลางเดียวกับ SO/BR/Consig
+ * =================================================================== */
+
+if (!function_exists('po_is_sale_side_user')) {
+	/** ฝั่ง Sale = ผู้รับใบ PO (status_po_sale.php) — Engineer เห็นใบของเขต EN */
+	function po_is_sale_side_user(array $session)
+	{
+		$typeLogin = (string)($session['type_login'] ?? '');
+		return $typeLogin === 'Sale' || $typeLogin === 'Engineer' || (string)($session['user_type'] ?? '') === 'Engineer';
+	}
+}
+
+if (!function_exists('po_sale_can_access')) {
+	/** กฎเดียวกับ query ของ status_po_sale.php: Engineer → sale_code มี EN, อื่น ๆ → sale_code ตรงกับตัวเอง */
+	function po_sale_can_access(array $row, array $session)
+	{
+		if (!po_is_sale_side_user($session)) {
+			return false;
+		}
+		$saleCode = (string)($row['sale_code'] ?? '');
+		if ((string)($session['user_type'] ?? '') === 'Engineer') {
+			return strpos($saleCode, 'EN') !== false;
+		}
+		$ownCode = (string)($session['code'] ?? '');
+		return $ownCode !== '' && $saleCode === $ownCode;
+	}
+}
+
+if (!function_exists('po_status_log_table_exists')) {
+	function po_status_log_table_exists($conn)
+	{
+		static $cache = array();
+		$key = spl_object_id($conn);
+		if (!array_key_exists($key, $cache)) {
+			try {
+				$query = @mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
+				$cache[$key] = ($query && mysqli_num_rows($query) > 0);
+			} catch (Throwable $e) {
+				$cache[$key] = false;
+			}
+		}
+		return $cache[$key];
+	}
+}
+
+if (!function_exists('po_insert_status_log')) {
+	/** ไม่มีตาราง log = ข้าม (สถานะเอกสารยังเปลี่ยนตามปกติ) */
+	function po_insert_status_log($conn, $refId, $status, $reason, array $session)
+	{
+		if (!po_status_log_table_exists($conn)) {
+			return;
+		}
+		$userName = trim((string)($session['name'] ?? '') . ' ' . (string)($session['surname'] ?? ''));
+		po_stmt_exec(
+			$conn,
+			"INSERT INTO tb_document_status_log (ref_id, status_doc, reason, user_id, user_name) VALUES (?, ?, ?, ?, ?)",
+			'sssss',
+			array($refId, $status, $reason, (string)($session['UserID'] ?? ''), $userName)
+		);
+	}
+}
+
+if (!function_exists('po_load_status_log')) {
+	/** ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก ใหม่สุดก่อน — row แรก = เหตุผลล่าสุดของ banner */
+	function po_load_status_log($conn, $refId)
+	{
+		if ($refId === '' || !po_status_log_table_exists($conn)) {
+			return array();
+		}
+		$stmt = mysqli_prepare($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log
+			WHERE ref_id = ? AND status_doc IN ('Returned', 'ส่งกลับ', 'Rejected', 'Cancelled', 'ยกเลิก')
+			ORDER BY created_at DESC, id DESC");
+		if (!$stmt) {
+			return array();
+		}
+		mysqli_stmt_bind_param($stmt, 's', $refId);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+		$rows = array();
+		while ($result && ($row = mysqli_fetch_assoc($result))) {
+			$rows[] = $row;
+		}
+		mysqli_stmt_close($stmt);
+		return $rows;
+	}
+}
+
+if (!function_exists('po_status_log_display')) {
+	/** @return array{label:string,title:string,class:string} */
+	function po_status_log_display($status)
+	{
+		$status = trim((string)$status);
+		if ($status === 'Returned' || $status === 'ส่งกลับ') {
+			return array('label' => 'ส่งกลับ', 'title' => 'เหตุผลในการส่งกลับ', 'class' => 'is-returned');
+		}
+		if ($status === 'Rejected') {
+			return array('label' => 'ไม่อนุมัติ', 'title' => 'เหตุผลที่ไม่อนุมัติ', 'class' => 'is-rejected');
+		}
+		return array('label' => 'ยกเลิกเอกสาร', 'title' => 'เหตุผลในการยกเลิก', 'class' => 'is-cancelled');
+	}
+}
+
+if (!function_exists('po_clean_reason')) {
+	function po_clean_reason($reason)
+	{
+		$reason = trim((string)$reason);
+		if ($reason === '') {
+			throw new PoValidationException('กรุณาระบุเหตุผล');
+		}
+		return mb_substr($reason, 0, 1000, 'UTF-8');
+	}
+}
+
+if (!function_exists('po_return_document')) {
+	/**
+	 * Sale ส่งใบ PO กลับให้ Admin: Submitted + ส่ง Sale แล้ว + ยังไม่ยกเลิก/ไม่ออก SO → Returned, send_sale 0
+	 * ไม่อ่านข้อมูลฟอร์ม จึงไม่ต้องผ่าน validation ของการบันทึก
+	 */
+	function po_return_document($conn, $refId, $reason, array $session)
+	{
+		$reason = po_clean_reason($reason);
+		mysqli_begin_transaction($conn);
+		try {
+			$po = po_load_document($conn, $refId, true);
+			if ($po === null) {
+				throw new PoValidationException('ไม่พบเอกสารเลขที่ ' . $refId);
+			}
+			if (!po_sale_can_access($po, $session)) {
+				throw new PoValidationException('คุณไม่มีสิทธิ์ส่งกลับใบ PO เลขที่ ' . $refId);
+			}
+			$blockReason = po_edit_block_reason($po);
+			if ($blockReason !== '') {
+				throw new PoValidationException($blockReason . ' จึงส่งกลับไม่ได้');
+			}
+			if (po_document_status($po) !== PO_STATUS_SUBMITTED || (string)$po['send_sale'] !== '1') {
+				throw new PoValidationException('ใบ PO เลขที่ ' . $refId . ' ไม่ได้อยู่ในสถานะรอ Sale เปิดใบสั่งขาย กรุณาโหลดหน้าใหม่');
+			}
+			po_stmt_exec(
+				$conn,
+				"UPDATE hos__po SET status_doc = ?, send_sale = 0 WHERE ref_id = ?",
+				'ss',
+				array(PO_STATUS_RETURNED, $refId)
+			);
+			po_insert_status_log($conn, $refId, PO_STATUS_RETURNED, $reason, $session);
+			mysqli_commit($conn);
+		} catch (Exception $e) {
+			mysqli_rollback($conn);
+			throw $e;
+		}
+	}
+}
+
+if (!function_exists('po_cancel_document')) {
+	/**
+	 * Admin ยกเลิกใบ PO: ไม่ใช่ Draft + ยังไม่ยกเลิก/ไม่ออก SO → cancel_ckk 1, remark_cancel = เหตุผล
+	 * ความหมายเดียวกับการติ๊กยกเลิกใน register_poclose.php เดิม
+	 */
+	function po_cancel_document($conn, $refId, $reason, array $session)
+	{
+		$reason = po_clean_reason($reason);
+		if (po_is_sale_side_user($session)) {
+			throw new PoValidationException('เฉพาะ Admin เท่านั้นที่ยกเลิกใบ PO ได้');
+		}
+		mysqli_begin_transaction($conn);
+		try {
+			$po = po_load_document($conn, $refId, true);
+			if ($po === null) {
+				throw new PoValidationException('ไม่พบเอกสารเลขที่ ' . $refId);
+			}
+			if (po_is_draft($po)) {
+				throw new PoValidationException('ใบ PO เลขที่ ' . $refId . ' ยังเป็น Draft อยู่ จึงยกเลิกไม่ได้');
+			}
+			$blockReason = po_edit_block_reason($po);
+			if ($blockReason !== '') {
+				throw new PoValidationException($blockReason . ' จึงยกเลิกไม่ได้');
+			}
+			po_stmt_exec(
+				$conn,
+				"UPDATE hos__po SET cancel_ckk = 1, remark_cancel = ? WHERE ref_id = ?",
+				'ss',
+				array($reason, $refId)
+			);
+			po_insert_status_log($conn, $refId, 'Cancelled', $reason, $session);
+			mysqli_commit($conn);
+		} catch (Exception $e) {
+			mysqli_rollback($conn);
+			throw $e;
+		}
 	}
 }
