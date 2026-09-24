@@ -16,23 +16,6 @@ $poStatusFilters = array(
 $status_filter = isset($_GET['status_filter']) && !is_array($_GET['status_filter']) && isset($poStatusFilters[$_GET['status_filter']]) ? $_GET['status_filter'] : '';
 $poHasStatusColumn = po_has_status_column($conn);
 ?>
-<?php if (isset($_GET['submitted']) && !is_array($_GET['submitted']) && $_GET['submitted'] !== '') { ?>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-	var cleanUrl = new URL(window.location.href);
-	cleanUrl.searchParams.delete('submitted');
-	window.history.replaceState({}, document.title, cleanUrl);
-	Swal.fire({
-		title: 'ส่งใบ PO ให้ Sale เรียบร้อยแล้ว',
-		text: <?php echo json_encode('เลขที่อ้างอิง: ' . (string)$_GET['submitted'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
-		icon: 'success',
-		confirmButtonColor: '#612989',
-		confirmButtonText: 'ตกลง'
-	});
-});
-</script>
-<?php } ?>
 <body>
 <form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME'];?>">
 <div class="w3-white">
@@ -258,11 +241,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 
 
 <td  >
-<?php if ($poRowIsDraft) { ?>
-<a href="register_poawl.php?ref_id=<?php echo urlencode($objResult["ref_id"]);?>" title="แก้ไขร่าง"><img src="img/edit-icon.png" width="23" height="23" border="0" alt="แก้ไขร่าง" /></a>
-<?php } else { ?>
-<a href="register_poadmin_edit.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
-<?php } ?>
+<a href="register_poawl.php?ref_id=<?php echo urlencode($objResult["ref_id"]);?>" title="แก้ไข"><img src="img/edit-icon.png" width="23" height="23" border="0" alt="แก้ไข" /></a>
 </td>
 <td  >
 	<?php if ($_SESSION['code']=='ACC' or $_SESSION['code']=='ST'){  }else{?>

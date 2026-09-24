@@ -1657,15 +1657,13 @@ include("head.php"); ?>
 	<?php if ($fromPoBlockMessage !== "") { ?>
 		<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;box-sizing:border-box;font-family:'Prompt',sans-serif;">
 			<p><?php echo so_saved_h($fromPoBlockMessage); ?></p>
-			<p><a href="report_po.php?ref_id=<?php echo urlencode(trim((string)$_GET["ref_id"])); ?>" target="_blank" rel="noopener">ดูใบ PO</a></p>
 		</div>
 		<?php include 'foot.php'; ?>
 		<?php exit(); ?>
 	<?php } ?>
 	<?php if ($fromPoRefId !== "") { ?>
 		<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" role="status" style="max-width:1096px;margin:16px auto 0;box-sizing:border-box;font-family:'Prompt',sans-serif;">
-			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้าและรายการสินค้าจากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก
-				(<a href="report_po.php?ref_id=<?php echo urlencode($fromPoRefId); ?>" target="_blank" rel="noopener">ดูใบ PO</a>)</p>
+			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้าและรายการสินค้าจากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก</p>
 		</div>
 	<?php } ?>
 

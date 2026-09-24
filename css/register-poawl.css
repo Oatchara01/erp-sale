@@ -37,7 +37,6 @@
 	background: #FFF4E5;
 	color: #B25E00;
 }
-
 .po-section-head {
 	margin-bottom: 20px;
 }
@@ -128,10 +127,34 @@
 .po-page .btn-so-submit:focus-visible,
 .po-page .btn-so-draft:focus-visible,
 .po-page .btn-so-cancel-nav:focus-visible,
-.po-page .btn-preview-so:focus-visible,
 .po-page .btn-add-customer-pill:focus-visible {
 	outline: 2px solid rgba(97, 41, 137, 0.45);
 	outline-offset: 2px;
+}
+
+/* แท็บ "แนบไฟล์" เหนือการ์ด 5 — แท็บเดียว จึงคงขนาดตามเนื้อหาและโค้งมุมบนทั้งสองข้างทุกความกว้าง
+   (register-suphos.css ยืดแท็บเต็มแถว/โค้งทุกมุมใน @container 860px และ @media 768px) */
+.po-page .po-attach-tabs {
+	padding-left: 20px;
+	margin-top: 0;
+}
+
+.po-page .po-attach-tabs .so-tab-btn {
+	flex: 0 0 auto;
+	min-width: 150px;
+	border-radius: 12px 12px 0 0;
+	border-bottom: none;
+	padding-bottom: 12px;
+}
+
+/* เส้นม่วง (::after) เป็น absolute อยู่แล้ว — padding เท่ากันทั้งสองสถานะ แท็บจึงไม่กระโดดตอนกด */
+.po-page .po-attach-tabs .so-tab-btn.active {
+	padding-bottom: 12px;
+}
+
+.po-tab-dot {
+	color: #E81A70;
+	margin-right: 6px;
 }
 
 .po-attach-hint {

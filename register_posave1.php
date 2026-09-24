@@ -3,7 +3,7 @@
 /**
  * ตัวบันทึกใบ PO — ทุกเส้นทางผ่าน includes/po_repo.php (prepared statement + transaction)
  *
- *   po_action = draft | submit | create_so  → จาก register_poawl.php (fetch) ตอบกลับ JSON เสมอ
+ *   po_action = draft | submit | create_so | update  → จาก register_poawl.php (fetch) ตอบกลับ JSON เสมอ
  *   ไม่มี po_action                         → ฟอร์มเดิม register_ponbm.php (submit ปกติ) ตอบ alert + redirect แบบเดิม
  *
  * po_action ถูกส่งมาทั้งใน query string และ body — ถ้าไฟล์ใหญ่เกิน post_max_size PHP จะทิ้ง $_POST ทั้งก้อน
@@ -37,7 +37,7 @@ if ($poAction !== '') {
 	if (count($_POST) === 0 && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
 		$respond(array('success' => false, 'message' => 'ข้อมูลหรือไฟล์แนบมีขนาดใหญ่เกินกำหนด (ไฟล์ละไม่เกิน 1 MB)'), 413);
 	}
-	if (!in_array($poAction, array('draft', 'submit', 'create_so'), true)) {
+	if (!in_array($poAction, array('draft', 'submit', 'create_so', 'update'), true)) {
 		$respond(array('success' => false, 'message' => 'ไม่รู้จักคำสั่งบันทึก'), 400);
 	}
 
@@ -52,7 +52,10 @@ if ($poAction !== '') {
 			$redirect = 'register_poawl.php?ref_id=' . rawurlencode($refId) . '&saved=1';
 		} else if ($poAction === 'submit') {
 			$message = 'ส่งใบ PO ให้ Sale เรียบร้อยแล้ว';
-			$redirect = 'status_adminpo.php?submitted=' . rawurlencode($refId);
+			$redirect = 'register_poawl.php?ref_id=' . rawurlencode($refId) . '&submitted=1';
+		} else if ($poAction === 'update') {
+			$message = 'อัปเดตใบ PO เรียบร้อยแล้ว';
+			$redirect = 'register_poawl.php?ref_id=' . rawurlencode($refId) . '&updated=1';
 		} else {
 			$message = 'บันทึกใบ PO แล้ว กำลังเปิดหน้าออกใบสั่งขาย';
 			$redirect = 'register_suphos.php?ref_id=' . rawurlencode($refId);

@@ -7,7 +7,6 @@
  *   - register_posave1.php  (po_action = draft / submit / create_so จาก register_poawl.php
  *                            และเส้นทาง legacy ของ register_ponbm.php ที่ยังส่งฟิลด์ตายตัวมา)
  *   - register_poawl.php    (โหลดร่างกลับมาแก้ + เลขที่คาดการณ์บนหัวฟอร์ม)
- *   - report_po.php         (Preview จากค่าฟอร์มสด — อ่านอย่างเดียว)
  *   - register_suphos.php / register_suphos1.php (ออกใบสั่งขายจาก PO)
  *
  * prepared statement + transaction ทั้งหมด ต่างจากตัวบันทึกเดิมที่ต่อ string ตรง ๆ
@@ -247,6 +246,22 @@ if (!function_exists('po_status_info')) {
 			return array('key' => 'waiting_so', 'label' => 'รอ Sale เปิดใบสั่งขาย', 'color' => '#FFFF00');
 		}
 		return array('key' => 'waiting_send', 'label' => 'รอส่งข้อมูลให้ Sale', 'color' => '#FF0000');
+	}
+}
+
+if (!function_exists('po_edit_block_reason')) {
+	/** ใบจริงที่แก้ต่อไม่ได้ (ยกเลิก / ออกใบสั่งขายแล้ว) → ข้อความเหตุผล ; แก้ได้ → '' */
+	function po_edit_block_reason(array $row)
+	{
+		$refId = (string)$row['ref_id'];
+		if ((string)($row['cancel_ckk'] ?? '0') === '1') {
+			return 'ใบ PO เลขที่ ' . $refId . ' ถูกยกเลิกแล้ว';
+		}
+		$so = trim((string)($row['ref_so'] ?? ''));
+		if ((string)($row['open_so'] ?? '0') === '1' || $so !== '') {
+			return 'ใบ PO เลขที่ ' . $refId . ' ออกใบสั่งขายไปแล้ว' . ($so !== '' ? ' (' . $so . ')' : '');
+		}
+		return '';
 	}
 }
 
@@ -870,10 +885,11 @@ if (!function_exists('po_persist')) {
 	 *   'draft'     → Save Draft: ไม่บังคับกรอกครบ, status Draft, send_sale 0, จองเลขตั้งแต่ครั้งแรก
 	 *   'submit'    → Submit: validate ครบ, status Submitted, send_sale 1
 	 *   'create_so' → เหมือน submit (หน้าเว็บ redirect ต่อไปออกใบสั่งขาย)
+	 *   'update'    → แก้ใบที่ Submit แล้ว: validate ครบ, คง Submitted และสถานะส่ง Sale เดิม
 	 *   'legacy'    → ฟอร์มเดิม register_ponbm.php: ใบจริงทันทีแต่ยังไม่ส่ง Sale (send_sale 0)
 	 *                 ตามพฤติกรรมเดิม บังคับแค่เลขที่ PO + ห้ามซ้ำ
 	 *
-	 * มี ref_id → ต้องเป็น Draft อยู่ (ล็อกแถวก่อนแก้) กันการ Submit ซ้ำ/ทับใบที่ส่งไปแล้ว
+	 * มี ref_id → ล็อกแถวก่อนแก้ แล้วตรวจตาม po_persist_existing (Draft ↔ ใบจริงที่ยังแก้ได้)
 	 * ไม่มี ref_id → จองเลขใหม่ (GET_LOCK + unique key) แล้วเขียนรายการ/ไฟล์ในทรานแซกชันถัดไป
 	 *   ถ้าขั้นหลังล้มเหลว ลบหัวเอกสารที่เพิ่งจองและไฟล์ที่ย้ายแล้วทิ้ง ไม่ให้เหลือขยะ
 	 *
@@ -882,7 +898,7 @@ if (!function_exists('po_persist')) {
 	 */
 	function po_persist($conn, $mode, array $post, array $files, array $session, array $options = array())
 	{
-		if (!in_array($mode, array('draft', 'submit', 'create_so', 'legacy'), true)) {
+		if (!in_array($mode, array('draft', 'submit', 'create_so', 'update', 'legacy'), true)) {
 			throw new PoValidationException('ไม่รู้จักคำสั่งบันทึก');
 		}
 		if (!po_has_status_column($conn)) {
@@ -892,6 +908,9 @@ if (!function_exists('po_persist')) {
 
 		$isFinal = ($mode !== 'draft');
 		$refId = ($mode === 'legacy') ? '' : po_post_value($post, 'ref_id');
+		if ($mode === 'update' && $refId === '') {
+			throw new PoValidationException('ไม่พบเลขที่เอกสารที่จะอัปเดต');
+		}
 
 		$header = po_header_from_post($post, $session);
 		$items = po_collect_items_from_post($post, $mode === 'legacy' ? 'pm' : 'pm_year');
@@ -931,7 +950,7 @@ if (!function_exists('po_persist')) {
 			}
 
 			if ($refId !== '') {
-				return po_persist_existing($conn, $refId, $header, $items, $plan, $moveFile);
+				return po_persist_existing($conn, $mode, $refId, $header, $items, $plan, $moveFile);
 			}
 			return po_persist_new($conn, $header, $items, $plan, $moveFile);
 		} finally {
@@ -943,7 +962,13 @@ if (!function_exists('po_persist')) {
 }
 
 if (!function_exists('po_persist_existing')) {
-	function po_persist_existing($conn, $refId, array $header, array $items, array $plan, $moveFile)
+	/**
+	 * Draft      → ใช้ draft / submit / create_so (ยังไม่มี update)
+	 * ใบจริง     → ห้ามถอยกลับเป็น draft และต้องยังแก้ได้ (po_edit_block_reason) ณ ตอนที่ล็อกแถวแล้ว
+	 *   update           → คงสถานะส่ง Sale เดิมทั้งหมด
+	 *   submit/create_so → ใบที่ส่ง Sale แล้วคงเวลาส่งเดิม ; ใบเก่าที่ยังไม่ส่ง (send_sale 0) ส่งตอนนี้
+	 */
+	function po_persist_existing($conn, $mode, $refId, array $header, array $items, array $plan, $moveFile)
 	{
 		$stored = array('created' => array(), 'obsolete' => array());
 		mysqli_begin_transaction($conn);
@@ -952,8 +977,25 @@ if (!function_exists('po_persist_existing')) {
 			if ($original === null) {
 				throw new PoValidationException('ไม่พบเอกสารเลขที่ ' . $refId);
 			}
-			if (!po_is_draft($original)) {
-				throw new PoValidationException('เอกสารเลขที่ ' . $refId . ' ถูกส่งไปแล้ว ไม่สามารถบันทึกทับได้ กรุณาโหลดหน้าใหม่');
+			if (po_is_draft($original)) {
+				if ($mode === 'update') {
+					throw new PoValidationException('เอกสารเลขที่ ' . $refId . ' ยังเป็น Draft อยู่ กรุณาโหลดหน้าใหม่');
+				}
+			} else {
+				if ($mode === 'draft') {
+					throw new PoValidationException('เอกสารเลขที่ ' . $refId . ' ถูกส่งไปแล้ว ไม่สามารถบันทึกเป็นร่างได้ กรุณาโหลดหน้าใหม่');
+				}
+				$blockReason = po_edit_block_reason($original);
+				if ($blockReason !== '') {
+					throw new PoValidationException($blockReason . ' จึงแก้ไขไม่ได้');
+				}
+				$wasSent = ((string)$original['send_sale'] === '1');
+				if ($mode === 'update') {
+					$header['send_sale'] = $wasSent ? 1 : 0;
+					$header['send_saledate'] = (string)$original['send_saledate'];
+				} else if ($wasSent) {
+					$header['send_saledate'] = (string)$original['send_saledate'];
+				}
 			}
 
 			// ผู้สร้าง/เวลาสร้างเป็นของร่างครั้งแรกเสมอ
@@ -1068,14 +1110,7 @@ if (!function_exists('po_load_for_sale_order')) {
 		if (po_is_draft($po)) {
 			return array('po' => $po, 'error' => 'ใบ PO เลขที่ ' . $refId . ' ยังเป็น Draft อยู่ ต้อง Submit ก่อนจึงออกใบสั่งขายได้');
 		}
-		if ((string)$po['cancel_ckk'] === '1') {
-			return array('po' => $po, 'error' => 'ใบ PO เลขที่ ' . $refId . ' ถูกยกเลิกแล้ว');
-		}
-		if ((string)$po['open_so'] === '1' || trim((string)$po['ref_so']) !== '') {
-			$so = trim((string)$po['ref_so']);
-			return array('po' => $po, 'error' => 'ใบ PO เลขที่ ' . $refId . ' ออกใบสั่งขายไปแล้ว' . ($so !== '' ? ' (' . $so . ')' : ''));
-		}
-		return array('po' => $po, 'error' => '');
+		return array('po' => $po, 'error' => po_edit_block_reason($po));
 	}
 }
 

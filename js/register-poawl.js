@@ -287,7 +287,8 @@
 	var actionLabels = {
 		draft: { busy: 'กำลังบันทึก...', fail: 'บันทึกร่างไม่สำเร็จ' },
 		submit: { busy: 'กำลังส่ง...', fail: 'Submit ไม่สำเร็จ' },
-		create_so: { busy: 'กำลังบันทึก...', fail: 'ออกใบสั่งขายไม่สำเร็จ' }
+		create_so: { busy: 'กำลังบันทึก...', fail: 'ออกใบสั่งขายไม่สำเร็จ' },
+		update: { busy: 'กำลังบันทึก...', fail: 'อัปเดตไม่สำเร็จ' }
 	};
 
 	function setButtonsBusy(isBusy, activeButton) {
@@ -359,39 +360,18 @@
 			return;
 		}
 
+		// Update ใบจริง — ตรวจครบเหมือน Submit แต่บันทึกทันทีไม่ต้องยืนยัน
+		if (action === 'update') {
+			send(action, button);
+			return;
+		}
+
 		var dialog = action === 'submit'
-			? confirmDialog('ยืนยันส่งใบ PO ?', 'ใบ PO จะถูกส่งให้ Sale และแก้ไขในหน้านี้ไม่ได้อีก', 'Submit')
+			? confirmDialog('ยืนยันส่งใบ PO ?', 'ใบ PO จะถูกส่งให้ Sale (ยังแก้ไขได้ด้วยปุ่ม Update จนกว่าจะออกใบสั่งขาย)', 'Submit')
 			: confirmDialog('ออกใบสั่งขาย ?', 'ระบบจะบันทึกและส่งใบ PO นี้ แล้วเปิดหน้าออกใบสั่งขายพร้อมข้อมูลจาก PO', 'ออกใบสั่งขาย');
 		dialog.then(function(confirmed) {
 			if (confirmed && !busy) send(action, button);
 		});
-	};
-
-	/* ===================== Preview — POST ค่าฟอร์มสดไป report_po.php ไม่แตะฐานข้อมูล ===================== */
-	window.poOpenPreview = function() {
-		var form = document.forms.frmMain;
-		var target = 'po_preview_' + Date.now();
-		var previewWindow = window.open('', target);
-		if (!previewWindow) {
-			notify('เปิด Preview ไม่ได้', 'เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง', 'warning');
-			return;
-		}
-
-		var flag = document.createElement('input');
-		flag.type = 'hidden';
-		flag.name = '_report_preview';
-		flag.value = '1';
-		form.appendChild(flag);
-
-		var original = { action: form.getAttribute('action'), target: form.getAttribute('target') };
-		form.setAttribute('action', 'report_po.php');
-		form.setAttribute('target', target);
-		HTMLFormElement.prototype.submit.call(form);
-
-		form.setAttribute('action', original.action);
-		if (original.target === null) form.removeAttribute('target');
-		else form.setAttribute('target', original.target);
-		flag.remove();
 	};
 
 	/* ===================== เริ่มต้นหน้า ===================== */
