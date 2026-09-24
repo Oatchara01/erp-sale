@@ -14,6 +14,8 @@ require_once __DIR__ . '/includes/po_repo.php';
  * บันทึกทุกปุ่มผ่าน register_posave1.php (po_action) → includes/po_repo.php
  * =================================================================== */
 $poRequestedRefId = isset($_GET['ref_id']) && !is_array($_GET['ref_id']) ? trim((string)$_GET['ref_id']) : '';
+// คัดลอกใบเดิม (?copy_from=) — ใช้เฉพาะตอนสร้างใบใหม่ (ไม่มี ref_id)
+$poCopyFromRefId = ($poRequestedRefId === '' && isset($_GET['copy_from']) && !is_array($_GET['copy_from'])) ? trim((string)$_GET['copy_from']) : '';
 ?>
 <?php include("head.php"); ?>
 
@@ -68,6 +70,18 @@ if ($poRequestedRefId !== '') {
 	$poSavedItemsForForm = po_items_for_form(po_load_items($conn, $savedPo['ref_id']));
 }
 
+/* คัดลอกใบเดิม: prefill หัวเอกสาร + รายการสินค้าเป็นใบใหม่ ($savedPo ยังเป็น null → เลขใหม่ / วันนี้ / สถานะใบใหม่)
+ * ไม่คัดลอกเลข PO ลูกค้า, ไฟล์แนบ และ flag สถานะ */
+$poCopySource = null;
+if ($poCopyFromRefId !== '') {
+	$poCopySource = po_load_document($conn, $poCopyFromRefId);
+	if ($poCopySource === null) {
+		$poStopPage('ไม่พบเอกสารเลขที่ ' . $poCopyFromRefId . ' สำหรับคัดลอก', array($poBackLabel => $poBackUrl));
+	}
+	$poSavedItemsForForm = po_items_for_form(po_load_items($conn, $poCopySource['ref_id']));
+}
+$poCopySkipKeys = array('ref_id', 'po_no', 'date_po', 'status_doc', 'cancel_ckk', 'remark_cancel', 'ref_so');
+
 /* new = ใบใหม่ | draft = ร่าง | cancelled = ยกเลิกแล้ว | opened = ออกใบสั่งขายแล้ว | returned = Sale ส่งกลับ
  * pending_send = ใบจริงที่ยังไม่ส่ง Sale (ใบเก่า) | submitted = ส่ง Sale แล้ว
  * cancelled / opened = อ่านอย่างเดียว (ลำดับเดียวกับ po_status_info) */
@@ -104,8 +118,15 @@ if ($poLatestLog === null && $poMode === 'cancelled' && trim((string)($savedPo['
 	$poLatestLog = array('reason' => (string)$savedPo['remark_cancel']) + po_status_log_display('Cancelled');
 }
 $poDisplayRefId = $poIsExisting ? (string)$savedPo['ref_id'] : po_peek_next_ref_id($conn);
-$poValue = function ($key, $default = '') use ($savedPo) {
-	return $savedPo !== null && isset($savedPo[$key]) ? (string)$savedPo[$key] : $default;
+$poValue = function ($key, $default = '') use ($savedPo, $poCopySource, $poCopySkipKeys) {
+	if ($savedPo !== null) {
+		return isset($savedPo[$key]) ? (string)$savedPo[$key] : $default;
+	}
+	if ($poCopySource !== null && isset($poCopySource[$key]) && !in_array($key, $poCopySkipKeys, true)
+		&& strpos($key, 'img_po') !== 0 && strpos($key, 'send_sale') !== 0 && strpos($key, 'open_so') !== 0) {
+		return (string)$poCopySource[$key];
+	}
+	return $default;
 };
 
 $poTypeDoc = $poValue('type_doc', '3');
