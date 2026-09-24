@@ -1,0 +1,253 @@
+/* Page-specific styles for register_poawl.php (ใบ PO)
+   ต่อยอดจาก css/so-core.css + css/register-suphos.css — ไฟล์นี้มีเฉพาะส่วนที่หน้า PO ต่างจริง ๆ
+   ทุก selector ผูกกับ .po-page / .po-* เพื่อไม่ให้หน้า SO เปลี่ยนตาม */
+
+.po-layout {
+	max-width: 1096px;
+	margin: 0 auto;
+	padding-left: 16px;
+	padding-right: 16px;
+	box-sizing: border-box;
+}
+
+.po-page .so-card {
+	min-width: 0;
+	margin-bottom: 24px;
+}
+
+.so-title.po-title {
+	font-size: 24px;
+}
+
+.po-required {
+	color: #DC3545;
+}
+
+.po-status-pill {
+	display: inline-flex;
+	align-items: center;
+	height: 22px;
+	padding: 0 10px;
+	border-radius: 11px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.po-status-pill.is-draft {
+	background: #FFF4E5;
+	color: #B25E00;
+}
+
+.po-section-head {
+	margin-bottom: 20px;
+}
+
+.po-section-head .so-divider {
+	border: 0;
+	border-top: 2px solid var(--so-divider);
+	margin: 8px 0 0;
+}
+
+/* ===== การ์ดข้อมูลเอกสาร ===== */
+.po-doc-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0 24px;
+}
+
+/* หัว "ข้อมูลเอกสาร" คั่นกลางการ์ด — แถวบน (บริษัท/แผนก/วันที่) อยู่เหนือหัว, เลขที่ PO อยู่ใต้หัว */
+.po-doc-subhead {
+	margin-top: 4px;
+}
+
+.po-doc-grid .so-field-group {
+	min-width: 0;
+}
+
+.po-span-2 {
+	grid-column: span 2;
+}
+
+.po-page .so-input,
+.po-page .so-select,
+.po-page .so-textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* ===== การ์ดลูกค้า ===== */
+.po-bill-name {
+	margin: 24px 0 0;
+}
+
+/* ===== การ์ดสินค้า ===== ตารางกว้างเกินจอมือถือได้ แต่ต้องเลื่อนในกรอบตารางเท่านั้น */
+.po-items-card {
+	overflow: hidden;
+}
+
+.po-items-card .so-product-search-col {
+	min-width: 0 !important;
+	flex: 1 1 240px !important;
+}
+
+.po-items-card .pf-search-bar {
+	max-width: 100%;
+}
+
+.po-items-card .so-product-count {
+	font-size: 16px;
+	color: var(--so-muted);
+}
+
+/* ===== หมายเหตุ ===== */
+.po-description-field {
+	margin: 20px 0 0;
+}
+
+/* ===== แนบไฟล์ ===== ปุ่ม/รายการไฟล์ชุดเดียวกับแท็บแนบไฟล์ของหน้า SO */
+.po-attach-btn {
+	background-color: #EFEBFF;
+	color: var(--so-primary);
+	border: none;
+	border-radius: 24px;
+	min-height: 44px;
+	padding: 10px 24px;
+	font-family: 'Prompt', sans-serif;
+	font-weight: 500;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.po-attach-btn:hover {
+	background-color: #E3DCFB;
+}
+
+.po-attach-btn:focus-visible,
+.po-page .btn-so-submit:focus-visible,
+.po-page .btn-so-draft:focus-visible,
+.po-page .btn-so-cancel-nav:focus-visible,
+.po-page .btn-preview-so:focus-visible,
+.po-page .btn-add-customer-pill:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.45);
+	outline-offset: 2px;
+}
+
+.po-attach-hint {
+	margin: 12px 0 20px;
+	font-size: 13px;
+	color: #7A767D;
+}
+
+.po-attach-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+
+/* ===== Sticky footer ===== */
+.po-page .po-sticky-actions {
+	bottom: 0;
+	z-index: 50;
+	padding: 12px 16px;
+}
+
+.po-sticky-actions-inner {
+	max-width: 1096px;
+	padding: 0 16px; /* แนวเดียวกับขอบการ์ด (.po-layout มี gutter 16px) */
+	justify-content: flex-end;
+	align-items: center;
+	flex-wrap: wrap;
+	row-gap: 12px;
+}
+
+.po-actions-main {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: flex-end;
+}
+
+.po-page .po-sticky-actions button {
+	min-height: 44px;
+	justify-content: center;
+}
+
+.po-page .po-action-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+/* ===== Popup เครดิตเทอม ===== */
+.po-credit-term-popup-box {
+	max-width: 760px;
+}
+
+.po-credit-term-table-wrap {
+	overflow-x: auto;
+}
+
+.po-credit-term-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+
+.po-credit-term-table th,
+.po-credit-term-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--so-divider);
+	text-align: right;
+	white-space: nowrap;
+}
+
+.po-credit-term-table th:first-child,
+.po-credit-term-table td:first-child {
+	text-align: left;
+}
+
+.po-credit-term-table th {
+	color: var(--so-primary);
+	font-weight: 500;
+}
+
+.po-swal-multiline {
+	white-space: pre-line;
+	text-align: left;
+}
+
+@media (max-width: 768px) {
+	.po-doc-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.po-span-2 {
+		grid-column: auto;
+	}
+
+	.po-sticky-actions-inner,
+	.po-actions-main {
+		width: 100%;
+	}
+
+	.po-actions-main > button,
+	.po-btn-back {
+		flex: 1 1 100%;
+	}
+}
+
+@media (max-width: 480px) {
+	.po-layout {
+		padding-left: 12px;
+		padding-right: 12px;
+	}
+
+	.po-page .so-card {
+		padding: 16px 14px;
+	}
+
+	.so-title.po-title {
+		font-size: 20px;
+	}
+}

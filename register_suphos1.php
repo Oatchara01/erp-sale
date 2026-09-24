@@ -593,8 +593,29 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$time_range = $_POST["time_range"] ?? '';
 	$status_comment_val = $_POST["status_comment"] ?? '';
 
-	if (!$isDraftRequest && $po_no != '') {
-		$strSQL23 = "SELECT * FROM hos__po WHERE po_no = '" . $po_no . "'";
+	// ออกใบสั่งขายจากใบ PO (register_suphos.php?ref_id=PO... → hidden ref_po)
+	// ตรวจก่อนเริ่มบันทึกว่าใบ PO ยังเปิด SO ได้ (Submitted, ไม่ยกเลิก, ยังไม่มี SO) — ผูกจริงใน transaction ด้านล่าง
+	require_once __DIR__ . '/includes/po_repo.php';
+	$refPoFromPost = (isset($_POST['ref_po']) && !is_array($_POST['ref_po'])) ? trim((string)$_POST['ref_po']) : '';
+	$linkedPo = null;
+	if ($refPoFromPost !== '') {
+		$poLink = po_load_for_sale_order($conn, $refPoFromPost);
+		if ($poLink['po'] === null || $poLink['error'] !== '') {
+			$poLinkMessage = $poLink['error'] !== '' ? $poLink['error'] : 'ไม่พบใบ PO เลขที่ ' . $refPoFromPost;
+			if ($isDraftRequest) {
+				echo json_encode(array('success' => false, 'message' => $poLinkMessage), JSON_UNESCAPED_UNICODE);
+				exit();
+			}
+			echo "<script language=\"JavaScript\">alert(" . json_encode($poLinkMessage, JSON_UNESCAPED_UNICODE) . ");window.location='register_suphos.php';</script>";
+			exit();
+		}
+		$linkedPo = $poLink['po'];
+	}
+
+	// ใบที่เปิดมาจาก PO ใบเดียวกันไม่นับว่าเลข PO ซ้ำ ; ใบ PO ที่ยังเป็น Draft ไม่ใช่เอกสารจริง จึงไม่นับ
+	$isOwnLinkedPoNo = ($linkedPo !== null && (string)$po_no === (string)$linkedPo['po_no']);
+	if (!$isDraftRequest && $po_no != '' && !$isOwnLinkedPoNo) {
+		$strSQL23 = "SELECT * FROM hos__po WHERE po_no = '" . mysqli_real_escape_string($conn, $po_no) . "'" . po_not_draft_sql($conn);
 		$objQuery23 = mysqli_query($conn, $strSQL23);
 		$num = mysqli_num_rows($objQuery23);
 
@@ -859,14 +880,18 @@ $save="Update  hos__jongproduct set  close_jong = '1'    where  iv_no LIKE '%".$
 $qsave=mysqli_query($conn,$save);
 			
 	}	*/
-		if ($po_no != '') {
-			$sql1 = "SELECT ref_id FROM hos__po where po_no ='" . $po_no . "'";
-			$qry1 = mysqli_query($conn, $sql1) or die(mysqli_error());
-			$rs1 = mysqli_fetch_assoc($qry1);
+		if ($linkedPo !== null) {
+			// อัปเดตแบบมีเงื่อนไข (open_so = 0) — ถ้ามีคนออก SO จาก PO ใบนี้แซงไปแล้ว ต้องล้มทั้ง transaction
+			if (!po_mark_sale_order_opened($conn, (string)$linkedPo['ref_id'], $ref_id, $add_by, $add_date)) {
+				throw new mysqli_sql_exception('ใบ PO เลขที่ ' . $linkedPo['ref_id'] . ' ออกใบสั่งขายไปแล้ว');
+			}
+		} else if ($po_no != '') {
+			// ใบ PO ที่ยังเป็น Draft ไม่ถูกผูก (po_find_ref_by_po_no ไม่นับ Draft)
+			$poRefByNo = po_find_ref_by_po_no($conn, $po_no);
 
-			if (!empty($rs1["ref_id"])) {
+			if ($poRefByNo !== '') {
 
-				$save = "Update  hos__po set  open_so='1',open_sodate='" . $add_date . "',ref_so = '" . $ref_id . "',name_open='" . $add_by . "'    where  ref_id = '" . $rs1["ref_id"] . "'";
+				$save = "Update  hos__po set  open_so='1',open_sodate='" . $add_date . "',ref_so = '" . $ref_id . "',name_open='" . $add_by . "'    where  ref_id = '" . mysqli_real_escape_string($conn, $poRefByNo) . "'";
 				$qsave = mysqli_query($conn, $save);
 			}
 		}

@@ -2,13 +2,42 @@
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
+require_once __DIR__ . '/includes/po_repo.php';
 
+// ตัวกรองสถานะ (key ตาม po_status_info()) — Draft แสดงเฉพาะหน้านี้ ไม่ไหลไปหน้า Sale/SO
+$poStatusFilters = array(
+	'' => 'ทั้งหมด',
+	'draft' => 'Draft',
+	'waiting_send' => 'รอส่งข้อมูลให้ Sale',
+	'waiting_so' => 'รอ Sale เปิดใบสั่งขาย',
+	'opened' => 'เปิดใบสั่งขายแล้ว',
+	'cancelled' => 'ยกเลิก',
+);
+$status_filter = isset($_GET['status_filter']) && !is_array($_GET['status_filter']) && isset($poStatusFilters[$_GET['status_filter']]) ? $_GET['status_filter'] : '';
+$poHasStatusColumn = po_has_status_column($conn);
 ?>
+<?php if (isset($_GET['submitted']) && !is_array($_GET['submitted']) && $_GET['submitted'] !== '') { ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	var cleanUrl = new URL(window.location.href);
+	cleanUrl.searchParams.delete('submitted');
+	window.history.replaceState({}, document.title, cleanUrl);
+	Swal.fire({
+		title: 'ส่งใบ PO ให้ Sale เรียบร้อยแล้ว',
+		text: <?php echo json_encode('เลขที่อ้างอิง: ' . (string)$_GET['submitted'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
+		icon: 'success',
+		confirmButtonColor: '#612989',
+		confirmButtonText: 'ตกลง'
+	});
+});
+</script>
+<?php } ?>
 <body>
 <form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME'];?>">
 <div class="w3-white">
 <div class="w3-container w3-padding-large">
-<div class="w3-panel w3-light-grey"><h3>Status เอกสาร PO</h3></div>
+<div class="w3-panel w3-light-grey"><h3 style="display:inline-block;">Status เอกสาร PO</h3> <a href="register_poawl.php" class="w3-button w3-teal w3-right" style="margin-top:12px;">+ สร้างใบ PO</a></div>
 	
 <div class="w3-bar w3-quarter">
 
@@ -41,7 +70,15 @@ while($objResuut5 = mysqli_fetch_array($objQuery5))
 </div>
 
 <div class="w3-bar w3-quarter">
-ค้นหา : <input name="Keyword" class="w3-input" style="width:90%;" type="text" id="Keyword" value="<?php echo $Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '';?>"></div>
+ค้นหา : <input name="Keyword" class="w3-input" style="width:90%;" type="text" id="Keyword" value="<?php echo htmlspecialchars($Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '', ENT_QUOTES, 'UTF-8');?>"></div>
+
+<div class="w3-bar w3-quarter">
+สถานะ :
+<select name="status_filter" id="status_filter" class="w3-input" style="width:90%;">
+<?php foreach ($poStatusFilters as $poFilterKey => $poFilterLabel) { ?>
+<option value="<?php echo $poFilterKey; ?>" <?php echo $poFilterKey === $status_filter ? 'selected' : ''; ?>><?php echo $poFilterLabel; ?></option>
+<?php } ?>
+</select></div>
 	</div>
 	</p>
 <center><input type="submit" class="w3-button w3-teal" value="Search"></center>
@@ -87,23 +124,39 @@ while($objResuut5 = mysqli_fetch_array($objQuery5))
 
 $strSQL = "SELECT *  FROM hos__po  where  1";
 
-if($start_date !=""){ 
-    $strSQL .= ' AND date_po >= "'.$start_date.'"'; 
+if($start_date !=""){
+    $strSQL .= ' AND date_po >= "'.mysqli_real_escape_string($conn, $start_date).'"';
 }
 
-if($end_date !=""){ 
-    $strSQL .= ' AND date_po <= "'.$end_date.'"'; 
+if($end_date !=""){
+    $strSQL .= ' AND date_po <= "'.mysqli_real_escape_string($conn, $end_date).'"';
 }
 
-if($sale_code !=""){ 
-    $strSQL .= ' AND sale_code = "'.$sale_code.'"'; 
+if($sale_code !=""){
+    $strSQL .= ' AND sale_code = "'.mysqli_real_escape_string($conn, $sale_code).'"';
 }
 
-if($Keyword !=""){ 
-	$strSQL .= ' AND bill_name  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or  po_no  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or ref_id  LIKE "%'.$Keyword.'%"'; 
-	$strSQL .= ' or ref_so  LIKE "%'.$Keyword.'%"'; 
+if($Keyword !=""){
+	// ครอบวงเล็บ — เดิม OR หลุดออกนอกเงื่อนไขอื่นทั้งหมด (วันที่/Sale/สถานะ) ทำให้ตัวกรองอื่นไม่มีผล
+	$safeKeyword = mysqli_real_escape_string($conn, $Keyword);
+	$strSQL .= ' AND (bill_name  LIKE "%'.$safeKeyword.'%"';
+	$strSQL .= ' or  po_no  LIKE "%'.$safeKeyword.'%"';
+	$strSQL .= ' or ref_id  LIKE "%'.$safeKeyword.'%"';
+	$strSQL .= ' or ref_so  LIKE "%'.$safeKeyword.'%")';
+}
+
+// เงื่อนไขตามลำดับเดียวกับ po_status_info()
+$poNotDraft = $poHasStatusColumn ? " AND status_doc <> 'Draft'" : '';
+if ($status_filter === 'draft') {
+	$strSQL .= $poHasStatusColumn ? " AND status_doc = 'Draft'" : " AND 0";
+} else if ($status_filter === 'cancelled') {
+	$strSQL .= $poNotDraft . " AND cancel_ckk = '1'";
+} else if ($status_filter === 'opened') {
+	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so = '1'";
+} else if ($status_filter === 'waiting_so') {
+	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so <> '1' AND send_sale = '1'";
+} else if ($status_filter === 'waiting_send') {
+	$strSQL .= $poNotDraft . " AND cancel_ckk <> '1' AND open_so <> '1' AND send_sale <> '1'";
 }
 		
 
@@ -199,22 +252,21 @@ while($objResult = mysqli_fetch_array($objQuery))
 				
 				<td ><div align="left"><?php echo Datethai($objResult["send_saledate"]);   ?> <?php echo substr($objResult["send_saledate"],10); ?></div></td>
 				
-					<?php  if($objResult["cancel_ckk"]=='1'){ ?>
-					<td  bgcolor="#FF0000" >ยกเลิก</td>
-						<?php  }else if($objResult["send_sale"]=='0'){ ?>
-					<td  bgcolor="#FF0000" >รอส่งข้อมุลให้ Sale	</td>
-						<?php  }else if($objResult["send_sale"]=='1' and $objResult["open_so"]=='0'){ ?>
-						<td  bgcolor="#FFFF00" >รอ Sale เปิดใบสั่งขาย</td>
-						<?php }else if($objResult["open_so"]=='1'){ ?>
-						<td  bgcolor="#00FF00" >เปิดใบสั่งขายแล้ว</td>
-						<?php } ?>
-				
-				
-				
-<td  ><a href="register_poadmin_edit.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a></td>
+					<?php $poStatus = po_status_info($objResult); $poRowIsDraft = ($poStatus['key'] === 'draft'); ?>
+					<td  bgcolor="<?php echo $poStatus['color']; ?>" ><?php echo $poStatus['label']; ?></td>
+
+
+
+<td  >
+<?php if ($poRowIsDraft) { ?>
+<a href="register_poawl.php?ref_id=<?php echo urlencode($objResult["ref_id"]);?>" title="แก้ไขร่าง"><img src="img/edit-icon.png" width="23" height="23" border="0" alt="แก้ไขร่าง" /></a>
+<?php } else { ?>
+<a href="register_poadmin_edit.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+<?php } ?>
+</td>
 <td  >
 	<?php if ($_SESSION['code']=='ACC' or $_SESSION['code']=='ST'){  }else{?>
-	<?php if($objResult["open_so"]=='0'){ ?>
+	<?php if($objResult["open_so"]=='0' && !$poRowIsDraft){ ?>
 	<a href="register_poclose.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/create.png" width="23" height="23" border="0" /></a></td>
 					<?php }
 																		  }
@@ -238,13 +290,13 @@ while($objResult = mysqli_fetch_array($objQuery))
       <?
 	if($Prev_Page)
 	{
-		echo " <a href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'><< Back</span></a> ";
+		echo " <a href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code&status_filter=$status_filter'><span class='style40'><< Back</span></a> ";
 	}
 
 	for($i=1; $i<=$Num_Pages; $i++){
 		if($i != $Page)
 		{
-			echo "[ <a href='$_SERVER[SCRIPT_NAME]?Page=$i&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'>$i</span></a> ]";
+			echo "[ <a href='$_SERVER[SCRIPT_NAME]?Page=$i&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code&status_filter=$status_filter'><span class='style40'>$i</span></a> ]";
 			
 
 		}
@@ -255,7 +307,7 @@ while($objResult = mysqli_fetch_array($objQuery))
 	}
 	if($Page!=$Num_Pages)
 	{
-		echo " <a href ='$_SERVER[SCRIPT_NAME]?Page=$Next_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'>Next>></span></a> ";
+		echo " <a href ='$_SERVER[SCRIPT_NAME]?Page=$Next_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code&status_filter=$status_filter'><span class='style40'>Next>></span></a> ";
 	}
 
 	

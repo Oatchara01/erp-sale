@@ -1229,6 +1229,48 @@ include("head.php"); ?>
 		}
 	}
 
+	// ออกใบสั่งขายจากใบ PO (ปุ่ม "ออกใบสั่งขาย" ของ register_poawl.php → ?ref_id=PO...)
+	// ref_id ของหน้านี้ยังหมายถึงเลข SO เสมอ — ค้น hos__so ก่อนตามเดิม fallback นี้ทำงานเฉพาะเมื่อไม่พบ SO
+	// แต่พบใบ PO แล้วสลับเป็นโหมดสร้าง SO ใหม่ที่ prefill จาก PO (ไม่ตั้ง $savedSo จึงไม่ทับ SO ใด ๆ)
+	$poPrefill = null;
+	$fromPoRefId = "";
+	$fromPoBlockMessage = "";
+	if ($savedRefId !== "" && $savedSo === null) {
+		require_once __DIR__ . '/includes/po_repo.php';
+		$poRequestedRef = trim((string)$_GET["ref_id"]);
+		$poLookup = po_load_for_sale_order($conn, $poRequestedRef);
+		if ($poLookup['po'] !== null) {
+			$savedRefId = "";
+			$loadRefId = "";
+			$savedRegister = null;
+			$savedOtherBill = null;
+			$savedCommentSo = null;
+			$savedCommentSoItems = array();
+			$savedTransaction = null;
+			$savedDeliveryPrint = null;
+			$savedDeliveryBill = null;
+			$savedShippingAddresses = array();
+			$savedProducts = array();
+			$soDocumentLogRows = array();
+
+			if ($poLookup['error'] !== '') {
+				// ใบ PO ที่เปิด SO ไปแล้ว/ยังเป็น Draft/ยกเลิก — ห้ามเปิดฟอร์ม SO ใหม่จากลิงก์นี้ กันออก SO ซ้ำ
+				$fromPoBlockMessage = $poLookup['error'];
+			} else {
+				$poSource = $poLookup['po'];
+				$fromPoRefId = (string)$poSource['ref_id'];
+				$poPrefill = array(
+					'type_doc' => (string)$poSource['type_doc'],
+					'bill_id' => (string)$poSource['bill_id'],
+					'bill_name' => (string)$poSource['bill_name'],
+					'sale_code' => (string)$poSource['sale_code'],
+					'po_no' => (string)$poSource['po_no'],
+				);
+				$savedProductsForForm = po_items_for_form(po_load_items($conn, $fromPoRefId));
+			}
+		}
+	}
+
 	if (count($savedProducts) > 0) {
 		foreach ($savedProducts as $savedProduct) {
 			$savedProductsForForm[] = array(
@@ -1610,6 +1652,21 @@ include("head.php"); ?>
 				}
 			});
 		</script>
+	<?php } ?>
+
+	<?php if ($fromPoBlockMessage !== "") { ?>
+		<div class="w3-panel w3-pale-red w3-leftbar w3-border-red" style="max-width:1096px;margin:24px auto;box-sizing:border-box;font-family:'Prompt',sans-serif;">
+			<p><?php echo so_saved_h($fromPoBlockMessage); ?></p>
+			<p><a href="report_po.php?ref_id=<?php echo urlencode(trim((string)$_GET["ref_id"])); ?>" target="_blank" rel="noopener">ดูใบ PO</a></p>
+		</div>
+		<?php include 'foot.php'; ?>
+		<?php exit(); ?>
+	<?php } ?>
+	<?php if ($fromPoRefId !== "") { ?>
+		<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" role="status" style="max-width:1096px;margin:16px auto 0;box-sizing:border-box;font-family:'Prompt',sans-serif;">
+			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้าและรายการสินค้าจากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก
+				(<a href="report_po.php?ref_id=<?php echo urlencode($fromPoRefId); ?>" target="_blank" rel="noopener">ดูใบ PO</a>)</p>
+		</div>
 	<?php } ?>
 
 	<!--action="register_office1.php"-->
@@ -2084,6 +2141,8 @@ include("head.php"); ?>
 
 			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
 			<input type="hidden" name="ref_ren" value="<?php echo so_saved_h($fromRentalRefId); ?>">
+			<!-- ใบ PO ต้นทาง (ออกใบสั่งขายจาก PO) — register_suphos1.php ใช้ผูก ref_so กลับและกันออก SO ซ้ำ -->
+			<input type="hidden" name="ref_po" value="<?php echo so_saved_h($fromPoRefId); ?>">
 			<input type="hidden" name="type" value="<?php echo so_saved_h($rentalConversionType); ?>">
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
@@ -7167,8 +7226,11 @@ include("head.php"); ?>
 	if ($soJsPrefillSource === null && $rentalPrefill !== null) {
 		$soJsPrefillSource = $rentalPrefill;
 	}
+	if ($soJsPrefillSource === null && $poPrefill !== null) {
+		$soJsPrefillSource = $poPrefill;
+	}
 	?>
-	<?php if ($savedSo !== null || $copySrcSo !== null || $rentalPrefill !== null): ?>
+	<?php if ($savedSo !== null || $copySrcSo !== null || $rentalPrefill !== null || $poPrefill !== null): ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				var savedSo = <?php echo json_encode($soJsPrefillSource); ?>;

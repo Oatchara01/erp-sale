@@ -3,6 +3,14 @@ include "dbconnect.php";
 include ("head.php");
 
 $ref_id = $_GET['ref_id'];
+
+// ใบ Draft ต้องไป Submit จากหน้า register_poawl.php เท่านั้น — ห้ามส่ง Sale ทางลัดจากลิงก์นี้
+require_once __DIR__ . '/includes/po_repo.php';
+$poForSend = po_has_status_column($conn) ? po_load_document($conn, (string)$ref_id) : null;
+if ($poForSend !== null && po_is_draft($poForSend)) {
+	echo "<script language=\"JavaScript\">alert('ใบ PO นี้ยังเป็น Draft กรุณา Submit จากหน้าใบ PO');window.location=" . json_encode('register_poawl.php?ref_id=' . rawurlencode((string)$ref_id)) . ";</script>";
+	exit();
+}
 $sale_code = $_GET['sale_code'];
 $bill_name = $_GET['bill_name'];
 $po_no = $_GET['po_no'];

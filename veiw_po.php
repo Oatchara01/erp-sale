@@ -200,7 +200,7 @@ function fncSubmit()   //ห้ามชื่อสินค้า ยี่ห
 
 			
 				<div class="w3-half">
-		<?php if($rs["send_sale"]=='0'){ ?>			
+		<?php if($rs["send_sale"]=='0' && ($rs["status_doc"] ?? 'Submitted') !== 'Draft'){ // Draft ต้อง Submit จาก register_poawl.php ?>
 <a href="sendsale_line.php?ref_id=<?php echo $rs["ref_id"];?>&sale_code=<?php echo $rs["sale_code"]; ?>&bill_name=<?php echo $rs["bill_name"]; ?>&po_no=<?php echo $rs["po_no"]; ?>"  class="w3-button w3-yellow w3-right"><font color="red">ส่งข้อมูลให้ Sale</font></a>
 					
 					<?php } ?>

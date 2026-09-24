@@ -646,13 +646,13 @@ $qsave=mysqli_query($conn,$save);
 
 
 	if ($po_no != '') {
-		$sql1 = "SELECT ref_id FROM hos__po where po_no ='" . $po_no . "'";
-		$qry1 = mysqli_query($conn, $sql1) or die(mysqli_error());
-		$rs1 = mysqli_fetch_assoc($qry1);
+		// ใบ PO ที่ยังเป็น Draft ไม่ใช่เอกสารจริง — ห้ามถูกผูกเป็นเปิด SO แล้ว (po_find_ref_by_po_no ไม่นับ Draft)
+		require_once __DIR__ . '/includes/po_repo.php';
+		$poRefByNo = po_find_ref_by_po_no($conn, $po_no);
 
-		if ($rs1["ref_id"] != "") {
+		if ($poRefByNo !== "") {
 
-			$save = "Update  hos__po set  open_so='1',open_sodate='" . $add_date . "',ref_so = '" . $ref_id . "',name_open='" . $add_by . "'    where  ref_id = '" . $rs1["ref_id"] . "'";
+			$save = "Update  hos__po set  open_so='1',open_sodate='" . $add_date . "',ref_so = '" . $ref_id . "',name_open='" . $add_by . "'    where  ref_id = '" . mysqli_real_escape_string($conn, $poRefByNo) . "'";
 			$qsave = mysqli_query($conn, $save);
 		}
 	}

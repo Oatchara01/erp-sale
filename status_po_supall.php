@@ -2,6 +2,7 @@
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
+require_once __DIR__ . '/includes/po_repo.php'; // po_not_draft_sql(): ใบ Draft ห้ามโผล่ในรายการนี้
 
 ?>
 <body>
@@ -290,7 +291,7 @@ $sddd = "1";
 
 
 
-$strSQL = "SELECT *  FROM hos__po  where  $sddd ";
+$strSQL = "SELECT *  FROM hos__po  where  $sddd " . po_not_draft_sql($conn);
 
 
 if($start_date !=""){ 

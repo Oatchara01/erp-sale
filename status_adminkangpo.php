@@ -2,6 +2,7 @@
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
+require_once __DIR__ . '/includes/po_repo.php'; // po_not_draft_sql(): ใบ Draft ห้ามโผล่ในรายการนี้
 
 ?>
 <body>
@@ -84,7 +85,7 @@ while($objResuut5 = mysqli_fetch_array($objQuery5))
 	
 	date_default_timezone_set("Asia/Bangkok");
 
-$strSQL = "SELECT *  FROM hos__po  where open_so ='0' and cancel_ckk ='0'";
+$strSQL = "SELECT *  FROM hos__po  where open_so ='0' and cancel_ckk ='0'" . po_not_draft_sql($conn);
 
 if($start_date !=""){ 
     $strSQL .= ' AND date_po >= "'.$start_date.'"'; 

@@ -2,7 +2,7 @@
 // register_suphos.php, register_supbrhos.php, register_supchange.php and register_supsmp.php.
 // Default: posts to slip1-slip5 input names (slip1 reserved, slots 2-5 dynamic, links to upload/).
 // A page can override this via data-* on #attach_file_list (emitted by the partial's
-// attach_file config): first-slot, last-slot, base-url, max-bytes, allowed-ext.
+// attach_file config): first-slot, last-slot, base-url, max-bytes, allowed-ext, allowed-mime.
 // Elements that only exist in edit-mode pages (hidden_slip_val{i}, hidden_remove_val{i},
 // file_name_display) are optional and null-guarded.
 
@@ -14,8 +14,20 @@ function attachConfig() {
 		lastSlot: parseInt(data.lastSlot, 10) || 5,
 		baseUrl: data.baseUrl || 'upload/',
 		maxBytes: parseInt(data.maxBytes, 10) || 1100000,
-		allowedExt: data.allowedExt ? data.allowedExt.toLowerCase().split(',') : []
+		allowedExt: data.allowedExt ? data.allowedExt.toLowerCase().split(',') : [],
+		allowedMime: data.allowedMime ? data.allowedMime.toLowerCase().split(',') : []
 	};
+}
+
+function attachEscapeHtml(value) {
+	return String(value === undefined || value === null ? '' : value)
+		.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function attachMaxSizeLabel(bytes) {
+	const mb = bytes / 1048576;
+	return (Math.round(mb * 10) / 10) + ' MB';
 }
 
 function triggerAttachFile() {
@@ -38,12 +50,17 @@ function handleFileSelect(input, index) {
 		const ext = file.name.split('.').pop().toLowerCase();
 		let title = '';
 		let problem = '';
+		const mime = String(file.type || '').toLowerCase();
 		if (cfg.allowedExt.length && cfg.allowedExt.indexOf(ext) === -1) {
 			title = 'ชนิดไฟล์ไม่ถูกต้อง';
 			problem = 'รองรับเฉพาะไฟล์ ' + cfg.allowedExt.join(', ').toUpperCase();
+		} else if (cfg.allowedMime.length && mime !== '' && cfg.allowedMime.indexOf(mime) === -1) {
+			// เบราว์เซอร์บางตัวไม่บอกชนิดไฟล์ (type ว่าง) — ปล่อยให้ server ตรวจเนื้อไฟล์ซ้ำอีกชั้น
+			title = 'ชนิดไฟล์ไม่ถูกต้อง';
+			problem = 'เนื้อหาไฟล์ไม่ตรงกับนามสกุล .' + ext;
 		} else if (file.size > cfg.maxBytes) {
 			title = 'ไฟล์มีขนาดเกินกำหนด';
-			problem = 'กรุณาแนบไฟล์ที่มีขนาดไม่เกิน 1 MB';
+			problem = 'กรุณาแนบไฟล์ที่มีขนาดไม่เกิน ' + attachMaxSizeLabel(cfg.maxBytes);
 		}
 		if (problem) {
 			input.value = '';
@@ -87,30 +104,31 @@ function renderFileList() {
 		if (!input) continue;
 
 		if (input.files && input.files[0]) {
-			const fileName = input.files[0].name;
+			const fileName = attachEscapeHtml(input.files[0].name);
 
 			const fileWrap = document.createElement('div');
-			fileWrap.style.cssText = 'display: flex; flex-direction: column; width: 300px;';
+			fileWrap.style.cssText = 'display: flex; flex-direction: column; width: 300px; max-width: 100%;';
 
 			fileWrap.innerHTML = `
                 <span style="font-size: 12px; color: #612989; font-weight: 600; margin-bottom: 4px;">ไฟล์ใหม่</span>
                 <div style="background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                     <span style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</span>
-                    <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeFile(${i})"></i>
+                    <button type="button" aria-label="ลบไฟล์ ${fileName}" onclick="removeFile(${i})" style="background: none; border: 0; padding: 0; margin-left: 12px; cursor: pointer; color: #DC3545; line-height: 1;"><i class="far fa-trash-alt" style="font-size: 16px;"></i></button>
                 </div>
             `;
 			list.appendChild(fileWrap);
 		} else if (hiddenVal && hiddenVal.value) {
-			const fileName = hiddenVal.value;
+			const fileName = attachEscapeHtml(hiddenVal.value);
+			const fileHref = attachEscapeHtml(cfg.baseUrl + encodeURIComponent(hiddenVal.value));
 
 			const fileWrap = document.createElement('div');
-			fileWrap.style.cssText = 'display: flex; flex-direction: column; width: 300px;';
+			fileWrap.style.cssText = 'display: flex; flex-direction: column; width: 300px; max-width: 100%;';
 
 			fileWrap.innerHTML = `
                 <span style="font-size: 12px; color: #28a745; font-weight: 600; margin-bottom: 4px;">ไฟล์เดิม</span>
                 <div style="background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                    <a href="${cfg.baseUrl}${fileName}" target="_blank" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
-                    <i class="far fa-trash-alt" style="color: #DC3545; cursor: pointer; font-size: 16px; margin-left: 12px;" onclick="removeExistingFile(${i})"></i>
+                    <a href="${fileHref}" target="_blank" rel="noopener" style="color: #612989; text-decoration: underline; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; font-size: 14px;">${fileName}</a>
+                    <button type="button" aria-label="ลบไฟล์ ${fileName}" onclick="removeExistingFile(${i})" style="background: none; border: 0; padding: 0; margin-left: 12px; cursor: pointer; color: #DC3545; line-height: 1;"><i class="far fa-trash-alt" style="font-size: 16px;"></i></button>
                 </div>
             `;
 			list.appendChild(fileWrap);

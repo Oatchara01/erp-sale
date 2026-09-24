@@ -2,6 +2,7 @@
 
 include "dbconnect.php";
 include "dbconnect_sale.php";
+require_once __DIR__ . '/includes/po_repo.php'; // po_not_draft_sql(): ใบ Draft ห้ามโผล่ในรายการนี้
 
 ?>
 <body>
@@ -64,9 +65,9 @@ $sale_code = $_SESSION['code'];
 $user_type = $_SESSION['user_type'];
 
 if($user_type=='Engineer'){
-$strSQL = "SELECT *  FROM hos__po  where sale_code LIKE '%EN%' ";
+$strSQL = "SELECT *  FROM hos__po  where sale_code LIKE '%EN%' " . po_not_draft_sql($conn);
 }else{
-$strSQL = "SELECT *  FROM hos__po  where   sale_code='".$sale_code."' ";
+$strSQL = "SELECT *  FROM hos__po  where   sale_code='".$sale_code."' " . po_not_draft_sql($conn);
 }
 
 if($start_date !=""){ 

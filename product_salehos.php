@@ -1,3 +1,10 @@
+<?php
+// ตารางสินค้าชุดเดียวใช้ได้หลายเอกสาร — หน้าที่ include ตั้ง $productTableContext ก่อน include
+//   'so' (ค่าเริ่มต้น) = ใบสั่งขาย: popup ครบทุกช่อง (PM ครั้ง/ปี, ใบจอง, ใบยืม, SN)
+//   'po' = ใบ PO (register_poawl.php): popup เฉพาะ รับประกัน / CAL / PM(ปี) / หมายเหตุสินค้า ไม่บังคับกรอก
+$productTableContext = (isset($productTableContext) && $productTableContext === 'po') ? 'po' : 'so';
+$productTableIsPo = ($productTableContext === 'po');
+?>
 <html>
 
 <head>
@@ -601,6 +608,27 @@
             margin-bottom: 10px;
         }
 
+        /* popup ของใบ PO มีแค่ 3 ช่องตัวเลข + หมายเหตุเต็มแถว */
+        .so-modal-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px 24px;
+            margin-bottom: 18px;
+        }
+
+        .so-modal-grid-1 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            margin-bottom: 10px;
+        }
+
+        .action-icon:focus-visible {
+            outline: 2px solid rgba(97, 41, 137, 0.45);
+            outline-offset: 2px;
+            border-radius: 4px;
+            color: #612989;
+        }
+
         .so-modal-field label {
             display: block;
             font-size: 14px;
@@ -801,6 +829,7 @@
             }
 
             .so-modal-grid-6,
+            .so-modal-grid-3,
             .so-modal-grid-2 {
                 grid-template-columns: 1fr;
                 gap: 14px;
@@ -839,6 +868,9 @@
 
     <div class="so-product-header-row">
         <div class="so-product-title-text">รายการสินค้า</div>
+        <?php if ($productTableIsPo) { ?>
+            <div class="so-product-count"><span id="total_items_count">0</span>/30 รายการ</div>
+        <?php } ?>
         <!-- <div class="so-product-count"><span id="total_items_count">0</span> รายการ</div> -->
     </div>
     <hr style="border: 0; border: 2px solid #EDE9F0; margin-bottom: 24px;">
@@ -863,8 +895,8 @@
     </div>
 
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px;">
-        <div style="flex: 1; min-width: 260px;">
-            <div class="so-summary-label" style="color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</div>
+        <div class="so-product-search-col" style="flex: 1; min-width: 260px;">
+            <label for="global_product_search" class="so-summary-label" style="display: block; color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</label>
             <div class="pf-search-bar" style="margin-bottom: 0;">
                 <i class="fas fa-search"></i>
                 <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
@@ -968,8 +1000,8 @@
                         </td>
                         <td style="text-align: right; padding-right: 16px;">
                             <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
-                            <i class="far fa-edit action-icon" onclick="openEditModal(<?php echo $i; ?>)"></i>
-                            <i class="far fa-trash-alt action-icon" onclick="clearRow(<?php echo $i; ?>)"></i>
+                            <i class="far fa-edit action-icon" role="button" tabindex="0" aria-label="ข้อมูลเพิ่มเติมรายการที่ <?php echo $i; ?>" onclick="openEditModal(<?php echo $i; ?>)"></i>
+                            <i class="far fa-trash-alt action-icon" role="button" tabindex="0" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="clearRow(<?php echo $i; ?>)"></i>
                         </td>
                     </tr>
                 <?php endfor; ?>
@@ -980,15 +1012,55 @@
 
     <!-- Edit Modal -->
     <div class="so-modal-overlay" id="productEditModal">
-        <div class="so-modal-content">
+        <div class="so-modal-content" role="dialog" aria-modal="true" aria-labelledby="productEditModalTitle">
             <div class="so-modal-header">
-                <h3 class="so-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
-                <button type="button" class="so-modal-close" onclick="closeEditModal()">&times;</button>
+                <h3 class="so-modal-title" id="productEditModalTitle">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
+                <button type="button" class="so-modal-close" onclick="closeEditModal()" aria-label="ปิด">&times;</button>
             </div>
 
             <input type="hidden" id="current_editing_row">
             <input type="hidden" id="modal_row_number">
 
+            <?php if ($productTableIsPo) { ?>
+            <!-- ใบ PO: 4 ช่อง ไม่บังคับกรอก → hos__subpo.warranty / cal / pm / sale_remark
+                 ช่องเฉพาะ SO ยังต้องมี element (openEditModal/saveEditModal อ้างถึง) จึงเก็บเป็น hidden -->
+            <div class="so-modal-grid-3">
+                <div class="so-modal-field">
+                    <label for="m_warranty" id="modal_warranty_label">รับประกัน(ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label for="m_cal">CAL/ปี</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label for="m_pm_year">PM(ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+            </div>
+            <div class="so-modal-grid-1">
+                <div class="so-modal-field">
+                    <label for="m_sale_remarkk">หมายเหตุสินค้า</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="m_pm">
+            <input type="hidden" id="m_jong_no">
+            <input type="hidden" id="m_clear_ivno">
+            <input type="hidden" id="m_product_sn">
+            <?php } else { ?>
             <div class="so-modal-grid-6">
                 <div class="so-modal-field">
                     <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
@@ -1047,6 +1119,7 @@
                     </div>
                 </div>
             </div>
+            <?php } ?>
 
             <div class="so-modal-actions">
                 <button type="button" class="so-btn-outline" onclick="closeEditModal()">ยกเลิก</button>
@@ -1415,7 +1488,9 @@
                         '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
                         '</span>';
                 }
-                warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')<span class="so-modal-required">*</span>' + iconHtml;
+                // ใบ PO ไม่บังคับกรอกรับประกัน จึงไม่แสดงเครื่องหมาย *
+                var requiredMark = productTableContext === 'po' ? '' : '<span class="so-modal-required">*</span>';
+                warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')' + requiredMark + iconHtml;
             }
 
             document.getElementById('m_cal').value = document.getElementById('cal' + rowIndex).value;
@@ -1427,12 +1502,36 @@
             document.getElementById('m_product_sn').value = document.getElementById('product_sn' + rowIndex).value;
 
             syncModalClearButtons();
+            productEditModalReturnFocus = document.activeElement;
             document.getElementById('productEditModal').style.display = 'flex';
+            var firstField = document.getElementById('m_warranty');
+            if (firstField) firstField.focus();
         }
+
+        // ปุ่มที่เปิด popup — คืนโฟกัสให้ตอนปิด ผู้ใช้คีย์บอร์ดจะได้ไม่หลุดไปต้นหน้า
+        var productEditModalReturnFocus = null;
 
         function closeEditModal() {
             document.getElementById('productEditModal').style.display = 'none';
+            if (productEditModalReturnFocus && typeof productEditModalReturnFocus.focus === 'function') {
+                productEditModalReturnFocus.focus();
+            }
+            productEditModalReturnFocus = null;
         }
+
+        document.addEventListener('keydown', function(event) {
+            var modal = document.getElementById('productEditModal');
+            if (event.key === 'Escape' && modal && modal.style.display === 'flex') {
+                closeEditModal();
+                return;
+            }
+            // ไอคอนแก้ไข/ลบเป็น <i role="button"> — ให้ Enter/Space ทำงานเหมือนคลิก
+            var target = event.target;
+            if ((event.key === 'Enter' || event.key === ' ') && target && target.classList && target.classList.contains('action-icon')) {
+                event.preventDefault();
+                target.click();
+            }
+        });
 
         function saveEditModal() {
             var rowIndex = document.getElementById('current_editing_row').value;
@@ -1533,6 +1632,8 @@
 
                 let netTotal = totalAmount - totalDiscount;
 
+                var itemsCountEl = document.getElementById('total_items_count');
+                if (itemsCountEl) itemsCountEl.innerText = itemsCount;
 
                 document.getElementById('summary_total_qty').innerText = totalQty.toLocaleString(undefined, {
                     minimumFractionDigits: 0
@@ -1649,24 +1750,61 @@
             return (td && td.value === '4') ? 'NBM' : 'AWL';
         }
 
-        // เปลี่ยนบริษัท -> ล้างรายการสินค้าที่เลือกไว้ทั้งหมด (เตือนก่อน) กันสินค้า AWL/NBM ปนกันในใบเดียว
-        function handleCompanyChange(sel) {
-            var hasItems = false;
+        var productTableContext = <?php echo json_encode($productTableContext); ?>;
+
+        function productTableHasItems() {
             for (var i = 1; i <= 30; i++) {
                 var c = document.getElementById('product_codet' + i);
-                if (c && c.value.trim() !== '') {
-                    hasItems = true;
-                    break;
-                }
+                if (c && c.value.trim() !== '') return true;
             }
-            if (hasItems) {
+            return false;
+        }
+
+        function productTableClearAll() {
+            for (var j = 1; j <= 30; j++) {
+                executeClearRow(j);
+            }
+        }
+
+        // เติมแถวจากข้อมูลที่บันทึกไว้ (คีย์เดียวกับ savedProductsForForm ของ register_suphos.php)
+        function productTableFillRows(products) {
+            (products || []).slice(0, 30).forEach(function(product, index) {
+                var rowIndex = index + 1;
+                var row = document.getElementById('product_row_' + rowIndex);
+                if (!row) return;
+                row.style.display = '';
+
+                ['product_id', 'product_sn', 'unit_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount',
+                    'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no',
+                    'display_name', 'subso_db_id', 'remark_hc', 'product_name'
+                ].forEach(function(field) {
+                    var el = document.getElementById(field + rowIndex);
+                    if (el) el.value = product[field] || '';
+                });
+                var codeEl = document.getElementById('product_codet' + rowIndex);
+                if (codeEl) codeEl.value = product.product_code || '';
+                var hiddenCodeEl = document.getElementById('h_product_codet' + rowIndex);
+                if (hiddenCodeEl) hiddenCodeEl.value = product.product_code || '';
+                var nameLabel = document.getElementById('product_name_label' + rowIndex);
+                if (nameLabel) nameLabel.textContent = product.product_name || product.product_code || '';
+
+                ['product_price', 'discount_unit'].forEach(function(field) {
+                    var el = document.getElementById(field + rowIndex);
+                    if (el && el.value !== '') formatNumberInput(el);
+                });
+                updateRowTotal(rowIndex);
+            });
+            calculateSummary();
+        }
+
+        // เปลี่ยนบริษัท -> ล้างรายการสินค้าที่เลือกไว้ทั้งหมด (เตือนก่อน) กันสินค้า AWL/NBM ปนกันในใบเดียว
+        function handleCompanyChange(sel) {
+            if (productTableHasItems()) {
                 if (!confirm('การเปลี่ยนบริษัทจะล้างรายการสินค้าที่เลือกไว้ทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
                     sel.value = sel.getAttribute('data-prev'); // ยกเลิก -> คืนค่าบริษัทเดิม
                     return;
                 }
-                for (var j = 1; j <= 30; j++) {
-                    if (typeof executeClearRow === 'function') executeClearRow(j);
-                }
+                productTableClearAll();
             }
             // sync hidden input[name=type_doc] (พฤติกรรมเดิมของ onchange ที่ถูกแทนที่)
             var r = document.querySelector('input[name=type_doc]');
