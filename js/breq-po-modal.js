@@ -110,9 +110,22 @@
 		breqPoState.loading = true;
 		renderRows();
 
-		var url = 'ajax_breq_po_items.php?q=' + encodeURIComponent(keyword || '') + '&company=' + encodeURIComponent(getSelectedCompany());
+		var url = 'ajax_breq_po_items.php?q=' + encodeURIComponent(keyword || '') + '&company=' + encodeURIComponent(getSelectedCompany()) + '&limit=100';
 		fetch(url, { credentials: 'same-origin' })
-			.then(function(res) { return res.json(); })
+			.then(function(res) {
+				return res.text().then(function(body) {
+					var data;
+					try {
+						data = JSON.parse(body);
+					} catch (error) {
+						throw new Error('เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')');
+					}
+					if (!res.ok) {
+						throw new Error(data.message || ('HTTP ' + res.status));
+					}
+					return data;
+				});
+			})
 			.then(function(data) {
 				breqPoState.loading = false;
 				if (!data || !data.success) {

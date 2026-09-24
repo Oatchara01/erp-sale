@@ -304,12 +304,42 @@ if (!function_exists('breq_items_from_post')) {
 	}
 }
 
+if (!function_exists('breq_po_main_source')) {
+	/**
+	 * po__main อยู่ใน DB allwell_inter — บน production user ของ $conn ไม่มีสิทธิ์ข้าม DB
+	 * จึงต่อผ่าน dbconnect_inter.php (user/password ของ allwell_inter) ถ้าต่อได้
+	 * ไม่งั้น fallback ไป $conn + ชื่อเต็ม (local ที่ใช้ root)
+	 *
+	 * @return array{0: mysqli, 1: string} [connection, table]
+	 */
+	function breq_po_main_source($conn)
+	{
+		static $interConn = null;
+		if ($interConn === null) {
+			$interConn = false;
+			$interFile = dirname(__DIR__) . '/dbconnect_inter.php';
+			if (is_file($interFile)) {
+				$inter = null;
+				include $interFile;
+				if ($inter instanceof mysqli) {
+					$interConn = $inter;
+				}
+			}
+		}
+		if ($interConn instanceof mysqli) {
+			return array($interConn, 'po__main');
+		}
+		return array($conn, 'allwell_inter.po__main');
+	}
+}
+
 if (!function_exists('breq_po_belongs_to_company')) {
 	function breq_po_belongs_to_company($conn, $poNo, $company)
 	{
+		list($poConn, $poTable) = breq_po_main_source($conn);
 		return breq_fetch_one(
-			$conn,
-			"SELECT 1 AS hit FROM allwell_inter.po__main WHERE po_no = ? AND company = ? LIMIT 1",
+			$poConn,
+			"SELECT 1 AS hit FROM " . $poTable . " WHERE po_no = ? AND company = ? LIMIT 1",
 			'ss',
 			array($poNo, $company)
 		) !== null;
