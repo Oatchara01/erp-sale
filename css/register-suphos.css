@@ -2174,3 +2174,23 @@ body,
 .so-latest-reason-banner.is-cancelled .so-latest-reason-close:hover {
 	color: #F2F2F2;
 }
+
+/* แถว "สถานที่ติดตั้งเครื่อง | Location Link" — 2:1 ให้ขอบคอลัมน์ตรงกับ .so-grid-3 แถวบน (ชื่อผู้ติดต่อ/เบอร์โทร/จังหวัด) */
+.so-grid-install {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 24px;
+}
+
+@media (max-width: 576px) {
+	.so-grid-install {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
+/* หัวเอกสาร (บริษัท/ประเภท/E-Mail/แผนก/ช่องทาง) รวมเป็น grid เดียวเพื่อให้ฟิลด์ไหลเติมช่อง E-Mail ที่ซ่อน —
+   row-gap 0 ให้ระยะห่างแนวตั้งเท่าตอนแยก 2 grid (ใช้ margin-bottom ของ .so-field-group แทน) */
+#so_doc_head_grid {
+	row-gap: 0;
+}

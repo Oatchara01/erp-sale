@@ -1733,6 +1733,8 @@ $productTableIsPo = ($productTableContext === 'po');
         (function() {
             var searchInput = document.getElementById('global_product_search');
             var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
+            // ซ่อนไอคอนสถานะเล็กๆ ทางขวาของช่องค้นหา (autocomplete.js สร้างให้อัตโนมัติ) เพราะไม่ได้ใช้
+            acInstance.image.e.style.display = 'none';
             searchInput.addEventListener('paste', function() {
                 setTimeout(function() {
                     acInstance.isModified = 1;

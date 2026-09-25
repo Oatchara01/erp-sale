@@ -4100,7 +4100,8 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 			'add_code',
 			'mk_research',
 			'province_name',
-			'count_box'
+			'count_box',
+			'location_link'
 		);
 
 		$registerDataValues = array(
@@ -4150,7 +4151,9 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 			$h_employee_name,
 			$mk_research,
 			$province_name,
-			$admin_box_count_value
+			$admin_box_count_value,
+			// tb_register_data.location_link เป็น varchar(500)
+			mb_substr(trim((string)($_POST['location_link'] ?? '')), 0, 500)
 		);
 
 		$shippingColumnCheck = mysqli_query($conn, "SHOW COLUMNS FROM tb_register_data LIKE 'shipping_id'");

@@ -2159,7 +2159,41 @@ include("head.php"); ?>
 						</label>
 						<input name="book_no" id="book_no" class="so-input" placeholder="เลขที่..." style="display:none">
 
-						<div class="so-grid-3">
+						<script>
+							// E-Mail แสดง/บังคับกรอกเฉพาะเมื่อเลือกใบสั่งขาย E-Tax (doc_type_select value=2) เท่านั้น
+							// ค่า 4 (ใบกำกับอิเล็กทรอนิกส์) ไม่เข้ากฎนี้ตามที่ตกลงกับผู้ใช้
+							function syncEmailFieldVisibility() {
+								var docTypeSel = document.getElementById('doc_type_select');
+								var emailGroup = document.getElementById('email_field_group');
+								var emailInput = document.getElementById('email');
+								if (!docTypeSel || !emailGroup || !emailInput) return;
+								var isETax = docTypeSel.value === '2';
+								emailGroup.style.display = isETax ? '' : 'none';
+								emailInput.required = isETax;
+							}
+							document.addEventListener('DOMContentLoaded', syncEmailFieldVisibility);
+
+							// คืน true ถ้าผ่าน (ไม่ใช่ E-Tax หรือกรอกอีเมลถูกต้อง), false แล้ว alert+focus ถ้าไม่ผ่าน
+							function validateEmailFieldRequired() {
+								var docTypeSel = document.getElementById('doc_type_select');
+								var emailInput = document.getElementById('email');
+								if (!docTypeSel || !emailInput) return true;
+								if (docTypeSel.value !== '2') return true;
+
+								var emailVal = (emailInput.value || '').trim();
+								emailInput.value = emailVal;
+								var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+								if (!emailVal || !emailPattern.test(emailVal)) {
+									alert('กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax');
+									emailInput.focus();
+									return false;
+								}
+								return true;
+							}
+						</script>
+
+						<!-- grid เดียว: E-Mail ซ่อนด้วย display:none เมื่อไม่ใช่ E-Tax → แผนก/เขตการขายไหลขึ้นมาต่อจากประเภท -->
+						<div class="so-grid-3" id="so_doc_head_grid">
 							<!-- บริษัท* -->
 							<div class="so-field-group">
 								<label class="so-label" for="type_doc_select">บริษัท<span class="required">*</span></label>
@@ -2202,42 +2236,7 @@ include("head.php"); ?>
 									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('email').value=''"></i>
 								</div>
 							</div>
-						</div>
 
-						<script>
-							// E-Mail แสดง/บังคับกรอกเฉพาะเมื่อเลือกใบสั่งขาย E-Tax (doc_type_select value=2) เท่านั้น
-							// ค่า 4 (ใบกำกับอิเล็กทรอนิกส์) ไม่เข้ากฎนี้ตามที่ตกลงกับผู้ใช้
-							function syncEmailFieldVisibility() {
-								var docTypeSel = document.getElementById('doc_type_select');
-								var emailGroup = document.getElementById('email_field_group');
-								var emailInput = document.getElementById('email');
-								if (!docTypeSel || !emailGroup || !emailInput) return;
-								var isETax = docTypeSel.value === '2';
-								emailGroup.style.display = isETax ? '' : 'none';
-								emailInput.required = isETax;
-							}
-							document.addEventListener('DOMContentLoaded', syncEmailFieldVisibility);
-
-							// คืน true ถ้าผ่าน (ไม่ใช่ E-Tax หรือกรอกอีเมลถูกต้อง), false แล้ว alert+focus ถ้าไม่ผ่าน
-							function validateEmailFieldRequired() {
-								var docTypeSel = document.getElementById('doc_type_select');
-								var emailInput = document.getElementById('email');
-								if (!docTypeSel || !emailInput) return true;
-								if (docTypeSel.value !== '2') return true;
-
-								var emailVal = (emailInput.value || '').trim();
-								emailInput.value = emailVal;
-								var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-								if (!emailVal || !emailPattern.test(emailVal)) {
-									alert('กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax');
-									emailInput.focus();
-									return false;
-								}
-								return true;
-							}
-						</script>
-
-						<div class="so-grid-3">
 							<!-- แผนก/เขตการขาย* -->
 							<div class="so-field-group">
 								<label class="so-label" for="sale_code">แผนก/เขตการขาย<span class="required">*</span></label>
@@ -2832,11 +2831,21 @@ include("head.php"); ?>
 							</div>
 						</div>
 
-						<div class="so-field-group" style="margin-top: 16px;">
-							<label class="so-label" style="color: #612989;">สถานที่ติดตั้งเครื่อง<span style="color:red">*</span></label>
-							<div style="position: relative; display: flex; align-items: center;">
-								<input name="install_location" id="install_location" type="text" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['install_place'] ?? '') : ''; ?>" placeholder="ใส่ที่ติดตั้งเครื่อง" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
-								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+						<div class="so-grid-install" style="margin-top: 16px;">
+							<div class="so-field-group">
+								<label class="so-label" style="color: #612989;">สถานที่ติดตั้งเครื่อง<span style="color:red">*</span></label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<input name="install_location" id="install_location" type="text" class="so-input" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['install_place'] ?? '') : ''; ?>" placeholder="ใส่ที่ติดตั้งเครื่อง" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+								</div>
+							</div>
+							<div class="so-field-group">
+								<label class="so-label" for="location_link" style="color: #612989;">Location Link</label>
+								<div style="position: relative; display: flex; align-items: center;">
+									<!-- เก็บที่ tb_register_data.location_link — $savedRegister มาจาก SO เอง / ใบต้นทาง copy_from / ใบเช่า ตามโหมดที่เปิด -->
+									<input name="location_link" id="location_link" type="text" class="so-input" maxlength="500" value="<?php echo so_saved_h($savedRegister['location_link'] ?? ''); ?>" placeholder="วางลิงก์ Google Maps หรือพิกัด" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 32px;" />
+									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="this.previousElementSibling.value=''"></i>
+								</div>
 							</div>
 						</div>
 					</div>

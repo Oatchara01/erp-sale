@@ -3869,6 +3869,13 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		mysqli_query($conn, "UPDATE tb_register_data SET shipping_id = '" . $shipping_id_val . "' WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
 	}
 
+	// หน้าเก่า (register_suphos_edit.php / register_veiwsup.php) submit มาที่ไฟล์นี้เหมือนกันแต่ไม่มีช่อง location_link
+	// อัปเดตเฉพาะเมื่อฟอร์มส่งค่ามา กันลิงก์ที่บันทึกไว้ถูกล้างเป็นค่าว่าง
+	if (isset($_POST['location_link'])) {
+		$location_link_val = mysqli_real_escape_string($conn, mb_substr(trim((string)$_POST['location_link']), 0, 500));
+		mysqli_query($conn, "UPDATE tb_register_data SET location_link = '" . $location_link_val . "' WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
+	}
+
 
 	$strSQL33 =  "Update tb_transaction set runway='" . $runway . "',road='" . $road . "',soy='" . $soy . "',soy_long='" . $soy_long . "',soy_big='" . $soy_big . "',car_load='" . $car_load . "',car_park='" . $car_park . "',car_road='" . $car_road . "',no_car_road='" . $no_car_road . "',car_home='" . $car_home . "',door_long='" . $door_long . "',slope='" . $slope . "',bundai='" . $bundai . "',unit_bundai='" . $unit_bundai . "',door_big='" . $door_big . "',door_longer='" . $door_longer . "',type_door='" . $type_door . "',home_type='" . $home_type . "',install='" . $install . "',bundai_install='" . $bundai_install . "',bundai_big='" . $bundai_big . "',lip='" . $lip . "',lip_big='" . $lip_big . "',lip_long='" . $lip_long . "',lip_weight='" . $lip_weight . "',want_employee='" . $want_employee . "',employee_unit='" . $employee_unit . "',ferniger_name='" . $ferniger_name . "',ferniger_address='" . $ferniger_address . "',want_ex='" . $want_ex . "',want_credit='" . $want_credit . "',want_prem='" . $want_prem . "',add_date='$add_date',add_by='" . $add_by . "',room_bigger='" . $room_bigger . "',room_longer='" . $room_longer . "',bundai_hug='" . $bundai_hug . "',bank='" . $bank . "',description='" . $description_ja . "',type_bundai='" . $type_bundai . "',head_bad='" . $head_bad . "',height_ltd='" . $height_ltd . "',up='" . $up . "',no_up='" . $no_up . "'   where ref_id = '" . $ref_id . "' ";
 
