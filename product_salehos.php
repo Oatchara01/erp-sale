@@ -336,6 +336,17 @@ $productTableIsPo = ($productTableContext === 'po');
             overflow-x: auto;
         }
 
+        /* กล่องแจ้งตอนยังไม่มีรายการสินค้า (สไตล์เดียวกับ .breg-empty-state ของ register_supsmp) */
+        .so-product-empty-state {
+            padding: 28px 16px;
+            text-align: center;
+            font-size: 14px;
+            color: #8E8B94;
+            background: #FAF9FC;
+            border: 1px dashed #E3DCEA;
+            border-radius: 10px;
+        }
+
         @media (max-width: 768px) {
             .so-product-summary {
                 flex-wrap: wrap;
@@ -925,13 +936,13 @@ $productTableIsPo = ($productTableContext === 'po');
                     <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
                     <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
                     <th style="width: 15%; text-align: center;">ยอดรวม</th>
-                    <th style="width: 10%;"></th>
+                    <th style="width: 10%; text-align: center;">PM</th>
                 </tr>
             </thead>
             <tbody>
 
                 <?php for ($i = 1; $i <= 30; $i++): ?>
-                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" <?php if ($i > 3) echo 'style="display:none;"'; ?>
+                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" style="display:none;"
                         ondragstart="handleDragStart(event, <?php echo $i; ?>)"
                         ondragover="handleDragOver(event)"
                         ondragenter="handleDragEnter(event)"
@@ -1009,6 +1020,7 @@ $productTableIsPo = ($productTableContext === 'po');
             </tbody>
         </table>
     </div>
+    <div class="so-product-empty-state" id="product_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
     <!-- Edit Modal -->
     <div class="so-modal-overlay" id="productEditModal">
@@ -1022,103 +1034,103 @@ $productTableIsPo = ($productTableContext === 'po');
             <input type="hidden" id="modal_row_number">
 
             <?php if ($productTableIsPo) { ?>
-            <!-- ใบ PO: 4 ช่อง ไม่บังคับกรอก → hos__subpo.warranty / cal / pm / sale_remark
+                <!-- ใบ PO: 4 ช่อง ไม่บังคับกรอก → hos__subpo.warranty / cal / pm / sale_remark
                  ช่องเฉพาะ SO ยังต้องมี element (openEditModal/saveEditModal อ้างถึง) จึงเก็บเป็น hidden -->
-            <div class="so-modal-grid-3">
-                <div class="so-modal-field">
-                    <label for="m_warranty" id="modal_warranty_label">รับประกัน(ปี)</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                <div class="so-modal-grid-3">
+                    <div class="so-modal-field">
+                        <label for="m_warranty" id="modal_warranty_label">รับประกัน(ปี)</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label for="m_cal">CAL/ปี</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label for="m_pm_year">PM(ปี)</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
                     </div>
                 </div>
-                <div class="so-modal-field">
-                    <label for="m_cal">CAL/ปี</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                <div class="so-modal-grid-1">
+                    <div class="so-modal-field">
+                        <label for="m_sale_remarkk">หมายเหตุสินค้า</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
                     </div>
                 </div>
-                <div class="so-modal-field">
-                    <label for="m_pm_year">PM(ปี)</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-            </div>
-            <div class="so-modal-grid-1">
-                <div class="so-modal-field">
-                    <label for="m_sale_remarkk">หมายเหตุสินค้า</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-            </div>
-            <input type="hidden" id="m_pm">
-            <input type="hidden" id="m_jong_no">
-            <input type="hidden" id="m_clear_ivno">
-            <input type="hidden" id="m_product_sn">
+                <input type="hidden" id="m_pm">
+                <input type="hidden" id="m_jong_no">
+                <input type="hidden" id="m_clear_ivno">
+                <input type="hidden" id="m_product_sn">
             <?php } else { ?>
-            <div class="so-modal-grid-6">
-                <div class="so-modal-field">
-                    <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                <div class="so-modal-grid-6">
+                    <div class="so-modal-field">
+                        <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>CAL/ปี</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>PM(ปี)</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>PM (จำนวนครั้ง/ปี)</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_pm" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>เลขที่ใบจอง</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_jong_no" data-clearable="true" readonly>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>เลขที่ใบยืม</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_clear_ivno" data-clearable="true" readonly>
+                        </div>
                     </div>
                 </div>
-                <div class="so-modal-field">
-                    <label>CAL/ปี</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-                <div class="so-modal-field">
-                    <label>PM(ปี)</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-                <div class="so-modal-field">
-                    <label>PM (จำนวนครั้ง/ปี)</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_pm" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-                <div class="so-modal-field">
-                    <label>เลขที่ใบจอง</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_jong_no" data-clearable="true" readonly>
-                    </div>
-                </div>
-                <div class="so-modal-field">
-                    <label>เลขที่ใบยืม</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_clear_ivno" data-clearable="true" readonly>
-                    </div>
-                </div>
-            </div>
 
-            <div class="so-modal-grid-2">
-                <div class="so-modal-field">
-                    <label>เลขที่ SN</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_product_sn" data-clearable="true" readonly>
+                <div class="so-modal-grid-2">
+                    <div class="so-modal-field">
+                        <label>เลขที่ SN</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_product_sn" data-clearable="true" readonly>
+                        </div>
+                    </div>
+                    <div class="so-modal-field">
+                        <label>หมายเหตุสินค้า</label>
+                        <div class="so-modal-input-wrap">
+                            <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
+                            <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
+                        </div>
                     </div>
                 </div>
-                <div class="so-modal-field">
-                    <label>หมายเหตุสินค้า</label>
-                    <div class="so-modal-input-wrap">
-                        <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
-                        <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
-                    </div>
-                </div>
-            </div>
             <?php } ?>
 
             <div class="so-modal-actions">
@@ -1844,6 +1856,35 @@ $productTableIsPo = ($productTableContext === 'po');
                 });
             }
         });
+
+        // แสดงกล่อง "ยังไม่มีรายการสินค้า" เมื่อไม่มีแถวไหนแสดงอยู่ — เฝ้าการเปลี่ยน style ของแถวแทนการแก้ฟังก์ชันเดิม
+        // (ค้นหา/เติมข้อมูล/เคลียร์ยืม สั่ง display='' ส่วน clearRow สั่ง display='none' อยู่แล้ว)
+        (function() {
+            function syncProductEmptyState() {
+                var emptyState = document.getElementById('product_empty_state');
+                if (!emptyState) return;
+                var rows = document.querySelectorAll('#product_table tr.so-product-row');
+                var hasVisibleRow = false;
+                for (var i = 0; i < rows.length; i++) {
+                    if (rows[i].style.display !== 'none') {
+                        hasVisibleRow = true;
+                        break;
+                    }
+                }
+                emptyState.style.display = hasVisibleRow ? 'none' : '';
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                var tbody = document.querySelector('#product_table tbody');
+                if (!tbody) return;
+                syncProductEmptyState();
+                new MutationObserver(syncProductEmptyState).observe(tbody, {
+                    attributes: true,
+                    attributeFilter: ['style'],
+                    subtree: true
+                });
+            });
+        })();
     </script>
 
     <?php for ($i = 1; $i <= 30; $i++): ?>
