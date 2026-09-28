@@ -58,24 +58,9 @@ $typeCustomers = fetchRows($conn, "SELECT type_id, type_name FROM tb_typecustome
 $creditBanks = fetchRows($code, "SELECT id, pay_in FROM tb_bank WHERE close_ckk = '0' ORDER BY id");
 $provinces = fetchRows($conn, "SELECT province_name FROM tb_province ORDER BY province_name");
 $saleTeams = fetchRows($com, "SELECT sale_code FROM tb_team_all WHERE 1 ORDER BY sale_code");
-
-$prefaceOptions = array(
-    'คุณ',
-    'มหาวิทยาลัย',
-    'บริษัท',
-    'หจก.',
-    'คลินิก',
-    'ร้าน',
-    'มูลนิธิ',
-    'ร้านขายยา',
-    'ร้านค้า',
-    'โรงพยาบาล',
-    'โรงเรียน',
-    'สถาบัน',
-    'สำนักงาน',
-    'หสน.',
-    'หสม.'
-);
+// กรองกลุ่มลูกค้าตาม session แบบเดียวกับ data_mode_cus.php
+$modeSaleFilter = (($_SESSION['name'] ?? '') === 'มาลินี' || ($_SESSION['code'] ?? '') === 'S31') ? "WHERE sale_code = 'S31' OR sale_code = 'S32'" : '';
+$modeCustomers = fetchRows($conn, "SELECT id_mode, mode_name FROM tb_mode_customer {$modeSaleFilter} ORDER BY mode_name");
 
 $customerId = isset($_GET['customer_id']) ? (int)$_GET['customer_id'] : 0;
 $isEditMode = $customerId > 0;
@@ -92,8 +77,8 @@ if ($successStatus === 'created') {
 $customerData = array(
     'customer_id' => $customerId,
     'customer_code' => '',
+    'customer_coden' => '',
     'customer_no' => '',
-    'preface_name' => '',
     'customer_name' => '',
     'cus_tel' => '',
     'type_customer' => '',
@@ -137,13 +122,7 @@ if ($isEditMode) {
     $customerRow = fetchRow($conn, "SELECT * FROM tb_customer WHERE customer_id = {$customerId}");
     if ($customerRow) {
         $customerData = array_merge($customerData, $customerRow);
-        $fullCustomerName = trim((string)$customerRow['customer_name']);
-        $preface = trim((string)$customerRow['preface_name']);
-        if ($preface !== '' && strpos($fullCustomerName, $preface) === 0) {
-            $customerData['customer_name'] = trim(substr($fullCustomerName, strlen($preface)));
-        } else {
-            $customerData['customer_name'] = $fullCustomerName;
-        }
+        $customerData['customer_name'] = trim((string)$customerRow['customer_name']);
     }
 
     $selectedRows = fetchRows($conn, "SELECT sale_code FROM tb_selected_sales WHERE id_customer = {$customerId}");
@@ -160,9 +139,20 @@ if ($isEditMode) {
     }
 }
 
+$currentMode = trim((string)$customerData['mode_name']);
+if ($currentMode === '0') {
+    $currentMode = '';
+}
+$currentModeFound = $currentMode === '';
+foreach ($modeCustomers as $modeCustomer) {
+    if ((string)$modeCustomer['id_mode'] === $currentMode) {
+        $currentModeFound = true;
+        break;
+    }
+}
+
 if (empty($billingRecords)) {
     $billingRecords[] = array(
-        'billing_preface_name' => $customerData['preface_name'],
         'billing_name' => $customerData['bill_name'],
         'billing_tax_id' => $customerData['tax_id'],
         'billing_tel' => $customerData['bill_tel'],
@@ -178,7 +168,6 @@ if (empty($billingRecords)) {
 
 if (empty($shippingRecords)) {
     $shippingRecords[] = array(
-        'shipping_preface_name' => $customerData['preface_name'],
         'shipping_name' => $customerData['delivery_name'],
         'shipping_tel' => $customerData['del_tel'],
         'shipping_address' => $customerData['del_address'],
@@ -189,6 +178,7 @@ if (empty($shippingRecords)) {
 }
 ?>
 
+<link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <style>
     :root {
         --customer-primary: #612989;
@@ -392,16 +382,13 @@ if (empty($shippingRecords)) {
     }
 
     .section-block {
-        padding: 18px 0 24px;
-        border-bottom: 1px solid var(--customer-border);
-    }
-
-    .section-block:last-of-type {
-        border-bottom: 0;
+        padding: 18px 0 8px;
     }
 
     .section-title {
         margin: 0 0 18px;
+        padding: 0 10px 10px;
+        border-bottom: 1px solid var(--customer-border);
         font-size: 20px;
         font-weight: 500;
     }
@@ -498,18 +485,20 @@ if (empty($shippingRecords)) {
     .field-clear {
         position: absolute;
         top: 50%;
-        right: 12px;
+        right: 8px;
         transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        padding: 0;
         border: 0;
         background: transparent;
         color: #8d8797;
-        font-size: 18px;
+        font-size: 26px;
+        line-height: 1;
         cursor: pointer;
-        display: none;
-    }
-
-    .input-shell.has-value .field-clear {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .field-error,
@@ -531,6 +520,66 @@ if (empty($shippingRecords)) {
         flex-wrap: wrap;
         gap: 14px;
         margin-bottom: 16px;
+    }
+
+    .code-run-row {
+        display: flex;
+        gap: 6px;
+        align-items: stretch;
+    }
+
+    .code-run-row .input-shell {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .code-run-row .form-input[readonly] {
+        font-size: 13px;
+        color: var(--customer-text);
+        padding-right: 14px;
+        text-overflow: ellipsis;
+    }
+
+    .code-run-button {
+        flex: none;
+        align-self: center;
+        width: 152px;
+        height: 42px;
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 0;
+        border-radius: 21px;
+        background: #f1e1ff;
+        box-shadow: 0 0 4px rgba(97, 41, 137, 0.25);
+        color: var(--customer-primary);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 9px 8px 9px 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .code-run-button svg {
+        width: 33px;
+        height: 33px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .code-run-button:hover {
+        background: #e8cffb;
+    }
+
+    .code-run-button:disabled {
+        opacity: 0.6;
+        cursor: wait;
     }
 
     .outline-pill {
@@ -599,29 +648,234 @@ if (empty($shippingRecords)) {
         color: #fff;
     }
 
+    .tag-pair {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+    }
+
+    .credit-term-button {
+        min-height: 44px;
+        border: 1px solid #ddd6e6;
+        border-radius: 999px;
+        background: #fff;
+        color: var(--customer-primary);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 14px;
+        cursor: pointer;
+    }
+
+    .credit-term-button:hover:not(:disabled) {
+        background: #f8f1fd;
+    }
+
+    .credit-term-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .credit-term-button img {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* โครง popup เครดิตเทอม — ยกจาก css/so-core.css เฉพาะส่วนที่ใช้ (ไม่โหลด so-core ทั้งไฟล์เพื่อไม่ให้ชนกับสไตล์หน้านี้) */
+    #creditTermPopupModal {
+        display: none;
+        position: fixed;
+        z-index: 99998;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 24px;
+        box-sizing: border-box;
+        font-family: var(--customer-font);
+        color: var(--customer-text);
+    }
+
+    #creditTermPopupModal .credit-term-popup-box {
+        width: min(1096px, 96vw);
+        height: min(884px, 92vh);
+        background: #fff;
+        border-radius: 10px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+    }
+
+    #creditTermPopupModal .customer-popup-close {
+        position: absolute;
+        top: 4px;
+        right: 18px;
+        width: 28px;
+        height: 28px;
+        border: 0;
+        background: transparent;
+        color: #3b3b3b;
+        font-size: 52px;
+        line-height: 1;
+        cursor: pointer;
+        z-index: 1;
+    }
+
+    #creditTermPopupModal .clear-loan-header {
+        padding: 24px 32px 0;
+    }
+
+    #creditTermPopupModal .clear-loan-header h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+    #creditTermPopupModal .credit-term-popup-content {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+        padding: 22px 30px 30px;
+        gap: 20px;
+    }
+
+    #creditTermPopupModal .credit-term-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        background: var(--customer-input);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    #creditTermPopupModal .credit-term-summary-item {
+        padding: 18px 20px 16px;
+        text-align: center;
+        position: relative;
+    }
+
+    #creditTermPopupModal .credit-term-summary-item:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 14px;
+        right: 0;
+        width: 1px;
+        height: calc(100% - 28px);
+        background: #c9c3ce;
+    }
+
+    #creditTermPopupModal .credit-term-summary-label {
+        margin: 0 0 10px;
+        font-size: 16px;
+        color: #696969;
+    }
+
+    #creditTermPopupModal .credit-term-summary-value {
+        margin: 0;
+        font-size: 20px;
+        min-height: 30px;
+    }
+
+    #creditTermPopupModal .credit-term-summary-item.is-highlight .credit-term-summary-label {
+        color: var(--customer-text);
+    }
+
+    #creditTermPopupModal .credit-term-summary-item.is-highlight .credit-term-summary-value {
+        color: var(--customer-primary);
+        font-size: 24px;
+    }
+
+    #creditTermPopupModal .credit-term-table {
+        width: 100%;
+        min-width: 920px;
+        border-collapse: collapse;
+    }
+
+    #creditTermPopupModal .credit-term-table th,
+    #creditTermPopupModal .credit-term-table td {
+        padding: 18px 14px;
+        font-size: 14px;
+        border-bottom: 1px solid var(--customer-border);
+        vertical-align: middle;
+    }
+
+    #creditTermPopupModal .credit-term-table th {
+        padding-top: 16px;
+        padding-bottom: 16px;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--customer-primary);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    #creditTermPopupModal .credit-term-table th:first-child,
+    #creditTermPopupModal .credit-term-table td:first-child {
+        width: 42px;
+        padding-left: 18px;
+        padding-right: 6px;
+    }
+
+    #creditTermPopupModal .credit-term-table th:nth-child(2) {
+        width: 15%;
+    }
+
+    #creditTermPopupModal .credit-term-table th:nth-child(3) {
+        width: 41%;
+    }
+
+    #creditTermPopupModal .credit-term-table th:nth-child(n+4),
+    #creditTermPopupModal .credit-term-table td:nth-child(n+4) {
+        width: 14%;
+        text-align: right;
+    }
+
+    #creditTermPopupModal .credit-term-empty-row td {
+        padding-top: 22px;
+        padding-bottom: 22px;
+        color: #857d8e;
+        text-align: center !important;
+    }
+
     .card-list {
         display: grid;
         gap: 18px;
     }
 
-    .sub-card {
-        border-top: 1px solid var(--customer-border);
-        padding-top: 12px;
-    }
-
     .sub-card-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
         margin-bottom: 10px;
     }
 
     .sub-card-title {
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 14px;
         font-weight: 500;
         color: #7c7486;
+    }
+
+    .sub-card-title::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--customer-border);
+    }
+
+    .field-action {
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .field-action .danger-button[hidden] {
+        display: none;
     }
 
     .danger-button {
@@ -801,6 +1055,32 @@ if (empty($shippingRecords)) {
             grid-column: auto;
         }
 
+        .tag-pair {
+            gap: 12px;
+        }
+
+        #creditTermPopupModal {
+            padding: 12px;
+        }
+
+        #creditTermPopupModal .credit-term-popup-box {
+            width: 100%;
+            height: auto;
+            max-height: 94vh;
+        }
+
+        #creditTermPopupModal .clear-loan-header {
+            padding: 22px 18px 0;
+        }
+
+        #creditTermPopupModal .credit-term-popup-content {
+            padding: 18px 14px 20px;
+        }
+
+        #creditTermPopupModal .credit-term-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .outline-pill,
         .primary-button,
         .ghost-button {
@@ -971,18 +1251,6 @@ if (empty($shippingRecords)) {
                     <section class="section-block">
                         <div class="field-grid">
                             <div class="field">
-                                <label class="field-label" for="preface_name">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
-                                <div class="select-shell">
-                                    <select name="preface_name" id="preface_name" class="form-select" required>
-                                        <option value="">เลือกคำนำหน้าชื่อ</option>
-                                        <?php foreach ($prefaceOptions as $option) { ?>
-                                            <option value="<?php echo h($option); ?>" <?php echo ($customerData['preface_name'] === $option) ? 'selected' : ''; ?>><?php echo h($option); ?></option>
-                                        <?php } ?>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="field">
                                 <label class="field-label" for="customer_name">ชื่อลูกค้า<span class="required-mark">*</span></label>
                                 <div class="input-shell">
                                     <input type="text" name="customer_name" id="customer_name" class="form-input js-clearable" value="<?php echo h($customerData['customer_name']); ?>" autocomplete="off" placeholder="Customer name" required>
@@ -1004,7 +1272,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="type_customer">ประเภทลูกค้า<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="type_customer" id="type_customer" class="form-select" required>
-                                        <option value="">เลือกประเภทลูกค้า</option>
+                                        <option value="">Select</option>
                                         <?php foreach ($typeCustomers as $typeCustomer) { ?>
                                             <option value="<?php echo h($typeCustomer['type_id']); ?>" <?php echo ((string)$customerData['type_customer'] === (string)$typeCustomer['type_id']) ? 'selected' : ''; ?>><?php echo h($typeCustomer['type_name']); ?></option>
                                         <?php } ?>
@@ -1013,16 +1281,22 @@ if (empty($shippingRecords)) {
                             </div>
 
                             <div class="field">
-                                <label class="field-label" for="mode_name">กลุ่มลูกค้า<span class="required-mark">*</span></label>
-                                <div class="input-shell">
-                                    <input type="text" name="mode_name" id="mode_name" class="form-input js-clearable" value="<?php echo h($customerData['mode_name']); ?>" autocomplete="off" placeholder="Customer group" required>
-                                    <button type="button" class="field-clear" data-clear-target="mode_name" aria-label="ล้างค่า">&times;</button>
+                                <label class="field-label" for="h_mode_name">กลุ่มลูกค้า<span class="required-mark">*</span></label>
+                                <div class="select-shell">
+                                    <select name="h_mode_name" id="h_mode_name" class="form-select" required>
+                                        <option value="">Select</option>
+                                        <?php if (!$currentModeFound) { ?>
+                                            <option value="<?php echo h($currentMode); ?>" selected><?php echo h($currentMode); ?> (ไม่พบในรายการ)</option>
+                                        <?php } ?>
+                                        <?php foreach ($modeCustomers as $modeCustomer) { ?>
+                                            <option value="<?php echo h($modeCustomer['id_mode']); ?>" <?php echo ((string)$modeCustomer['id_mode'] === $currentMode) ? 'selected' : ''; ?>><?php echo h($modeCustomer['mode_name']); ?></option>
+                                        <?php } ?>
+                                    </select>
                                 </div>
-                                <input type="hidden" name="h_mode_name" id="h_mode_name" value="<?php echo h($customerData['mode_name']); ?>">
                             </div>
 
                             <div class="field">
-                                <label class="field-label" for="customer_code_display">รหัสสมาชิก (สถานะ.)</label>
+                                <label class="field-label" for="customer_code_display">รหัสสมาชิก (สถานะ)</label>
                                 <div class="input-shell">
                                     <input type="text" id="customer_code_display" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly>
                                 </div>
@@ -1033,7 +1307,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="credit_ckk">วิธีชำระเงิน</label>
                                 <div class="select-shell">
                                     <select name="credit_ckk" id="credit_ckk" class="form-select">
-                                        <option value="">เลือกวิธีชำระเงิน</option>
+                                        <option value="">Select</option>
                                         <?php foreach ($creditBanks as $creditBank) { ?>
                                             <option value="<?php echo h($creditBank['id']); ?>" <?php echo ((string)$customerData['credit_ckk'] === (string)$creditBank['id']) ? 'selected' : ''; ?>><?php echo h($creditBank['pay_in']); ?></option>
                                         <?php } ?>
@@ -1043,13 +1317,21 @@ if (empty($shippingRecords)) {
 
                             <div class="field">
                                 <label class="field-label">&nbsp;</label>
-                                <label class="tag-toggle<?php echo !empty($customerData['vip_ckk']) ? ' is-active' : ''; ?>" id="vip_toggle">
-                                    <input type="checkbox" value="1" id="vip_ckk" name="vip_ckk" <?php echo !empty($customerData['vip_ckk']) ? 'checked' : ''; ?>>
-                                    <span>VIP</span>
-                                </label>
+                                <div class="tag-pair">
+                                    <label class="tag-toggle<?php echo !empty($customerData['vip_ckk']) ? ' is-active' : ''; ?>" id="vip_toggle">
+                                        <input type="checkbox" value="1" id="vip_ckk" name="vip_ckk" <?php echo !empty($customerData['vip_ckk']) ? 'checked' : ''; ?>>
+                                        <span>VIP</span>
+                                    </label>
+                                    <!-- id display_credit_thb_trigger / h_bill_id ตายตัวตาม js/credit-term-modal.js -->
+                                    <button type="button" class="credit-term-button" id="display_credit_thb_trigger" onclick="openCreditTermPopup()" <?php echo $isEditMode ? '' : 'disabled title="บันทึกข้อมูลลูกค้าก่อน จึงจะดูเครดิตเทอมได้"'; ?>>
+                                        <img src="img/icons/credit_term.svg" alt="" aria-hidden="true">
+                                        <span>เครดิตเทอม</span>
+                                    </button>
+                                    <input type="hidden" id="h_bill_id" value="<?php echo $isEditMode ? h($customerData['customer_id']) : ''; ?>">
+                                </div>
                             </div>
 
-                            <div class="field span-3">
+                            <div class="field span-2">
                                 <label class="field-label" for="cus_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                 <div class="input-shell">
                                     <input type="text" name="cus_address" id="cus_address" class="form-input js-clearable" value="<?php echo h($customerData['cus_address']); ?>" placeholder="ใส่รายละเอียดที่อยู่" required>
@@ -1061,7 +1343,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="cus_province">จังหวัด<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="cus_province" id="cus_province" class="form-select" required>
-                                        <option value="">เลือกจังหวัด</option>
+                                        <option value="">Select</option>
                                         <?php foreach ($provinces as $province) { ?>
                                             <option value="<?php echo h($province['province_name']); ?>" <?php echo ($customerData['cus_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
                                         <?php } ?>
@@ -1096,42 +1378,50 @@ if (empty($shippingRecords)) {
 
                         <div id="billingCards" class="card-list">
                             <?php foreach ($billingRecords as $index => $billing) { ?>
+                                <?php
+                                // บิล 1 ใช้รหัสลูกค้าหลัก บิล 2+ ใช้รหัสของแถวนั้นเอง
+                                $billingCode = $index === 0 ? trim((string)$customerData['customer_code']) : trim((string)($billing['billing_code'] ?? ''));
+                                $billingCoden = $index === 0 ? trim((string)$customerData['customer_coden']) : trim((string)($billing['billing_coden'] ?? ''));
+                                ?>
                                 <div class="sub-card billing-card" data-billing-index="<?php echo h($index); ?>">
                                     <div class="sub-card-header">
                                         <h3 class="sub-card-title">ที่อยู่ออกบิล <?php echo h($index + 1); ?></h3>
-                                        <button type="button" class="danger-button remove-billing-card" <?php echo $index === 0 ? 'hidden' : ''; ?>>
-                                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M3 6h18"></path>
-                                                <path d="M8 6V4h8v2"></path>
-                                                <path d="M8 10v6"></path>
-                                                <path d="M12 10v6"></path>
-                                                <path d="M16 10v6"></path>
-                                                <path d="M6 6l1 14h10l1-14"></path>
-                                            </svg>
-                                            ลบข้อมูล
-                                        </button>
                                     </div>
 
-                                    <div class="field-grid field-grid-4">
+                                    <div class="field-grid">
                                         <div class="field">
                                             <label class="field-label">รหัสลูกค้า AWL</label>
-                                            <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly></div>
+                                            <div class="code-run-row js-code-row" data-code-type="awl">
+                                                <div class="input-shell"><input type="text" class="form-input js-code-display" value="<?php echo h($billingCode !== '' ? $billingCode : 'Auto'); ?>" readonly></div>
+                                                <input type="hidden" class="js-code-value" name="billing_code[]" value="<?php echo h($billingCode); ?>" data-saved-code="<?php echo h($billingCode); ?>">
+                                                <button type="button" class="code-run-button js-code-run">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
+                                                        <circle cx="8.5" cy="10.5" r="2"></circle>
+                                                        <path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4"></path>
+                                                        <path d="M14.5 10h4"></path>
+                                                        <path d="M14.5 14h4"></path>
+                                                    </svg>
+                                                    Run รหัสลูกค้า
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div class="field">
                                             <label class="field-label">รหัสลูกค้า NBM</label>
-                                            <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_no'] !== '' ? $customerData['customer_no'] : 'Auto'); ?>" readonly></div>
-                                        </div>
-
-                                        <div class="field">
-                                            <label class="field-label">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
-                                            <div class="select-shell">
-                                                <select class="form-select billing-preface" name="billing_preface_name[]" required>
-                                                    <option value="">เลือกคำนำหน้าชื่อ</option>
-                                                    <?php foreach ($prefaceOptions as $option) { ?>
-                                                        <option value="<?php echo h($option); ?>" <?php echo (($billing['billing_preface_name'] ?? '') === $option) ? 'selected' : ''; ?>><?php echo h($option); ?></option>
-                                                    <?php } ?>
-                                                </select>
+                                            <div class="code-run-row js-code-row" data-code-type="nbm">
+                                                <div class="input-shell"><input type="text" class="form-input js-code-display" value="<?php echo h($billingCoden !== '' ? $billingCoden : 'Auto'); ?>" readonly></div>
+                                                <input type="hidden" class="js-code-value" name="billing_coden[]" value="<?php echo h($billingCoden); ?>" data-saved-code="<?php echo h($billingCoden); ?>">
+                                                <button type="button" class="code-run-button js-code-run">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
+                                                        <circle cx="8.5" cy="10.5" r="2"></circle>
+                                                        <path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4"></path>
+                                                        <path d="M14.5 10h4"></path>
+                                                        <path d="M14.5 14h4"></path>
+                                                    </svg>
+                                                    Run รหัสลูกค้า
+                                                </button>
                                             </div>
                                         </div>
 
@@ -1159,7 +1449,7 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field span-2">
+                                        <div class="field">
                                             <label class="field-label">E-mail<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="email" class="form-input js-clearable billing-email" name="billing_email[]" value="<?php echo h($billing['billing_email'] ?? ''); ?>" placeholder="email@example.com" required>
@@ -1179,7 +1469,7 @@ if (empty($shippingRecords)) {
                                             <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-province" name="billing_province[]" required>
-                                                    <option value="">เลือกจังหวัด</option>
+                                                    <option value="">Select</option>
                                                     <?php foreach ($provinces as $province) { ?>
                                                         <option value="<?php echo h($province['province_name']); ?>" <?php echo (($billing['billing_province'] ?? '') === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
                                                     <?php } ?>
@@ -1207,7 +1497,7 @@ if (empty($shippingRecords)) {
                                             <label class="field-label">เลือกสาขา<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-branch-type" name="billing_branch_type[]" required>
-                                                    <option value="">เลือกสาขา</option>
+                                                    <option value="">Select</option>
                                                     <option value="1" <?php echo (($billing['billing_branch_type'] ?? '') === '1') ? 'selected' : ''; ?>>สำนักงานใหญ่</option>
                                                     <option value="2" <?php echo (($billing['billing_branch_type'] ?? '') === '2') ? 'selected' : ''; ?>>สาขา</option>
                                                 </select>
@@ -1220,7 +1510,19 @@ if (empty($shippingRecords)) {
                                                 <input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" value="<?php echo h($billing['billing_branch_no'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Branch number" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
-                                            <div class="field-hint">ถ้าเป็นสำนักงานใหญ่สามารถใส่ 00000 ได้</div>
+                                        </div>
+                                        <div class="field field-action">
+                                            <button type="button" class="danger-button remove-billing-card" <?php echo $index === 0 ? 'hidden' : ''; ?>>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M3 6h18"></path>
+                                                    <path d="M8 6V4h8v2"></path>
+                                                    <path d="M8 10v6"></path>
+                                                    <path d="M12 10v6"></path>
+                                                    <path d="M16 10v6"></path>
+                                                    <path d="M6 6l1 14h10l1-14"></path>
+                                                </svg>
+                                                ลบข้อมูล
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1241,32 +1543,9 @@ if (empty($shippingRecords)) {
                                 <div class="sub-card shipping-card" data-shipping-index="<?php echo h($index); ?>">
                                     <div class="sub-card-header">
                                         <h3 class="sub-card-title">ที่อยู่จัดส่ง <?php echo h($index + 1); ?></h3>
-                                        <button type="button" class="danger-button remove-shipping-card" <?php echo $index === 0 ? 'hidden' : ''; ?>>
-                                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M3 6h18"></path>
-                                                <path d="M8 6V4h8v2"></path>
-                                                <path d="M8 10v6"></path>
-                                                <path d="M12 10v6"></path>
-                                                <path d="M16 10v6"></path>
-                                                <path d="M6 6l1 14h10l1-14"></path>
-                                            </svg>
-                                            ลบข้อมูล
-                                        </button>
                                     </div>
 
                                     <div class="field-grid">
-                                        <div class="field">
-                                            <label class="field-label">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
-                                            <div class="select-shell">
-                                                <select class="form-select shipping-preface" name="shipping_preface_name[]" required>
-                                                    <option value="">เลือกคำนำหน้าชื่อ</option>
-                                                    <?php foreach ($prefaceOptions as $option) { ?>
-                                                        <option value="<?php echo h($option); ?>" <?php echo (($shipping['shipping_preface_name'] ?? '') === $option) ? 'selected' : ''; ?>><?php echo h($option); ?></option>
-                                                    <?php } ?>
-                                                </select>
-                                            </div>
-                                        </div>
-
                                         <div class="field">
                                             <label class="field-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
                                             <div class="input-shell">
@@ -1282,6 +1561,19 @@ if (empty($shippingRecords)) {
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
+                                        <div class="field field-action">
+                                            <button type="button" class="danger-button remove-shipping-card" <?php echo $index === 0 ? 'hidden' : ''; ?>>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M3 6h18"></path>
+                                                    <path d="M8 6V4h8v2"></path>
+                                                    <path d="M8 10v6"></path>
+                                                    <path d="M12 10v6"></path>
+                                                    <path d="M16 10v6"></path>
+                                                    <path d="M6 6l1 14h10l1-14"></path>
+                                                </svg>
+                                                ลบข้อมูล
+                                            </button>
+                                        </div>
 
                                         <div class="field span-3">
                                             <label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
@@ -1295,7 +1587,7 @@ if (empty($shippingRecords)) {
                                             <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select shipping-province" name="shipping_province[]" required>
-                                                    <option value="">เลือกจังหวัด</option>
+                                                    <option value="">Select</option>
                                                     <?php foreach ($provinces as $province) { ?>
                                                         <option value="<?php echo h($province['province_name']); ?>" <?php echo (($shipping['shipping_province'] ?? '') === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
                                                     <?php } ?>
@@ -1339,7 +1631,7 @@ if (empty($shippingRecords)) {
                                 <label class="field-label" for="rental_province">จังหวัด</label>
                                 <div class="select-shell">
                                     <select name="rental_province" id="rental_province" class="form-select">
-                                        <option value="">เลือกจังหวัด</option>
+                                        <option value="">Select</option>
                                         <?php foreach ($provinces as $province) { ?>
                                             <option value="<?php echo h($province['province_name']); ?>" <?php echo ($customerData['rental_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
                                         <?php } ?>
@@ -1350,7 +1642,7 @@ if (empty($shippingRecords)) {
                             <div class="field">
                                 <label class="field-label" for="rental_ampher">เขต/อำเภอ</label>
                                 <div class="input-shell">
-                                    <input type="text" name="rental_ampher" id="rental_ampher" class="form-input js-clearable" value="<?php echo h($customerData['rental_ampher']); ?>" placeholder="District / Amphur">
+                                    <input type="text" name="rental_ampher" id="rental_ampher" class="form-input js-clearable" value="<?php echo h($customerData['rental_ampher']); ?>" placeholder="กรอกเขต / อำเภอ">
                                     <button type="button" class="field-clear" data-clear-target="rental_ampher" aria-label="ล้างค่า">&times;</button>
                                 </div>
                             </div>
@@ -1358,7 +1650,7 @@ if (empty($shippingRecords)) {
                             <div class="field">
                                 <label class="field-label" for="rental_postcode">รหัสไปรษณีย์</label>
                                 <div class="input-shell">
-                                    <input type="text" name="rental_postcode" id="rental_postcode" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['rental_postcode']); ?>" inputmode="numeric" maxlength="10" placeholder="Postcode">
+                                    <input type="text" name="rental_postcode" id="rental_postcode" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['rental_postcode']); ?>" inputmode="numeric" maxlength="10" placeholder="ใส่เฉพาะตัวเลข">
                                     <button type="button" class="field-clear" data-clear-target="rental_postcode" aria-label="ล้างค่า">&times;</button>
                                 </div>
                             </div>
@@ -1387,8 +1679,8 @@ if (empty($shippingRecords)) {
 
                         <div class="customer-actions">
                             <button type="submit" class="primary-button">
-                                <img src="img/icons/add_user.png" alt="Add User">
-                                <span id="submitCustomerButtonText"><?php echo $isEditMode ? 'อัพเดต' : 'บันทึก'; ?></span>
+                                <?php if (!$isEditMode) { ?><img src="img/icons/add_user.png" alt="Add User"><?php } ?>
+                                <span id="submitCustomerButtonText"><?php echo $isEditMode ? 'อัพเดต' : 'เพิ่มลูกค้า'; ?></span>
                             </button>
                             <a href="register_suphos.php" class="ghost-button">ยกเลิก</a>
                         </div>
@@ -1436,29 +1728,39 @@ if (empty($shippingRecords)) {
         <div class="sub-card billing-card" data-billing-index="__INDEX__">
             <div class="sub-card-header">
                 <h3 class="sub-card-title">ที่อยู่ออกบิล __NUMBER__</h3>
-                <button type="button" class="danger-button remove-billing-card">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 6h18"></path>
-                        <path d="M8 6V4h8v2"></path>
-                        <path d="M8 10v6"></path>
-                        <path d="M12 10v6"></path>
-                        <path d="M16 10v6"></path>
-                        <path d="M6 6l1 14h10l1-14"></path>
-                    </svg>
-                    ลบข้อมูล
-                </button>
             </div>
-            <div class="field-grid field-grid-4">
+            <div class="field-grid">
                 <div class="field"><label class="field-label">รหัสลูกค้า AWL</label>
-                    <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly></div>
+                    <div class="code-run-row js-code-row" data-code-type="awl">
+                        <div class="input-shell"><input type="text" class="form-input js-code-display" value="Auto" readonly></div>
+                        <input type="hidden" class="js-code-value" name="billing_code[]" value="" data-saved-code="">
+                        <button type="button" class="code-run-button js-code-run">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
+                                <circle cx="8.5" cy="10.5" r="2"></circle>
+                                <path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4"></path>
+                                <path d="M14.5 10h4"></path>
+                                <path d="M14.5 14h4"></path>
+                            </svg>
+                            Run รหัสลูกค้า
+                        </button>
+                    </div>
                 </div>
                 <div class="field"><label class="field-label">รหัสลูกค้า NBM</label>
-                    <div class="input-shell"><input type="text" class="form-input" value="<?php echo h($customerData['customer_no'] !== '' ? $customerData['customer_no'] : 'Auto'); ?>" readonly></div>
-                </div>
-                <div class="field"><label class="field-label">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
-                    <div class="select-shell"><select class="form-select billing-preface" name="billing_preface_name[]" required>
-                            <option value="">เลือกคำนำหน้าชื่อ</option><?php foreach ($prefaceOptions as $option) { ?><option value="<?php echo h($option); ?>"><?php echo h($option); ?></option><?php } ?>
-                        </select></div>
+                    <div class="code-run-row js-code-row" data-code-type="nbm">
+                        <div class="input-shell"><input type="text" class="form-input js-code-display" value="Auto" readonly></div>
+                        <input type="hidden" class="js-code-value" name="billing_coden[]" value="" data-saved-code="">
+                        <button type="button" class="code-run-button js-code-run">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
+                                <circle cx="8.5" cy="10.5" r="2"></circle>
+                                <path d="M5.5 16c.6-1.6 1.7-2.4 3-2.4s2.4.8 3 2.4"></path>
+                                <path d="M14.5 10h4"></path>
+                                <path d="M14.5 14h4"></path>
+                            </svg>
+                            Run รหัสลูกค้า
+                        </button>
+                    </div>
                 </div>
                 <div class="field"><label class="field-label">ชื่อในการออกบิล<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable billing-name" name="billing_name[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
@@ -1469,7 +1771,7 @@ if (empty($shippingRecords)) {
                 <div class="field"><label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tel" name="billing_tel[]" inputmode="numeric" maxlength="15" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field span-2"><label class="field-label">E-mail<span class="required-mark">*</span></label>
+                <div class="field"><label class="field-label">E-mail<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="email" class="form-input js-clearable billing-email" name="billing_email[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field span-3"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
@@ -1477,7 +1779,7 @@ if (empty($shippingRecords)) {
                 </div>
                 <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-province" name="billing_province[]" required>
-                            <option value="">เลือกจังหวัด</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
+                            <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
                 <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
@@ -1488,14 +1790,26 @@ if (empty($shippingRecords)) {
                 </div>
                 <div class="field"><label class="field-label">เลือกสาขา<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-branch-type" name="billing_branch_type[]" required>
-                            <option value="">เลือกสาขา</option>
+                            <option value="">Select</option>
                             <option value="1">สำนักงานใหญ่</option>
                             <option value="2">สาขา</option>
                         </select></div>
                 </div>
                 <div class="field"><label class="field-label">เลขที่สาขา<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" inputmode="numeric" maxlength="10" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
-                    <div class="field-hint">ถ้าเป็นสำนักงานใหญ่สามารถใส่ 00000 ได้</div>
+                </div>
+                <div class="field field-action">
+                    <button type="button" class="danger-button remove-billing-card">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M8 10v6"></path>
+                            <path d="M12 10v6"></path>
+                            <path d="M16 10v6"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                        </svg>
+                        ลบข้อมูล
+                    </button>
                 </div>
             </div>
         </div>
@@ -1505,36 +1819,33 @@ if (empty($shippingRecords)) {
         <div class="sub-card shipping-card" data-shipping-index="__INDEX__">
             <div class="sub-card-header">
                 <h3 class="sub-card-title">ที่อยู่จัดส่ง __NUMBER__</h3>
-                <button type="button" class="danger-button remove-shipping-card">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 6h18"></path>
-                        <path d="M8 6V4h8v2"></path>
-                        <path d="M8 10v6"></path>
-                        <path d="M12 10v6"></path>
-                        <path d="M16 10v6"></path>
-                        <path d="M6 6l1 14h10l1-14"></path>
-                    </svg>
-                    ลบข้อมูล
-                </button>
             </div>
             <div class="field-grid">
-                <div class="field"><label class="field-label">คำนำหน้าชื่อ<span class="required-mark">*</span></label>
-                    <div class="select-shell"><select class="form-select shipping-preface" name="shipping_preface_name[]" required>
-                            <option value="">เลือกคำนำหน้าชื่อ</option><?php foreach ($prefaceOptions as $option) { ?><option value="<?php echo h($option); ?>"><?php echo h($option); ?></option><?php } ?>
-                        </select></div>
-                </div>
                 <div class="field"><label class="field-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable shipping-name" name="shipping_name[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable shipping-tel" name="shipping_tel[]" inputmode="numeric" maxlength="15" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
+                <div class="field field-action">
+                    <button type="button" class="danger-button remove-shipping-card">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M8 10v6"></path>
+                            <path d="M12 10v6"></path>
+                            <path d="M16 10v6"></path>
+                            <path d="M6 6l1 14h10l1-14"></path>
+                        </svg>
+                        ลบข้อมูล
+                    </button>
+                </div>
                 <div class="field span-3"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable shipping-address" name="shipping_address[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select shipping-province" name="shipping_province[]" required>
-                            <option value="">เลือกจังหวัด</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
+                            <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
                 <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
@@ -1547,25 +1858,171 @@ if (empty($shippingRecords)) {
         </div>
     </template>
 
+    <!-- Popup เครดิตเทอม (ใช้ระบบร่วมกับ register_suphos.php ผ่าน js/credit-term-modal.js) — อยู่นอก form เพื่อไม่ให้ Enter ในช่องติดตามไป submit ฟอร์มลูกค้า -->
+    <div id="creditTermPopupModal" aria-hidden="true">
+        <div class="credit-term-popup-box" role="dialog" aria-modal="true" aria-labelledby="creditTermPopupTitle">
+            <button type="button" class="customer-popup-close" onclick="closeCreditTermPopup()" aria-label="Close">&times;</button>
+            <div class="clear-loan-header">
+                <h2 id="creditTermPopupTitle">เครดิตเทอม</h2>
+            </div>
+            <div class="credit-term-popup-content">
+                <div class="credit-term-summary">
+                    <div class="credit-term-summary-item">
+                        <p class="credit-term-summary-label">เครดิต (วัน)</p>
+                        <p class="credit-term-summary-value" id="creditTermSummaryDay">-</p>
+                    </div>
+                    <div class="credit-term-summary-item">
+                        <p class="credit-term-summary-label">เครดิต (ยอดเงิน)</p>
+                        <p class="credit-term-summary-value" id="creditTermSummaryAmount">0.00</p>
+                    </div>
+                    <div class="credit-term-summary-item">
+                        <p class="credit-term-summary-label">ยอดรวมหนี้คงค้าง</p>
+                        <p class="credit-term-summary-value" id="creditTermSummaryOutstanding">0.00</p>
+                    </div>
+                    <div class="credit-term-summary-item is-highlight">
+                        <p class="credit-term-summary-label">ยอดเครดิตคงเหลือ</p>
+                        <p class="credit-term-summary-value" id="creditTermSummaryRemaining">0.00</p>
+                    </div>
+                </div>
+                <div class="credit-term-table-panel">
+                    <div class="credit-term-table-wrap">
+                        <table class="credit-term-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col" aria-label="เลือก"></th>
+                                    <th scope="col">เลขที่ใบสั่งขาย</th>
+                                    <th scope="col">รายการสินค้า</th>
+                                    <th scope="col">ยอดที่ต้องชำระ</th>
+                                    <th scope="col">ยอดชำระแล้ว</th>
+                                    <th scope="col">ยอดหนี้คงค้าง</th>
+                                </tr>
+                            </thead>
+                            <tbody id="creditTermTableBody">
+                                <tr class="credit-term-empty-row">
+                                    <td><span class="credit-term-caret" aria-hidden="true"></span></td>
+                                    <td colspan="5">เลือกลูกค้าแล้วกดเปิดเครดิตเทอมเพื่อดูข้อมูล</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
     <script>
-        function make_autocom(autoObj, showObj) {
-            var mkAutoObj = autoObj;
-            var mkSerValObj = showObj;
-            new Autocomplete(mkAutoObj, function() {
-                this.setValue = function(id) {
-                    document.getElementById(mkSerValObj).value = id;
+        (function() {
+            var creditTermModal = document.getElementById("creditTermPopupModal");
+            creditTermModal.addEventListener("click", function(event) {
+                if (event.target === creditTermModal) closeCreditTermPopup();
+            });
+            document.addEventListener("keydown", function(event) {
+                if (event.key === "Escape" && creditTermModal.style.display === "flex") closeCreditTermPopup();
+            });
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function() {
+            // การ์ดที่อยู่ออกบิลแต่ละใบรันรหัส AWL (billing_code[]) และ NBM (billing_coden[]) ของตัวเอง ชุดเลขแยกกัน
+            // บิล 1 = รหัสลูกค้าหลัก บันทึกจริง + เช็คซ้ำตอนกดบันทึกฟอร์ม ผูก event แบบ delegation ให้ครอบคลุมการ์ดที่เพิ่มทีหลัง
+            var codeLabels = {
+                awl: "รหัสลูกค้า AWL",
+                nbm: "รหัสลูกค้า NBM"
+            };
+
+            function cardCodeInputs(row) {
+                return {
+                    display: row.querySelector(".js-code-display"),
+                    value: row.querySelector(".js-code-value")
                 };
-                if (this.isModified) {
-                    this.setValue("");
+            }
+
+            function setCardCode(row, code) {
+                var inputs = cardCodeInputs(row);
+                inputs.value.value = code;
+                inputs.display.value = code !== "" ? code : "Auto";
+
+                // บิล 1 ของ AWL คือ tb_customer.customer_code ให้ช่องรหัสด้านบนตรงกัน
+                if (row.dataset.codeType === "awl" && row.closest(".billing-card") === document.querySelector("#billingCards .billing-card")) {
+                    document.getElementById("customer_code").value = code;
+                    document.getElementById("customer_code_display").value = code !== "" ? code : "Auto";
                 }
-                if (this.value.length < 1 && this.isNotClick) {
+            }
+
+            function runCode(row, button) {
+                var type = row.dataset.codeType;
+                var body = new URLSearchParams();
+                body.append("type", type);
+                document.querySelectorAll('#billingCards .js-code-row[data-code-type="' + type + '"] .js-code-value').forEach(function(input) {
+                    if (input.closest(".js-code-row") !== row && input.value.trim() !== "") {
+                        body.append("exclude[]", input.value.trim());
+                    }
+                });
+
+                button.disabled = true;
+                fetch("ajax_customer_run_code.php", {
+                        method: "POST",
+                        body: body
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(result) {
+                        if (!result.success) {
+                            throw new Error(result.message || "รันรหัสลูกค้าไม่สำเร็จ");
+                        }
+                        setCardCode(row, result.code);
+                        Swal.fire({
+                            icon: "success",
+                            title: "รันรหัสลูกค้าแล้ว",
+                            text: codeLabels[type] + ": " + result.code + " (บันทึกจริงตอนกดบันทึก หากเลขนี้ถูกใช้ไปก่อน ระบบจะรันเลขใหม่ให้อัตโนมัติ)"
+                        });
+                    })
+                    .catch(function(error) {
+                        Swal.fire({
+                            icon: "error",
+                            title: "เกิดข้อผิดพลาด",
+                            text: error.message || "รันรหัสลูกค้าไม่สำเร็จ"
+                        });
+                    })
+                    .finally(function() {
+                        button.disabled = false;
+                    });
+            }
+
+            document.addEventListener("click", function(event) {
+                var button = event.target.closest(".js-code-run");
+                if (!button) {
                     return;
                 }
-                return "data_mode_cus.php?bill_search=" + encodeURIComponent(this.value);
-            });
-        }
 
-        make_autocom("mode_name", "h_mode_name");
+                var row = button.closest(".js-code-row");
+                var codeInput = cardCodeInputs(row).value;
+                var savedCode = codeInput.dataset.savedCode || "";
+
+                // ถามเฉพาะตอนจะทับรหัสที่บันทึกในฐานแล้ว เลขที่เพิ่งรันในหน้านี้กดซ้ำได้เลย
+                if (savedCode === "" || codeInput.value.trim() !== savedCode) {
+                    runCode(row, button);
+                    return;
+                }
+
+                Swal.fire({
+                    icon: "warning",
+                    title: "รัน" + codeLabels[row.dataset.codeType] + "ใหม่?",
+                    html: "รหัสเดิม <b>" + savedCode.replace(/[&<>"']/g, "") + "</b> จะถูกแทนที่เมื่อกดบันทึก<br>เอกสารเดิมที่อ้างรหัสนี้จะไม่ถูกแก้ไข",
+                    showCancelButton: true,
+                    confirmButtonText: "รันรหัสใหม่",
+                    cancelButtonText: "ยกเลิก",
+                    confirmButtonColor: "#612989"
+                }).then(function(choice) {
+                    if (choice.isConfirmed) {
+                        runCode(row, button);
+                    }
+                });
+            });
+        })();
 
         (function() {
             var form = document.getElementById("customerForm");
@@ -1588,8 +2045,6 @@ if (empty($shippingRecords)) {
             var customerDupInput = document.getElementById("customer_name_dup");
             var customerMsg = document.getElementById("customer_name_msg");
             var customerIdInput = form.querySelector("input[name='customer_id']");
-            var modeNameInput = document.getElementById("mode_name");
-            var hiddenModeNameInput = document.getElementById("h_mode_name");
             var duplicateNames = [];
             var lastCheckedName = "";
             var duplicateAlertShown = false;
@@ -1635,24 +2090,23 @@ if (empty($shippingRecords)) {
             function applyPlaceholders(scope) {
                 var placeholders = {
                     "#customer_name": "กรอกชื่อลูกค้า",
-                    "#cus_tel": "กรอกเบอร์โทร",
-                    "#mode_name": "กรอกกลุ่มลูกค้า",
+                    "#cus_tel": "ใส่เฉพาะตัวเลข",
                     "#cus_address": "กรอกรายละเอียดที่อยู่",
                     "#cus_ampher": "กรอกเขต / อำเภอ",
-                    "#cus_postcode": "กรอกรหัสไปรษณีย์",
+                    "#cus_postcode": "ใส่เฉพาะตัวเลข",
                     ".billing-name": "กรอกชื่อสำหรับออกบิล",
-                    ".billing-tax-id": "กรอกเลขประจำตัวผู้เสียภาษี",
-                    ".billing-tel": "กรอกเบอร์โทร",
+                    ".billing-tax-id": "ใส่เฉพาะตัวเลข",
+                    ".billing-tel": "ใส่เฉพาะตัวเลข",
                     ".billing-email": "กรอกอีเมล",
                     ".billing-address": "กรอกรายละเอียดที่อยู่ออกบิล",
                     ".billing-ampher": "กรอกเขต / อำเภอ",
-                    ".billing-postcode": "กรอกรหัสไปรษณีย์",
-                    ".billing-branch-no": "กรอกเลขที่สาขา",
+                    ".billing-postcode": "ใส่เฉพาะตัวเลข",
+                    ".billing-branch-no": "ใส่เฉพาะตัวเลข",
                     ".shipping-name": "กรอกชื่อผู้ติดต่อ",
-                    ".shipping-tel": "กรอกเบอร์โทร",
+                    ".shipping-tel": "ใส่เฉพาะตัวเลข",
                     ".shipping-address": "กรอกรายละเอียดที่อยู่จัดส่ง",
                     ".shipping-ampher": "กรอกเขต / อำเภอ",
-                    ".shipping-postcode": "กรอกรหัสไปรษณีย์"
+                    ".shipping-postcode": "ใส่เฉพาะตัวเลข"
                 };
 
                 Object.keys(placeholders).forEach(function(selector) {
@@ -1672,7 +2126,6 @@ if (empty($shippingRecords)) {
 
             function getCustomerSnapshot() {
                 return {
-                    preface: document.getElementById("preface_name").value,
                     name: document.getElementById("customer_name").value.trim(),
                     tel: document.getElementById("cus_tel").value.trim(),
                     address: document.getElementById("cus_address").value.trim(),
@@ -1724,12 +2177,6 @@ if (empty($shippingRecords)) {
                 });
             }
 
-            function syncModeNameField() {
-                if (modeNameInput && hiddenModeNameInput && hiddenModeNameInput.value.trim() === "") {
-                    hiddenModeNameInput.value = modeNameInput.value.trim();
-                }
-            }
-
             function showDuplicateNames(names) {
                 customerMsg.textContent = "";
                 if (!names.length) return;
@@ -1764,7 +2211,6 @@ if (empty($shippingRecords)) {
             function copyCustomerToBilling() {
                 var data = getCustomerSnapshot();
                 billingCards.querySelectorAll(".billing-card").forEach(function(card) {
-                    setSelectValue(card.querySelector(".billing-preface"), data.preface);
                     card.querySelector(".billing-name").value = data.name;
                     card.querySelector(".billing-tel").value = data.tel;
                     card.querySelector(".billing-address").value = data.address;
@@ -1783,7 +2229,6 @@ if (empty($shippingRecords)) {
             function copyCustomerToShipping() {
                 var data = getCustomerSnapshot();
                 shippingCards.querySelectorAll(".shipping-card").forEach(function(card) {
-                    setSelectValue(card.querySelector(".shipping-preface"), data.preface);
                     card.querySelector(".shipping-name").value = data.name;
                     card.querySelector(".shipping-tel").value = data.tel;
                     card.querySelector(".shipping-address").value = data.address;
@@ -1799,7 +2244,6 @@ if (empty($shippingRecords)) {
                 var firstBilling = billingCards.querySelector(".billing-card");
                 if (!firstBilling) return;
                 var billing = {
-                    preface: firstBilling.querySelector(".billing-preface").value,
                     name: firstBilling.querySelector(".billing-name").value.trim(),
                     tel: firstBilling.querySelector(".billing-tel").value.trim(),
                     address: firstBilling.querySelector(".billing-address").value.trim(),
@@ -1808,7 +2252,6 @@ if (empty($shippingRecords)) {
                     postcode: firstBilling.querySelector(".billing-postcode").value.trim()
                 };
                 shippingCards.querySelectorAll(".shipping-card").forEach(function(card) {
-                    setSelectValue(card.querySelector(".shipping-preface"), billing.preface);
                     card.querySelector(".shipping-name").value = billing.name;
                     card.querySelector(".shipping-tel").value = billing.tel;
                     card.querySelector(".shipping-address").value = billing.address;
@@ -2074,11 +2517,6 @@ if (empty($shippingRecords)) {
                 appendBillingCard();
             });
             document.getElementById("addShippingCard").addEventListener("click", appendShippingCard);
-
-            if (modeNameInput && hiddenModeNameInput) {
-                modeNameInput.addEventListener("input", syncModeNameField);
-                modeNameInput.addEventListener("change", syncModeNameField);
-            }
 
             billingCards.addEventListener("input", function() {
                 clearActivePills("#copyCustomerToBilling, #copyBillingToShipping");

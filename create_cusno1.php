@@ -18,68 +18,42 @@ $mm = substr($mm1,-2);
 
 if($type_doc =='3'){
 	
-$yearMonth = substr($yy+543, -2).$mm;
-$sql = "SELECT MAX(customer_code) AS MAXID FROM tb_customer  where customer_code LIKE '%$yearMonth%'";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
-
-$maxId1 = substr($maxId3,0,-4);
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -4);
-$nextId = $yearMonth.$maxId2;
+// ใช้ helper กลางให้เลขไม่ชนกับรหัสบิล 2+ (tb_customer_billing_address.billing_code) ยังอิงเดือนของวันที่ SO เหมือนเดิม
+include_once "customer_code_lib.php";
+if (!customer_code_acquire_lock($conn, 'awl')) {
+	echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณาลองใหม่อีกครั้ง');history.back();</script>";
+	exit();
 }
-else 
-{
-$maxId1 = "0001"; 
-$nextId = $yearMonth.$maxId1;
-
-}
-
-$so = "PC";
-$ref_id ="$so$nextId";	
+$ref_id = customer_code_next($conn, 'awl', array(), customer_code_prefix('awl', substr($iv_date, 0, 10)));
 	
 
 
 $save="UPDATE  tb_customer SET customer_code='".$ref_id."' where customer_id ='".$bill_id."'";
 $qsave=mysqli_query($conn,$save);
+// บิล 1 ต้องเท่ากับ tb_customer.customer_code เสมอ
+if ($qsave && customer_code_ensure_billing_column($conn, 'awl')) {
+	mysqli_query($conn, "UPDATE tb_customer_billing_address SET billing_code='".mysqli_real_escape_string($conn, $ref_id)."' WHERE customer_id='".(int)$bill_id."' AND billing_index=1");
+}
 
 
 		
 	}else if($type_doc =='4'){
 		
-$yearMonth = substr($yy+543, -2).$mm;
-$sql = "SELECT MAX(customer_coden) AS MAXID FROM tb_customer  where customer_coden LIKE '%$yearMonth%'";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId3 = substr($rs['MAXID'],-8);
-
-$maxId1 = substr($maxId3,0,-4);
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -4);
-$nextId = $yearMonth.$maxId2;
+// ชุดเลข NBM ผ่าน helper กลางให้เลขไม่ชนกับรหัสบิล 2+ (tb_customer_billing_address.billing_coden) ยังอิงเดือนของวันที่ SO เหมือนเดิม
+include_once "customer_code_lib.php";
+if (!customer_code_acquire_lock($conn, 'nbm')) {
+	echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณาลองใหม่อีกครั้ง');history.back();</script>";
+	exit();
 }
-else 
-{
-$maxId1 = "0001"; 
-$nextId = $yearMonth.$maxId1;
+$ref_id = customer_code_next($conn, 'nbm', array(), customer_code_prefix('nbm', substr($iv_date, 0, 10)));
 
-}
-
-$so = "NC";
-$ref_id ="$so$nextId";
-	
 
 $save="UPDATE  tb_customer SET customer_coden = '".$ref_id."' where customer_id ='".$bill_id."'";
 $qsave=mysqli_query($conn,$save);
+// บิล 1 ต้องเท่ากับ tb_customer.customer_coden เสมอ
+if ($qsave && customer_code_ensure_billing_column($conn, 'nbm')) {
+	mysqli_query($conn, "UPDATE tb_customer_billing_address SET billing_coden='".mysqli_real_escape_string($conn, $ref_id)."' WHERE customer_id='".(int)$bill_id."' AND billing_index=1");
+}
 
 }
 

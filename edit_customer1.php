@@ -1,6 +1,7 @@
 <?php
 include("dbconnect.php");
 include("head.php");
+include("customer_code_lib.php");
 date_default_timezone_set("Asia/Bangkok");
 
 function normalizeThaiName($text)
@@ -107,9 +108,7 @@ if (isset($_POST["submit"])) {
     $customer_id = (int)postValue("customer_id", 0);
     $customer_code = postValue("customer_code");
     $customer_no = postValue("customer_no");
-    $preface_name = postValue("preface_name");
-    $customer_name1 = normalizeThaiName(postValue("customer_name"));
-    $customer_name = trim($preface_name . " " . $customer_name1);
+    $customer_name = normalizeThaiName(postValue("customer_name"));
     $type_customer = postValue("type_customer");
     $cus_address = postValue("cus_address");
     $cus_ampher = postValue("cus_ampher");
@@ -142,7 +141,6 @@ if (isset($_POST["submit"])) {
     $rental_contacttel = postValue("rental_contacttel");
     $rental_contact = postValue("rental_contact");
 
-    $billingPrefaces = postArray("billing_preface_name");
     $billingNames = postArray("billing_name");
     $billingTaxIds = postArray("billing_tax_id");
     $billingTels = postArray("billing_tel");
@@ -154,7 +152,6 @@ if (isset($_POST["submit"])) {
     $billingBranchTypes = postArray("billing_branch_type");
     $billingBranchNos = postArray("billing_branch_no");
 
-    $shippingPrefaces = postArray("shipping_preface_name");
     $shippingNames = postArray("shipping_name");
     $shippingTels = postArray("shipping_tel");
     $shippingAddresses = postArray("shipping_address");
@@ -191,15 +188,26 @@ if (isset($_POST["submit"])) {
     $surname = isset($_SESSION["surname"]) ? $_SESSION["surname"] : '';
     $edit_name = trim($name . " " . $surname);
 
+    // รหัส AWL/NBM ต่อการ์ดบิล: รหัสที่ลูกค้าคนนี้ถืออยู่แล้วใช้ต่อ, เลขที่เพิ่งรันในหน้า lock แล้วรันใหม่ถ้าชน/ข้ามเดือน
+    // AWL: บิล 1 = tb_customer.customer_code, บิล 2+ = billing_code / NBM: บิล 1 = customer_coden, บิล 2+ = billing_coden
+    $billingCodes = customer_code_resolve_posted_codes($conn, 'awl', $customer_id);
+    $billingCodens = $billingCodes === false ? false : customer_code_resolve_posted_codes($conn, 'nbm', $customer_id);
+    if ($billingCodes === false || $billingCodens === false) {
+        echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง');history.back();</script>";
+        exit();
+    }
+    $customer_code = isset($billingCodes[0]) ? $billingCodes[0] : '';
+    $customer_coden = isset($billingCodens[0]) ? $billingCodens[0] : '';
+
     mysqli_begin_transaction($conn);
     $allOk = ensureCustomerChildTables($conn);
 
     if ($allOk) {
         $save = "UPDATE tb_customer SET
             customer_code='" . esc($conn, $customer_code) . "',
+            customer_coden='" . esc($conn, $customer_coden) . "',
             customer_name='" . esc($conn, $customer_name) . "',
             type_customer='" . esc($conn, $type_customer) . "',
-            preface_name='" . esc($conn, $preface_name) . "',
             cus_address='" . esc($conn, $cus_address) . "',
             cus_ampher='" . esc($conn, $cus_ampher) . "',
             cus_province='" . esc($conn, $cus_province) . "',
@@ -302,7 +310,6 @@ if (isset($_POST["submit"])) {
                 continue;
             }
 
-            $billingPreface = isset($billingPrefaces[$i]) ? trim($billingPrefaces[$i]) : '';
             $billingTaxId = isset($billingTaxIds[$i]) ? preg_replace('/[^0-9]/', '', $billingTaxIds[$i]) : '';
             $billingTel = isset($billingTels[$i]) ? preg_replace('/[^0-9]/', '', $billingTels[$i]) : '';
             $billingEmail = isset($billingEmails[$i]) ? trim($billingEmails[$i]) : '';
@@ -315,11 +322,13 @@ if (isset($_POST["submit"])) {
             }
             $isPrimary = ($i === 0) ? 1 : 0;
             $billingIndex = $i + 1;
+            $billingCode = isset($billingCodes[$i]) ? $billingCodes[$i] : '';
+            $billingCoden = isset($billingCodens[$i]) ? $billingCodens[$i] : '';
 
             $billingInsert = "INSERT INTO tb_customer_billing_address
-                (customer_id, billing_index, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
+                (customer_id, billing_index, billing_code, billing_coden, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
                 VALUES
-                ('" . esc($conn, $customer_id) . "', '" . esc($conn, $billingIndex) . "', '" . esc($conn, $billingPreface) . "', '" . esc($conn, $billingName) . "', '" . esc($conn, $billingTaxId) . "', '" . esc($conn, $billingTel) . "', '" . esc($conn, $billingEmail) . "', '" . esc($conn, $billingAddress) . "', '" . esc($conn, $billingAmpher) . "', '" . esc($conn, $billingProvince) . "', '" . esc($conn, $billingPostcode) . "', '" . esc($conn, $billingBranchType) . "', '" . esc($conn, $billingBranchNo) . "', '" . esc($conn, $isPrimary) . "')";
+                ('" . esc($conn, $customer_id) . "', '" . esc($conn, $billingIndex) . "', " . ($billingCode === '' ? "NULL" : "'" . esc($conn, $billingCode) . "'") . ", " . ($billingCoden === '' ? "NULL" : "'" . esc($conn, $billingCoden) . "'") . ", '', '" . esc($conn, $billingName) . "', '" . esc($conn, $billingTaxId) . "', '" . esc($conn, $billingTel) . "', '" . esc($conn, $billingEmail) . "', '" . esc($conn, $billingAddress) . "', '" . esc($conn, $billingAmpher) . "', '" . esc($conn, $billingProvince) . "', '" . esc($conn, $billingPostcode) . "', '" . esc($conn, $billingBranchType) . "', '" . esc($conn, $billingBranchNo) . "', '" . esc($conn, $isPrimary) . "')";
 
             if (!mysqli_query($conn, $billingInsert)) {
                 $allOk = false;
@@ -349,7 +358,6 @@ if (isset($_POST["submit"])) {
                 continue;
             }
 
-            $shippingPreface = isset($shippingPrefaces[$i]) ? trim($shippingPrefaces[$i]) : '';
             $shippingTel = isset($shippingTels[$i]) ? preg_replace('/[^0-9]/', '', $shippingTels[$i]) : '';
             $shippingAmpher = isset($shippingAmphers[$i]) ? trim($shippingAmphers[$i]) : '';
             $shippingPostcode = isset($shippingPostcodes[$i]) ? preg_replace('/[^0-9]/', '', $shippingPostcodes[$i]) : '';
@@ -359,7 +367,7 @@ if (isset($_POST["submit"])) {
             $shippingInsert = "INSERT INTO tb_customer_shipping_address
                 (customer_id, shipping_index, shipping_preface_name, shipping_name, shipping_tel, shipping_address, shipping_ampher, shipping_province, shipping_postcode, is_primary)
                 VALUES
-                ('" . esc($conn, $customer_id) . "', '" . esc($conn, $shippingIndex) . "', '" . esc($conn, $shippingPreface) . "', '" . esc($conn, $shippingName) . "', '" . esc($conn, $shippingTel) . "', '" . esc($conn, $shippingAddress) . "', '" . esc($conn, $shippingAmpher) . "', '" . esc($conn, $shippingProvince) . "', '" . esc($conn, $shippingPostcode) . "', '" . esc($conn, $isPrimary) . "')";
+                ('" . esc($conn, $customer_id) . "', '" . esc($conn, $shippingIndex) . "', '', '" . esc($conn, $shippingName) . "', '" . esc($conn, $shippingTel) . "', '" . esc($conn, $shippingAddress) . "', '" . esc($conn, $shippingAmpher) . "', '" . esc($conn, $shippingProvince) . "', '" . esc($conn, $shippingPostcode) . "', '" . esc($conn, $isPrimary) . "')";
 
             if (!mysqli_query($conn, $shippingInsert)) {
                 $allOk = false;
