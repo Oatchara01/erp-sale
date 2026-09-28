@@ -14,6 +14,8 @@ $keyword = isset($_GET['q']) ? trim($_GET['q']) : '';
 $keywordLike = '%' . $keyword . '%';
 $lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+// customer_id ไม่บังคับ: ส่งมา = จำกัดเฉพาะข้อมูลออกบิลของลูกค้าคนนั้น (register_suphos), ไม่ส่ง = ค้นทุกลูกค้าเหมือนเดิม
+$customerId = isset($_GET['customer_id']) ? (int)$_GET['customer_id'] : 0;
 
 if ($limit <= 0) {
     $limit = 20;
@@ -22,7 +24,7 @@ if ($limit > 50) {
     $limit = 50;
 }
 
-$sql = "SELECT b.id AS billing_id, b.customer_id, c.first_name, c.last_name, c.customer_name, c.customer_code, c.customer_coden, b.billing_name AS bill_name, c.cus_tel, b.billing_tel AS bill_tel, b.billing_address AS bill_address, b.billing_ampher AS bill_ampher, b.billing_province AS billl_province, b.billing_postcode AS bill_postcode, b.billing_tax_id AS tax_id, b.billing_branch_no, b.billing_branch_type
+$sql = "SELECT b.id AS billing_id, b.customer_id, c.first_name, c.last_name, c.customer_name, c.customer_code, c.customer_coden, b.billing_name AS bill_name, c.cus_tel, b.billing_tel AS bill_tel, b.billing_address AS bill_address, b.billing_ampher AS bill_ampher, b.billing_province AS billl_province, b.billing_postcode AS bill_postcode, b.billing_tax_id AS tax_id, b.billing_branch_no, b.billing_branch_type, b.billing_preface_name
         FROM tb_customer_billing_address b
         LEFT JOIN tb_customer c ON b.customer_id = c.customer_id
         WHERE 1";
@@ -33,6 +35,12 @@ if ($lastId > 0) {
     $sql .= " AND b.id < ?";
     $types .= 'i';
     $params[] = $lastId;
+}
+
+if ($customerId > 0) {
+    $sql .= " AND b.customer_id = ?";
+    $types .= 'i';
+    $params[] = $customerId;
 }
 
 if ($keyword !== '') {
@@ -106,13 +114,24 @@ foreach ($rows as $row) {
         return $value !== '';
     });
 
-    $customerId = (int)$row['customer_id'];
+    // ที่อยู่สำหรับเติมลงช่อง bill_address: ไม่มีสาขา และใส่ "จ." หน้าจังหวัด (รูปแบบเดียวกับ data_bill_name1.php)
+    $provinceText = trim((string)$row['billl_province']);
+    $billAddressFillParts = array_filter(array(
+        trim((string)$row['bill_address']),
+        trim((string)$row['bill_ampher']),
+        $provinceText !== '' ? 'จ. ' . $provinceText : '',
+        trim((string)$row['bill_postcode'])
+    ), function ($value) {
+        return $value !== '';
+    });
+
+    $rowCustomerId = (int)$row['customer_id'];
     $billingId = (int)$row['billing_id'];
     $nextLastId = $billingId;
 
     $customers[] = array(
         'billing_id' => $billingId,
-        'customer_id' => $customerId,
+        'customer_id' => $rowCustomerId,
         'customer_name' => $displayName,
         'customer_code' => $row['customer_code'],
         'customer_coden' => $row['customer_coden'],
@@ -120,7 +139,9 @@ foreach ($rows as $row) {
         'cus_tel' => $displayTel,
         'bill_tel' => $row['bill_tel'],
         'bill_address' => implode(' ', $billAddressParts),
-        'tax_id' => $row['tax_id']
+        'tax_id' => $row['tax_id'],
+        'preface_name' => $row['billing_preface_name'],
+        'bill_address_fill' => implode(' ', $billAddressFillParts)
     );
 }
 

@@ -2194,3 +2194,8 @@ body,
 #so_doc_head_grid {
 	row-gap: 0;
 }
+
+/* Swal ต้องอยู่เหนือ popup ลูกค้า/ออกบิล/ที่อยู่จัดส่ง (.customer-popup-modal z-index: 99998 ใน so-core.css) */
+.swal2-container {
+	z-index: 100000;
+}

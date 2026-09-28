@@ -348,6 +348,27 @@ include("head.php"); ?>
 		syncShippingFieldsToLegacy();
 	}
 
+	// ตั้งค่า select คำนำหน้าชื่อ ถ้าค่าที่ได้มาไม่มีใน option ให้เพิ่ม option ใหม่ก่อน
+	function setPreNameValue(selectId, value) {
+		var preNameVal = String(value || '').trim();
+		var preNameSelect = document.getElementById(selectId);
+		if (!preNameSelect) return;
+		var exists = false;
+		for (var i = 0; i < preNameSelect.options.length; i++) {
+			if (preNameSelect.options[i].value === preNameVal) {
+				exists = true;
+				break;
+			}
+		}
+		if (!exists && preNameVal !== "") {
+			var opt = document.createElement('option');
+			opt.value = preNameVal;
+			opt.innerHTML = preNameVal;
+			preNameSelect.appendChild(opt);
+		}
+		preNameSelect.value = preNameVal;
+	}
+
 	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, pre_name, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
 		if (typeof mode === 'function') {
 			onComplete = mode;
@@ -442,24 +463,7 @@ include("head.php"); ?>
 						setElementValue(bill_tel, customerData.bill_tel);
 						setElementValue(tax_id, customerData.tax_id);
 
-						var preNameVal = customerData.preface_name.trim();
-						var preNameSelect = document.getElementById(pre_name);
-						if (preNameSelect) {
-							var exists = false;
-							for (var i = 0; i < preNameSelect.options.length; i++) {
-								if (preNameSelect.options[i].value === preNameVal) {
-									exists = true;
-									break;
-								}
-							}
-							if (!exists && preNameVal !== "") {
-								var opt = document.createElement('option');
-								opt.value = preNameVal;
-								opt.innerHTML = preNameVal;
-								preNameSelect.appendChild(opt);
-							}
-							preNameSelect.value = preNameVal;
-						}
+						setPreNameValue(pre_name, customerData.preface_name);
 					}
 
 					if (isCustomerMode) {
@@ -1678,9 +1682,9 @@ include("head.php"); ?>
 			window.soIsRentalIvConversion = <?php echo $isRentalIvConversion ? 'true' : 'false'; ?>;
 			window.soSavedHaveProduct = <?php echo json_encode((string)($savedSo['have_product'] ?? ''), JSON_UNESCAPED_UNICODE); ?>;
 			<?php if ($fromRentalError !== null): ?>
-			document.addEventListener('DOMContentLoaded', function() {
-				Swal.fire('แจ้งเตือน', <?php echo json_encode($fromRentalError, JSON_UNESCAPED_UNICODE); ?>, 'error');
-			});
+				document.addEventListener('DOMContentLoaded', function() {
+					Swal.fire('แจ้งเตือน', <?php echo json_encode($fromRentalError, JSON_UNESCAPED_UNICODE); ?>, 'error');
+				});
 			<?php endif; ?>
 
 			// return true = ลูกค้ามีวงเงินแต่วงเงินไม่พอ ต้อง block การบันทึก
@@ -2209,7 +2213,7 @@ include("head.php"); ?>
 							<div class="so-field-group">
 								<label class="so-label" for="doc_type_select">ประเภท<span class="required">*</span></label>
 								<div class="so-select-wrapper">
-					<select class="so-select" id="doc_type_select" onchange="
+									<select class="so-select" id="doc_type_select" onchange="
 									document.getElementById('ic_ckk').checked = false;
 									document.getElementById('et_ckk').checked = false;
 									if(this.value == '2') document.getElementById('et_ckk').checked = true;
@@ -2563,8 +2567,7 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label" for="bill_name">ชื่อออกบิล<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_name" id="bill_name" class="so-input" placeholder="ชื่อที่ต้องการออกบิล..." style="padding-right: 32px;">
-								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_name').value=''"></i>
+								<input type='text' name="bill_name" id="bill_name" class="so-input" placeholder="ชื่อที่ต้องการออกบิล..." readonly>
 							</div>
 						</div>
 
@@ -2572,8 +2575,7 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label" for="bill_tel">เบอร์โทรศัพท์<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_tel" id="bill_tel" class="so-input" readonly placeholder="เบอร์โทรศัพท์..." style="padding-right: 32px;">
-								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_tel').value=''"></i>
+								<input type='text' name="bill_tel" id="bill_tel" class="so-input" placeholder="เบอร์โทรศัพท์..." readonly>
 							</div>
 						</div>
 					</div>
@@ -2582,8 +2584,7 @@ include("head.php"); ?>
 					<div class="so-field-group" style="margin-bottom: 24px;">
 						<label class="so-label" for="bill_address">ที่อยู่ออกบิล<span class="required">*</span></label>
 						<div class="so-input-wrapper" style="width: 100%; max-width: 1032px;">
-							<input type="text" name="bill_address" id="bill_address" class="so-input" style="width: 100%; max-width: 1032px; padding-right: 32px;" readonly placeholder="ที่อยู่ที่ใช้ในการออกบิล...">
-							<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('bill_address').value=''"></i>
+							<input type="text" name="bill_address" id="bill_address" class="so-input" style="width: 100%; max-width: 1032px;" placeholder="ที่อยู่ที่ใช้ในการออกบิล..." readonly>
 						</div>
 					</div>
 
@@ -4302,6 +4303,7 @@ include("head.php"); ?>
 		var fullBillPopupLoading = false;
 		var fullBillPopupPageSize = 20;
 		var fullBillPopupPreviousChecked = false;
+		var fullBillPopupCustomerId = '';
 		var shippingAddressPopupSelected = null;
 		var shippingAddressPopupTimer = null;
 		var shippingAddressPopupData = [];
@@ -4346,12 +4348,27 @@ include("head.php"); ?>
 			modal.setAttribute('aria-hidden', 'true');
 		}
 
+		// customer_id ของลูกค้าที่เลือกในฟอร์มหลักเท่านั้น (ไม่ fallback ไปแถวออกบิลที่เคยเลือก)
+		// ใช้จำกัดให้ popup ข้อมูลออกบิลแสดงเฉพาะของลูกค้าคนนี้
+		function getSelectedCustomerIdForBilling() {
+			var hiddenBillId = document.getElementById('h_bill_id');
+			var billId = document.getElementById('bill_id');
+			var displayBillId = document.getElementById('display_bill_id');
+			return String(
+				(hiddenBillId && hiddenBillId.value) ||
+				(billId && billId.value) ||
+				(displayBillId && displayBillId.textContent) ||
+				''
+			).trim();
+		}
+
 		// เปิด modal ข้อมูลออกบิล และรีเซ็ตผลลัพธ์เพื่อป้องกันข้อมูลค้างจากรอบก่อน
 		function openFullBillPopup() {
 			var modal = document.getElementById('fullBillPopupModal');
 			var search = document.getElementById('fullBillPopupSearch');
 			if (!modal) return;
 
+			fullBillPopupCustomerId = getSelectedCustomerIdForBilling();
 			modal.style.display = 'flex';
 			modal.setAttribute('aria-hidden', 'false');
 			fullBillPopupSelected = null;
@@ -4389,7 +4406,7 @@ include("head.php"); ?>
 		function openShippingAddressCreatePage(customerId) {
 			var resolvedCustomerId = String(customerId || getCurrentShippingPopupCustomerId() || '').trim();
 			if (!resolvedCustomerId) {
-				alert('กรุณาเลือกลูกค้าก่อนเพิ่มที่อยู่จัดส่ง');
+				Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อนเพิ่มที่อยู่จัดส่ง', 'warning');
 				return;
 			}
 			var url = 'shipping_info_add.php';
@@ -5089,6 +5106,14 @@ include("head.php"); ?>
 		function loadFullBillPopupRows(keyword, append) {
 			var tbody = document.getElementById('fullBillPopupRows');
 			if (fullBillPopupLoading) return;
+			// ไม่มีลูกค้า = ไม่ค้น (endpoint จะคืนข้อมูลออกบิลของทุกลูกค้าถ้าไม่ส่ง customer_id)
+			if (!fullBillPopupCustomerId) {
+				fullBillPopupData = [];
+				fullBillPopupHasMore = false;
+				fullBillPopupNextLastId = null;
+				renderFullBillPopupRows([]);
+				return;
+			}
 			fullBillPopupLoading = true;
 
 			if (!append && tbody) {
@@ -5106,7 +5131,8 @@ include("head.php"); ?>
 			toggleFullBillPopupLoadMore(append || fullBillPopupHasMore, append);
 
 			var requestUrl = 'ajax_fullbill_popup_search.php?q=' + encodeURIComponent(fullBillPopupKeyword || '') +
-				'&limit=' + encodeURIComponent(fullBillPopupPageSize);
+				'&limit=' + encodeURIComponent(fullBillPopupPageSize) +
+				'&customer_id=' + encodeURIComponent(fullBillPopupCustomerId);
 
 			if (append && fullBillPopupNextLastId) {
 				requestUrl += '&last_id=' + encodeURIComponent(fullBillPopupNextLastId);
@@ -5189,43 +5215,31 @@ include("head.php"); ?>
 				return;
 			}
 
-			var selectedCustId = fullBillPopupSelected.customer_id || '';
-
-			doCallAjax1(selectedCustId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', 'billing', function(success, missingFields) {
-				if (!success) {
-					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลออกบิลไม่ครบถ้วน';
-					alert('ไม่สามารถดึงข้อมูลออกบิลได้ครบ: ' + missingMessage);
-					return;
-				}
-				var checkbox = document.getElementById('full_bill');
-				if (checkbox) {
-					checkbox.checked = true;
-					updateToggleStyle(checkbox);
-				}
-				closeFullBillPopup(true);
-			});
-		}
-
-		function handleBillingInfoCreated(customerId) {
-			var resolvedId = String(customerId || '').trim();
-			var checkbox = document.getElementById('full_bill');
-
-			if (!resolvedId) {
-				loadFullBillPopupRows('', false);
+			// กันกรณีลูกค้าในฟอร์มถูกเปลี่ยนระหว่างที่ popup เปิดอยู่
+			var currentCustId = getSelectedCustomerIdForBilling();
+			if (String(fullBillPopupSelected.customer_id).trim() !== currentCustId) {
+				alert('ข้อมูลออกบิลที่เลือกไม่ใช่ของลูกค้าที่เลือกไว้ กรุณาเลือกใหม่');
 				return;
 			}
 
+			// เติมจากแถวออกบิลที่เลือกโดยตรง (ไม่ดึง bill_* จาก tb_customer)
+			setPreNameValue('pre_name', fullBillPopupSelected.preface_name);
+			setElementValue('bill_name', fullBillPopupSelected.bill_name || '');
+			setElementValue('bill_address', fullBillPopupSelected.bill_address_fill || '');
+			setElementValue('bill_tel', fullBillPopupSelected.bill_tel || '');
+			setElementValue('tax_id', fullBillPopupSelected.tax_id || '');
+
+			var checkbox = document.getElementById('full_bill');
 			if (checkbox) {
 				checkbox.checked = true;
 				updateToggleStyle(checkbox);
 			}
+			closeFullBillPopup(true);
+		}
 
-			doCallAjax1(resolvedId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', 'billing', function(success) {
-				if (success) {
-					closeFullBillPopup(true);
-				}
-				loadFullBillPopupRows('', false);
-			});
+		// หลังเพิ่ม/แก้ข้อมูลออกบิลในแท็บใหม่: โหลดรายการของลูกค้าปัจจุบันใหม่ ให้ผู้ใช้เลือกและยืนยันเอง
+		function handleBillingInfoCreated(customerId) {
+			loadFullBillPopupRows(fullBillPopupKeyword || '', false);
 		}
 
 		function selectCustomerPopupRow(index) {
@@ -5242,13 +5256,13 @@ include("head.php"); ?>
 
 		function confirmCustomerPopupSelection() {
 			if (!customerPopupSelected) {
-				alert('กรุณาเลือกลูกค้าก่อน');
+				Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อน', 'warning');
 				return;
 			}
 
 			var selectedCustId = String(customerPopupSelected.customer_id || '').trim();
 			if (!selectedCustId) {
-				alert('ข้อมูลลูกค้าที่เลือกไม่มีรหัสลูกค้า');
+				Swal.fire('แจ้งเตือน', 'ข้อมูลลูกค้าที่เลือกไม่มีรหัสลูกค้า', 'warning');
 				return;
 			}
 
@@ -5271,6 +5285,14 @@ include("head.php"); ?>
 					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลลูกค้าไม่ครบถ้วน';
 					alert('ไม่สามารถดึงข้อมูลลูกค้าได้ครบ: ' + missingMessage);
 					return;
+				}
+
+				// เปลี่ยนลูกค้าแล้ว ช่องออกบิลถูกทับด้วยค่าของลูกค้าใหม่ → ข้อมูลออกบิลที่เคยเลือกไว้ไม่ใช้อีก
+				fullBillPopupSelected = null;
+				var fullBillCheckbox = document.getElementById('full_bill');
+				if (fullBillCheckbox && fullBillCheckbox.checked) {
+					fullBillCheckbox.checked = false;
+					updateToggleStyle(fullBillCheckbox);
 				}
 
 				// ดึงและเช็คยอดเครดิตคงเหลือ
@@ -5634,6 +5656,12 @@ include("head.php"); ?>
 
 			if (fullBillCheckbox) {
 				fullBillCheckbox.addEventListener('change', function() {
+					if (this.checked && !getSelectedCustomerIdForBilling()) {
+						Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อน', 'warning');
+						this.checked = false;
+						updateToggleStyle(this);
+						return;
+					}
 					fullBillPopupPreviousChecked = !this.checked;
 					updateToggleStyle(this);
 					if (this.checked) {
