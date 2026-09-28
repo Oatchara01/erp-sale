@@ -2091,7 +2091,12 @@ include("head.php"); ?>
 			<!-- Header Section -->
 			<div class="so-header-container">
 				<div class="so-header-left">
-					<h1 class="so-title">Register Sale Order</h1>
+					<div class="so-title-row">
+						<button type="button" class="so-back-btn" onclick="goMainSuphos();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+							<img src="img/icons/chevron-left.png" alt="">
+						</button>
+						<h1 class="so-title">Register Sale Order</h1>
+					</div>
 					<div class="so-ref-info">
 						<span class="so-ref-label">เลขที่อ้างอิง</span>
 						<span class="so-ref-value"><?php echo ($savedSo !== null) ? $savedSo['ref_id'] : ($so . $nextId); ?></span>
@@ -2104,7 +2109,6 @@ include("head.php"); ?>
 						<span class="so-ref-value" id="clearLoanReserveInfoValue"></span>
 					</div>
 					<button type="button" class="btn-clear-loan-reserve" id="clearLoanTriggerButton">เคลียร์จอง/ยืม</button>
-					<button type="button" class="btn-preview-so" onclick="openPrintReport();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 				</div>
 			</div>
 
@@ -3836,9 +3840,73 @@ include("head.php"); ?>
 						<i class="far fa-save"></i> Update
 					</button>
 				<?php endif; ?>
-				<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
-					ย้อนกลับ
-				</button>
+				<?php
+				// ใบกำกับภาษีเปิดจากข้อมูลที่บันทึกแล้วเท่านั้น (เหมือนเมนูใน status_adminhos.php): ET -> report_EThos, อื่นๆ -> report_IEhos
+				$soPreviewSavedRefId = ($savedSo !== null) ? (string)($savedSo['ref_id'] ?? '') : '';
+				$soPreviewEtCkk = ($savedSo !== null) ? (string)($savedSo['et_ckk'] ?? '') : '';
+				$soPreviewTaxReport = (substr((string)($savedSo['iv_no'] ?? ''), 0, 2) === 'ET') ? 'report_EThos.php' : 'report_IEhos.php';
+				?>
+				<div class="so-preview-menu-wrap">
+					<button type="button" name="preview_so" id="btn_preview_menu" onclick="toggleSoPreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="soPreviewMenu" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+						<img src="img/icons/preview.png" alt="" style="width: 16px; height: 16px;"> Preview
+					</button>
+					<div id="soPreviewMenu" class="so-preview-menu" hidden>
+						<div class="so-preview-menu-label">Preview</div>
+						<div class="so-preview-menu-box" role="menu">
+							<button type="button" role="menuitem" onclick="soPreviewSelect('so');">ใบสั่งขาย</button>
+							<button type="button" role="menuitem" onclick="soPreviewSelect('tax');">ใบกำกับภาษี</button>
+							<button type="button" role="menuitem" onclick="soPreviewSelect('delivery');">ใบส่งสินค้า</button>
+						</div>
+					</div>
+				</div>
+				<script>
+					var soPreviewTaxInfo = {
+						refId: <?php echo json_encode($soPreviewSavedRefId); ?>,
+						etCkk: <?php echo json_encode($soPreviewEtCkk); ?>,
+						report: <?php echo json_encode($soPreviewTaxReport); ?>
+					};
+
+					function setSoPreviewMenuOpen(open) {
+						var menu = document.getElementById('soPreviewMenu');
+						var trigger = document.getElementById('btn_preview_menu');
+						if (!menu || !trigger) return;
+						menu.hidden = !open;
+						trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+					}
+
+					function toggleSoPreviewMenu(event) {
+						if (event) event.stopPropagation();
+						var menu = document.getElementById('soPreviewMenu');
+						setSoPreviewMenuOpen(menu ? menu.hidden : false);
+					}
+
+					function soPreviewSelect(kind) {
+						setSoPreviewMenuOpen(false);
+						if (kind === 'so') {
+							openPrintReport();
+						} else if (kind === 'tax') {
+							if (!soPreviewTaxInfo.refId) {
+								Swal.fire('แจ้งเตือน', 'กรุณาบันทึกเอกสารก่อนเปิดใบกำกับภาษี', 'warning');
+								return;
+							}
+							if (soPreviewTaxInfo.etCkk !== '1') {
+								Swal.fire('แจ้งเตือน', 'เอกสารนี้ไม่ได้เป็น E-Tax จึงไม่มีใบกำกับภาษี', 'warning');
+								return;
+							}
+							window.open(soPreviewTaxInfo.report + '?ref_id=' + encodeURIComponent(soPreviewTaxInfo.refId), '_blank');
+						} else if (kind === 'delivery') {
+							Swal.fire('แจ้งเตือน', 'ใบส่งสินค้ายังไม่เปิดใช้งาน', 'info');
+						}
+					}
+
+					document.addEventListener('click', function(event) {
+						var wrap = document.querySelector('.so-preview-menu-wrap');
+						if (wrap && !wrap.contains(event.target)) setSoPreviewMenuOpen(false);
+					});
+					document.addEventListener('keydown', function(event) {
+						if (event.key === 'Escape') setSoPreviewMenuOpen(false);
+					});
+				</script>
 			</div>
 		</div>
 		<script>
