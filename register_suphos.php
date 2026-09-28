@@ -3855,7 +3855,6 @@ include("head.php"); ?>
 						<div class="so-preview-menu-box" role="menu">
 							<button type="button" role="menuitem" onclick="soPreviewSelect('so');">ใบสั่งขาย</button>
 							<button type="button" role="menuitem" onclick="soPreviewSelect('tax');">ใบกำกับภาษี</button>
-							<button type="button" role="menuitem" onclick="soPreviewSelect('delivery');">ใบส่งสินค้า</button>
 						</div>
 					</div>
 				</div>
@@ -3894,8 +3893,6 @@ include("head.php"); ?>
 								return;
 							}
 							window.open(soPreviewTaxInfo.report + '?ref_id=' + encodeURIComponent(soPreviewTaxInfo.refId), '_blank');
-						} else if (kind === 'delivery') {
-							Swal.fire('แจ้งเตือน', 'ใบส่งสินค้ายังไม่เปิดใช้งาน', 'info');
 						}
 					}
 

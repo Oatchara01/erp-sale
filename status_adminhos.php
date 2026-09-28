@@ -4,6 +4,7 @@ include "dbconnect.php";
 include "dbconnect_sale.php";
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <body>
 	<script>
@@ -442,7 +443,7 @@ include "dbconnect_sale.php";
 											</a>
 
 											<!-- คัดลอกใบเดิม -->
-											<a href="register_suphos.php?copy_from=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
+											<a href="register_suphos.php?copy_from=<?php echo $ref_id_url; ?>" onclick="return confirmNav(event, this, 'ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')" class="so-dropdown-item">
 												<i class="fas fa-copy" style="width:16px;"></i> คัดลอกใบเดิม
 											</a>
 
@@ -464,17 +465,17 @@ include "dbconnect_sale.php";
 												</a>
 											<?php } ?>
 
-											<!-- สร้างใบลดหนี้ -->
+											<!-- ใบส่งสินค้า -->
 											<?php if ($objResult['send_admin'] == '1') { ?>
-												<a href="register_credinot.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการสร้างใบสั่งลดหนี้ใช่หรือไม่')" class="so-dropdown-item">
-													<i class="fas fa-file-invoice" style="width:16px;"></i> สร้างใบลดหนี้
+												<a href="register_receivepro_so.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirmNav(event, this, 'ต้องการสร้างใบส่งสินค้าใช่หรือไม่')" class="so-dropdown-item">
+													<i class="fas fa-truck" style="width:16px;"></i> ใบส่งสินค้า
 												</a>
 											<?php } ?>
 
-											<!-- ใบส่งสินค้า -->
+											<!-- สร้างใบลดหนี้ -->
 											<?php if ($objResult['send_admin'] == '1') { ?>
-												<a href="register_receivepro_so.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirm('!!!ต้องการสร้างใบรับสินค้าใช่หรือไม่')" class="so-dropdown-item">
-													<i class="fas fa-truck" style="width:16px;"></i> ใบส่งสินค้า
+												<a href="register_credinot.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirmNav(event, this, 'ต้องการสร้างใบสั่งลดหนี้ใช่หรือไม่')" class="so-dropdown-item">
+													<i class="fas fa-file-invoice" style="width:16px;"></i> สร้างใบลดหนี้
 												</a>
 											<?php } ?>
 										</div>
@@ -685,6 +686,33 @@ include "dbconnect_sale.php";
 					menu.style.top = (rect.bottom + 4) + 'px';
 				}
 			}
+		}
+
+		// ยืนยันด้วย Swal ก่อนเปลี่ยนหน้าไปยัง href ของลิงก์ (คงไว้ให้คลิกขวา/เปิดแท็บใหม่ได้)
+		function confirmNav(event, link, text) {
+			event.preventDefault();
+			event.stopPropagation();
+			document.querySelectorAll('.so-dropdown-menu').forEach(m => {
+				m.classList.remove('show');
+			});
+			document.querySelectorAll('.so-dropdown-trigger').forEach(t => {
+				t.setAttribute('aria-expanded', 'false');
+			});
+
+			Swal.fire({
+				text: text,
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonColor: '#612989',
+				cancelButtonColor: '#8a8a8a',
+				confirmButtonText: 'ยืนยัน',
+				cancelButtonText: 'ยกเลิก'
+			}).then(function(result) {
+				if (result.isConfirmed) {
+					window.location.href = link.href;
+				}
+			});
+			return false;
 		}
 
 		// Close dropdowns when clicking anywhere outside
