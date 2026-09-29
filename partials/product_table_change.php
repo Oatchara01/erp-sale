@@ -4,29 +4,6 @@
  * รายการสินค้า (Change Order) — 6-row product table, ported/trimmed from
  * partials/detail_brschos_so.php (10-row version) + the field layout of
  * detail_changehos.php / detail_changeng.php.
- *
- * register_supchange1.php reads exactly these fields per row i=1..6:
- *   product_id{i}, count_stock{i}, count_sale{i}, product_price{i},
- *   sale_remarkk{i}, sum_amount{i}, product_name{i}, unit_name{i}
- * — do not rename/drop any of those. product_name/unit_name are posted for
- * the tb_register_data.product_name summary; search box/sn{i} remain UI-only.
- *
- * Row-fill AJAX target and the live search-as-you-type autocomplete both use
- * dedicated data_product_*_ptc.php endpoints (NOT the data_product_hos.php /
- * data_product_eng.php / data_product_hos1.php shared by 100+ other pages) -
- * this flow needs its own close_pro/group1/department filter rules, and
- * editing the shared endpoints would change behavior everywhere else too.
- * Department is computed below from $_SESSION['department'], override-able
- * by predefining $ptcIsEngDept before including this partial.
- *
- * C1 (Addendum 2): the old 3 per-row free-text search inputs
- * (product_codet{i}/product_code{i}/product_c{i}) are replaced by a single
- * search box above the table (#ptc_product_search), Autocomplete-bound to
- * $ptcSearchNameEndpoint, which fills the first empty row (port of
- * csFindEmptyRowIndex() from detail_brschos_so.php). A drag handle per row
- * (port of csHandleDragStart/Over/Enter/Leave/Drop/End + csShiftRows(),
- * trimmed from 10 rows to 6) lets rows be reordered - only VALUES move
- * between the 6 fixed slots, field names stay product_id{i}/etc.
  */
 
 if (!isset($ptcIsEngDept)) {
@@ -325,12 +302,14 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 		}, 200);
 	}
 
-	/* Modal แก้ไข "ข้อมูลรายการสินค้าเพิ่มเติม" — ตัดเหลือเฉพาะ หมายเหตุสินค้า (sale_remarkk{i})
+	/* Modal แก้ไข "ข้อมูลรายการสินค้าเพิ่มเติม" — มีเฉพาะ หมายเลข SN (sn{i}) และ หมายเหตุสินค้า (sale_remarkk{i})
 	   ตาม Figma (hos__subchange ไม่มีคอลัมน์ warranty/cal/pm/pm_year/print_name แบบฝั่ง BR/CS) */
 	var ptcActiveEditRowIndex = null;
 
 	function ptcOpenEditModal(rowIndex) {
 		ptcActiveEditRowIndex = rowIndex;
+		var snEl = document.getElementById('sn' + rowIndex);
+		document.getElementById('ptc_modal_sn').value = snEl ? snEl.value : '';
 		var remarkEl = document.getElementById('sale_remarkk' + rowIndex);
 		document.getElementById('ptc_modal_sale_remarkk').value = remarkEl ? remarkEl.value : '';
 		var modal = document.getElementById('ptc_edit_modal');
@@ -345,6 +324,8 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 
 	function ptcSaveEditModal() {
 		if (!ptcActiveEditRowIndex) return;
+		var snEl = document.getElementById('sn' + ptcActiveEditRowIndex);
+		if (snEl) snEl.value = document.getElementById('ptc_modal_sn').value;
 		var remarkEl = document.getElementById('sale_remarkk' + ptcActiveEditRowIndex);
 		if (remarkEl) remarkEl.value = document.getElementById('ptc_modal_sale_remarkk').value;
 		ptcCloseEditModal();
@@ -428,13 +409,12 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 		<thead>
 			<tr>
 				<th aria-label="ลากจัดเรียง" style="width:36px;"></th>
-				<th style="width:14%;">รหัสสินค้า</th>
-				<th style="width:23%;">รายการสินค้า</th>
-				<th style="width:8%;">แลกเข้า</th>
-				<th style="width:8%;">แลกออก</th>
-				<th style="width:10%;">ราคา/หน่วย</th>
-				<th style="width:10%;">ยอดรวม</th>
-				<th style="width:13%;">หมายเลข SN</th>
+				<th style="width:13%;">รหัสสินค้า</th>
+				<th style="width:25%;">รายการสินค้า</th>
+				<th style="width:9%;">แลกเข้า</th>
+				<th style="width:9%;">แลกออก</th>
+				<th style="width:14%;">ราคา/หน่วย</th>
+				<th style="width:16%;">ยอดรวม</th>
 				<th style="width:90px;" aria-label="จัดการรายการ"></th>
 			</tr>
 		</thead>
@@ -483,12 +463,8 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 						<input type="text" name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" value=""
 							jAutoCalc='({count_stock<?php echo $i; ?>} + {count_sale<?php echo $i; ?>}) * {product_price<?php echo $i; ?>}' readonly>
 					</td>
-					<td>
-						<div class="cs-cell-pill">
-							<input type="text" name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>" class="so-input" placeholder="ใส่เลข SN">
-						</div>
-					</td>
 					<td class="cs-row-actions-cell">
+						<input type="hidden" name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>">
 						<input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
 						<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="ptcOpenEditModal(<?php echo $i; ?>);">
 							<i class="fas fa-pen" aria-hidden="true"></i>
@@ -507,7 +483,7 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 	</table>
 </div>
 
-<!-- Modal "ข้อมูลรายการสินค้าเพิ่มเติม" ตัดเหลือเฉพาะ หมายเหตุสินค้า ตาม Figma -->
+<!-- Modal "ข้อมูลรายการสินค้าเพิ่มเติม" มีเฉพาะ หมายเลข SN และ หมายเหตุสินค้า ตาม Figma -->
 <div id="ptc_edit_modal" class="cs-modal-overlay" style="display:none;">
 	<div class="cs-modal-card">
 		<div class="cs-modal-header">
@@ -515,9 +491,15 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 			<button type="button" class="cs-modal-close-btn" onclick="ptcCloseEditModal();">&times;</button>
 		</div>
 		<div class="cs-modal-body">
-			<div class="so-field-group">
-				<label class="so-label">หมายเหตุสินค้า</label>
-				<input type="text" id="ptc_modal_sale_remarkk" class="so-input" placeholder="ระบุหมายเหตุสินค้า">
+			<div class="cs-modal-grid-2">
+				<div class="so-field-group">
+					<label class="so-label">หมายเลข SN</label>
+					<input type="text" id="ptc_modal_sn" class="so-input" placeholder="ใส่เลข SN">
+				</div>
+				<div class="so-field-group">
+					<label class="so-label">หมายเหตุสินค้า</label>
+					<input type="text" id="ptc_modal_sale_remarkk" class="so-input" placeholder="ระบุหมายเหตุสินค้า">
+				</div>
 			</div>
 		</div>
 		<div class="cs-modal-footer">

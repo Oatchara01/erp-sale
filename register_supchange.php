@@ -553,7 +553,12 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title">Change Order</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="goMainSupChange();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title">Change Order</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : $so . $nextId; ?></span>
@@ -1294,73 +1299,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							}
 						})();
 					</script>
-
-					<!-- <div class="so-card" style="margin-top: 24px;">
-						<div class="so-section-title-container">
-							<h3 class="so-section-title">เงื่อนไขการจัดส่ง / การรับเงิน</h3>
-							<hr class="so-divider">
-						</div>
-						<div class="so-checkbox-grid" style="margin-bottom: 16px;">
-							<label class="so-checkbox-pill">
-								<input type="checkbox" name="fix_datetime" id="fix_datetime" value="1"> <span>นัดวันและเวลาเรียบร้อยแล้ว</span>
-							</label>
-							<label class="so-checkbox-pill">
-								<input type="checkbox" name="on_time" id="on_time" value="1"> <span>งานสำคัญต้องตรงเวลา</span>
-							</label>
-							<label class="so-checkbox-pill">
-								<input type="checkbox" name="call_back" id="call_back" value="1"> <span>ต้องการให้โทรกลับเมื่อส่งสินค้าเสร็จแล้ว</span>
-							</label>
-							<label class="so-checkbox-pill">
-								<input type="checkbox" name="want_bus" id="want_bus" value="1"> <span>ต้องการรถใหญ่</span>
-							</label>
-						</div>
-
-						<div class="so-field-group" style="margin-bottom: 16px;">
-							<label class="so-label">สถานะการทำงาน</label>
-							<div style="display:flex; gap:16px; align-items:center; height:42px;">
-								<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-family:'Prompt',sans-serif; font-size:14px; color:#333; font-weight:500;">
-									<input type="radio" name="status" value="ส่ง" checked style="accent-color:#612989; width:18px; height:18px;"> ส่ง
-								</label>
-								<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-family:'Prompt',sans-serif; font-size:14px; color:#333; font-weight:500;">
-									<input type="radio" name="status" value="รับ" style="accent-color:#612989; width:18px; height:18px;"> รับ
-								</label>
-							</div>
-						</div>
-
-						<div class="so-grid-2" style="margin-bottom: 16px;">
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="sn_ckk" id="sn_ckk" value="1"> ต้องการ SN</label>
-								<input name="sn" id="sn" class="so-input" placeholder="ระบุหมายเลข SN">
-							</div>
-						</div>
-
-						<div class="so-grid-2">
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="cash" id="cash" value="1"> เก็บเงินสด</label>
-								<input name="unit_cash" id="unit_cash" class="so-input" style="text-align:right;" placeholder="จำนวนเงิน">
-							</div>
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="check_paper" id="check_paper" value="1"> รับเช็ค</label>
-								<input name="unit_check" id="unit_check" class="so-input" style="text-align:right;" placeholder="จำนวนเงิน">
-							</div>
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="credit_card" id="credit_card" value="1"> รูดการ์ด</label>
-								<input name="unit_credit" id="unit_credit" class="so-input" style="text-align:right;" placeholder="จำนวนเงิน">
-							</div>
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="bill" id="bill" value="1"> วางบิล</label>
-								<input name="unit_bill" id="unit_bill" class="so-input" style="text-align:right;" placeholder="จำนวนเงิน">
-							</div>
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="tran" id="tran" value="1"> ลูกค้าโอนเงินหน้างาน</label>
-								<input name="unit_tran" id="unit_tran" class="so-input" style="text-align:right;" placeholder="จำนวนเงิน">
-							</div>
-							<div class="so-input-with-checkbox">
-								<label class="so-checkbox-label"><input type="checkbox" name="dep" id="dep" value="1"> อื่นๆ</label>
-								<input name="dept" id="dept" class="so-input" placeholder="ระบุ">
-							</div>
-						</div>
-					</div> -->
 				</div>
 
 				<!-- ===================== ที่อยู่ ===================== -->
@@ -1990,8 +1928,8 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 						<button type="button" class="so-menu-danger" onclick="chgRunApproveAction('reject', true)" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
 						<button type="button" onclick="triggerCancelDocFromChgApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 					</div>
-					<button type="button" class="btn-so-approve" onclick="chgRunApproveAction('approve', false)"><i class="far fa-check-circle"></i> อนุมัติ</button>
-					<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> Update</button>
+					<button type="button" class="btn-so-approve" onclick="chgRunApproveAction('approve', false)"><img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ</button>
+					<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update</button>
 				</div>
 			<?php endif; ?>
 			<?php if (!$chgHideSubmit): ?>
@@ -2000,7 +1938,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 			<?php if (!$chgHideUpdate): ?>
 				<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> <?php echo $chgIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 			<?php endif; ?>
-			<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupChange();">ยกเลิก</button>
 		</div>
 	</div>
 </form>

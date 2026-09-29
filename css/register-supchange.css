@@ -29,8 +29,8 @@
 }
 
 /* Fix: shared .so-product-table (register-supbrcshos.css) nth-child width rules
-   are calibrated for an 8-column table; this page's table has 9 (drag handle +
-   8 data columns), so those rules land on the wrong columns. Redeclare all 9
+   are calibrated for an 8-column table; this page's table has 8 (drag handle +
+   7 data columns), so those rules land on the wrong columns. Redeclare all 8
    widths scoped to #ptc_product_table, matching the thead's own inline widths. */
 #ptc_product_table {
 	table-layout: fixed;
@@ -39,21 +39,27 @@
 #ptc_product_table th:nth-child(1),
 #ptc_product_table td:nth-child(1) { width: 36px; }
 #ptc_product_table th:nth-child(2),
-#ptc_product_table td:nth-child(2) { width: 14%; }
+#ptc_product_table td:nth-child(2) { width: 13%; }
 #ptc_product_table th:nth-child(3),
-#ptc_product_table td:nth-child(3) { width: 23%; }
+#ptc_product_table td:nth-child(3) { width: 25%; }
 #ptc_product_table th:nth-child(4),
-#ptc_product_table td:nth-child(4) { width: 8%; text-align: center; }
+#ptc_product_table td:nth-child(4) { width: 9%; text-align: center; }
 #ptc_product_table th:nth-child(5),
-#ptc_product_table td:nth-child(5) { width: 8%; text-align: center; }
+#ptc_product_table td:nth-child(5) { width: 9%; text-align: center; }
 #ptc_product_table th:nth-child(6),
-#ptc_product_table td:nth-child(6) { width: 10%; text-align: right; }
+#ptc_product_table td:nth-child(6) { width: 14%; text-align: right; }
 #ptc_product_table th:nth-child(7),
-#ptc_product_table td:nth-child(7) { width: 10%; text-align: right; }
+#ptc_product_table td:nth-child(7) { width: 16%; text-align: right; }
+
+/* numeric columns: tighter cell padding so long values (e.g. 1,234,567.00) fit
+   inside the input instead of being clipped */
+#ptc_product_table td:nth-child(n+4):nth-child(-n+7),
+#ptc_product_table th:nth-child(n+4):nth-child(-n+7) {
+	padding-left: 8px;
+	padding-right: 8px;
+}
 #ptc_product_table th:nth-child(8),
-#ptc_product_table td:nth-child(8) { width: 13%; }
-#ptc_product_table th:nth-child(9),
-#ptc_product_table td:nth-child(9) { width: 90px; }
+#ptc_product_table td:nth-child(8) { width: 90px; }
 
 /* Row that has a product filled in but no แลกเข้า/แลกออก entered yet: numbers
    render muted per Figma (node 599:3876, row 3) until quantities are typed. */
