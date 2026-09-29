@@ -429,6 +429,17 @@ $productTableIsPo = ($productTableContext === 'po');
             border-top: 2px solid #612989;
         }
 
+        .so-product-row.drag-over-after {
+            border-bottom: 2px solid #612989;
+        }
+
+        body.row-dragging,
+        body.row-dragging * {
+            cursor: grabbing !important;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         .so-product-table {
             width: 100%;
             min-width: 850px;
@@ -540,6 +551,20 @@ $productTableIsPo = ($productTableContext === 'po');
             cursor: grab;
             color: #8E8B94;
             margin-right: 8px;
+            padding: 6px 4px;
+            /* ไม่ให้นิ้วที่ลากไอคอนไปเลื่อนหน้าจอ / เลือกข้อความ / เด้งเมนู callout ของ iOS */
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        /* จอสัมผัส: ขยายพื้นที่กดให้ใช้นิ้วได้ง่าย */
+        @media (pointer: coarse) {
+            .drag-handle {
+                padding: 12px 8px;
+                font-size: 18px;
+            }
         }
 
         .action-icon {
@@ -942,17 +967,11 @@ $productTableIsPo = ($productTableContext === 'po');
             <tbody>
 
                 <?php for ($i = 1; $i <= 30; $i++): ?>
-                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" style="display:none;"
-                        ondragstart="handleDragStart(event, <?php echo $i; ?>)"
-                        ondragover="handleDragOver(event)"
-                        ondragenter="handleDragEnter(event)"
-                        ondragleave="handleDragLeave(event)"
-                        ondrop="handleDrop(event, <?php echo $i; ?>)"
-                        ondragend="handleDragEnd(event)">
+                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" style="display:none;">
                         <td style="text-align: center;">
-                            <!-- ไอคอนลากสลับตำแหน่ง และ Checkbox สำหรับไฮไลท์แถว -->
+                            <!-- ไอคอนลากสลับตำแหน่ง (Pointer Events: รองรับเมาส์ + ทัชบน mobile/iPad) และ Checkbox สำหรับไฮไลท์แถว -->
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <i class="fas fa-grip-vertical drag-handle" style="margin: 0; cursor: grab;" onmousedown="document.getElementById('product_row_<?php echo $i; ?>').setAttribute('draggable', true)" onmouseup="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')" onmouseleave="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')"></i>
+                                <i class="fas fa-grip-vertical drag-handle" style="margin: 0;" onpointerdown="handleRowPointerDown(event, <?php echo $i; ?>)"></i>
                                 <input type="checkbox" class="so-row-checkbox" onchange="toggleRowHighlight(this, <?php echo $i; ?>)">
                             </div>
 
@@ -1142,7 +1161,6 @@ $productTableIsPo = ($productTableContext === 'po');
 
     <script>
         // --- Drag and Drop Row Reordering ---
-        let dragSourceIndex = null;
         const rowFields = [
             'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name', 'subso_db_id', 'row_deleted', 'deleted_subso_db_id', 'deleted_product_code',
             'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name', 'product_sn',
@@ -1188,54 +1206,98 @@ $productTableIsPo = ($productTableContext === 'po');
             }
         }
 
-        // Prevent browser default drop on the document
-        document.addEventListener('dragover', function(e) {
-            e.preventDefault();
-        }, false);
-        document.addEventListener('drop', function(e) {
-            e.preventDefault();
-        }, false);
+        // ใช้ Pointer Events แทน HTML5 drag & drop เพื่อให้ลากได้ทั้งเมาส์และนิ้ว (mobile / tablet / iPad)
+        let rowDrag = null; // { from, target, pointerId, handle, x, y, raf }
 
-        function handleDragStart(e, index) {
-            dragSourceIndex = index;
-            e.dataTransfer.effectAllowed = 'move';
-            e.currentTarget.classList.add('dragging');
+        function handleRowPointerDown(e, index) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+
+            const handle = e.currentTarget;
+            const rect = handle.getBoundingClientRect();
+            handle.setPointerCapture(e.pointerId);
+
+            rowDrag = {
+                from: index,
+                target: null,
+                pointerId: e.pointerId,
+                handle: handle,
+                // หาแถวปลายทางจากแนวคอลัมน์ไอคอนลาก นิ้วเลื่อนออกด้านข้างก็ยังหาแถวเจอ
+                x: rect.left + rect.width / 2,
+                y: e.clientY,
+                raf: null
+            };
+
+            document.getElementById('product_row_' + index).classList.add('dragging');
+            document.body.classList.add('row-dragging');
+            handle.addEventListener('pointermove', handleRowPointerMove);
+            handle.addEventListener('pointerup', handleRowPointerEnd);
+            handle.addEventListener('pointercancel', handleRowPointerEnd);
+            rowDrag.raf = requestAnimationFrame(rowDragAutoScroll);
         }
 
-        function handleDragOver(e) {
+        function handleRowPointerMove(e) {
+            if (!rowDrag || e.pointerId !== rowDrag.pointerId) return;
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            return false;
+            rowDrag.y = e.clientY;
+            updateRowDragTarget();
         }
 
-        function handleDragEnter(e) {
-            if (e.currentTarget.id !== 'product_row_' + dragSourceIndex) {
-                e.currentTarget.classList.add('drag-over');
+        function updateRowDragTarget() {
+            const el = document.elementFromPoint(rowDrag.x, rowDrag.y);
+            const row = el ? el.closest('.so-product-row') : null;
+            let target = null;
+            if (row && row.style.display !== 'none') {
+                target = parseInt(row.id.replace('product_row_', ''), 10);
+                if (target === rowDrag.from) target = null;
             }
-        }
+            if (target === rowDrag.target) return;
 
-        function handleDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
-        }
-
-        function handleDrop(e, targetIndex) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.remove('drag-over');
-
-            if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
-                shiftRows(dragSourceIndex, targetIndex);
+            if (rowDrag.target !== null) {
+                document.getElementById('product_row_' + rowDrag.target).classList.remove('drag-over', 'drag-over-after');
             }
-            dragSourceIndex = null;
-            return false;
+            if (target !== null) {
+                // ลากลง = วางใต้แถวปลายทาง, ลากขึ้น = วางเหนือแถวปลายทาง (ตรงกับผลของ shiftRows)
+                row.classList.add(target > rowDrag.from ? 'drag-over-after' : 'drag-over');
+            }
+            rowDrag.target = target;
         }
 
-        function handleDragEnd(e) {
-            e.currentTarget.classList.remove('dragging');
+        // เลื่อนหน้าจออัตโนมัติเมื่อลากไปใกล้ขอบบน/ล่าง (รายการยาวบนมือถือ)
+        function rowDragAutoScroll() {
+            if (!rowDrag) return;
+            const edge = 60;
+            const h = window.innerHeight;
+            let dy = 0;
+            if (rowDrag.y < edge) {
+                dy = -Math.ceil((edge - rowDrag.y) / 4);
+            } else if (rowDrag.y > h - edge) {
+                dy = Math.ceil((rowDrag.y - (h - edge)) / 4);
+            }
+            if (dy !== 0) {
+                window.scrollBy(0, dy);
+                updateRowDragTarget();
+            }
+            rowDrag.raf = requestAnimationFrame(rowDragAutoScroll);
+        }
+
+        function handleRowPointerEnd(e) {
+            if (!rowDrag || e.pointerId !== rowDrag.pointerId) return;
+            const drag = rowDrag;
+            rowDrag = null;
+
+            cancelAnimationFrame(drag.raf);
+            drag.handle.removeEventListener('pointermove', handleRowPointerMove);
+            drag.handle.removeEventListener('pointerup', handleRowPointerEnd);
+            drag.handle.removeEventListener('pointercancel', handleRowPointerEnd);
+            document.body.classList.remove('row-dragging');
             document.querySelectorAll('.so-product-row').forEach(row => {
-                row.classList.remove('drag-over');
-                row.removeAttribute('draggable');
+                row.classList.remove('dragging', 'drag-over', 'drag-over-after');
             });
+
+            if (e.type === 'pointerup' && drag.target !== null) {
+                shiftRows(drag.from, drag.target);
+            }
         }
 
         function shiftRows(fromIndex, toIndex) {
