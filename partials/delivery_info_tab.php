@@ -41,7 +41,11 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 ?>
 <div class="so-tabs-container" style="margin-top: 24px;">
 	<button type="button" class="so-tab-btn active" onclick="<?php echo $deliveryOpenFn; ?>('<?php echo $deliveryInfoId; ?>', this)">ข้อมูลการจัดส่ง</button>
-	<button type="button" class="so-tab-btn" onclick="<?php echo $deliveryOpenFn; ?>('<?php echo $deliveryCostId; ?>', this)">ค่าจัดส่ง</button>
+	<?php // ซ่อนแค่ปุ่มแท็บ ไม่ลบ div#del_cost ด้านล่าง: ช่องค่าจัดส่งยังต้องถูก submit พร้อมฟอร์ม
+	// ไม่งั้นตอนคนที่ไม่ใช่ Admin กดบันทึก ค่าจัดส่งที่ Admin คีย์ไว้จะถูกเขียนทับเป็นค่าว่าง
+	if (($_SESSION['type_login'] ?? '') === 'Admin') { ?>
+		<button type="button" class="so-tab-btn" onclick="<?php echo $deliveryOpenFn; ?>('<?php echo $deliveryCostId; ?>', this)">ค่าจัดส่ง</button>
+	<?php } ?>
 </div>
 <!-- padding เป็น clamp ไม่ใช่ 24px ตายตัว: inline style ไม่มี media query ไหนแก้ได้
      ค่าบนสุดยังเป็น 24px เท่าเดิมบน desktop แต่ยุบเหลือ 16px บนจอแคบเหมือน .so-card ใบอื่น -->

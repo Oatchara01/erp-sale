@@ -83,7 +83,7 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 					$ofCbChecked = !empty($docExtraOtherField['checkbox_checked']);
 				?>
 					<div class="so-doc-other-wrapper" style="grid-column: span 4; display: flex; flex-direction: column; justify-content: flex-end;">
-						<label style="color: #612989; font-weight: 400; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
+						<label style="color: #612989; font-weight: 500; font-size: 14px; margin-bottom: 8px; display: block; font-family: 'Prompt', sans-serif;">อื่นๆ</label>
 						<input type="text" name="<?php echo $ofTextName; ?>" class="so-input" value="<?php echo $ofTextValue; ?>" placeholder="ระบุรายละเอียดอื่นๆ..." style="width: 100%;" oninput="document.getElementById('<?php echo $ofCbId; ?>').checked = (this.value.trim() !== '');">
 						<input type="checkbox" name="<?php echo $ofCbName; ?>" id="<?php echo $ofCbId; ?>" value="1" style="display:none;" <?php echo $ofCbChecked ? ' checked' : ''; ?>>
 					</div>

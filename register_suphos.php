@@ -2280,7 +2280,10 @@ include("head.php"); ?>
 									<select name="sale_channel" id="sale_channel" class="so-select">
 										<option value="">เลือกช่องทางการขาย</option>
 										<?php
-										$sqlchannel = "SELECT * FROM tb_salechannel ORDER BY salechannel_ID";
+										// ซ่อนช่องทางที่ถูกลบ (delete_ckk = 1) แต่ตอนแก้ไขใบเดิมต้องคงช่องทางที่ใบนั้นเลือกไว้
+										// ไม่งั้น dropdown จะว่างและบันทึกใบเดิมไม่ได้ (ช่องนี้บังคับกรอก)
+										$currentChannelId = ($savedSo !== null) ? (int)($savedSo['sale_channel'] ?? 0) : 0;
+										$sqlchannel = "SELECT * FROM tb_salechannel WHERE delete_ckk = 0 OR salechannel_ID = " . $currentChannelId . " ORDER BY salechannel_ID";
 										$querychannel = false;
 										$saleChannelTable = mysqli_query($conn, "SHOW TABLES LIKE 'tb_salechannel'");
 										if ($saleChannelTable && mysqli_num_rows($saleChannelTable) > 0) {
