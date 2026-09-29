@@ -2708,11 +2708,11 @@ include("head.php"); ?>
 					<div id="pd" class="w3-container city1">
 
 						<?php
-						if ($_SESSION["department"] == 'วิศวกรรม') {
-							include('product_engineer.php');
-						} else {
+						// if ($_SESSION["department"] == 'วิศวกรรม') {
+						// 	include('product_engineer.php');
+						// } else {
 							include('product_salehos.php');
-						}
+						// }
 						?>
 
 					</div>
@@ -6133,11 +6133,17 @@ include("head.php"); ?>
 			updateClearLoanLoadMoreButton();
 		}
 
+		// ใบยืมฝากขาย (consig) เขียนแถว SO แบบเดียวกับใบยืม (clear_br=1, clear_ivno=เลข BRSC)
+		// ฝั่ง save/approve หาเลขนี้ทั้งใน hos__br และ hos__consig อยู่แล้ว
+		function isClearLoanBorrowType(docType) {
+			return docType === 'loan' || docType === 'consig';
+		}
+
 		function updateClearLoanTableHeaders(docType) {
-			var labels = docType === 'loan' ? {
+			var labels = isClearLoanBorrowType(docType) ? {
 				clearLoanHeaderReference: 'เลขที่อ้างอิง',
 				clearLoanHeaderRegisteredDate: 'วันที่ลงทะเบียน',
-				clearLoanHeaderDocumentNo: 'เลขที่ใบยืม',
+				clearLoanHeaderDocumentNo: docType === 'consig' ? 'เลขที่ใบยืมฝากขาย' : 'เลขที่ใบยืม',
 				clearLoanHeaderRequiredDate: 'วันที่ต้องการสินค้า',
 				clearLoanHeaderCustomerName: 'ชื่อลูกค้า',
 				clearLoanHeaderSaleZone: 'เขตการขาย',
@@ -6384,7 +6390,7 @@ include("head.php"); ?>
 				if (isClearLoanRowEmpty(rowIndex)) {
 					continue;
 				}
-				if (docType === 'loan') {
+				if (isClearLoanBorrowType(docType)) {
 					if (getClearLoanRowValue('clear_br', rowIndex) === '1' && getClearLoanRowValue('clear_ivno', rowIndex) === normalizedDocumentNo) {
 						return true;
 					}
@@ -6411,7 +6417,7 @@ include("head.php"); ?>
 				if (isClearLoanRowEmpty(rowIndex)) {
 					continue;
 				}
-				var referenceMatches = docType === 'loan' ?
+				var referenceMatches = isClearLoanBorrowType(docType) ?
 					(getClearLoanRowValue('clear_br', rowIndex) === '1' && getClearLoanRowValue('clear_ivno', rowIndex) === normalizedDocumentNo) :
 					(getClearLoanRowValue('jong_ckk', rowIndex) === '1' && getClearLoanRowValue('jong_no', rowIndex) === normalizedDocumentNo);
 				if (!referenceMatches) {
@@ -6515,7 +6521,7 @@ include("head.php"); ?>
 			// (เดิม popup เคลียร์จอง/ยืมไม่เคยเขียนฟิลด์นี้เลย ทำให้ใบจองไม่ถูกปิดและกลับมาเลือกซ้ำได้)
 			// หมายเหตุ: ฝั่งใบยืม (loan) ใช้กลไกปิดเอกสารคนละทาง (per-row clear_br{i}/clear_ivno{i})
 			// brn_no ไม่มี logic ปิด hos__br ต่อจากนั้น จึงยังไม่ implement ส่วนนี้
-			if (documentRow.doc_type !== 'loan') {
+			if (!isClearLoanBorrowType(documentRow.doc_type)) {
 				var docNo = documentRow.document_no || '';
 				var bookNo = document.getElementById('book_no');
 				var bookClear = document.getElementById('book_clear');
@@ -6581,7 +6587,7 @@ include("head.php"); ?>
 			setClearLoanRowField('pm', rowIndex, '');
 			setClearLoanRowField('pm_year', rowIndex, '');
 			setClearLoanRowField('sale_remarkk', rowIndex, '');
-			if (docType === 'loan') {
+			if (isClearLoanBorrowType(docType)) {
 				setClearLoanRowField('clear_br', rowIndex, '1');
 				setClearLoanRowField('clear_ivno', rowIndex, documentNo);
 				setClearLoanRowField('jong_ckk', rowIndex, '');
@@ -7232,6 +7238,11 @@ include("head.php"); ?>
 						<input type="radio" name="clear_loan_type" value="loan" class="so-custom-radio-input">
 						<span class="so-custom-radio-circle" aria-hidden="true"></span>
 						ใบยืม
+					</label>
+					<label class="clear-loan-radio-label">
+						<input type="radio" name="clear_loan_type" value="consig" class="so-custom-radio-input">
+						<span class="so-custom-radio-circle" aria-hidden="true"></span>
+						ใบยืมฝากขาย
 					</label>
 				</div>
 				<div class="clear-loan-search-wrap">
