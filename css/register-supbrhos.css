@@ -22,9 +22,22 @@
 
 .br-returns-row-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	/* วันที่รับคืน | ถึงวันที่ | เลือกช่วงเวลา | ตั้งแต่เวลา | ถึงเวลา (สัดส่วนตามดีไซน์) */
+	grid-template-columns: 1fr 1fr 2fr 1fr 1fr;
 	gap: 16px;
 	align-items: end;
+}
+
+@container (max-width: 900px) {
+	.br-returns-row-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@container (max-width: 560px) {
+	.br-returns-row-grid {
+		grid-template-columns: 1fr;
+	}
 }
 
  .objective-field-group {
@@ -209,6 +222,25 @@
 	padding-bottom: 0;
 	margin-bottom: 0;
 	border-bottom: none;
+}
+
+/* "งานด่วน" toggle in ข้อมูลเอกสาร: fixed-width pill the same height as the
+   date input beside it (per design) instead of hugging its text. */
+#lbl-que_ckk {
+	width: 250px;
+	max-width: 100%;
+	height: 42px;
+	min-height: 42px;
+	padding: 0 24px;
+	border-radius: 12px;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+	#lbl-que_ckk {
+		width: 100%;
+	}
 }
 
 #br_summary_bar {

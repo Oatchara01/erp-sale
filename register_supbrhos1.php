@@ -56,14 +56,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			}
 		}
 
-		$brObjectiveValue = trim((string)($_POST['objective'] ?? ''));
-		if ($brObjectiveValue === '4' && trim((string)($_POST['objective_des4'] ?? '')) === '') {
-			$brValidationErrors[] = 'กรุณาระบุเลขที่ใบงานบริการ';
-		}
-		if ($brObjectiveValue === '5' && trim((string)($_POST['objective_des5'] ?? '')) === '') {
-			$brValidationErrors[] = 'กรุณาระบุรายละเอียดอื่น ๆ';
-		}
-
 		if (!empty($brValidationErrors)) {
 			if (ob_get_level() > 0) {
 				ob_end_clean();
@@ -333,6 +325,16 @@ values
 					$optionalValue = normalizeOptionalBrDateValue($optionalValue);
 				}
 				updateHosBrColumnIfExists($conn, $ref_id_br, $columnName, $optionalValue);
+			}
+		}
+
+		// ช่วงวันที่/เวลารับคืน (ถึงวันที่ / ถึงเวลา): ค่าว่างต้องล้างเป็น NULL ได้ จึงไม่ใช้ updateHosBrColumnIfExists ที่ข้ามค่าว่าง
+		foreach (array('returns_date_to', 'returns_time_to') as $returnsRangeColumn) {
+			$returnsRangeCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__br LIKE '" . $returnsRangeColumn . "'");
+			if ($returnsRangeCheck && mysqli_num_rows($returnsRangeCheck) > 0) {
+				$returnsRangeValue = trim((string)($_POST[$returnsRangeColumn] ?? ''));
+				$returnsRangeSql = $returnsRangeValue === '' ? 'NULL' : "'" . mysqli_real_escape_string($conn, $returnsRangeValue) . "'";
+				mysqli_query($conn, "UPDATE hos__br SET " . $returnsRangeColumn . " = " . $returnsRangeSql . " WHERE ref_id_br = '" . mysqli_real_escape_string($conn, $ref_id_br) . "'");
 			}
 		}
 

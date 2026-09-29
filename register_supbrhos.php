@@ -678,7 +678,7 @@
 					if (label) label.innerHTML = 'ข้อความ';
 				} else {
 					shared.placeholder = 'ระบุ' + desLabel;
-					if (label) label.innerHTML = desLabel + ' <span style="color:red;">*</span>';
+					if (label) label.innerHTML = desLabel;
 				}
 			}
 		}
@@ -1489,8 +1489,10 @@ if ($savedBr !== null) {
 		'objective_des5' => $savedBr['objective_des5'],
 		'returns' => $savedBr['returns'],
 		'returns_date' => $savedBr['returns_date'],
+		'returns_date_to' => $savedBr['returns_date_to'] ?? '',
 		'return_date_bet' => $savedBr['return_date_bet'],
 		'returns_time' => $savedBr['returns_time'],
+		'returns_time_to' => $savedBr['returns_time_to'] ?? '',
 		'returns_name' => $savedBr['returns_name'],
 		'returns_address' => $savedBr['returns_address'],
 		'returns_contact' => $savedBr['returns_contact'],
@@ -1629,7 +1631,12 @@ $adminInfoTab = [
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title">Borrow Order</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="goMainSuphos();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title">Borrow Order</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<?php if ($brIsEditMode) { ?>
@@ -1875,20 +1882,6 @@ $adminInfoTab = [
 
 				brWriteObjectiveDesHidden();
 
-				var objVal = document.getElementById('objective') ? document.getElementById('objective').value : '';
-				var objDesShared = document.getElementById('objective_des_shared') ? document.getElementById('objective_des_shared').value.trim() : '';
-
-				if (objVal === '4' && objDesShared === '') {
-					alert('กรุณาระบุเลขที่ใบงานบริการ');
-					brFocusField(document.getElementById('objective_des_shared'));
-					return false;
-				}
-				if (objVal === '5' && objDesShared === '') {
-					alert('กรุณาระบุรายละเอียดอื่น ๆ');
-					brFocusField(document.getElementById('objective_des_shared'));
-					return false;
-				}
-
 				if (document.frmMain.start_time.value == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
@@ -1923,9 +1916,19 @@ $adminInfoTab = [
 					brFocusField(document.frmMain.returns_date);
 					return false;
 				}
+				if (document.frmMain.return_time_range.value == "") {
+					alert('กรุณาเลือกช่วงเวลารับคืนสินค้า');
+					brFocusField(document.frmMain.return_time_range);
+					return false;
+				}
 				if (document.frmMain.returns_time.value == "") {
 					alert('กรุณาใส่เวลารับคืนสินค้า');
 					brFocusField(document.frmMain.returns_time);
+					return false;
+				}
+				if (document.frmMain.returns_date_to.value != "" && document.frmMain.returns_date_to.value < document.frmMain.returns_date.value) {
+					alert('ถึงวันที่ต้องไม่น้อยกว่าวันที่รับคืน');
+					brFocusField(document.frmMain.returns_date_to);
 					return false;
 				}
 				if (document.frmMain.returns_name.value == "") {
@@ -2146,11 +2149,12 @@ $adminInfoTab = [
 
 				<div class="so-section-title-container" style="margin-top: 8px;">
 					<h3 class="so-section-title" style="font-size: 16px;">ข้อมูลเอกสาร</h3>
+					<hr class="so-divider">
 				</div>
 
 				<div class="so-grid-3">
 					<div class="so-field-group">
-						<label class="so-label" for="date_br">วันที่เริ่มยืม <span style="color:red;">*</span></label>
+						<label class="so-label" for="date_br">วันที่ <span style="color:red;">*</span></label>
 						<div class="calendar-wrapper">
 							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" required onchange="brUpdateReturnDate();">
 						</div>
@@ -3182,7 +3186,7 @@ $adminInfoTab = [
 				<!-- Hidden field to preserve backend returns=1 behavior -->
 				<input type="hidden" name="returns" value="1">
 
-				<!-- Row 1: 4 columns -->
+				<!-- Row 1: 5 columns (date from/to, time range, time from/to) -->
 				<div class="br-returns-row-grid">
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" style="color: #612989;">วันที่รับคืน <span style="color:red;">*</span></label>
@@ -3191,7 +3195,13 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">เวลาในการรับคืน</label>
+						<label class="so-label" style="color: #612989;">ถึงวันที่</label>
+						<div class="calendar-wrapper" style="width: 100%; display: flex;">
+							<input name="returns_date_to" type="date" id="returns_date_to" class="so-input" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 40px;" />
+						</div>
+					</div>
+					<div class="so-field-group" style="margin-bottom: 0;">
+						<label class="so-label" style="color: #612989;">เลือกช่วงเวลา <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
 							<select name="return_time_range" id="return_time_range" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
 								<option value="">Select</option>
@@ -3203,18 +3213,19 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">เวลา</label>
+						<label class="so-label" style="color: #612989;">ตั้งแต่เวลา <span style="color:red;">*</span></label>
 						<div class="time-wrapper" style="width: 100%; display: flex;">
 							<input id="returns_time" name="returns_time" class="so-input" type="time" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 40px;" />
 						</div>
 					</div>
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">ช่วงเวลาโดยประมาณ</label>
-						<div style="position: relative; display: flex; align-items: center; width: 100%;">
-							<input name="return_date_bet" class="so-input" type="text" id="return_date_bet" placeholder="กรอกช่วงเวลา" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 36px !important;" />
-							<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('return_date_bet').value=''" aria-label="ล้างค่า"></button>
+						<label class="so-label" style="color: #612989;">ถึงเวลา</label>
+						<div class="time-wrapper" style="width: 100%; display: flex;">
+							<input id="returns_time_to" name="returns_time_to" class="so-input" type="time" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 40px;" />
 						</div>
 					</div>
+					<!-- ช่วงเวลาโดยประมาณ: ไม่แสดงแล้ว ประกอบค่าอัตโนมัติจากช่วงวันที่/เวลาเพื่อให้หน้าเดิมที่อ่าน return_date_bet ยังใช้งานได้ -->
+					<input name="return_date_bet" type="hidden" id="return_date_bet" />
 				</div>
 
 				<!-- Row 2: 3 columns -->
@@ -3238,7 +3249,7 @@ $adminInfoTab = [
 
 				<!-- Row 3: Full width -->
 				<div class="so-field-group" style="margin-top: 16px;">
-					<label class="so-label" for="returns_address" style="color: #612989;">รายละเอียดสถานที่รับคืน</label>
+					<label class="so-label" for="returns_address" style="color: #612989;">รายละเอียดสถานที่รับคืน <span style="color:red;">*</span></label>
 					<div style="position: relative; display: flex; align-items: center; width: 100%;">
 						<input name="returns_address" class="so-input" type="text" id="returns_address" placeholder="กรอกสถานที่รับคืน" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 36px !important;" />
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('returns_address').value=''" aria-label="ล้างค่า"></button>
@@ -3246,6 +3257,18 @@ $adminInfoTab = [
 				</div>
 
 				<script>
+					function formatReturnDateBet(dateVal) {
+						const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateVal || '');
+						return m ? (m[3] + '/' + m[2] + '/' + (parseInt(m[1], 10) + 543)) : '';
+					}
+
+					// ประกอบ return_date_bet (hidden) จาก ตั้งแต่/ถึง วันที่-เวลา เช่น "29/09/2569 08:00 - 30/09/2569 17:00"
+					function syncReturnDateBet() {
+						const from = [formatReturnDateBet($('#returns_date').val()), ($('#returns_time').val() || '').substring(0, 5)].join(' ').trim();
+						const to = [formatReturnDateBet($('#returns_date_to').val()), ($('#returns_time_to').val() || '').substring(0, 5)].join(' ').trim();
+						$('#return_date_bet').val(to ? (from + ' - ' + to) : from);
+					}
+
 					function syncReturnTimeRangeFromTime() {
 						const timeVal = ($('#returns_time').val() || '').trim();
 						const rangeSelect = $('#return_time_range');
@@ -3272,28 +3295,42 @@ $adminInfoTab = [
 						$('#return_time_range').on('change', function() {
 							const val = $(this).val();
 							const timeInput = $('#returns_time');
+							const timeToInput = $('#returns_time_to');
 							if (val === 'morning') {
 								timeInput.val('08:00');
+								timeToInput.val('12:00');
 							} else if (val === 'afternoon') {
 								timeInput.val('13:00');
+								timeToInput.val('17:00');
 							} else if (val === 'allday') {
 								timeInput.val('08:00');
+								timeToInput.val('17:00');
 							} else if (val === 'specific') {
 								const currentVal = (timeInput.val() || '').trim().substring(0, 5);
 								if (currentVal === '08:00' || currentVal === '13:00') {
 									timeInput.val('');
 								}
+								timeToInput.val('');
 								timeInput.focus();
 							} else {
 								timeInput.val('');
+								timeToInput.val('');
 							}
+							syncReturnDateBet();
 						});
 
 						$('#returns_time').on('input change', function() {
 							syncReturnTimeRangeFromTime();
 						});
 
+						$('#returns_date, #returns_date_to, #returns_time, #returns_time_to').on('input change', syncReturnDateBet);
+						// วันที่ปลายทางต้องไม่ก่อนวันที่รับคืน
+						$('#returns_date').on('change', function() {
+							$('#returns_date_to').attr('min', $(this).val() || '');
+						});
+
 						syncReturnTimeRangeFromTime();
+						syncReturnDateBet();
 					});
 				</script>
 			</div>
@@ -3433,9 +3470,6 @@ $adminInfoTab = [
 					<i class="far fa-save"></i> Update
 				</button>
 			<?php endif; ?>
-			<button type="button" name="cancel_edit" onclick="goMainSuphos();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
-				ย้อนกลับ
-			</button>
 		</div>
 	</div>
 
@@ -3482,7 +3516,7 @@ $adminInfoTab = [
 				});
 
 				// ให้ UI ที่ผูกกับค่าเหล่านี้อัปเดตตาม (ปุ่ม/ช่องที่ซ่อน-แสดงตาม objective ฯลฯ)
-				['objective', 'type_breng', 'returns', 'delivery_type', 'returns_time', 'time_range', 'start_time'].forEach(function(name) {
+				['objective', 'type_breng', 'returns', 'delivery_type', 'returns_time', 'returns_date', 'returns_time_to', 'returns_date_to', 'time_range', 'start_time'].forEach(function(name) {
 					var el = document.getElementById(name);
 					if (el) el.dispatchEvent(new Event('change', {
 						bubbles: true
