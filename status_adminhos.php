@@ -265,8 +265,12 @@ include "dbconnect_sale.php";
 						}
 
 						if ($status_doc != "") {
+							// Sup อนุมัติแล้วแต่ status_doc ยังค้างเป็น 'Request' โดยตั้ง send_cm='1' (ส่งบัญชี) หรือ '2' (IC ส่งอนุมัติต่อ)
+							// จึงต้องแยกด้วย send_cm ให้ตรงกับป้ายสถานะด้านล่าง
 							if ($status_doc == 'รอหัวหน้า') {
-								$strSQL .= ' AND (status_doc = "รอหัวหน้า" OR status_doc = "Request")';
+								$strSQL .= ' AND (status_doc = "รอหัวหน้า" OR (status_doc = "Request" AND (send_cm IS NULL OR send_cm NOT IN ("1", "2"))))';
+							} else if ($status_doc == 'รอผู้บริหาร') {
+								$strSQL .= ' AND (status_doc = "รอผู้บริหาร" OR (status_doc = "Request" AND send_cm IN ("1", "2")))';
 							} else {
 								$strSQL .= ' AND status_doc = "' . mysqli_real_escape_string($conn, $status_doc) . '"';
 							}
@@ -381,10 +385,11 @@ include "dbconnect_sale.php";
 							} else if ($objResult["status_doc"] == 'ยกเลิก') {
 								$status_class = 'cancel';
 								$status_text = 'ยกเลิก';
-							} else if ($objResult["status_doc"] == 'รอหัวหน้า' || $objResult["status_doc"] == 'Request') {
+							} else if ($objResult["status_doc"] == 'รอหัวหน้า' || ($objResult["status_doc"] == 'Request' && !in_array((string)$objResult["send_cm"], ['1', '2'], true))) {
 								$status_class = 'pending-mgr';
 								$status_text = 'รอหัวหน้า';
-							} else if ($objResult["status_doc"] == 'รอผู้บริหาร') {
+							} else if ($objResult["status_doc"] == 'รอผู้บริหาร' || $objResult["status_doc"] == 'Request') {
+								// เหลือเฉพาะ Request ที่ send_cm='1'/'2' = Sup อนุมัติแล้ว รอผู้บริหาร
 								$status_class = 'pending-exec';
 								$status_text = 'รอผู้บริหาร';
 							} else if ($objResult["status_doc"] == 'ส่งกลับ' || $objResult["status_doc"] == 'Returned') {

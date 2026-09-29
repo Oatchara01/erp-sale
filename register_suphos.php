@@ -2093,7 +2093,7 @@ include("head.php"); ?>
 				<div class="so-header-left">
 					<div class="so-title-row">
 						<button type="button" class="so-back-btn" onclick="goMainSuphos();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
-							<img src="img/icons/chevron-left.png" alt="">
+							<img src="img/icons/chevron_left.svg" alt="">
 						</button>
 						<h1 class="so-title">Register Sale Order</h1>
 					</div>
