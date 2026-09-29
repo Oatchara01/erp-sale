@@ -40,8 +40,6 @@ if (($_POST["submit"] ?? '') == "submit" || isset($_POST['approve_action'])) {
 	$send_stock = mysqli_real_escape_string($conn, $_POST["send_stock"] ?? '');
 	$contact_ckk = mysqli_real_escape_string($conn, $_POST["contact_ckk"] ?? '');
 	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
-	$cancel_ckk = mysqli_real_escape_string($conn, $_POST["cancel_ckk"] ?? '0');
-	$admin_cancel_reason = mysqli_real_escape_string($conn, $_POST["admin_cancel_reason"] ?? '');
 	$status_doc = $isDraftRequest ? "Draft" : "Request";
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
@@ -55,7 +53,7 @@ if (($_POST["submit"] ?? '') == "submit" || isset($_POST['approve_action'])) {
 	}
 
 
-	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "',remark='" . $admin_cancel_reason . "',cancel_ckk='" . $cancel_ckk . "',close_jong='" . $cancel_ckk . "'";
+	$save = "UPDATE  hos__jongproduct SET date_jong = '" . $date_jong . "',customer_id = '" . $customer_id . "',customer = '" . $customer . "',drescription = '" . $drescription . "',date_receive = '" . $date_receive . "',address_send = '" . $address_send . "',sale_code = '" . $sale_code . "',ref_receive='" . $ref_receive . "',type_jong='" . $type_jong . "',contact_ckk='" . $contact_ckk . "'";
 	if (!$isDraftRequest) {
 		$save .= ", status_doc = 'Request', send_sup = '1'";
 	}
@@ -142,6 +140,11 @@ values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc
 		} elseif ($soApproveAction === 'approve') {
 			mysqli_query($conn, "UPDATE hos__jongproduct SET status_doc='Approve', send_stock='1', date_approve='" . $approve_date_val . "', approve_name='" . $approve_name . "' WHERE ref_id='" . $ref_id . "'");
 			mysqli_query($conn, "UPDATE hos__subjongpro SET status_sub='Approve' WHERE ref_idd='" . $ref_id . "'");
+		} elseif ($soApproveAction === 'cancel') {
+			// ยกเลิกแบบเดียวกับ cancel_jongsup1.php — ไม่แตะ status_doc
+			$cancelReason = mysqli_real_escape_string($conn, trim((string)($_POST['so_approve_reason'] ?? '')));
+			mysqli_query($conn, "UPDATE hos__jongproduct SET cancel_ckk='1', close_jong='1', remark='" . $cancelReason . "' WHERE ref_id='" . $ref_id . "'");
+			mysqli_query($conn, "UPDATE hos__subjongpro SET close_ckk='1' WHERE ref_idd='" . $ref_id . "'");
 		}
 	}
 
@@ -149,7 +152,8 @@ values ('" . $ref_id . "','" . $row_product_id_esc . "','" . $row_product_id_esc
 		$soApproveReason = trim((string)($_POST['so_approve_reason'] ?? ''));
 		$soApproveStatusMap = array(
 			'return' => 'Returned',
-			'reject' => 'Rejected'
+			'reject' => 'Rejected',
+			'cancel' => 'Cancelled'
 		);
 
 		if (isset($soApproveStatusMap[$soApproveAction]) && $soApproveReason !== '') {

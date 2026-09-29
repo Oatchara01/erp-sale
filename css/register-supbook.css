@@ -50,19 +50,6 @@
 	}
 }
 
-.so-grid-cancel {
-	display: grid;
-	grid-template-columns: 200px 1fr;
-	gap: 32px;
-}
-
-@media (max-width: 768px) {
-.so-grid-cancel {
-		grid-template-columns: 1fr;
-		gap: 16px;
-	}
-}
-
 .so-input:disabled,
 .so-select:disabled {
 	color: var(--so-muted);
@@ -151,30 +138,6 @@
 	font-weight: 500;
 }
 
-.so-product-total-box {
-	background: var(--so-input-bg);
-	border-radius: 10px;
-	padding: 14px 20px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	margin-bottom: 16px;
-}
-
-.so-product-total-label {
-	font-size: 14px;
-	color: var(--so-muted);
-	font-weight: 400;
-}
-
-.so-product-total-value {
-	font-size: 20px;
-	color: var(--so-text);
-	font-weight: 600;
-}
-
 .so-product-search-wrap {
 	position: relative;
 	display: flex;
@@ -186,6 +149,9 @@
 	height: 42px;
 	gap: 10px;
 	margin-bottom: 16px;
+	width: 100%;
+	max-width: 680px;
+	box-sizing: border-box;
 }
 
 .so-product-search-wrap:focus-within {
@@ -534,4 +500,46 @@
 		white-space: nowrap;
 		padding: 12px 18px;
 	}
+}
+
+/* ไอคอนย้อนกลับหน้าหัวข้อ -> status_supjong.php (goMainSupbook) */
+.so-title-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.so-title-row .so-title {
+	margin-bottom: 0;
+}
+
+.so-back-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.so-back-btn:hover {
+	background-color: rgba(97, 41, 137, 0.08);
+}
+
+.so-back-btn:focus-visible {
+	outline: 2px solid #612989;
+	outline-offset: 2px;
+}
+
+.so-back-btn img {
+	width: 20px;
+	height: 20px;
+	object-fit: contain;
 }

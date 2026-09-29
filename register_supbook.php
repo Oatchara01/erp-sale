@@ -69,7 +69,7 @@ if ($savedRefId !== "") {
 
 	$documentStatusLogTableQuery = mysqli_query($conn, "SHOW TABLES LIKE 'tb_document_status_log'");
 	if ($documentStatusLogTableQuery && mysqli_num_rows($documentStatusLogTableQuery) > 0) {
-		$soDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $savedRefId . "' AND status_doc IN ('Returned', 'Rejected') ORDER BY created_at DESC, id DESC");
+		$soDocumentLogQuery = mysqli_query($conn, "SELECT status_doc, reason, user_name, created_at FROM tb_document_status_log WHERE ref_id = '" . $savedRefId . "' AND status_doc IN ('Returned', 'Rejected', 'Cancelled') ORDER BY created_at DESC, id DESC");
 		if ($soDocumentLogQuery) {
 			while ($soDocumentLogRow = mysqli_fetch_assoc($soDocumentLogQuery)) {
 				$soDocumentLogRows[] = $soDocumentLogRow;
@@ -125,7 +125,12 @@ if ($savedRefId !== "") {
 	<!-- Header Section -->
 	<div class="so-header-container">
 		<div class="so-header-left">
-			<h1 class="so-title">Product Booking</h1>
+			<div class="so-title-row">
+				<button type="button" class="so-back-btn" onclick="goMainSupbook();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+					<img src="img/icons/chevron_left.svg" alt="">
+				</button>
+				<h1 class="so-title">Product Booking</h1>
+			</div>
 			<div class="so-ref-info">
 				<span class="so-ref-label">เลขที่จอง</span>
 				<span class="so-ref-value"><?php echo ($savedJong !== null && !$isCopy) ? $savedJong['ref_id'] : ($so . $nextId); ?></span>
@@ -185,16 +190,19 @@ if ($savedRefId !== "") {
 
 				<div class="so-field-group">
 					<label class="so-label">ประเภท <span style="color:red;">*</span></label>
-					<select name="type_jong" id="type_jong" class="so-select" required>
-						<option value="">**Please Select**</option>
-						<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
-						<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
-						<option value="3" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '3') ? 'selected' : ''; ?>>จองสินค้าสาธิต</option>
-					</select>
+					<div class="so-select-wrapper">
+						<select name="type_jong" id="type_jong" class="so-select" required>
+							<option value="">**Please Select**</option>
+							<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
+							<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
+							<option value="3" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '3') ? 'selected' : ''; ?>>จองสินค้าสาธิต</option>
+						</select>
+					</div>
 				</div>
 
 				<div class="so-field-group">
 					<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
+					<div class="so-select-wrapper">
 					<?php
 					$selected_sale_code = ($savedJong !== null) ? $savedJong['sale_code'] : ($_GET['sale_code'] ?? '');
 
@@ -280,6 +288,7 @@ if ($savedRefId !== "") {
 					<?php
 					}
 					?>
+					</div>
 				</div>
 			</div>
 
@@ -296,28 +305,13 @@ if ($savedRefId !== "") {
 					<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
 					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
 				</div>
+				<?php $adminDocNo = ($savedJong !== null && !$isCopy) ? trim((string)$savedJong['iv_no']) : ''; ?>
+				<?php if ($adminDocNo !== '') { ?>
 				<div class="so-field-group">
 					<label class="so-label" for="admin_doc_no">เลขที่เอกสาร</label>
-					<input type="text" name="admin_doc_no" id="admin_doc_no" class="so-input" placeholder="ระบบสร้างให้อัตโนมัติ" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['iv_no'], ENT_QUOTES, 'UTF-8') : ''; ?>" readonly>
+					<input type="text" name="admin_doc_no" id="admin_doc_no" class="so-input" value="<?php echo htmlspecialchars($adminDocNo, ENT_QUOTES, 'UTF-8'); ?>" readonly>
 				</div>
-			</div>
-
-			<?php $isCancelled = ($savedJong !== null && !$isCopy && $savedJong['cancel_ckk'] == '1'); ?>
-			<div class="so-grid-cancel">
-				<div class="so-field-group">
-					<label class="so-label">&nbsp;</label>
-					<input type="hidden" name="cancel_ckk" id="cancel_ckk" value="<?php echo $isCancelled ? '1' : '0'; ?>">
-					<button type="button" class="btn-so-danger<?php echo $isCancelled ? ' is-active' : ''; ?>" style="width: 100%; justify-content: center;" onclick="this.classList.toggle('is-active'); document.getElementById('cancel_ckk').value = this.classList.contains('is-active') ? '1' : '0';">
-						<img src="img/icons/circle_x.png" alt="" style="width: 16px; height: 16px;"> ยกเลิกเอกสาร
-					</button>
-				</div>
-				<div class="so-field-group">
-					<label class="so-label" for="admin_cancel_reason">หมายเหตุการยกเลิก</label>
-					<div class="so-input-wrapper">
-						<input type="text" name="admin_cancel_reason" id="admin_cancel_reason" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? htmlspecialchars($savedJong['remark'], ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder="กรอกหมายเหตุ">
-						<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('admin_cancel_reason');" role="button" tabindex="0" aria-label="ล้างค่าหมายเหตุการยกเลิก"></i>
-					</div>
-				</div>
+				<?php } ?>
 			</div>
 
 		</div>
@@ -416,8 +410,8 @@ if ($savedRefId !== "") {
 		<div class="so-card">
 			<div class="so-section-title-container">
 				<h2 class="so-section-title">หมายเหตุ</h2>
+				<hr class="so-divider">
 			</div>
-			<hr class="so-divider" style="margin: -12px 0 24px 0;">
 			<div class="so-field-group" style="margin-bottom: 0;">
 				<label class="so-label" for="drescription">หมายเหตุ</label>
 				<textarea name="drescription" id="drescription" class="so-textarea" placeholder="ระบุรายละเอียดเพิ่มเติม..." style="margin-bottom: 0;"><?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['drescription'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
@@ -432,11 +426,6 @@ if ($savedRefId !== "") {
 				<span class="so-product-count" id="productItemCount">0 รายการ</span>
 			</div>
 			<hr class="so-divider" style="margin: -12px 0 24px 0;">
-
-			<div class="so-product-total-box">
-				<span class="so-product-total-label">จำนวนรวม(ชิ้น)</span>
-				<span class="so-product-total-value" id="productTotalQty">0</span>
-			</div>
 
 			<div class="so-product-search-wrap">
 				<i class="fas fa-search"></i>
@@ -479,6 +468,7 @@ if ($savedRefId !== "") {
 			);
 		}
 		?>
+		<?php if (!empty($soDocumentLogRowsForTabs)) { ?>
 		<div class="so-tabs-container so-document-return-tabs-container" style="margin-top: 24px;">
 			<button type="button" class="so-tab-btn so-document-return-tab-btn active">การส่งเอกสารกลับ</button>
 		</div>
@@ -493,7 +483,6 @@ if ($savedRefId !== "") {
 						</tr>
 					</thead>
 					<tbody>
-						<?php if (!empty($soDocumentLogRowsForTabs)) { ?>
 							<?php foreach ($soDocumentLogRowsForTabs as $documentReturnLogRow) { ?>
 								<tr>
 									<td class="so-document-log-status-cell">
@@ -510,15 +499,11 @@ if ($savedRefId !== "") {
 									</td>
 								</tr>
 							<?php } ?>
-						<?php } else { ?>
-							<tr class="so-document-status-empty">
-								<td colspan="3">ยังไม่มีรายการส่งกลับเอกสาร</td>
-							</tr>
-						<?php } ?>
 					</tbody>
 				</table>
 			</div>
 		</div>
+		<?php } ?>
 </div>
 
 <?php
@@ -526,13 +511,15 @@ $soIsEditMode = ($savedJong !== null && !$isCopy);
 $soStatusDoc = $savedJong['status_doc'] ?? '';
 $soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
 $soIsApproved = $soIsEditMode && ($soStatusDoc === 'Approve');
-$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover && ($soStatusDoc === 'Request');
+// ใบจองที่ถูกยกเลิกแล้ว (cancel_ckk แบบ legacy) เหลือแค่ปุ่มกลับหน้าหลัก
+$soIsCancelled = $soIsEditMode && ((string)($savedJong['cancel_ckk'] ?? '0') === '1');
+$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover && ($soStatusDoc === 'Request') && !$soIsCancelled;
 // Sale หลัง Approve: ปิดทุกปุ่ม
 $soHideAllActions = $soIsApproved && !$soIsSupApprover;
 // Submit หายเมื่อส่งรออนุมัติแล้ว (Request) หรือเอกสารอนุมัติแล้ว
-$soHideSubmit = $soIsEditMode && (($soStatusDoc === 'Request') || $soIsApproved);
+$soHideSubmit = $soIsEditMode && (($soStatusDoc === 'Request') || $soIsApproved || $soIsCancelled);
 // ปุ่ม Update หลักซ้ำกับปุ่ม Update ที่อยู่ในแถบอนุมัติแล้ว
-$soHideUpdate = $soCanShowApproveBar || $soIsApproved;
+$soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 ?>
 <?php if (!$soHideAllActions): ?>
 	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
@@ -547,6 +534,7 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 					<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
 						<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #FF830F; cursor: pointer;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
 						<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
+						<button type="button" name="approve_action" value="cancel" onclick="soRunApproveAction('cancel', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
 					</div>
 					<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
 						<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
@@ -566,9 +554,6 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 					<i class="far fa-save"></i> <?php echo $soIsEditMode ? 'Update' : 'Save Draft'; ?>
 				</button>
 			<?php endif; ?>
-			<button type="button" name="cancel_edit" onclick="goMainSupbook();" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
-				ยกเลิก
-			</button>
 		</div>
 	</div>
 	<script>
@@ -669,6 +654,14 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 						placeholder: 'ระบุเหตุผลที่ไม่อนุมัติ',
 						iconBg: '#FEECEB',
 						iconSrc: 'img/icons/reject.png'
+					},
+					cancel: {
+						title: 'ยกเลิกเอกสารนี้ ?',
+						subtitleText: 'ต้องการยกเลิกเอกสารเลขที่',
+						label: 'ระบุเหตุผลในการยกเลิก',
+						placeholder: 'ระบุเหตุผลในการยกเลิก',
+						iconBg: '#F4F5F7',
+						iconSrc: 'img/icons/cancel_document.png'
 					}
 				} [action];
 				if (!reasonConfig) return;
@@ -1040,10 +1033,6 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 		if (!tbody) return;
 
 		document.getElementById('productItemCount').textContent = productRows.length + ' รายการ';
-		var totalQty = productRows.reduce(function(sum, r) {
-			return sum + (parseFloat(r.count) || 0);
-		}, 0);
-		document.getElementById('productTotalQty').textContent = totalQty;
 
 		if (productRows.length === 0) {
 			tbody.innerHTML = '<tr id="productEmptyRow"><td colspan="5" class="product-empty">ยังไม่มีรายการสินค้า ค้นหาด้านบนเพื่อเพิ่มรายการ</td></tr>';
@@ -1154,10 +1143,6 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved;
 			var inputs = hiddenWrap.querySelectorAll('input[name="' + countInputName + '"]');
 			if (inputs[idx]) inputs[idx].value = val;
 		}
-		var totalQty = productRows.reduce(function(sum, r) {
-			return sum + (parseFloat(r.count) || 0);
-		}, 0);
-		document.getElementById('productTotalQty').textContent = totalQty;
 	}
 
 	function updateProductRemark(idx, val) {
