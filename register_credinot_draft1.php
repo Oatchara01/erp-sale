@@ -13,14 +13,15 @@ $refCredit = trim((string)($_POST['ref_credit'] ?? ''));
 $formMode = $_POST['form_mode'] ?? '';
 
 try {
-	// ปุ่ม Update ใช้ได้เฉพาะตอนแก้ไขเอกสารที่มีอยู่แล้วเท่านั้น (ไม่มี fallback ไป insert path
-	// เหมือน register_suphos_draft1.php เพราะ register_credinot1.php รองรับทั้ง insert/update
-	// อยู่แล้วผ่าน form_mode — ถ้าไม่มี ref_credit ให้ปฏิเสธไปเลย กันไม่ให้สร้างเอกสารใหม่โดยไม่ตั้งใจ)
-	if ($formMode !== 'edit' || $refCredit === '') {
-		echo json_encode([
-			'success' => false,
-			'message' => 'ปุ่ม Update ใช้ได้เฉพาะตอนแก้ไขเอกสารที่มีอยู่แล้วเท่านั้น'
-		]);
+	// ปุ่ม Save Draft (โหมดสร้าง) — register_credinot1.php แยก insert/update ผ่าน form_mode อยู่แล้ว
+	// insert + is_draft=1 จะบันทึกเป็น status_doc='Draft', send_sup='0' (ยังไม่เข้าคิว Sup)
+	if ($formMode !== 'edit') {
+		include("register_credinot1.php");
+		exit();
+	}
+
+	if ($refCredit === '') {
+		echo json_encode(['success' => false, 'message' => 'ไม่พบเลขที่เอกสารใบลดหนี้']);
 		exit();
 	}
 

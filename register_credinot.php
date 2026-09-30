@@ -1,6 +1,7 @@
 <?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
+<?php require_once __DIR__ . '/includes/credit_note_labels.php'; ?>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -66,9 +67,12 @@
     $creditCanShowApproveBar = ($mode === 'edit') && !$creditIsClosed;
     // ยกเลิกเอกสารได้ตลอด ไม่ว่าจะอยู่ระดับอนุมัติไหนหรือ Approve ไปแล้วก็ตาม ยกเว้นถูกยกเลิกไปแล้ว
     $creditCanCancel = ($mode === 'edit') && $creditStatusDoc !== 'ยกเลิก';
-    // ปุ่ม Update (AJAX บันทึกโดยไม่รีโหลดหน้า) โชว์เฉพาะตอนแก้ไขเอกสารเดิม และไม่ถูก lock เหมือนปุ่ม Submit
+    // ปุ่ม Save Draft/Update (AJAX) โชว์ทุกโหมดที่ไม่ถูก lock — ชื่อ "Save Draft" ตอนสร้าง / "Update" ตอนแก้ไข (เหมือน register_suphos.php)
     $creditIsEditMode = ($mode === 'edit');
-    $creditHideUpdate = !$creditIsEditMode || $creditItemsLocked;
+    // ใบที่ยกเลิกแล้ว (ทุกกรณี) ไม่มีปุ่มใด ๆ ในแถบล่าง — ⋮/Submit ถูกซ่อนด้วยเงื่อนไขของตัวเองอยู่แล้ว
+    $creditHideUpdate = $creditItemsLocked || $creditStatusDoc === 'ยกเลิก';
+    // ใบที่บันทึกเป็น Draft ไว้ (ยังไม่เข้าคิว Sup) — เปิดกลับมาต้องกด Submit เพื่อส่งเข้าคิวอนุมัติ
+    $creditIsDraftDoc = ($creditIsEditMode && $creditStatusDoc === 'Draft');
 
     // ===== ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — mirror ของ register_suphos.php:1035-1045 =====
     $creditDocumentLogRows = array();
@@ -224,11 +228,6 @@
                     </div>
                 </div>
                 <div class="so-header-right">
-                    <?php if ($creditCanCancel): ?>
-                        <button type="button" class="btn-preview-so" style="color:#DC3545; border-color:#F1B0B7;" onclick="openCancelCreditModal();">
-                            <i class="far fa-window-close"></i> ยกเลิกใบลดหนี้
-                        </button>
-                    <?php endif; ?>
                     <button type="button" class="btn-preview-so" onclick="openPrintReport();">
                         <img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview
                     </button>
@@ -459,25 +458,38 @@
                     </div>
 
                     <div class="so-grid-3">
-                        <!-- สาเหตุการคืน -->
+                        <!-- สภาพสินค้าที่ได้รับคืน -->
                         <div class="so-field-group">
-                            <label class="so-label" for="return_reason">สาเหตุการคืน</label>
+                            <label class="so-label" for="return_reason">สภาพสินค้าที่ได้รับคืน</label>
+                            <div class="so-select-wrapper">
+                                <?php $returnCondVal = trim((string)($rs['return_des'] ?? '')); ?>
+                                <select class="so-select" name="return_reason" id="return_reason">
+                                    <option value="">Select</option>
+                                    <?php foreach (credit_return_condition_options() as $returnCondCode => $returnCondLabel) { ?>
+                                    <option value="<?php echo $returnCondCode; ?>" <?php echo ($returnCondVal === (string)$returnCondCode) ? 'selected' : ''; ?>><?php echo htmlspecialchars($returnCondLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- ผู้รับคืนสินค้า: ล็อกเป็นชื่อคนที่ login ตอนสร้างเอกสาร (= add_by) — server ไม่รับค่าจากช่องนี้ -->
+                        <?php
+                        // ตอนสร้าง: ชื่อคนที่ login อยู่ (สูตรเดียวกับ add_by ใน register_credinot1.php)
+                        // ตอนแก้ไข: ค่าที่บันทึกไว้ (ใบเก่าที่ว่างใช้ add_by) — ใครมากด Update ชื่อก็ไม่เปลี่ยน
+                        if ($mode === 'edit') {
+                            $receiveNameVal = trim($rs['receive_name'] ?? '') !== '' ? $rs['receive_name'] : ($rs['add_by'] ?? '');
+                        } else {
+                            $receiveNameVal = trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? ''));
+                        }
+                        ?>
+                        <div class="so-field-group">
+                            <label class="so-label" for="receive_name">ผู้รับคืนสินค้า</label>
                             <div class="so-input-wrapper">
-                                <input type="text" name="return_reason" id="return_reason" value="<?php echo htmlspecialchars($rs['return_des'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกสาเหตุการคืน" class="so-input">
-                                <button type="button" class="so-clear-icon" onclick="document.getElementById('return_reason').value=''"><i class="fas fa-times"></i></button>
+                                <input type="text" id="receive_name" value="<?php echo htmlspecialchars($receiveNameVal, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" readonly>
                             </div>
                         </div>
 
                         <?php if ($mode === 'edit') { ?>
-                        <!-- ผู้รับคืนสินค้า -->
-                        <div class="so-field-group">
-                            <label class="so-label" for="receive_name">ผู้รับคืนสินค้า</label>
-                            <div class="so-input-wrapper">
-                                <input type="text" name="receive_name" id="receive_name" value="<?php echo htmlspecialchars($rs['receive_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกชื่อผู้รับคืนสินค้า" class="so-input">
-                                <button type="button" class="so-clear-icon" onclick="document.getElementById('receive_name').value=''"><i class="fas fa-times"></i></button>
-                            </div>
-                        </div>
-
                         <!-- วันที่ -->
                         <div class="so-field-group">
                             <label class="so-label" for="date_receive">วันที่<span style="color:#D32F2F;">*</span></label>
@@ -488,7 +500,7 @@
                         <?php } ?>
 
                         <!-- คำอธิบายเพิ่มเติม -->
-                        <div class="so-field-group <?php echo $mode === 'edit' ? 'credinot-des-full' : 'credinot-des-inline'; ?>">
+                        <div class="so-field-group<?php echo $mode === 'edit' ? ' credinot-des-full' : ''; ?>">
                             <label class="so-label" for="return_des">คำอธิบายเพิ่มเติม</label>
                             <div class="so-input-wrapper">
                                 <input type="text" name="return_des" id="return_des" value="<?php echo htmlspecialchars($rs['remark_et'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกคำอธิบายเพิ่มเติม" class="so-input">
@@ -995,7 +1007,8 @@
 
         <div class="so-sticky-actions">
             <div class="so-sticky-actions-inner" style="align-items: center;">
-                <?php if ($creditCanShowApproveBar): ?>
+                <?php if ($creditCanShowApproveBar || $creditCanCancel): ?>
+                    <?php /* ใบที่ปิดแล้ว (Approve/Rejected) ยังโชว์ ⋮ เพื่อยกเลิกเอกสารได้ แต่ไม่มีปุ่มอนุมัติ ($creditBucket = 3 จึงไม่มีส่งกลับ/ไม่อนุมัติ) */ ?>
                     <div class="so-approve-actions" style="display: flex; gap: 16px; align-items: center; position: relative;">
                         <button type="button" class="so-overflow-menu-trigger" id="btn_credinot_approve_overflow" onclick="toggleCreditApproveOverflowMenu()" style="background: white; border: 1px solid #EBEBEB; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #612989;">
                             <i class="fas fa-ellipsis-v"></i>
@@ -1007,7 +1020,9 @@
                             <?php endif; ?>
                             <button type="button" onclick="triggerCreditCancelFromApproveMenu();" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
                         </div>
-                        <?php if ($creditBucket === 0): ?>
+                        <?php if (!$creditCanShowApproveBar || $creditIsDraftDoc): ?>
+                            <?php /* ใบปิดแล้วไม่มีปุ่มอนุมัติ ; ใบ Draft ส่งเข้าคิวด้วยปุ่ม Submit ด้านล่าง (send_sup ไม่เปลี่ยน status_doc) */ ?>
+                        <?php elseif ($creditBucket === 0): ?>
                             <button type="submit" name="approve_action" value="send_sup" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
                                 <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
@@ -1018,14 +1033,14 @@
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-                <?php if (!$creditItemsLocked && $mode !== 'edit') { ?>
+                <?php if (!$creditItemsLocked && ($mode !== 'edit' || $creditIsDraftDoc)) { ?>
                     <button type="submit" name="submit" value="submit" class="btn-so-submit">
                         <i class="far fa-paper-plane"></i> Submit
                     </button>
                 <?php } ?>
                 <?php if (!$creditHideUpdate): ?>
                     <button type="button" name="save_draft" onclick="saveDraftCredit()" class="btn-so-update">
-                        <i class="far fa-save"></i> Update
+                        <i class="far fa-save"></i> <?php echo $creditIsEditMode ? 'Update' : 'Save Draft'; ?>
                     </button>
                 <?php endif; ?>
             </div>
@@ -2286,47 +2301,19 @@
             modal.setAttribute('aria-hidden', 'true');
         }
 
-        function openCancelCreditModal() {
-            var refCredit = <?php echo json_encode($refCreditFull); ?>;
-            Swal.fire({
-                title: 'ยืนยันการยกเลิกใบลดหนี้',
-                html: 'คุณต้องการยกเลิกใบลดหนี้เลขที่ <strong>' + escapeDocRefHtml(refCredit) + '</strong> ใช่หรือไม่?<br><span style="color:#DC3545;">การยกเลิกไม่สามารถย้อนกลับได้</span>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ยืนยันยกเลิก',
-                cancelButtonText: 'ย้อนกลับ',
-                confirmButtonColor: '#DC3545',
-                cancelButtonColor: '#612989',
-                reverseButtons: true
-            }).then(function(result) {
-                if (result.isConfirmed) {
-                    confirmCancelCredit();
-                }
-            });
-        }
-
-        function closeCancelCreditModal() {
-            // retain empty function for safety
-        }
-
-        function confirmCancelCredit() {
-            var form = document.forms['frmMain'];
-            if (!form) return;
-            var actionField = document.createElement('input');
-            actionField.type = 'hidden';
-            actionField.name = 'approve_action';
-            actionField.value = 'cancel';
-            form.appendChild(actionField);
-            HTMLFormElement.prototype.submit.call(form);
-        }
-
         function saveDraftCredit() {
             var form = document.forms['frmMain'];
             if (!form) return;
 
-            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+            // Save Draft (สร้างใหม่ หรือใบที่ยังเป็น Draft) บันทึกข้อมูลไม่ครบได้เหมือน register_suphos.php
+            // ส่วน Update ของเอกสารที่ส่งเข้าคิวอนุมัติไปแล้วยังต้องกรอก field บังคับให้ครบ
+            var isDraftSave = <?php echo json_encode(!$creditIsEditMode || $creditIsDraftDoc); ?>;
+            if (!isDraftSave && typeof form.reportValidity === 'function' && !form.reportValidity()) {
                 return;
             }
+
+            var openerInput = form.querySelector('input[name="opener"]');
+            var openerValue = openerInput ? String(openerInput.value || '').trim() : '';
 
             var btn = form.querySelector('[name="save_draft"]');
             var defaultHtml = btn ? btn.innerHTML : '';
@@ -2347,13 +2334,24 @@
                 })
                 .then(function(data) {
                     if (data && data.success) {
+                        // เปิดเป็น popup จากหน้า SO: เติมเลขให้ SO แล้วปิด popup เหมือน Submit (register_credinot1.php)
+                        if (openerValue === 'suphos' && window.opener && typeof window.opener.handleCreditNoteCreated === 'function') {
+                            window.opener.handleCreditNoteCreated(data.ref_credit);
+                            window.close();
+                            return;
+                        }
+                        var nextUrl = 'register_credinot.php?ref_credit=' + encodeURIComponent(data.ref_credit);
+                        if (openerValue !== '') {
+                            nextUrl += '&opener=' + encodeURIComponent(openerValue);
+                        }
                         return Swal.fire({
                             title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+                            text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
                             icon: 'success',
                             confirmButtonColor: '#612989',
                             confirmButtonText: 'ตกลง'
                         }).then(function() {
-                            window.location.replace('register_credinot.php?ref_credit=' + encodeURIComponent(data.ref_credit));
+                            window.location.replace(nextUrl);
                         });
                     }
 

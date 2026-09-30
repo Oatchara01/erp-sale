@@ -70,6 +70,7 @@ function DateThai($strDate)
 	}
 $ref_credit=$_GET["ref_credit"];
 include"dbconnect.php";
+require_once __DIR__ . '/includes/credit_note_labels.php';
 $strSQL25="Update  tb_credit_note set print_adm = '1'  where ref_credit ='".$ref_credit."'";
 $objQuery25 = mysqli_query($conn,$strSQL25);
 $strSQL = "SELECT * from tb_credit_note WHERE ref_credit = '".$ref_credit."' ";
@@ -105,7 +106,7 @@ $address_name = $objResult['address_name'];
 $customer_tel = $objResult['customer_tel'];
 $iv_no_ref = $objResult['iv_no_ref'];
 $ttype_doc = $objResult['ttype_doc'];
-$return_des = $objResult['return_des'];
+$return_des = credit_return_condition_label($objResult['return_des']);
 $send_return_name = $objResult['send_return_name'];
 $date_send_return = DateThai($objResult['date_send_return']);
 $receive_name = $objResult['receive_name'];

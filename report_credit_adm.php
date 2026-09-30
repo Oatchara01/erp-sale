@@ -75,6 +75,7 @@ function creditPreviewDate($v, $fallback = '-') {
 	return DateThai($v);
 }
 include"dbconnect.php";
+require_once __DIR__ . '/includes/credit_note_labels.php';
 $isFormPreview = ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['preview_source'] ?? '') === 'form');
 $reportRows = null;
 
@@ -90,7 +91,7 @@ if ($isFormPreview) {
 	$iv_no_ref = $_POST['iv_no_ref'] ?? '';
 	$ttype_doc = $_POST['ttype_doc'] ?? '';
 	// สาเหตุที่คืน มาจาก field ชื่อ return_reason บนฟอร์ม (ไม่ใช่ return_des ซึ่งเป็นคนละความหมาย/map ไปคอลัมน์ remark_et)
-	$return_des = trim($_POST['return_reason'] ?? '');
+	$return_des = credit_return_condition_label($_POST['return_reason'] ?? '');
 	$type_return = $_POST['type_return'] ?? '';
 	$bank_name = $_POST['bank_name'] ?? '';
 	$account_name = $_POST['account_name'] ?? '';
@@ -202,7 +203,7 @@ $address_name = $objResult['address_name'];
 $customer_tel = $objResult['customer_tel'];
 $iv_no_ref = $objResult['iv_no_ref'];
 $ttype_doc = $objResult['ttype_doc'];
-$return_des = $objResult['return_des'];
+$return_des = credit_return_condition_label($objResult['return_des']);
 $type_return = $objResult['type_return'];
 $bank_name = $objResult['bank_name'];
 $account_name = $objResult['account_name'];
@@ -334,7 +335,7 @@ foreach ($reportRows as $row) {
 <table border="0" style="width:100%;border-left:1px solid black;border-right:1px solid black;">
 	<tr>
 		<td style="width:10%;" valign="top">สาเหตุที่คืน : </td>
-		<td style="width:90%;"><?php echo $return_des; ?></td>
+		<td style="width:90%;"><?php echo htmlspecialchars($return_des, ENT_QUOTES, 'UTF-8'); ?></td>
 	</tr>
 </table>
 <table border="1" width="100%">

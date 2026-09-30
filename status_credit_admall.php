@@ -90,6 +90,7 @@ include "dbconnect_sale.php";
 									<label class="so-label" style="color:#612989; font-size:13px; font-weight:500; display:block; margin-bottom:6px;">สถานะการอนุมัติ</label>
 									<select name="status_doc" id="modal_status_doc" class="so-select">
 										<option value="">Select</option>
+										<option value="Draft" <?php if ($status_doc == 'Draft') echo 'selected'; ?>>Draft</option>
 										<option value="Approve" <?php if ($status_doc == 'Approve') echo 'selected'; ?>>สมบูรณ์</option>
 										<option value="Rejected" <?php if ($status_doc == 'Rejected') echo 'selected'; ?>>ไม่อนุมัติ</option>
 										<option value="Returned" <?php if ($status_doc == 'Returned') echo 'selected'; ?>>ส่งกลับ</option>
@@ -294,7 +295,10 @@ include "dbconnect_sale.php";
 							// Map status_doc/send_dm/send_sup to badge class and display text (เงื่อนไขเดิมทุกจุด)
 							$status_class = '';
 							$status_text = '';
-							if ($objResult["status_doc"] == 'Rejected') {
+							if ($objResult["status_doc"] == 'Draft') {
+								$status_class = 'draft';
+								$status_text = 'Draft';
+							} else if ($objResult["status_doc"] == 'Rejected') {
 								$status_class = 'rejected';
 								$status_text = 'ไม่อนุมัติ';
 							} else if ($objResult["status_doc"] == 'ยกเลิก') {

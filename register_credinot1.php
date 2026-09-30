@@ -54,10 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	$customer_name = $_POST["customer_name"] ?? '';
 	$customer_tel = $_POST["customer_tel"] ?? '';
 	$address_name = $_POST["address_name"] ?? '';
+	// สภาพสินค้าที่ได้รับคืน: รับเฉพาะรหัส '1' / '2' (ดู includes/credit_note_labels.php)
 	$return_des = trim($_POST["return_reason"] ?? '');
+	if (!in_array($return_des, array('1', '2'), true)) $return_des = '';
 	$send_return_name = $_POST["send_return_name"] ?? '';
 	$date_send_return = $_POST["date_send_return"] ?? '';
-	$receive_name = $_POST["receive_name"] ?? '';
 	$date_receive = $_POST["date_receive"] ?? '';
 	$sale_name = $_POST["sale_name"] ?? '';
 	$sale_date = $_POST["sale_date"] ?? '';
@@ -70,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	$name =  $_SESSION['name'] ?? '';
 	$surname =  $_SESSION['surname'] ?? '';
 	$add_by = trim("$name $surname");
+	// ผู้รับคืนสินค้า = ผู้สร้างเอกสารเสมอ (ใช้เฉพาะ INSERT — UPDATE ไม่แตะคอลัมน์นี้)
+	$receive_name = $add_by;
 	$add_date = date('Y-m-d H:i:s');
 	$company_type = $_POST["company_type"] ?? '';
 	$ttype_doc = $_POST["ttype_doc"] ?? '';
@@ -83,8 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 	$sn = $_POST["sn"] ?? array();
 	$lot_no = $_POST["lot_no"] ?? array();
 	$sale_code = $_POST["sale_code"] ?? '';
-	$send_sup = '1';
-	$status_doc = 'Request';
+	// ใช้เฉพาะ insert path — Save Draft (is_draft=1) ยังไม่ส่งเข้าคิว Sup
+	$send_sup = $isDraft ? '0' : '1';
+	$status_doc = $isDraft ? 'Draft' : 'Request';
 	$send_admin = '0';
 	$account_no =  $_POST["account_no"] ?? '';
 	$account_name =  $_POST["account_name"] ?? '';
@@ -235,7 +239,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 		$isLockedDoc = ($curDocStatus === 'Approve') || ($curDocStatus === 'ยกเลิก' && $curDocWasEverApproved);
 		// 'Returned' ก็ต้อง reset กลับเข้าคิว SUP เหมือน Rejected — ไม่งั้นแก้แล้ว save/Update จะค้างสถานะ
 		// 'Returned' ตลอดไป (ไฟล์นี้ไม่มี draft handler แยกแบบ suphos จึงต้อง reset ที่นี่ทุกครั้งที่ save สำเร็จ)
-		$needsStatusReset = in_array($curDocStatus, ['Rejected', 'Returned'], true) || ($curDocStatus === 'ยกเลิก' && !$curDocWasEverApproved);
+		$needsStatusReset = in_array($curDocStatus, ['Rejected', 'Returned'], true) || ($curDocStatus === 'ยกเลิก' && !$curDocWasEverApproved)
+			// ใบ Draft: กด Submit (ไม่ใช่ is_draft) = ส่งเข้าคิว Sup ; กด Update (is_draft) = ยังเป็น Draft ต่อ
+			|| ($curDocStatus === 'Draft' && !$isDraft);
 		$blockedByLock = $isLockedDoc;
 
 		if (!$isLockedDoc) {
@@ -253,7 +259,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST["submit"])) {
 				return_des = '" . credinotEsc($conn, $return_des) . "',
 				send_return_name = '" . credinotEsc($conn, $send_return_name) . "',
 				date_send_return = '" . credinotEsc($conn, $date_send_return) . "',
-				receive_name = '" . credinotEsc($conn, $receive_name) . "',
 				date_receive = '" . credinotEsc($conn, $date_receive) . "',
 				sale_name = '" . credinotEsc($conn, $sale_name) . "',
 				sale_date = '" . credinotEsc($conn, $sale_date) . "',
@@ -497,6 +502,7 @@ values
 			echo "} else {";
 			echo "  Swal.fire({";
 			echo "    title: 'บันทึกข้อมูลเรียบร้อยแล้ว',";
+			echo "    text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',";
 			echo "    icon: 'success',";
 			echo "    confirmButtonColor: '#612989',";
 			echo "    confirmButtonText: 'ตกลง'";
@@ -509,6 +515,7 @@ values
 			echo "<script language=\"JavaScript\">";
 			echo "Swal.fire({";
 			echo "  title: 'บันทึกข้อมูลเรียบร้อยแล้ว',";
+			echo "  text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',";
 			echo "  icon: 'success',";
 			echo "  confirmButtonColor: '#612989',";
 			echo "  confirmButtonText: 'ตกลง'";

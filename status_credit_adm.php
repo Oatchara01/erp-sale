@@ -64,7 +64,7 @@ $to_day = date('Y-m-d');
 
 
 
-$strSQL = "SELECT *  FROM tb_credit_note  where credit_no=''  and status_doc !='ยกเลิก' and status_doc !='Rejected'";
+$strSQL = "SELECT *  FROM tb_credit_note  where credit_no=''  and status_doc !='ยกเลิก' and status_doc !='Rejected' and status_doc !='Draft'";
 
 if($start_date !=""){ 
     $strSQL .= ' AND date_credit >= "'.$start_date.'"'; 
