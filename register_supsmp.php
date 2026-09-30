@@ -151,7 +151,6 @@ if ($smpSource !== null) {
 		'brnp_no'       => (string)$smpSource['brnp_no'],
 		'crm_ckk'       => (string)$smpSource['crm_ckk'] === '1' ? '1' : '0',
 		'crm_ref'       => (string)$smpSource['crm_ref'],
-		'have_order'    => (string)$smpSource['have_order'] === '1' ? '1' : '0',
 		'customer_id'   => (string)$smpSource['bill_id'],
 		'customer_name' => (string)$smpSource['customer_name'],
 		'cus_tel'       => (string)$smpSource['customer_tel'],
@@ -282,7 +281,6 @@ if ($q) while ($row = mysqli_fetch_assoc($q)) $provinces[] = $row['province_name
 $isEngineer = ($_SESSION['department'] ?? '') === 'วิศวกรรม';
 $department = $isEngineer ? 'ฝ่ายวิศวกรรม' : 'ฝ่ายขาย';
 $workType = $isEngineer ? 'วิศวกรรม' : 'Sale';
-$employeeName = ($smpRegister !== null && !$smpIsCopy) ?(string)$smpRegister['employee_name'] : (string)($_SESSION['name'] ?? '');
 $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 ?>
 
@@ -310,7 +308,12 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 	<div class="smp-layout">
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title">สร้างใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP)</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="goMainSupSmp();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title">สร้างใบเบิกสินค้าเพื่อสนับสนุนการขาย (SMP)</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($referenceId); ?></span>
@@ -342,9 +345,6 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<div class="so-field-group"><label class="smp-pill-toggle"><input type="checkbox" name="crm_ckk" id="crm_ckk" value="1" aria-controls="crm_ref"><span>แลกสินค้า CRM</span></label></div>
 				<div class="so-field-group"><label class="so-label" for="crm_ref">เลขที่อ้างอิง (CRM)<span class="required" id="crm_ref_required" hidden>*</span></label><input class="so-input" type="text" name="crm_ref" id="crm_ref" maxlength="300" placeholder="เลขที่อ้างอิง" autocomplete="off" disabled></div>
 			</div>
-			<div class="so-grid-3 smp-doc-bottom">
-				<div class="so-field-group"><label class="smp-pill-toggle"><input type="checkbox" name="have_order" id="have_order" value="1"><span>ออเดอร์ฝาก</span></label></div>
-			</div>
 			<!-- ฟิลด์เดิมที่ไม่แสดงใน UI แต่ยังทำงาน: วันที่เอกสาร (ตรวจเดือนปิดเอกสาร), ความเห็นฝ่ายสนับสนุน, เลขที่ใบยืม (flow เคลียร์ยืม) -->
 			<input type="hidden" name="smp_date" id="smp_date" value="<?php echo date('Y-m-d'); ?>">
 			<input type="hidden" name="comment_sup" id="comment_sup" value="">
@@ -354,10 +354,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 		<!-- ===================== หมายเหตุ ===================== -->
 		<div class="so-card smp-note-card">
 			<div class="so-section-title-container"><h2 class="so-section-title">หมายเหตุ</h2><hr class="so-divider"></div>
-			<div class="smp-note-grid">
-				<div class="so-field-group"><span class="so-label">พนักงาน</span><span class="smp-employee-text"><?php echo so_saved_h($employeeName); ?></span><input type="hidden" name="employee_name" id="employee_name" value="<?php echo so_saved_h($employeeName); ?>"></div>
-				<div class="so-field-group"><label class="so-label" for="comment_sale">หมายเหตุ</label><input class="so-input" type="text" name="comment_sale" id="comment_sale" placeholder="ใส่รายละเอียดเพิ่มเติม" autocomplete="off"></div>
-			</div>
+			<div class="so-field-group"><label class="so-label" for="comment_sale">หมายเหตุ</label><input class="so-input" type="text" name="comment_sale" id="comment_sale" placeholder="ใส่รายละเอียดเพิ่มเติม" autocomplete="off"></div>
 		</div>
 
 		<!-- ===================== ข้อมูลลูกค้า ===================== -->
@@ -588,9 +585,6 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร
 			</button>
 			<?php } ?>
-			<button type="button" name="cancel_edit" onclick="window.location.href='<?php echo $smpBackUrl; ?>';" style="background-color: white; color: #4A4A4A; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px;">
-				ย้อนกลับ
-			</button>
 		</div>
 	</div>
 </form>
@@ -688,7 +682,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 		(function () {
 			var form = document.getElementById('smp-form');
 			if (!form) return;
-			var keepClasses = ['btn-preview-so', 'so-tab-btn', 'so-latest-reason-close'];
+			var keepClasses = ['btn-preview-so', 'so-tab-btn', 'so-latest-reason-close', 'so-back-btn'];
 			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function (el) {
 				if (el.type === 'hidden' || el.name === 'cancel_edit') return;
 				for (var i = 0; i < keepClasses.length; i++) { if (el.classList.contains(keepClasses[i])) return; }

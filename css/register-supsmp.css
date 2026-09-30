@@ -50,6 +50,8 @@
 .smp-cell-amount { font-weight: 500; color: var(--so-text); }
 .smp-product-table .cs-row-edit-btn, .smp-product-table .so-product-remove-btn { width: 28px; height: 28px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: #77727A; }
 .smp-product-table .cs-row-edit-btn:hover, .smp-product-table .so-product-remove-btn:hover { background: transparent; border: 0; color: var(--so-primary); }
+.smp-product-table .cs-row-edit-btn img { width: 18px; height: 18px; }
+.smp-product-table .so-product-remove-btn img { width: 16px; height: 18px; }
 .breg-empty-state { padding: 28px 16px; text-align: center; font-size: 14px; color: var(--so-muted); background: #FAF9FC; border: 1px dashed #E3DCEA; border-radius: 10px; }
 
 /* modal เคลียร์ยืม — รายการสินค้าต่างบริษัทที่เลือกไม่ได้ */
@@ -85,12 +87,10 @@
 	#smp_edit_modal .cs-modal-btn-update, #smp_edit_modal .cs-modal-btn-cancel { width: 100%; }
 }
 
-/* ===== การ์ดข้อมูลเอกสาร: บริษัท/เขตการขาย → หัวข้อ → หมายเลขคำสั่งซื้อ + CRM → ออเดอร์ฝาก ===== */
+/* ===== การ์ดข้อมูลเอกสาร: บริษัท/เขตการขาย → หัวข้อ → หมายเลขคำสั่งซื้อ + CRM ===== */
 .smp-doc-card .smp-doc-top { margin-bottom: 24px; }
-.smp-doc-card .smp-doc-bottom { margin-top: 24px; }
 .smp-doc-card .smp-doc-top .so-field-group,
-.smp-doc-card .smp-align-end .so-field-group,
-.smp-doc-card .smp-doc-bottom .so-field-group { margin-bottom: 0; }
+.smp-doc-card .smp-align-end .so-field-group { margin-bottom: 0; }
 .smp-doc-card #order_id { background: #F5F6F8; color: #3B3B3B; cursor: default; }
 .smp-doc-card #crm_ref:disabled { background: #F4F3F7; color: #8A8690; cursor: not-allowed; }
 .smp-doc-card #crm_ref.is-invalid { border-color: #DC3545; }
@@ -99,15 +99,10 @@
 .smp-pill-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .smp-pill-toggle:has(input:checked) { background: #612989; color: #FFF; }
 .smp-pill-toggle:has(input:focus-visible) { outline: 2px solid #612989; outline-offset: 2px; }
-/* ออเดอร์ฝาก: ปุ่มแคบพอดีข้อความ (ไม่ขยายเต็มคอลัมน์ของ grid) — ปุ่มแลกสินค้า CRM ยังเต็มคอลัมน์เหมือนเดิม */
-.smp-doc-card .smp-doc-bottom .smp-pill-toggle { width: fit-content; padding: 0 32px; }
 
 /* ===== การ์ดข้อมูลลูกค้า: แถวเบอร์โทร/ที่อยู่ (.so-grid-3-custom) และแถวจังหวัด/เขต/ไปรษณีย์ (.so-grid-3) ===== */
 .smp-cust-block { margin-top: 18px; margin-bottom: 0; }
 .smp-cust-block .so-field-group { margin-bottom: 0; }
 
-/* ===== การ์ดหมายเหตุ: พนักงาน (ข้อความเปล่า) | หมายเหตุ ===== */
-.smp-note-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
+/* ===== การ์ดหมายเหตุ ===== */
 .smp-note-card .so-field-group { margin-bottom: 0; }
-.smp-employee-text { display: flex; align-items: center; min-height: 42px; padding-left: 5px; font-size: 14px; color: #3B3B3B; }
-@media (max-width: 768px) { .smp-note-grid { grid-template-columns: 1fr; gap: 16px; } }

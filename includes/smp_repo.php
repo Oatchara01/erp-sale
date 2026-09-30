@@ -418,7 +418,7 @@ function smp_register_data_from_post($refId, $addDate, $productSummary, $session
 		'want_bus'          => smp_flag('want_bus'),
 		'product_name'      => $productSummary,
 		'product_sn'        => $refId,
-		'employee_name'     => smp_post('employee_name'),
+		'employee_name'     => (string)($session['name'] ?? ''),
 		'employee_tel'      => smp_post('employee_tel'),
 		'add_by'            => smp_post('add_by'),
 		'description'       => smp_post('comment_sale'),
@@ -598,7 +598,6 @@ function smp_persist_from_post($conn, $mode, array $session)
 			'ref_idsale'    => $refIdSale,
 			'crm_ckk'       => $crm['crm_ckk'],
 			'crm_ref'       => $crm['crm_ref'],
-			'have_order'    => smp_flag('have_order'),
 			'date_ker'     => smp_valid_date($shippingDate) ? $shippingDate : '0000-00-00',
 			'ker_bath'      => (string)(float)str_replace(',', '', smp_post('shipping_cost', '0')),
 			'ref_no'        => smp_post('shipping_ref1'),
@@ -660,7 +659,7 @@ function smp_persist_from_post($conn, $mode, array $session)
 		$registerData = smp_register_data_from_post($refId, $now, implode(' ', $summaryParts), $session);
 		$transactionData = smp_transaction_from_post($now);
 		if ($isUpdate) {
-			unset($registerData['add_by'], $registerData['add_date'], $registerData['add_code'], $transactionData['add_by'], $transactionData['add_date']);
+			unset($registerData['add_by'], $registerData['add_date'], $registerData['add_code'], $registerData['employee_name'], $transactionData['add_by'], $transactionData['add_date']);
 		}
 		smp_db_upsert($conn, 'tb_register_data', 'ref_id', $refId, $registerData);
 		smp_db_upsert($conn, 'tb_transaction', 'ref_id', $refId, $transactionData);

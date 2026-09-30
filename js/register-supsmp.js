@@ -167,8 +167,8 @@
 				'<input type="hidden" name="' + p + '[sale_remark]" class="smp-f-remark" value="' + esc(data.sale_remark) + '">' +
 				'<input type="hidden" name="' + p + '[br_no]" class="smp-f-br_no" value="' + esc(data.br_no) + '">' +
 				'<input type="hidden" name="' + p + '[clear_br]" class="smp-f-clear_br" value="' + (data.br_no || data.clear_br === '1' ? '1' : '0') + '">' +
-				'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" data-smp-edit><i class="far fa-edit" aria-hidden="true"></i></button>' +
-				'<button type="button" class="so-product-remove-btn" title="ลบรายการ" data-smp-remove><i class="far fa-trash-alt" aria-hidden="true"></i></button>' +
+				'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" data-smp-edit><img src="img/icons/edit.svg" alt=""></button>' +
+				'<button type="button" class="so-product-remove-btn" title="ลบรายการ" data-smp-remove><img src="img/icons/trash.svg" alt=""></button>' +
 			'</td></tr>';
 	}
 
@@ -830,6 +830,9 @@
 				notify('บันทึกไม่สำเร็จ', (data && data.message) || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
 			})
 			.catch(function (err) { setBusy(false, button); notify('บันทึกไม่สำเร็จ', String(err), 'error'); });
+	};
+	window.goMainSupSmp = function () {
+		window.location.href = 'status_samplesup.php';
 	};
 	/* Preview — POST ค่าปัจจุบันทั้งฟอร์มไป report_sample.php แบบ _report_preview=1 (ไม่แตะฐานข้อมูล ไม่จองเลข) */
 	window.smpOpenPreview = function () {

@@ -211,10 +211,6 @@ $sel = "";
 			แลกสินค้าระบบ CRM เลขที่อ้างอิง  
 			<input type="text" name="crm_ref" id="crm_ref" value="<?php echo $ffirst['crm_ref']; ?>" class="w3-input" style="width:90%;"  >
 </div>					
-<div class="w3-bar w3-margin-bottom">
-	<input type="checkbox" name="have_order" id="have_order" value="1"<?php echo $ffirst['have_order']=='1' ? " checked='checked'" : ''; ?> disabled>
-			ออเดอร์ฝาก
-</div>
 <script>(function(){var c=document.getElementById('crm_ckk'),r=document.getElementById('crm_ref');if(!c||!r)return;function s(){r.required=c.checked;}c.addEventListener('change',s);s();})();</script>
 </div>
 		
