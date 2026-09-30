@@ -15,6 +15,11 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include ("error_page.php");
+require_once __DIR__ . '/includes/rental_so_sync.php';
+// $code (invoice_receipt) มาจาก head.php แต่ path Save Draft ไม่ include head.php จึงต้องต่อเองสำหรับเช็คสถานะรับเงินของ SO
+if (!isset($code) || !($code instanceof mysqli)) {
+	include("dbconnect_acc.php");
+}
 
 date_default_timezone_set("Asia/Bangkok");
 
@@ -571,6 +576,12 @@ try {
 			}
 		}
 	}
+
+	// ซิงก์ยอดใบสั่งขาย (ref_iv/ref_ai) ให้ตรงกับใบเช่าที่เพิ่งบันทึก — อยู่ใน transaction เดียวกัน พังแล้ว rollback ทั้งก้อน
+	$rtSoSyncResult = null;
+	if ($saveOk) {
+		$rtSoSyncResult = rental_so_sync($conn, $code ?? null, $ref_id);
+	}
 } catch (mysqli_sql_exception $e) {
 	$saveOk = false;
 	$saveError = $e->getMessage();
@@ -578,6 +589,11 @@ try {
 
 if ($saveOk) {
 	mysqli_commit($conn);
+
+	// ผลซิงก์ SO แสดงเป็น flash ในป๊อปอัป saved=1 ของ register_suprental.php (ทั้ง path บันทึกปกติและ Save Draft)
+	if ($rtSoSyncResult && ($rtSoSyncResult['updated'] || $rtSoSyncResult['skipped'])) {
+		$_SESSION['rt_so_sync_result'] = $rtSoSyncResult;
+	}
 
 	// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_suprental.php =====
 	// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป

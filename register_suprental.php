@@ -12,22 +12,48 @@
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 
-<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") {
+	// ผลซิงก์ใบสั่งขายจาก register_suprental_edit1.php (flash ครั้งเดียว)
+	$rtSoSyncFlash = $_SESSION['rt_so_sync_result'] ?? null;
+	unset($_SESSION['rt_so_sync_result']);
+	$rtSoSyncLines = array();
+	if (is_array($rtSoSyncFlash)) {
+		foreach ($rtSoSyncFlash['updated'] ?? array() as $rtSoSyncSo) {
+			$rtSoSyncLines[] = 'อัปเดตใบสั่งขาย ' . $rtSoSyncSo . ' ตามยอดใหม่แล้ว';
+		}
+		foreach ($rtSoSyncFlash['skipped'] ?? array() as $rtSoSyncSkip) {
+			$rtSoSyncLines[] = 'ไม่ได้อัปเดตใบสั่งขาย ' . $rtSoSyncSkip['so'] . ': ' . $rtSoSyncSkip['reason'] . ' — กรุณาแก้ไขใบสั่งขายเอง';
+		}
+	}
+	$rtSoSyncHasSkip = is_array($rtSoSyncFlash) && !empty($rtSoSyncFlash['skipped']);
+?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			var cleanUrl = new URL(window.location.href);
 			cleanUrl.searchParams.delete('saved');
 			window.history.replaceState({}, document.title, cleanUrl);
 
+			var soSyncLines = <?php echo json_encode($rtSoSyncLines, JSON_UNESCAPED_UNICODE); ?>;
+			var soSyncHasSkip = <?php echo $rtSoSyncHasSkip ? 'true' : 'false'; ?>;
+
 			if (typeof Swal === 'undefined') {
-				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				alert(['บันทึกข้อมูลเรียบร้อยแล้ว'].concat(soSyncLines).join('\n'));
 				return;
 			}
 
+			var bodyText = document.createElement('div');
+			bodyText.textContent = 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว';
+			soSyncLines.forEach(function(line) {
+				var lineEl = document.createElement('div');
+				lineEl.style.marginTop = '8px';
+				lineEl.textContent = line;
+				bodyText.appendChild(lineEl);
+			});
+
 			Swal.fire({
 				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
-				icon: 'success',
+				html: bodyText,
+				icon: soSyncHasSkip ? 'warning' : 'success',
 				confirmButtonColor: '#612989',
 				confirmButtonText: 'ตกลง'
 			});

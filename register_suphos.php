@@ -1064,6 +1064,7 @@ include("head.php"); ?>
 	$rentalPrefill = null;
 	$fromRentalError = null;
 	if ($loadRefId === "" && $fromRentalRefId !== "") {
+		require_once __DIR__ . '/includes/rental_so_sync.php';
 		$rentalSourceQuery = mysqli_query($conn, "SELECT * FROM hos__rental WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
 		$rentalSourceRow = $rentalSourceQuery ? mysqli_fetch_assoc($rentalSourceQuery) : null;
 
@@ -1109,17 +1110,9 @@ include("head.php"); ?>
 
 			if ($rentalConversionType === "AI") {
 				// ใบสั่งขายเงินประกันสินค้า (AI): ไม่คัดลอกรายการเช่า ให้มีเฉพาะสินค้าเงินประกัน ID 5111
-				// ราคา = hos__rental.deposit_amount (เงินประกันที่บันทึกจาก register_suprental.php ซึ่งแก้เองได้)
-				// ถ้าเป็น NULL (เอกสารเก่า) ใช้ยอดรวมค่าเช่าของใบเช่า (SUM(hos__subrental.amount)) x 2 แบบเดิม
-				$rentalDepositSavedQuery = mysqli_query($conn, "SELECT deposit_amount FROM hos__rental WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
-				$rentalDepositSavedRow = $rentalDepositSavedQuery ? mysqli_fetch_assoc($rentalDepositSavedQuery) : null;
-				if ($rentalDepositSavedRow && $rentalDepositSavedRow["deposit_amount"] !== null) {
-					$rentalDepositAmount = (float)$rentalDepositSavedRow["deposit_amount"];
-				} else {
-					$rentalDepositSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS deposit_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
-					$rentalDepositSumRow = $rentalDepositSumQuery ? mysqli_fetch_assoc($rentalDepositSumQuery) : null;
-					$rentalDepositAmount = $rentalDepositSumRow ? ((float)$rentalDepositSumRow["deposit_sum"] * 2) : 0;
-				}
+				// ยอดคำนวณใน rental_so_expected_lines() (ใช้สูตรเดียวกับตอนซิงก์ SO เมื่อแก้ใบเช่า)
+				$rentalExpectedLines = rental_so_expected_lines($conn, $fromRentalRefId, "AI");
+				$rentalDepositAmount = $rentalExpectedLines['5111'];
 
 				$depositProductQuery = mysqli_query($conn, "SELECT * FROM tb_product WHERE product_ID = '5111' LIMIT 1");
 				$depositProductRow = $depositProductQuery ? mysqli_fetch_assoc($depositProductQuery) : null;
@@ -1153,15 +1146,11 @@ include("head.php"); ?>
 				}
 			} else if ($rentalConversionType === "IV") {
 				// ออกใบสั่งขายค่าเช่า (IV): ไม่คัดลอกสินค้าจริงที่ให้เช่า แต่สร้างรายการค่าบริการมาตรฐาน 2 แถวแทน
-				// 5112 = ค่าเช่า (ราคา = SUM(amount) ของใบเช่า), 3200 = ค่าบริการ/ค่าจัดส่ง Messenger (ราคา = delivery_cost แถวแรก)
-				// ห้าม SUM(delivery_cost) เพราะค่านี้ถูกเก็บซ้ำทุกแถวสินค้าในใบเช่า ไม่ใช่ค่าต่อแถว
-				$rentalFeeSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS fee_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
-				$rentalFeeSumRow = $rentalFeeSumQuery ? mysqli_fetch_assoc($rentalFeeSumQuery) : null;
-				$rentalFeeAmount = $rentalFeeSumRow ? (float)$rentalFeeSumRow["fee_sum"] : 0;
-
-				$rentalDeliveryCostQuery = mysqli_query($conn, "SELECT delivery_cost FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "' ORDER BY id_sub ASC LIMIT 1");
-				$rentalDeliveryCostRow = $rentalDeliveryCostQuery ? mysqli_fetch_assoc($rentalDeliveryCostQuery) : null;
-				$rentalDeliveryCost = $rentalDeliveryCostRow ? (float)$rentalDeliveryCostRow["delivery_cost"] : 0;
+				// 5112 = ค่าเช่า, 3200 = ค่าบริการ/ค่าจัดส่ง Messenger — ยอดคำนวณใน rental_so_expected_lines()
+				// (ใช้สูตรเดียวกับตอนซิงก์ SO เมื่อแก้ใบเช่า)
+				$rentalExpectedLines = rental_so_expected_lines($conn, $fromRentalRefId, "IV");
+				$rentalFeeAmount = $rentalExpectedLines['5112'];
+				$rentalDeliveryCost = $rentalExpectedLines['3200'];
 
 				$feeProductQuery = mysqli_query($conn, "SELECT * FROM tb_product WHERE product_ID IN ('5112', '3200')");
 				$feeProductRows = array();
