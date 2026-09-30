@@ -2058,28 +2058,6 @@ include("head.php"); ?>
 				else form.setAttribute('target', originalTarget);
 				previewFlag.remove();
 			}
-
-			function toggleCancelDoc() {
-				var cancelInput = document.getElementById('cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc');
-				var reasonInput = document.getElementById('admin_cancel_reason');
-				if (!cancelInput || !cancelBtn) return;
-
-				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
-				var newActive = !isCurrentlyActive;
-
-				cancelInput.value = newActive ? '1' : '0';
-				cancelBtn.classList.toggle('active', newActive);
-
-				if (reasonInput) {
-					reasonInput.disabled = !newActive;
-					if (!newActive) {
-						reasonInput.value = '';
-					} else {
-						reasonInput.focus();
-					}
-				}
-			}
 		</script>
 
 		<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;"><!-- main div -->
@@ -2149,6 +2127,8 @@ include("head.php"); ?>
 			<input type="hidden" name="_preview_sale" value="<?php echo so_saved_h($_SESSION['name'] ?? ''); ?>">
 			<input type="hidden" name="redirect_to" value="register_suphos.php">
 			<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedSo !== null && (($savedSo['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
+			<!-- เหตุผลการยกเลิก — popup ยกเลิกเอกสารในเมนู ⋮ ของแถบอนุมัติเป็นคนเติมค่า แล้ว register_suphos_edit1.php เขียนลง remark_cancel -->
+			<input type="hidden" name="admin_cancel_reason" id="admin_cancel_reason" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : ''; ?>">
 			<input type="hidden" name="admin_action" id="admin_action" value="">
 
 			<!-- Card Container -->
@@ -2383,11 +2363,6 @@ include("head.php"); ?>
 
 				<!-- TAB 2: Admin -->
 				<?php
-				$isCancelDisabled = ($savedSo !== null) && (
-					!empty(trim((string)($savedSo['stock_print'] ?? ''))) ||
-					!empty(trim((string)($savedSo['ref_idst'] ?? '')))
-				);
-				$isCancelChecked = ($savedSo !== null) && (($savedSo['status_doc'] ?? '') === 'ยกเลิก');
 				// ส่งรายการรับ-จ่ายได้เฉพาะเอกสารที่บันทึกแล้ว, อนุมัติแล้ว, ไม่ถูกยกเลิก, และยังไม่เคยส่งสำเร็จ
 				$isSendReceiptEnabled = ($savedSo !== null)
 					&& (($savedSo['status_doc'] ?? '') === 'Approve')
@@ -2424,19 +2399,6 @@ include("head.php"); ?>
 							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
-						[
-							['type' => 'button_field', 'button' => [
-								'type' => 'button',
-								'icon' => 'img/icons/circle_x.png',
-								'label' => 'ยกเลิกเอกสาร',
-								'variant' => 'danger',
-								'disabled' => $isCancelDisabled,
-								'active' => $isCancelChecked,
-								'id' => 'btn_cancel_doc',
-								'onclick' => 'toggleCancelDoc();'
-							]],
-							['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $isCancelDisabled || !$isCancelChecked],
-						],
 					],
 				];
 				if ($savedSo !== null) {
@@ -2453,7 +2415,7 @@ include("head.php"); ?>
 					];
 				}
 				include __DIR__ . '/partials/admin_info_tab.php';
-				unset($adminInfoTab, $isCancelDisabled, $isCancelChecked, $isSendReceiptEnabled);
+				unset($adminInfoTab, $isSendReceiptEnabled);
 				?>
 				<!-- End TAB 2 -->
 
@@ -3795,6 +3757,11 @@ include("head.php"); ?>
 		// Update ยังใช้แก้ไขต่อได้จนกว่าเอกสารจะจบ (ไม่ผูกกับ send_sup และไม่ผูกกับ send_cm)
 		// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่แล้ว เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองอยู่แล้ว กันไม่ให้เห็นปุ่ม Update ซ้ำสองปุ่ม
 		$soHideUpdate = $soIsClosed || $soCanShowApproveBar;
+		// พิมพ์ใบเบิกสต็อกแล้ว / ผูกเอกสารสต็อกแล้ว ห้ามยกเลิกเอกสาร จึงซ่อนเมนูยกเลิกในแถบอนุมัติ
+		$soCancelLocked = ($savedSo !== null) && (
+			!empty(trim((string)($savedSo['stock_print'] ?? ''))) ||
+			!empty(trim((string)($savedSo['ref_idst'] ?? '')))
+		);
 		// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารที่ Run ค้างไว้ได้ (ไม่งั้นรีหน้าแล้วเลขหาย)
 		// แต่ห้ามแก้ข้อมูลอื่นของเอกสารที่จบแล้ว จึงเปิดปุ่ม Update แบบจำกัดเฉพาะ Admin แทนปุ่ม Update ปกติ
 		$soIsAdminUser = (($_SESSION['type_login'] ?? '') === 'Admin');
@@ -3812,7 +3779,9 @@ include("head.php"); ?>
 						<div id="approveOverflowMenu" class="so-overflow-menu" style="display:none; position: absolute; bottom: 48px; left: 0; background: white; border: 1px solid #EBEBEB; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; z-index: 10; min-width: 160px;">
 							<button type="button" name="approve_action" value="return" onclick="soRunApproveAction('return', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
 							<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="soRunApproveAction('reject', true);" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #DC3545; cursor: pointer;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
-							<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+							<?php if (!$soCancelLocked): ?>
+								<button type="button" onclick="triggerCancelDocFromApproveMenu()" style="width: 100%; text-align: left; background: none; border: none; padding: 10px 16px; font-family: 'Prompt', sans-serif; font-size: 14px; color: #4A4A4A; cursor: pointer;"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+							<?php endif; ?>
 						</div>
 						<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
 							<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
@@ -4072,10 +4041,7 @@ include("head.php"); ?>
 					iconSrc: 'img/icons/cancel_document.png',
 					onConfirm: function(reason) {
 						var cancelInput = document.getElementById('cancel_doc');
-						var cancelBtn = document.getElementById('btn_cancel_doc');
-						if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
-							toggleCancelDoc();
-						}
+						if (cancelInput) cancelInput.value = '1';
 
 						var reasonInput = document.getElementById('admin_cancel_reason');
 						var reasonField = document.getElementById('so_approve_reason');

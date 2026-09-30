@@ -837,46 +837,15 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'chgRunJobNo();', 'icon_id' => 'btn_run_job_no'],
 							],
-							[
-								['type' => 'button_field', 'button' => [
-									'type' => 'button',
-									'icon' => 'img/icons/circle_x.png',
-									'label' => 'ยกเลิกเอกสาร',
-									'variant' => 'danger',
-									'active' => $chgIsCancelChecked,
-									'id' => 'btn_cancel_doc',
-									'onclick' => 'chgToggleCancelDoc();',
-								]],
-								['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['remark_cancel'] ?? '') : '', 'placeholder' => 'ระบุเหตุผลการยกเลิก', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3, 'disabled' => !$chgIsCancelChecked],
-							],
 						],
 					];
 					include __DIR__ . '/partials/admin_info_tab.php';
 					unset($adminInfoTab);
 					?>
+					<!-- ยกเลิกเอกสารทำได้จากเมนู ⋮ ในแถบอนุมัติเท่านั้น — popup เซ็ต cancel_doc=1 และเติมเหตุผลลง admin_cancel_reason (-> remark_cancel) -->
 					<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo $chgIsCancelChecked ? '1' : '0'; ?>">
+					<input type="hidden" name="admin_cancel_reason" id="admin_cancel_reason" value="<?php echo ($savedChg !== null) ? so_saved_h($savedChg['remark_cancel'] ?? '') : ''; ?>">
 					<script>
-						function chgToggleCancelDoc() {
-							var cancelInput = document.getElementById('cancel_doc');
-							var cancelBtn = document.getElementById('btn_cancel_doc');
-							var reasonInput = document.getElementById('admin_cancel_reason');
-							if (!cancelInput || !cancelBtn) return;
-
-							var newActive = !(cancelBtn.classList.contains('active') || cancelInput.value === '1');
-
-							cancelInput.value = newActive ? '1' : '0';
-							cancelBtn.classList.toggle('active', newActive);
-
-							if (reasonInput) {
-								reasonInput.disabled = !newActive;
-								if (newActive) {
-									reasonInput.focus();
-								} else {
-									reasonInput.value = '';
-								}
-							}
-						}
-
 						// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_supbrcshos.php:980-1043
 						// ajax_run_doc_no.php ใช้ doc_type='6' (EXC) และนับเลขจาก hos__change.iv_no
 						// โดยตรง ไม่มีตารางตัวนับ/ไม่มีการจองเลข ปุ่มนี้จึงคืนแค่เลขถัดไปที่แนะนำ
@@ -2053,8 +2022,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 		if (!chgSubmitting && field) field.value = '';
 	}
 
-	// ยกเลิกเอกสารจากเมนู ⋮ — mirror ของ register_supbrcshos.php:2364-2389
-	// chgToggleCancelDoc() เป็นตัวปลด disabled ของ admin_cancel_reason ด้วย ไม่งั้นค่าจะไม่ถูก POST
+	// ยกเลิกเอกสารจากเมนู ⋮ — mirror ของ triggerCancelDocFromApproveMenu() ใน register_supbrcshos.php
 	function triggerCancelDocFromChgApproveMenu() {
 		chgOpenReasonPopup({
 			title: 'ยกเลิกเอกสารนี้ ?',
@@ -2065,10 +2033,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 			iconSrc: 'img/icons/cancel_document.png',
 			onConfirm: function(reason) {
 				var cancelInput = document.getElementById('cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc');
-				if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
-					chgToggleCancelDoc();
-				}
+				if (cancelInput) cancelInput.value = '1';
 
 				var reasonInput = document.getElementById('admin_cancel_reason');
 				var reasonField = document.getElementById('chg_approve_reason');

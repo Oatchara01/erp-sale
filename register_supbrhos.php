@@ -1582,12 +1582,12 @@ if ($savedBr !== null) {
 // ข้อมูล Admin tab (partials/admin_info_tab.php) — reuse ของ Admin ที่มีอยู่แล้ว
 // Layout อ้างอิงจาก register_suphos.php บรรทัด ~1750 (Admin tab เดียวกัน)
 // ค่าที่ผูกเป็น inverse ของ $optionalHosBrFieldMap ใน register_supbrhos1.php
-// (admin_doc_date<-iv_date, admin_work_no<-job_no, admin_cancel_reason<-remark_cancel)
+// (admin_doc_date<-iv_date, admin_work_no<-job_no)
+// พิมพ์ใบเบิกสต็อกแล้ว / ผูกเอกสารสต็อกแล้ว ห้ามยกเลิกเอกสาร — ใช้ซ่อนเมนู "ยกเลิกเอกสาร" ในแถบอนุมัติ
 $brIsCancelDisabled = $brIsEditMode && (
 	!empty(trim((string)($savedBr['stock_print'] ?? ''))) ||
 	!empty(trim((string)($savedBr['ref_idst'] ?? '')))
 );
-$brIsCancelChecked = $brIsEditMode && (($savedBr['status_doc'] ?? '') === 'ยกเลิก');
 
 $adminInfoTab = [
 	'tab_id' => 'tab-admin-info',
@@ -1604,19 +1604,6 @@ $adminInfoTab = [
 			],
 			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($brIsEditMode ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
 			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($brIsEditMode ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
-		],
-		[
-			['type' => 'button_field', 'button' => [
-				'type' => 'button',
-				'icon' => 'img/icons/circle_x.png',
-				'label' => 'ยกเลิกเอกสาร',
-				'variant' => 'danger',
-				'disabled' => $brIsCancelDisabled,
-				'active' => $brIsCancelChecked,
-				'id' => 'btn_cancel_doc_br',
-				'onclick' => 'toggleCancelDocBr();'
-			]],
-			['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($brIsEditMode ? ($savedBr['remark_cancel'] ?? '') : ''), 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2, 'disabled' => $brIsCancelDisabled || !$brIsCancelChecked],
 		],
 	],
 ];
@@ -1693,44 +1680,17 @@ $adminInfoTab = [
 			// โดยส่งค่า ref_id_br ของหน้านี้ไปในคีย์ ref_id — ตรงกับ logic ใน register_suphos.php ทุกจุด ต่างแค่ selector ref_id_br
 			function brSubmitCancelDoc(reason) {
 				var cancelInput = document.getElementById('br_cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc_br');
 				var reasonInput = document.getElementById('admin_cancel_reason');
 				var reasonField = document.getElementById('br_approve_reason');
 				var actionField = document.getElementById('br_approve_action');
 
 				if (cancelInput) cancelInput.value = '1';
-				if (cancelBtn) cancelBtn.classList.add('active');
-				if (reasonInput) {
-					reasonInput.disabled = false;
-					reasonInput.value = reason;
-				}
+				if (reasonInput) reasonInput.value = reason;
 				if (reasonField) reasonField.value = reason;
 				if (actionField) actionField.value = '';
 
 				var form = brEnsureSubmitMarker();
 				if (form) HTMLFormElement.prototype.submit.call(form);
-			}
-
-			function toggleCancelDocBr() {
-				var cancelInput = document.getElementById('br_cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc_br');
-				var reasonInput = document.getElementById('admin_cancel_reason');
-				if (!cancelInput || !cancelBtn) return;
-
-				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
-				var newActive = !isCurrentlyActive;
-
-				cancelInput.value = newActive ? '1' : '0';
-				cancelBtn.classList.toggle('active', newActive);
-
-				if (reasonInput) {
-					reasonInput.disabled = !newActive;
-					if (!newActive) {
-						reasonInput.value = '';
-					} else {
-						reasonInput.focus();
-					}
-				}
 			}
 
 			function runDocumentNoBr() {
@@ -2000,6 +1960,8 @@ $adminInfoTab = [
 		?>
 		<input type="hidden" name="ref_id_br" class="w3-input" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['ref_id_br']) : so_saved_h($so . $nextId); ?>">
 		<input type="hidden" name="cancel_doc" id="br_cancel_doc" value="<?php echo ($brIsEditMode && (($savedBr['status_doc'] ?? '') === 'ยกเลิก')) ? '1' : '0'; ?>">
+		<!-- เหตุผลการยกเลิก — อยู่นอกแท็บ Admin (แท็บแสดงเฉพาะ It) เพื่อให้ popup ยกเลิกในเมนู ⋮ เติมค่าได้ทุกผู้อนุมัติ แล้ว backend เขียนลง remark_cancel -->
+		<input type="hidden" name="admin_cancel_reason" id="admin_cancel_reason" value="<?php echo $brIsEditMode ? so_saved_h($savedBr['remark_cancel'] ?? '') : ''; ?>">
 
 		<!-- แท็บ ข้อมูลเอกสาร / Admin (แท็บ Admin แสดงเฉพาะ type_login == 'It' เหมือนเดิม) -->
 		<div class="so-tabs-container">
@@ -3449,7 +3411,9 @@ $adminInfoTab = [
 					<div id="brApproveOverflowMenu" class="so-overflow-menu">
 						<button type="button" name="approve_action" value="return" onclick="brRunApproveAction('return', true);" style="color: #FF830F;"><img src="img/icons/send_back.png" alt="" style="width: 20px; height: 20px;"> ส่งกลับ</button>
 						<button type="button" name="approve_action" value="reject" class="so-menu-danger" onclick="brRunApproveAction('reject', true);" style="color: #FF0000;"><img src="img/icons/reject.png" alt="" style="width: 20px; height: 20px;"> ไม่อนุมัติ</button>
-						<button type="button" onclick="brTriggerCancelDocFromApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+						<?php if (!$brIsCancelDisabled): ?>
+							<button type="button" onclick="brTriggerCancelDocFromApproveMenu()"><img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร</button>
+						<?php endif; ?>
 					</div>
 					<button type="button" name="approve_action" value="approve" class="btn-so-approve" onclick="brRunApproveAction('approve', false);">
 						<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ

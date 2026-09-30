@@ -1023,19 +1023,14 @@ if ($csPrefillSource !== null) {
 				</div>
 
 				<input name="add_by" value="<?php echo $_SESSION['name']; ?>&nbsp;<?php echo $_SESSION['surname']; ?>" type='hidden'>
-				<!-- สถานะปุ่ม "ยกเลิกเอกสาร" ในแท็บ Admin — toggleCancelDoc() สลับค่า 0/1
-				     register_supbrcshos1.php อ่านค่านี้ไปตัดสิน status_doc (pattern เดียวกับ register_suphos.php:1656) -->
+				<!-- สถานะยกเลิกเอกสาร — เมนู ⋮ "ยกเลิกเอกสาร" ในแถบอนุมัติเซ็ตเป็น 1 พร้อมเหตุผล
+				     register_supbrcshos1.php / _edit1.php อ่านค่านี้ไปตัดสิน status_doc และเขียน admin_cancel_reason ลง remark_cancel -->
 				<input type="hidden" name="cancel_doc" id="cancel_doc" value="<?php echo ($savedBr !== null && ($savedBr['status_doc'] ?? '') === 'ยกเลิก') ? '1' : '0'; ?>">
+				<input type="hidden" name="admin_cancel_reason" id="admin_cancel_reason" value="<?php echo ($savedBr !== null) ? so_saved_h($savedBr['remark_cancel'] ?? '') : ''; ?>">
 			</div>
 		</div>
 
 		<?php
-		// พอร์ตจาก register_suphos.php:1888-1892 — ตอนนี้รองรับ view/edit mode แล้ว (มี $savedBr)
-		// ไม่มี lock ตามสถานะเอกสาร (เหมือน register_supbrhos.php) จึง disabled คงเป็น false เสมอ
-		// active ผูกกับสถานะจริงจาก DB แล้ว
-		$isCancelDisabled = false;
-		$isCancelChecked = $savedBr !== null && ($savedBr['status_doc'] ?? '') === 'ยกเลิก';
-
 		$adminInfoTab = [
 			'tab_id' => 'tab-admin-info',
 			'title' => 'ข้อมูลเพิ่มเติม (Admin)',
@@ -1046,50 +1041,12 @@ if ($csPrefillSource !== null) {
 					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
 					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no1'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 				],
-				[
-					['type' => 'button_field', 'button' => [
-						'type' => 'button',
-						'icon' => 'img/icons/circle_x.png',
-						'label' => 'ยกเลิกเอกสาร',
-						'variant' => 'danger',
-						'disabled' => $isCancelDisabled,
-						'active' => $isCancelChecked,
-						'id' => 'btn_cancel_doc',
-						'onclick' => 'toggleCancelDoc();'
-					]],
-					// ช่องหมายเหตุเริ่มต้นเป็น disabled จนกว่าจะกดปุ่มยกเลิก (input ที่ disabled จะไม่ถูก POST)
-					['type' => 'text', 'name' => 'admin_cancel_reason', 'id' => 'admin_cancel_reason', 'label' => 'หมายเหตุการยกเลิก', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['remark_cancel'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 3, 'disabled' => $isCancelDisabled || !$isCancelChecked],
-				],
 			],
 		];
 		include __DIR__ . '/partials/admin_info_tab.php';
-		unset($adminInfoTab, $isCancelDisabled, $isCancelChecked);
+		unset($adminInfoTab);
 		?>
 		<script>
-			// คัดลอกจาก register_suphos.php:1602-1622 ตรง ๆ — ใช้ id ชุดเดียวกันทั้งหมด
-			// ปุ่มเป็นแค่ toggle ไม่ได้ submit เอง ผู้ใช้ต้องกด "บันทึก" ต่อ
-			function toggleCancelDoc() {
-				var cancelInput = document.getElementById('cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc');
-				var reasonInput = document.getElementById('admin_cancel_reason');
-				if (!cancelInput || !cancelBtn) return;
-
-				var isCurrentlyActive = cancelBtn.classList.contains('active') || cancelInput.value === '1';
-				var newActive = !isCurrentlyActive;
-
-				cancelInput.value = newActive ? '1' : '0';
-				cancelBtn.classList.toggle('active', newActive);
-
-				if (reasonInput) {
-					reasonInput.disabled = !newActive;
-					if (!newActive) {
-						reasonInput.value = '';
-					} else {
-						reasonInput.focus();
-					}
-				}
-			}
-
 			// ปุ่ม "Run เอกสาร" ในแท็บ Admin — พอร์ตจาก register_suphos.php:4918-4977
 			// ต่างกันตรงที่หน้านี้ไม่มี doc_type_select (เอกสารประเภทเดียว จึงส่ง doc_type='5' ตรง ๆ)
 			// และ company_select ของหน้านี้ใช้ 1=AWL/2=NBM ต้อง map เป็น 3=AWL/4=NBM ก่อนส่งให้ ajax_run_doc_no.php
@@ -2372,10 +2329,7 @@ $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 			iconSrc: 'img/icons/cancel_document.png',
 			onConfirm: function(reason) {
 				var cancelInput = document.getElementById('cancel_doc');
-				var cancelBtn = document.getElementById('btn_cancel_doc');
-				if (cancelInput && !(cancelBtn && cancelBtn.classList.contains('active')) && cancelInput.value !== '1') {
-					toggleCancelDoc();
-				}
+				if (cancelInput) cancelInput.value = '1';
 
 				var reasonInput = document.getElementById('admin_cancel_reason');
 				var reasonField = document.getElementById('cs_approve_reason');
