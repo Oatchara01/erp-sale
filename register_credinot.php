@@ -965,6 +965,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="so-product-empty-state" id="credinot_empty_state"<?php echo $item_count > 0 ? ' style="display:none;"' : ''; ?>>ยังไม่มีรายการสินค้า<?php echo $creditItemsLocked ? '' : ' — ค้นหาสินค้าจากช่องด้านบน'; ?></div>
             </div>
 
             </div><!-- /#tab-document-info -->
@@ -2528,7 +2529,8 @@
                 grandTotal = 0,
                 itemCount = 0;
             tbody.querySelectorAll('tr.credinot-row').forEach(function(row) {
-                if (row.style.display === 'none') return;
+                // ข้ามเฉพาะแถวที่รอลบ — แถวที่แค่ถูกซ่อนจากช่องค้นหา (filterCreditNoteRows) ยังต้องนับยอด
+                if (row.classList.contains('is-pending-delete')) return;
                 var countInput = row.querySelector('input[name^="count"]');
                 var sumInput = row.querySelector('input[name^="sum_amount"]');
                 totalQty += countInput ? (parseFloat(String(countInput.value).replace(/,/g, '')) || 0) : 0;
@@ -2544,6 +2546,10 @@
                 maximumFractionDigits: 2
             });
             if (badge) badge.textContent = itemCount + ' รายการ';
+
+            // กล่อง "ยังไม่มีรายการสินค้า" แสดงเมื่อไม่มีสินค้าจริง (เหมือน #product_empty_state ของ product_salehos.php)
+            var emptyState = document.getElementById('credinot_empty_state');
+            if (emptyState) emptyState.style.display = itemCount > 0 ? 'none' : '';
         }
 
         // ผูก listener ให้แก้ count/ราคา ของแถวนี้แล้ว recalc ยอดรวมของแถว + สถิติรวมทั้งตารางทันที (ไม่กระทบ DB จนกว่าจะ submit)

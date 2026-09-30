@@ -109,6 +109,17 @@
 	margin-top: 16px;
 }
 
+/* กล่องแจ้งตอนยังไม่มีรายการสินค้า (สไตล์เดียวกับ .so-product-empty-state ของ product_salehos.php) */
+.so-product-empty-state {
+	padding: 28px 16px;
+	text-align: center;
+	font-size: 14px;
+	color: #8E8B94;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
+}
+
 /* ข้อความเตือนสีแดงเหนือ summary bar (Figma: "Auto คำนวณเงินประกัน x2 จากค่าเช่า") */
 .rt-summary-hint {
 	color: #DC3545;

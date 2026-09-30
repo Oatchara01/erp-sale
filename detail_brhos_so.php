@@ -107,6 +107,7 @@ function br_product_row_hos($i)
 		</tbody>
 	</table>
 </div>
+<div class="so-product-empty-state" id="br_empty_state"<?php if (!empty($savedProducts)) echo ' style="display:none;"'; ?>>ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
 <!-- ป๊อปอัปข้อมูลรายการสินค้าเพิ่มเติม (หมายเหตุสินค้า และ ชื่อที่แสดงในใบส่งสินค้า) สไตล์สีม่วงเม็ดยา -->
 <div id="brEditModal" class="customer-popup-modal" aria-hidden="true">
@@ -561,7 +562,10 @@ function br_product_row_hos($i)
 		var qty = 0;
 		var amount = 0;
 		var itemCount = 0;
+		var hasVisibleRow = false;
 		for (var i = 1; i <= BR_ROW_COUNT; i++) {
+			var rowEl = document.getElementById('br_row' + i);
+			if (rowEl && rowEl.style.display !== 'none') hasVisibleRow = true;
 			var codeEl = document.getElementById('product_code' + i);
 			if (codeEl && codeEl.value.trim() !== '') {
 				itemCount++;
@@ -595,6 +599,10 @@ function br_product_row_hos($i)
 		if (countLabel) {
 			countLabel.textContent = itemCount + ' รายการ';
 		}
+
+		// กล่อง "ยังไม่มีรายการสินค้า" แสดงเมื่อไม่มีแถวไหนแสดงอยู่ (เหมือน #product_empty_state ของ product_salehos.php)
+		var emptyState = document.getElementById('br_empty_state');
+		if (emptyState) emptyState.style.display = hasVisibleRow ? 'none' : '';
 	}
 
 	$(document).ready(function() {

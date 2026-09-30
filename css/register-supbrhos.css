@@ -351,6 +351,17 @@
 
 /* ===== Salehos-style interactive product table (detail_brhos_so.php) ===== */
 
+/* กล่องแจ้งตอนยังไม่มีรายการสินค้า (สไตล์เดียวกับ .so-product-empty-state ของ product_salehos.php) */
+.so-product-empty-state {
+	padding: 28px 16px;
+	text-align: center;
+	font-size: 14px;
+	color: #8E8B94;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
+}
+
 .br-product-header-row {
 	display: flex;
 	justify-content: space-between;

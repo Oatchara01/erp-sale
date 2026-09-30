@@ -507,7 +507,7 @@
   display: inline-block;
   cursor: pointer;
   position: relative;
-  border: 1px solid transparent;
+  border: 1px solid #612989;
 }
 
 .clear-loan-check-input {

@@ -448,7 +448,10 @@
 	function rtRenderTotals() {
 		var qty = 0;
 		var itemCount = 0;
+		var hasVisibleRow = false;
 		for (var i = 1; i <= RT_ROW_COUNT; i++) {
+			var rowEl = document.getElementById('rt_row' + i);
+			if (rowEl && rowEl.style.display !== 'none') hasVisibleRow = true;
 			var qtyEl = document.getElementById('sale_count' + i);
 			if (qtyEl) qty += rtParseNumber(qtyEl.value);
 			var idEl = document.getElementById('product_id' + i);
@@ -462,6 +465,10 @@
 		document.getElementById('rt_summary_amount').textContent = rtFormatMoney(deposit + delivery);
 		var countEl = document.getElementById('rt_summary_item_count');
 		if (countEl) countEl.textContent = itemCount + ' รายการ';
+
+		// กล่อง "ยังไม่มีรายการสินค้า" แสดงเมื่อไม่มีแถวไหนแสดงอยู่ (เหมือน #product_empty_state ของ product_salehos.php)
+		var emptyState = document.getElementById('rt_empty_state');
+		if (emptyState) emptyState.style.display = hasVisibleRow ? 'none' : '';
 	}
 
 	/* แก้ค่าเช่า/ค่าจัดส่งส่วนหัว -> อัปเดตทุกแถวที่มีสินค้าทันที แล้วคำนวณเงินประกัน/ยอดรวมใหม่ */
@@ -659,6 +666,7 @@
 		</tbody>
 	</table>
 </div>
+<div class="so-product-empty-state" id="rt_empty_state"<?php if (!empty($savedRentalProducts)) echo ' style="display:none;"'; ?>>ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
 <div id="rt_edit_modal" class="cs-modal-overlay" style="display:none;">
 	<div class="cs-modal-card">
