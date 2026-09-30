@@ -212,7 +212,12 @@
             <!-- Header Section -->
             <div class="so-header-container">
                 <div class="so-header-left">
-                    <h1 class="so-title">ใบลดหนี้ (Credit Note Order)</h1>
+                    <div class="so-title-row">
+                        <button type="button" class="so-back-btn" onclick="window.location.href='status_credit_admall.php';" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+                            <img src="img/icons/chevron_left.svg" alt="">
+                        </button>
+                        <h1 class="so-title">ใบลดหนี้ (Credit Note Order)</h1>
+                    </div>
                     <div class="so-ref-info">
                         <span class="so-ref-label">เลขที่อ้างอิง</span>
                         <span class="so-ref-value"><?php echo htmlspecialchars($refCreditFull, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -333,7 +338,7 @@
                                 <input type="hidden" name="ref_id" id="ref_id" value="<?php echo htmlspecialchars($ref_id, ENT_QUOTES, 'UTF-8'); ?>">
 
                                 <div class="so-doc-pill-wrapper">
-                                    <button type="button" class="so-doc-pill" id="docRefPopupTrigger" onclick="openDocRefPopup()">
+                                    <button type="button" class="so-doc-pill" id="docRefPopupTrigger" onclick="openDocRefPopup()"<?php echo $mode === 'create_so' ? ' disabled aria-disabled="true"' : ''; ?>>
                                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="so-doc-pill-icon">
                                             <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                             <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -463,11 +468,12 @@
                             </div>
                         </div>
 
+                        <?php if ($mode === 'edit') { ?>
                         <!-- ผู้รับคืนสินค้า -->
                         <div class="so-field-group">
-                            <label class="so-label" for="receive_name">ผู้รับคืนสินค้า<span style="color:#D32F2F;">*</span></label>
+                            <label class="so-label" for="receive_name">ผู้รับคืนสินค้า</label>
                             <div class="so-input-wrapper">
-                                <input type="text" name="receive_name" id="receive_name" value="<?php echo htmlspecialchars($rs['receive_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกชื่อผู้รับคืนสินค้า" class="so-input" required>
+                                <input type="text" name="receive_name" id="receive_name" value="<?php echo htmlspecialchars($rs['receive_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกชื่อผู้รับคืนสินค้า" class="so-input">
                                 <button type="button" class="so-clear-icon" onclick="document.getElementById('receive_name').value=''"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
@@ -479,9 +485,10 @@
                                 <input type="date" name="date_receive" id="date_receive" value="<?php echo htmlspecialchars($rs['date_receive'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input" required>
                             </div>
                         </div>
+                        <?php } ?>
 
                         <!-- คำอธิบายเพิ่มเติม -->
-                        <div class="so-field-group" style="grid-column: 1 / -1;">
+                        <div class="so-field-group <?php echo $mode === 'edit' ? 'credinot-des-full' : 'credinot-des-inline'; ?>">
                             <label class="so-label" for="return_des">คำอธิบายเพิ่มเติม</label>
                             <div class="so-input-wrapper">
                                 <input type="text" name="return_des" id="return_des" value="<?php echo htmlspecialchars($rs['remark_et'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="กรอกคำอธิบายเพิ่มเติม" class="so-input">
@@ -497,7 +504,8 @@
                         <hr class="so-divider">
                     </div>
 
-                    <div class="so-grid-3">
+                    <div class="so-grid-3<?php echo $mode === 'edit' ? '' : ' credinot-pay-flow'; ?>">
+                        <?php if ($mode === 'edit') { ?>
                         <!-- วันที่ลดหนี้ -->
                         <div class="so-field-group">
                             <label class="so-label" for="date_credit">วันที่ลดหนี้<span style="color:#D32F2F;">*</span></label>
@@ -518,6 +526,7 @@
                                 </button>
                             </div>
                         </div>
+                        <?php } ?>
 
                         <!-- วิธีชำระเงินคืน -->
                         <div class="so-field-group">
@@ -532,9 +541,11 @@
                                 </select>
                             </div>
                         </div>
+                    <?php if ($mode === 'edit') { ?>
                     </div>
 
                     <div class="so-grid-3">
+                    <?php } ?>
                         <!-- ธนาคาร -->
                         <div class="so-field-group">
                             <label class="so-label" for="bank_name">ธนาคาร</label>
@@ -585,9 +596,11 @@
                                 <button type="button" class="so-clear-icon" onclick="document.getElementById('account_name').value=''"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
+                    <?php if ($mode === 'edit') { ?>
                     </div>
 
                     <div class="so-grid-3">
+                    <?php } ?>
                         <!-- แนบไฟล์ Book Bank -->
                         <div class="so-field-group">
                             <label class="so-label" for="book_bank">แนบไฟล์ Book Bank</label>
@@ -682,7 +695,6 @@
                                     <div class="credinot-code-cell-inner">
                                         <div class="credinot-row-controls-inner">
                                             <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
-                                            <span class="credinot-select-dot" aria-hidden="true"></span>
                                             <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
                                                 <i class="fas fa-caret-down"></i>
                                             </button>
@@ -702,7 +714,7 @@
 
                                 <td>
                                     <div class="credinot-qty-pill">
-                                        <input type='text' name="count[<?php echo $objResult1["id"]; ?>]" value="<?php echo $count2; ?>" id="count[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:center" readonly />
+                                        <input type='text' name="count[<?php echo $objResult1["id"]; ?>]" value="<?php echo $count2; ?>" id="count[<?php echo $objResult1["id"]; ?>]" class="so-input" style="text-align:center" />
                                     </div>
                                 </td>
 
@@ -724,11 +736,8 @@
                                 </td>
 
                                 <td class="credinot-edit-col">
-                                    <button type="button" class="credinot-edit-btn" title="แก้ไขรายการ" onclick="toggleCreditRowEdit(this)">
-                                        <img src="img/icons/edit.png" alt="edit" style="width: 16px; height: 16px;">
-                                    </button>
                                     <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="removeNewCreditRow(this)">
-                                        <i class="fas fa-trash-alt"></i>
+                                        <img src="img/icons/trash.svg" alt="delete" style="width: 16px; height: 18px;">
                                     </button>
                                 </td>
 
@@ -800,7 +809,6 @@
                             <div class="credinot-code-cell-inner">
                                 <div class="credinot-row-controls-inner">
                                     <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
-                                    <span class="credinot-select-dot" aria-hidden="true"></span>
                                     <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
                                         <i class="fas fa-caret-down"></i>
                                     </button>
@@ -838,7 +846,7 @@
                         <td class="credinot-edit-col">
                             <?php if (!$creditItemsLocked) { ?>
                                 <button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="deleteCreditSubRow(this, <?php echo (int)$rowId; ?>)">
-                                    <i class="fas fa-trash-alt"></i>
+                                    <img src="img/icons/trash.svg" alt="delete" style="width: 16px; height: 18px;">
                                 </button>
                             <?php } ?>
                         </td>
@@ -1020,9 +1028,6 @@
                         <i class="far fa-save"></i> Update
                     </button>
                 <?php endif; ?>
-                <button type="button" class="btn-so-cancel-nav" onclick="if (window.opener && typeof window.opener.handleCreditNoteCreated === 'function') { window.close(); } else { window.location.href = 'status_credit_admall.php'; }">
-                    ยกเลิก
-                </button>
             </div>
         </div>
 
@@ -1565,25 +1570,6 @@
             }
         }
 
-        // สลับสถานะแก้ไข/อ่านอย่างเดียว ของแถวสินค้า (จำนวน, ราคา/หน่วย)
-        // หมายเหตุ: ส่วนลด/หน่วย ไม่แสดงในตารางแล้วตาม Design ใหม่ จึงไม่อยู่ในชุดฟิลด์ที่แก้ไขได้นี้อีกต่อไป (ค่ายังถูก submit แบบ hidden ตามเดิม)
-        function toggleCreditRowEdit(btn) {
-            var row = btn.closest('tr');
-            if (!row) return;
-            var fields = row.querySelectorAll('input[name^="count"], input[name^="unit_price"]');
-            var willEdit = fields.length > 0 && fields[0].hasAttribute('readonly');
-            fields.forEach(function(field) {
-                if (willEdit) {
-                    field.removeAttribute('readonly');
-                } else {
-                    field.setAttribute('readonly', 'readonly');
-                }
-            });
-            btn.classList.toggle('is-active', willEdit);
-            if (willEdit && fields.length) {
-                fields[0].focus();
-            }
-        }
 
         // ดูตัวอย่างรายงานใบลดหนี้ (Preview) — แสดงข้อมูลที่กรอกอยู่บนฟอร์ม "ตอนนี้" โดยไม่บันทึกลง DB
         // สร้าง <form> ชั่วคราว POST ไป report_credit_adm.php เปิดแท็บใหม่ (ไม่ใช้ fetch เพราะต้องให้ผู้ใช้เห็น/สั่งพิมพ์ได้จริง)
@@ -2591,17 +2577,16 @@
             row.addEventListener('dragover', handleCreditItemDragOver);
             row.addEventListener('drop', handleCreditItemDrop);
             row.innerHTML =
-                '<td class="credinot-row-controls">' +
+                '<td class="credinot-code-col">' +
+                '<div class="credinot-code-cell-inner">' +
                 '<div class="credinot-row-controls-inner">' +
                 '<span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>' +
-                '<span class="credinot-select-dot" aria-hidden="true"></span>' +
                 '</div>' +
-                '</td>' +
-                '<td>' +
                 '<input type="hidden" name="id[' + key + ']" value="">' +
                 '<input type="text" class="so-input credinot-code-input" value="' + escapeDocRefHtml(prod.access_code || '') + '" readonly>' +
                 '<input type="hidden" name="product_id[' + key + ']" value="' + escapeDocRefHtml(prod.product_id || '') + '">' +
                 '<input type="hidden" name="product_code[' + key + ']" value="' + escapeDocRefHtml(prod.access_code || '') + '">' +
+                '</div>' +
                 '</td>' +
                 '<td><textarea name="product_name[' + key + ']" class="so-textarea" readonly>' + escapeDocRefHtml(prod.sol_name || '') + '</textarea></td>' +
                 '<td><div class="credinot-qty-pill"><input type="text" name="count[' + key + ']" value="1" class="so-input credinot-new-count" style="text-align:center"></div></td>' +
@@ -2612,7 +2597,7 @@
                 '<input type="hidden" name="discount_unit[' + key + ']" value="0.00">' +
                 '</td>' +
                 '<td class="credinot-edit-col">' +
-                '<button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="removeNewCreditRow(this)"><i class="fas fa-trash-alt"></i></button>' +
+                '<button type="button" class="credinot-delete-btn" title="ลบรายการ" onclick="removeNewCreditRow(this)"><img src="img/icons/trash.svg" alt="delete" style="width: 16px; height: 18px;"></button>' +
                 '</td>';
 
             tbody.appendChild(row);

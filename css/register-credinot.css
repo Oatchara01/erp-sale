@@ -53,16 +53,16 @@
 	font-size: 14px;
 	table-layout: fixed;
 }
+/* 7 คอลัมน์: ตัวเลข/ปุ่มเป็น px คงที่ — รายการสินค้า (คอลัมน์ 2) ไม่กำหนดความกว้าง จึงได้พื้นที่ที่เหลือทั้งหมด */
 .credinot-table th:nth-child(1) {
-	width: 20%;
+	width: 240px; /* รหัสสินค้า — ปุ่มลาก/ลูกศร + รหัสยาวแสดงครบไม่ถูกตัด */
 	padding-left: 82px !important; /* เว้นพื้นที่ด้านซ้าย 82px ให้ตรงกับจุดเริ่มต้นของตัวเลขรหัสสินค้า 5209 พอดีเป๊ะ */
 }
-.credinot-table th:nth-child(2) { width: 42%; } /* รายการสินค้า (กว้างพิเศษให้อ่านชื่อสินค้าง่าย) */
-.credinot-table th:nth-child(3) { width: 10%; text-align: center; } /* จำนวน */
-.credinot-table th:nth-child(4) { width: 11%; text-align: right; } /* ราคา/หน่วย */
-.credinot-table th:nth-child(5) { width: 11%; text-align: right; } /* ยอดรวม */
-.credinot-table th:nth-child(6) { width: 6%; text-align: center; }  /* ปุ่มแก้ไข/ลบ */
-
+.credinot-table th:nth-child(3) { width: 100px; text-align: center; } /* จำนวน */
+.credinot-table th:nth-child(4) { width: 110px; text-align: right; }  /* ราคา/หน่วย */
+.credinot-table th:nth-child(5) { width: 110px; text-align: right; }  /* ส่วนลด/หน่วย */
+.credinot-table th:nth-child(6) { width: 110px; text-align: right; }  /* ยอดรวม */
+.credinot-table th:nth-child(7) { width: 56px; }                      /* ปุ่มลบ */
 .credinot-table th {
 	background-color: #ffffff;
 	color: #612989 !important;
@@ -83,7 +83,8 @@
 	text-align: center;
 }
 .credinot-table td:nth-child(4),
-.credinot-table td:nth-child(5) {
+.credinot-table td:nth-child(5),
+.credinot-table td:nth-child(6) {
 	text-align: right;
 }
 .credinot-table .so-input,
@@ -269,10 +270,6 @@
 }
 
 /* คอลัมน์ควบคุมหน้าแถวสินค้า */
-.credinot-row-controls {
-	width: 84px;
-	white-space: nowrap;
-}
 .credinot-row-controls-inner {
 	display: flex;
 	align-items: center;
@@ -294,13 +291,6 @@
 }
 .credinot-row.is-drop-target {
 	box-shadow: inset 0 2px 0 #612989;
-}
-.credinot-select-dot {
-	width: 16px;
-	height: 16px;
-	border-radius: 50%;
-	border: 1.5px solid #DCD8E3;
-	flex-shrink: 0;
 }
 .credinot-caret {
 	width: 24px;
@@ -378,10 +368,9 @@
 }
 
 .credinot-edit-col {
-	width: 40px;
 	text-align: center;
+	white-space: nowrap;
 }
-.credinot-edit-btn,
 .credinot-delete-btn {
 	display: inline-flex;
 	align-items: center;
@@ -396,7 +385,6 @@
 	transition: all 0.2s ease;
 	box-shadow: 0 2px 4px rgba(97, 41, 137, 0.04);
 }
-.credinot-edit-btn:hover,
 .credinot-delete-btn:hover {
 	background-color: #F6EFFD !important;
 	border-color: #612989 !important;
@@ -497,6 +485,14 @@
 	outline: 2px solid rgba(97, 41, 137, 0.35);
 	outline-offset: 2px;
 }
+.so-doc-pill:disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+.so-doc-pill:disabled:hover {
+	background-color: inherit;
+	border-color: inherit;
+}
 .so-doc-pill-icon {
 	width: 22px;
 	height: 22px;
@@ -541,8 +537,8 @@
 	height: 42px;
 	padding: 0 16px;
 	border: none;
-	border-radius: 10px;
-	background-color: #efebff;
+	border-radius: 21px;
+	background-color: #F1E1FF;
 	color: #612989;
 	font-size: 14px;
 	font-weight: 500;
@@ -899,3 +895,63 @@
 	color: #F2F2F2;
 }
 
+
+/* ไอคอนย้อนกลับหน้าหัวข้อ -> status_credit_admall.php */
+.so-title-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.so-title-row .so-title {
+	margin-bottom: 0;
+}
+
+.so-back-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.so-back-btn:hover {
+	background-color: rgba(97, 41, 137, 0.08);
+}
+
+.so-back-btn:focus-visible {
+	outline: 2px solid #612989;
+	outline-offset: 2px;
+}
+
+.so-back-btn img {
+	width: 20px;
+	height: 20px;
+	object-fit: contain;
+}
+
+/* คำอธิบายเพิ่มเติม: edit = เต็มแถว, create (ซ่อนผู้รับคืน/วันที่) = ต่อจากสาเหตุการคืนในแถวเดียวกัน */
+.credinot-des-full {
+	grid-column: 1 / -1;
+}
+.credinot-des-inline {
+	grid-column: 2 / -1;
+}
+@media (max-width: 768px) {
+	.credinot-des-inline {
+		grid-column: 1 / -1;
+	}
+}
+
+/* ข้อมูลการชำระเงินคืน ตอนสร้าง: รวมเป็นกริดเดียวให้ฟิลด์ไหลต่อกัน — ตัด row-gap ให้ระยะแนวตั้งเท่ากับตอนแยกแถว (ใช้ margin-bottom ของ .so-field-group) */
+.so-grid-3.credinot-pay-flow {
+	row-gap: 0;
+}
