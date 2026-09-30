@@ -34,12 +34,13 @@ function smp_flag($key)
 
 /**
  * ตัวเลือก "วิธีการจัดส่ง" ของ SMP — key = ค่าที่เก็บใน hos__smp.delivery_type, ลำดับ = ลำดับที่แสดง
- * 1/2 คงความหมายเดิม (หน้า edit/approve เดิมอ่านค่านี้) ส่วน 3/4 เพิ่มใหม่ — ต่างจาก Change Order ที่ 2 = ช่างรับเอง, 4 = บริษัทจัดส่ง
+ * รหัสเดียวกับ register_suphos.php / js/delivery-transport.js (3/4 กำหนดตัวเลือก transport_company)
+ * ใบเก่าที่บันทึกด้วยรหัสชุดเดิม (1 Sale รับเอง, 2 บริษัทจัดส่ง, 3 ช่างรับเอง, 4 ลูกค้ารับเอง) ไม่ถูก map — ต้องเลือกใหม่
  * ทุกหน้าที่แสดง/รับ delivery_type ของ SMP ต้องดึงรายการจากที่นี่ที่เดียว
  */
 function smp_delivery_type_options()
 {
-	return array('1' => 'Sale รับเอง', '3' => 'ช่างรับเอง', '4' => 'ลูกค้ารับเอง', '2' => 'บริษัทจัดส่ง');
+	return array('3' => 'พนักงานรับ/ลูกค้ารับ', '5' => 'บริษัทจัดส่ง(AllWell)', '4' => 'บริษัทขนส่งภายนอก');
 }
 
 /** บริษัทของใบ SMP: '2' = NBM, นอกนั้น '1' = AWL (กันค่าแปลกจาก browser) */
@@ -589,7 +590,7 @@ function smp_persist_from_post($conn, $mode, array $session)
 			'sale_code'     => smp_post('sale_code'),
 			'sale_date'     => $today,
 			'comment_sup'   => smp_post('comment_sup'),
-			'delivery_type' => smp_post('delivery_type', '2'),
+			'delivery_type' => smp_post('delivery_type', ''),
 			'delivery_date' => smp_valid_date($startDate) ? $startDate : '0000-00-00',
 			'date_send_key' => smp_post('between_date'),
 			'brnp_ckk'      => smp_flag('brnp_ckk'),
@@ -1048,7 +1049,8 @@ function smp_export_to_cs($conn, array $doc, $variant)
 	$excluded = ($variant === 'amount')
 		? array('SOL99', 'EN', 'SOL1', 'SOL2', 'SOL3')
 		: array('(SOL99)', 'EN', '(SOL1)', '(SOL2)', 'SOL3');
-	if (in_array((string)$doc['sale_code'], $excluded, true) || (string)$doc['delivery_type'] !== '2') {
+	/* ส่งเฉพาะบริษัทจัดส่ง: '5' = AllWell (รหัสปัจจุบัน), '2' = บริษัทจัดส่ง (รหัสเดิมของใบเก่าที่ยังค้างอนุมัติ) */
+	if (in_array((string)$doc['sale_code'], $excluded, true) || !in_array((string)$doc['delivery_type'], array('5', '2'), true)) {
 		return '';
 	}
 	/* เหมือน dm_approve.php: ไม่ส่งซ้ำถ้าเคยส่งไป CS แล้ว */

@@ -610,7 +610,7 @@
 		['cus_postcode', 'กรุณาใส่รหัสไปรษณีย์ลูกค้า']
 	];
 	var requiredDelivery = [
-		['start_time', 'กรุณาใส่เวลาส่ง'],
+		['start_time','กรุณาใส่เวลาส่ง'],
 		['customer_name1', 'กรุณาใส่ชื่อผู้ติดต่อ'],
 		['customer_tel', 'กรุณาใส่เบอร์โทรลูกค้า'],
 		['address_merged_ui', 'กรุณาใส่ที่อยู่ในการส่งสินค้า'], /* ช่องที่เห็น — address_1/address_name1 เป็น hidden ที่ copy ค่าไป (focus ไม่ได้) */
@@ -644,6 +644,8 @@
 		for (var d = 0; d < requiredDelivery.length; d++) {
 			if (getValue(requiredDelivery[d][0]) === '') return fail(requiredDelivery[d][1], named(requiredDelivery[d][0]));
 		}
+		/* บริษัทขนส่ง/สถานที่รับสินค้า: ตัวเดียวกับ register_suphos.php (js/delivery-transport.js) */
+		if (typeof validateTransportCompanyRequirement === 'function' && !validateTransportCompanyRequirement()) return false;
 		var fileProblem = checkFiles();
 		if (fileProblem) return fail(fileProblem, null);
 		return true;
@@ -860,6 +862,16 @@
 
 	/* ===================== เติมข้อมูล Draft กลับเข้าฟอร์ม ===================== */
 	Object.keys(window.SMP_PREFILL || {}).forEach(function (name) { setValue(name, window.SMP_PREFILL[name]); });
+	/* ตัวเลือก transport_company สร้างตาม delivery_type (setValue ด้านบนใส่ไม่ได้เพราะ option ยังไม่มี) -> คืนค่าที่บันทึกไว้หลังตั้ง delivery_type แล้ว
+	   ทำซ้ำตอน DOMContentLoaded ด้วย: delivery-transport.js เรียก updateTransportCompanyRequirement() ไม่ส่งค่าที่บันทึกไว้ ซึ่งจะล้างรหัสเก่า "(เดิม)" ทิ้ง
+	   (listener นี้ผูกทีหลังจึงรันหลังตัวนั้น) */
+	var restoreTransportCompany = function () {
+		if (typeof updateTransportCompanyRequirement === 'function') {
+			updateTransportCompanyRequirement(String((window.SMP_PREFILL || {}).transport_company || ''));
+		}
+	};
+	restoreTransportCompany();
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreTransportCompany);
 	syncTimeRangeFromInputs(); /* setValue ไม่ยิง event ให้ช่อง time — ซิงก์ dropdown ช่วงเวลากับเวลาที่โหลดจาก Draft เอง */
 	syncDeliveryAddress(); /* hidden address_1/address_name1 ต้องตรงกับช่องที่แสดง แม้ Draft เก่าสองค่าจะไม่ตรงกัน */
 	if (window.SMP_SAVED_CUSTOMER) fillCustomerCard(window.SMP_SAVED_CUSTOMER);

@@ -440,7 +440,10 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 			'open_fn' => 'openDelTab',
 			'grid_fields' => array(
 				array('type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => 'วิธีการจัดส่ง', 'required' => true, 'options' => smp_delivery_type_options()),
-				array('type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => array('' => 'เลือกบริษัทขนส่ง', '1' => 'Kerry', '2' => 'Flash', '3' => 'J&T', '4' => 'ไปรษณีย์ไทย')),
+				array('type' => 'select', 'span' => 2, 'name' => 'transport_company', 'label' => 'บริษัทขนส่ง', 'required' => true, 'options' => array(
+					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
+					'' => 'เลือกบริษัทขนส่ง',
+				)),
 				array('type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true),
 				array('type' => 'select', 'span' => 1, 'name' => 'time_range_ui', 'label' => 'เลือกช่วงเวลา', 'options' => array('' => 'เลือกช่วงเวลา', 'morning' => 'ช่วงเช้า', 'afternoon' => 'ช่วงบ่าย', 'allday' => 'ทั้งวัน', 'specific' => 'กำหนดเวลา')),
 				array('type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true),
@@ -675,6 +678,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 	window.SMP_READ_ONLY = <?php echo $smpReadOnly ? 'true' : 'false'; ?>;
 </script>
 <script src="js/doc-tabs-attach.js?v=<?php echo $assetVersion('js/doc-tabs-attach.js'); ?>"></script>
+<script src="js/delivery-transport.js?v=<?php echo $assetVersion('js/delivery-transport.js'); ?>"></script>
 <script src="js/register-supsmp.js?v=<?php echo $assetVersion('js/register-supsmp.js'); ?>"></script>
 <?php if ($smpReadOnly) { ?>
 	<script>
