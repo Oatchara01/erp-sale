@@ -111,6 +111,10 @@ $order_refer_code = mysqli_real_escape_string($conn, $_POST['shipping_ref1'] ?? 
 $order_refer_code1 = mysqli_real_escape_string($conn, $_POST['shipping_ref2'] ?? '');
 $ker_bath = floatval($_POST['shipping_cost'] ?? 0);
 
+// เงินประกัน (auto x2 หรือค่าที่แก้เองบน summary bar ของ product_rentalawl.php) — ว่าง = NULL
+$deposit_amount_raw = str_replace(',', '', trim($_POST['deposit_amount'] ?? ''));
+$deposit_amount_sql = is_numeric($deposit_amount_raw) ? "'" . number_format((float)$deposit_amount_raw, 2, '.', '') . "'" : 'NULL';
+
 $rental_addr_detail = mysqli_real_escape_string($conn, $_POST['rental_addr_detail'] ?? '');
 $rental_province = mysqli_real_escape_string($conn, $_POST['rental_province'] ?? '');
 $rental_district = mysqli_real_escape_string($conn, $_POST['rental_district'] ?? '');
@@ -207,6 +211,7 @@ try {
 	order_refer_code='" . $order_refer_code . "',
 	order_refer_code1='" . $order_refer_code1 . "',
 	ker_bath='" . $ker_bath . "',
+	deposit_amount=" . $deposit_amount_sql . ",
 	rental_addr_detail='" . $rental_addr_detail . "',
 	rental_province='" . $rental_province . "',
 	rental_district='" . $rental_district . "',

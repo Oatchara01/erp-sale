@@ -253,7 +253,6 @@
 		var priceEl = document.getElementById('product_price' + rowIndex);
 		var remarkEl = document.getElementById('sale_remarkk' + rowIndex);
 		var displayNameEl = document.getElementById('display_name' + rowIndex);
-		var snNumberEl = document.getElementById('sn_number' + rowIndex);
 
 		var depositInput = document.getElementById('rt_modal_deposit');
 		if (depositInput) {
@@ -267,11 +266,6 @@
 		if (displayNameInput) {
 			displayNameInput.value = displayNameEl ? displayNameEl.value : '';
 		}
-		var snNumberInput = document.getElementById('rt_modal_sn_number');
-		if (snNumberInput) {
-			snNumberInput.value = snNumberEl ? snNumberEl.value : '';
-		}
-
 		rtSyncModalClearButtons();
 		var modal = document.getElementById('rt_edit_modal');
 		if (modal) modal.style.display = 'flex';
@@ -300,10 +294,6 @@
 		}
 		if (displayNameEl && document.getElementById('rt_modal_display_name')) {
 			displayNameEl.value = document.getElementById('rt_modal_display_name').value;
-		}
-		var snNumberEl = document.getElementById('sn_number' + rtActiveEditRowIndex);
-		if (snNumberEl && document.getElementById('rt_modal_sn_number')) {
-			snNumberEl.value = document.getElementById('rt_modal_sn_number').value;
 		}
 		rtCloseEditModal();
 	}
@@ -364,6 +354,8 @@
 
 		var qtyEl = document.getElementById('sale_count' + rowIndex);
 		if (qtyEl && !qtyEl.value) qtyEl.value = '1';
+		var freeEl = document.getElementById('free_count' + rowIndex);
+		if (freeEl && !freeEl.value) freeEl.value = '0';
 
 		rtUpdateRowTotal(rowIndex);
 		rtCalculateSummary();
@@ -418,7 +410,19 @@
 		return true;
 	}
 
-	/* ===== ยอดรวมต่อแถว + สรุปยอด (จำนวนรวม / เงินประกัน x2 / ยอดรวม) ===== */
+	/* ===== ยอดรวมต่อแถว + สรุปยอด (จำนวนรวม / เงินประกัน x2 / ยอดรวม = เงินประกัน + ค่าจัดส่ง) ===== */
+	function rtParseNumber(value) {
+		var n = parseFloat((value || '').toString().replace(/,/g, ''));
+		return isNaN(n) ? 0 : n;
+	}
+
+	function rtFormatMoney(value) {
+		return value.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+	}
+
 	function rtUpdateRowTotal(rowIndex) {
 		var qty = parseFloat((document.getElementById('sale_count' + rowIndex).value || '').toString().replace(/,/g, '')) || 0;
 		var price = parseFloat((document.getElementById('product_price' + rowIndex).value || '').toString().replace(/,/g, '')) || 0;
@@ -429,30 +433,87 @@
 		});
 	}
 
+	/* คำนวณเงินประกันใหม่เป็น (ผลรวมค่าเช่าทุกแถว) x2 — ทับค่าที่ผู้ใช้แก้เองทุกครั้งที่รายการเปลี่ยน
+	   ถ้าต้องคงค่าที่บันทึกไว้ (โหลด edit mode) ให้เขียน rt_deposit_amount แล้วเรียก rtRenderTotals() ตามหลัง */
 	function rtCalculateSummary() {
+		var rentTotal = 0;
+		for (var i = 1; i <= RT_ROW_COUNT; i++) {
+			var amtEl = document.getElementById('sum_amount' + i);
+			if (amtEl) rentTotal += rtParseNumber(amtEl.value);
+		}
+		document.getElementById('rt_deposit_amount').value = (rentTotal * 2).toFixed(2);
+		rtRenderTotals();
+	}
+
+	function rtRenderTotals() {
 		var qty = 0;
-		var amount = 0;
+		var itemCount = 0;
 		for (var i = 1; i <= RT_ROW_COUNT; i++) {
 			var qtyEl = document.getElementById('sale_count' + i);
-			var amtEl = document.getElementById('sum_amount' + i);
-			if (qtyEl && qtyEl.value) {
-				var q = parseFloat(qtyEl.value.toString().replace(/,/g, ''));
-				if (!isNaN(q)) qty += q;
-			}
-			if (amtEl && amtEl.value) {
-				var a = parseFloat(amtEl.value.toString().replace(/,/g, ''));
-				if (!isNaN(a)) amount += a;
+			if (qtyEl) qty += rtParseNumber(qtyEl.value);
+			var idEl = document.getElementById('product_id' + i);
+			if (idEl && idEl.value.trim() !== '') itemCount++;
+		}
+		var deposit = rtParseNumber(document.getElementById('rt_deposit_amount').value);
+		var delivery = rtParseNumber(document.getElementById('rt_header_delivery').value);
+
+		document.getElementById('rt_summary_qty').textContent = qty.toLocaleString();
+		document.getElementById('rt_summary_deposit').textContent = rtFormatMoney(deposit);
+		document.getElementById('rt_summary_amount').textContent = rtFormatMoney(deposit + delivery);
+		var countEl = document.getElementById('rt_summary_item_count');
+		if (countEl) countEl.textContent = itemCount + ' รายการ';
+	}
+
+	/* แก้ค่าเช่า/ค่าจัดส่งส่วนหัว -> อัปเดตทุกแถวที่มีสินค้าทันที แล้วคำนวณเงินประกัน/ยอดรวมใหม่ */
+	function rtApplyHeaderToRows() {
+		var rent = document.getElementById('rt_header_rent').value;
+		var delivery = document.getElementById('rt_header_delivery').value;
+		for (var i = 1; i <= RT_ROW_COUNT; i++) {
+			var idEl = document.getElementById('product_id' + i);
+			if (!idEl || idEl.value.trim() === '') continue;
+			document.getElementById('product_price' + i).value = rent;
+			document.getElementById('delivery_cost' + i).value = delivery;
+			rtUpdateRowTotal(i);
+		}
+		rtCalculateSummary();
+	}
+
+	/* ===== แก้เงินประกันในช่องเดิม (Enter/blur = บันทึก, Esc = ยกเลิก) ===== */
+	function rtStartDepositEdit() {
+		var wrap = document.getElementById('rt_deposit_display');
+		var input = document.getElementById('rt_deposit_input');
+		if (!wrap || !input) return;
+		input.value = rtParseNumber(document.getElementById('rt_deposit_amount').value).toFixed(2);
+		wrap.style.display = 'none';
+		input.style.display = '';
+		input.focus();
+		input.select();
+	}
+
+	function rtFinishDepositEdit(commit) {
+		var wrap = document.getElementById('rt_deposit_display');
+		var input = document.getElementById('rt_deposit_input');
+		if (!wrap || !input || input.style.display === 'none') return;
+		if (commit) {
+			var raw = input.value.replace(/,/g, '').trim();
+			var n = parseFloat(raw);
+			if (raw !== '' && !isNaN(n) && n >= 0) {
+				document.getElementById('rt_deposit_amount').value = n.toFixed(2);
 			}
 		}
-		document.getElementById('rt_summary_qty').textContent = qty.toLocaleString();
-		document.getElementById('rt_summary_amount').textContent = amount.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		});
-		document.getElementById('rt_summary_deposit').textContent = (amount * 2).toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		});
+		input.style.display = 'none';
+		wrap.style.display = '';
+		rtRenderTotals();
+	}
+
+	function rtDepositInputKeydown(e) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			rtFinishDepositEdit(true);
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			rtFinishDepositEdit(false);
+		}
 	}
 </script>
 
@@ -463,7 +524,15 @@
 	</div>
 	<div class="so-product-summary-col">
 		<span class="so-product-summary-label">เงินประกัน</span>
-		<span class="so-product-summary-value" id="rt_summary_deposit">0.00</span>
+		<span class="rt-deposit-display" id="rt_deposit_display">
+			<span class="so-product-summary-value rt-deposit-value" id="rt_summary_deposit">0.00</span>
+			<button type="button" class="rt-deposit-edit-btn" title="แก้ไขเงินประกัน" aria-label="แก้ไขเงินประกัน" onclick="rtStartDepositEdit();">
+				<img src="img/icons/edit.svg" alt="">
+			</button>
+		</span>
+		<input type="text" id="rt_deposit_input" class="so-input rt-deposit-input" inputmode="decimal" style="display:none;"
+			aria-label="เงินประกัน" onkeydown="rtDepositInputKeydown(event);" onblur="rtFinishDepositEdit(true);">
+		<input type="hidden" name="deposit_amount" id="rt_deposit_amount" value="0.00">
 	</div>
 	<div class="so-product-summary-col">
 		<span class="so-product-summary-label">ยอดรวม</span>
@@ -482,12 +551,12 @@
 
 	<div class="so-field-group rt-header-input">
 		<label class="so-label" for="rt_header_rent">ค่าเช่า/เดือน<span class="rt-required-mark">*</span></label>
-		<input type="text" id="rt_header_rent" class="so-input" placeholder="ใส่เฉพาะตัวเลข">
+		<input type="text" id="rt_header_rent" class="so-input" placeholder="ใส่เฉพาะตัวเลข" oninput="rtApplyHeaderToRows();">
 	</div>
 
 	<div class="so-field-group rt-header-input">
 		<label class="so-label" for="rt_header_delivery">ค่าจัดส่ง<span class="rt-required-mark">*</span></label>
-		<input type="text" id="rt_header_delivery" class="so-input" placeholder="ใส่เฉพาะตัวเลข">
+		<input type="text" id="rt_header_delivery" class="so-input" placeholder="ใส่เฉพาะตัวเลข" oninput="rtApplyHeaderToRows();">
 	</div>
 
 	<div class="cs-product-header-row">
@@ -509,8 +578,10 @@
 				</th>
 				<th>รหัสสินค้า</th>
 				<th>รายการสินค้า</th>
+				<th>ของแถม</th>
 				<th>จำนวน</th>
-				<th aria-label="จัดการรายการ"></th>
+				<th>หมายเลข SN</th>
+				<th>เพิ่มเติม</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -551,21 +622,31 @@
 					<td>
 						<span class="so-product-name-label" id="product_name_label<?php echo $i; ?>"></span>
 					</td>
-					<input type='hidden' name="free_count<?php echo $i; ?>" id="free_count<?php echo $i; ?>" value="0">
+					<td>
+						<div class="cs-cell-pill">
+							<input type='text' name="free_count<?php echo $i; ?>" id="free_count<?php echo $i; ?>" class="so-input" style="text-align:center" value="0">
+						</div>
+					</td>
 					<td>
 						<div class="cs-cell-pill">
 							<input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="rtUpdateRowTotal(<?php echo $i; ?>); rtCalculateSummary();">
 						</div>
+						<input type='hidden' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" value="">
 					</td>
-					<input type='hidden' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" value="">
-					<input type='hidden' name="sn_number<?php echo $i; ?>" id="sn_number<?php echo $i; ?>" value="">
-					<td class="cs-row-actions-cell">
-						<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="rtOpenEditModal(<?php echo $i; ?>);">
-							<i class="fas fa-pen" aria-hidden="true"></i>
-						</button>
-						<button type="button" class="so-product-remove-btn" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="rtClearRow(<?php echo $i; ?>);">
-							<i class="fas fa-trash-alt" aria-hidden="true"></i>
-						</button>
+					<td>
+						<div class="cs-cell-pill">
+							<input type='text' name="sn_number<?php echo $i; ?>" id="sn_number<?php echo $i; ?>" class="so-input" placeholder="ใส่เลข SN">
+						</div>
+					</td>
+					<td class="rt-row-actions-cell">
+						<div class="rt-row-actions">
+							<button type="button" class="rt-row-action-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="rtOpenEditModal(<?php echo $i; ?>);">
+								<img src="img/icons/edit.png" alt="">
+							</button>
+							<button type="button" class="rt-row-action-btn is-delete" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="rtClearRow(<?php echo $i; ?>);">
+								<img src="img/icons/trash.svg" alt="">
+							</button>
+						</div>
 					</td>
 				</tr>
 			<?php
@@ -586,20 +667,11 @@
 			<button type="button" class="cs-modal-close-btn" onclick="rtCloseEditModal();" aria-label="ปิด">&times;</button>
 		</div>
 		<div class="cs-modal-body">
-			<div class="cs-modal-grid-2">
-				<div class="so-field-group">
-					<label class="so-label">หมายเหตุสินค้า</label>
-					<div class="so-modal-input-wrap">
-						<input type="text" id="rt_modal_sale_remarkk" class="so-input" placeholder="ระบุหมายเหตุสินค้า" data-clearable="true">
-						<button type="button" class="so-modal-clear" data-target="rt_modal_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
-					</div>
-				</div>
-				<div class="so-field-group">
-					<label class="so-label">หมายเลข SN</label>
-					<div class="so-modal-input-wrap">
-						<input type="text" id="rt_modal_sn_number" class="so-input" placeholder="ใส่เลข SN" data-clearable="true">
-						<button type="button" class="so-modal-clear" data-target="rt_modal_sn_number" aria-label="ล้างข้อมูล">&times;</button>
-					</div>
+			<div class="so-field-group">
+				<label class="so-label">หมายเหตุสินค้า</label>
+				<div class="so-modal-input-wrap">
+					<input type="text" id="rt_modal_sale_remarkk" class="so-input" placeholder="ระบุหมายเหตุสินค้า" data-clearable="true">
+					<button type="button" class="so-modal-clear" data-target="rt_modal_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
 				</div>
 			</div>
 		</div>
@@ -658,8 +730,10 @@
 		});
 	})();
 
+	/* render อย่างเดียว ไม่คำนวณ x2 ใหม่ — jQuery ready อาจรันหลัง prefill ของ edit mode
+	   (register_suprental.php) ซึ่งเขียนเงินประกันที่บันทึกไว้ลง rt_deposit_amount แล้ว */
 	$(document).ready(function() {
-		rtCalculateSummary();
+		rtRenderTotals();
 	});
 
 	/* ===== เปลี่ยนบริษัท: ถ้ามีสินค้าอยู่ ให้ยืนยันก่อนล้างทั้ง 10 แถว ===== */

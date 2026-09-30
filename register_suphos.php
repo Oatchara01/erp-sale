@@ -1109,10 +1109,17 @@ include("head.php"); ?>
 
 			if ($rentalConversionType === "AI") {
 				// ใบสั่งขายเงินประกันสินค้า (AI): ไม่คัดลอกรายการเช่า ให้มีเฉพาะสินค้าเงินประกัน ID 5111
-				// ราคา = ยอดรวมเงินประกันของใบเช่า (SUM(hos__subrental.amount)) x 2
-				$rentalDepositSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS deposit_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
-				$rentalDepositSumRow = $rentalDepositSumQuery ? mysqli_fetch_assoc($rentalDepositSumQuery) : null;
-				$rentalDepositAmount = $rentalDepositSumRow ? ((float)$rentalDepositSumRow["deposit_sum"] * 2) : 0;
+				// ราคา = hos__rental.deposit_amount (เงินประกันที่บันทึกจาก register_suprental.php ซึ่งแก้เองได้)
+				// ถ้าเป็น NULL (เอกสารเก่า) ใช้ยอดรวมค่าเช่าของใบเช่า (SUM(hos__subrental.amount)) x 2 แบบเดิม
+				$rentalDepositSavedQuery = mysqli_query($conn, "SELECT deposit_amount FROM hos__rental WHERE ref_id = '" . $fromRentalRefId . "' LIMIT 1");
+				$rentalDepositSavedRow = $rentalDepositSavedQuery ? mysqli_fetch_assoc($rentalDepositSavedQuery) : null;
+				if ($rentalDepositSavedRow && $rentalDepositSavedRow["deposit_amount"] !== null) {
+					$rentalDepositAmount = (float)$rentalDepositSavedRow["deposit_amount"];
+				} else {
+					$rentalDepositSumQuery = mysqli_query($conn, "SELECT SUM(COALESCE(amount, 0)) AS deposit_sum FROM hos__subrental WHERE ref_idd = '" . $fromRentalRefId . "'");
+					$rentalDepositSumRow = $rentalDepositSumQuery ? mysqli_fetch_assoc($rentalDepositSumQuery) : null;
+					$rentalDepositAmount = $rentalDepositSumRow ? ((float)$rentalDepositSumRow["deposit_sum"] * 2) : 0;
+				}
 
 				$depositProductQuery = mysqli_query($conn, "SELECT * FROM tb_product WHERE product_ID = '5111' LIMIT 1");
 				$depositProductRow = $depositProductQuery ? mysqli_fetch_assoc($depositProductQuery) : null;

@@ -122,6 +122,10 @@ $order_refer_code = mysqli_real_escape_string($conn, $_POST['shipping_ref1'] ?? 
 $order_refer_code1 = mysqli_real_escape_string($conn, $_POST['shipping_ref2'] ?? '');
 $ker_bath = floatval($_POST['shipping_cost'] ?? 0);
 
+// เงินประกัน (auto x2 หรือค่าที่แก้เองบน summary bar ของ product_rentalawl.php) — ว่าง = NULL
+$deposit_amount_raw = str_replace(',', '', trim($_POST['deposit_amount'] ?? ''));
+$deposit_amount_sql = is_numeric($deposit_amount_raw) ? "'" . number_format((float)$deposit_amount_raw, 2, '.', '') . "'" : 'NULL';
+
 $rental_addr_detail = mysqli_real_escape_string($conn, $_POST['rental_addr_detail'] ?? '');
 $rental_province = mysqli_real_escape_string($conn, $_POST['rental_province'] ?? '');
 $rental_district = mysqli_real_escape_string($conn, $_POST['rental_district'] ?? '');
@@ -213,9 +217,9 @@ mysqli_begin_transaction($conn);
 try {
 
 $save="insert into hos__rental
-(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,rental_addr_detail,rental_province,rental_district,rental_zipcode,status_doc,send_sup,sup_name,sup_date)
+(ref_id,type_doc,register_date,rental_name,connect_name,start_promis,install_date,rental_address,rental_id,rental_tel,connect_tel,end_promis,des_sale,sale_code,add_date,add_by,install_address,bill_name,bill_tel,bill_address,tax_no,payment,patient_name,emergency_name,emergency_tel,count_m,unit_m,bill_vat,delivery_type,delivery_date,delivery_key,bank_name,accbank_name,bank_no,bank_img,type_product,des_productunit,iv_no,iv_date,job_no,sr_no,order_no,new_bill,date_oldbill,desnew_bill,remark_cancel,cancel_flag,date_ker,order_refer_code,order_refer_code1,ker_bath,deposit_amount,rental_addr_detail,rental_province,rental_district,rental_zipcode,status_doc,send_sup,sup_name,sup_date)
 values
-('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
+('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."',".$deposit_amount_sql.",'".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
 
 $qsave=mysqli_query($conn,$save);
 	

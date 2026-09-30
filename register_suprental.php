@@ -1072,7 +1072,12 @@
 
 				<div class="so-header-container">
 					<div class="so-header-left">
-						<h1 class="so-title">ใบสั่งเช่า (Rental Order)</h1>
+						<div class="so-title-row">
+							<button type="button" class="so-back-btn" onclick="goMainSupRental();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+								<img src="img/icons/chevron_left.svg" alt="">
+							</button>
+							<h1 class="so-title">ใบสั่งเช่า (Rental Order)</h1>
+						</div>
 						<div class="so-ref-info">
 							<span class="so-ref-label">เลขที่อ้างอิง</span>
 							<span class="so-ref-value"><?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?></span>
@@ -1272,8 +1277,8 @@
 
 						<div class="so-field-group" style="flex-direction:row; gap:16px; margin-top:4px;">
 							<?php if ($rentalIsEditMode && !empty($savedRental['ref_id'])) { ?>
-								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=IV" class="so-toggle-pill-outline-custom"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></a>
-								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=AI" class="so-toggle-pill-outline-custom"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></a>
+								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=IV" target="_blank" class="so-toggle-pill-outline-custom"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></a>
+								<a href="register_suphos.php?from_rental=<?php echo urlencode($savedRental['ref_id']); ?>&type=AI" target="_blank" class="so-toggle-pill-outline-custom"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></a>
 							<?php } else { ?>
 								<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบสั่งขายได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/money.png" alt="" style="width:16px;height:16px;object-fit:contain;"> ออกใบสั่งขาย</span></button>
 								<button type="button" class="so-toggle-pill-outline-custom" onclick="alert('กรุณาบันทึกเอกสารก่อน จึงจะออกใบเงินประกันสินค้าได้ (ฟังก์ชันนี้อยู่ในหน้าแก้ไขเอกสารหลังบันทึก)');"><span><img src="img/icons/check_border.png" alt="" style="width:16px;height:16px;object-fit:contain;"> เงินประกันสินค้า</span></button>
@@ -1300,6 +1305,7 @@
 									if (!isNaN(months) && months >= 3) {
 										var deliveryInput = document.getElementById('rt_header_delivery');
 										if (deliveryInput) deliveryInput.value = '0';
+										if (typeof rtApplyHeaderToRows === 'function') rtApplyHeaderToRows();
 									}
 								});
 							</script>
@@ -1739,6 +1745,7 @@
 					<div class="so-card">
 						<div class="so-section-title-container">
 							<h2 class="so-section-title">รายการสินค้า</h2>
+							<span class="so-product-item-count" id="rt_summary_item_count">0 รายการ</span>
 							<hr class="so-divider">
 						</div>
 
@@ -2660,7 +2667,6 @@
 				<?php if (!$rtHideUpdate): ?>
 					<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> <?php echo $rentalIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php endif; ?>
-				<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupRental();">ย้อนกลับ</button>
 			</div>
 		</div>
 	</form>
@@ -2921,7 +2927,19 @@
 					});
 				});
 
+				// ช่องค่าเช่า/ค่าจัดส่งส่วนหัวใช้ค่าเดียวกันทุกแถว (rtApplyHeaderToRows) จึงดึงจากแถวแรก
+				var rtFirstSaved = rtSavedProducts[0] || {};
+				document.getElementById('rt_header_rent').value = rtFirstSaved.price || '';
+				document.getElementById('rt_header_delivery').value = rtFirstSaved.delivery_cost || '';
+
 				if (typeof rtCalculateSummary === 'function') rtCalculateSummary();
+
+				// เงินประกันที่บันทึกไว้ (อาจแก้เองไม่ใช่ x2) — เอกสารเก่าเป็น NULL ใช้ x2 จาก rtCalculateSummary
+				var rtSavedDeposit = <?php echo json_encode($savedRental['deposit_amount'] ?? null); ?>;
+				if (rtSavedDeposit !== null && typeof rtRenderTotals === 'function') {
+					document.getElementById('rt_deposit_amount').value = rtSavedDeposit;
+					rtRenderTotals();
+				}
 			});
 		</script>
 	<?php } ?>

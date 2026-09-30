@@ -139,6 +139,107 @@
 	margin-left: 2px;
 }
 
+/* เงินประกัน: ค่าขีดเส้นใต้สีม่วง + ปุ่มแก้ไข กดแล้วสลับเป็นช่องกรอกในตำแหน่งเดิม
+   (ค่า x2 คำนวณอัตโนมัติ — rtCalculateSummary / แก้เอง — rtStartDepositEdit ใน product_rentalawl.php) */
+.rt-deposit-display {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+#rt_summary_bar .rt-deposit-value {
+	color: var(--so-primary);
+	text-decoration: underline;
+	text-underline-offset: 4px;
+}
+
+.rt-deposit-edit-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.rt-deposit-edit-btn:hover {
+	background-color: rgba(97, 41, 137, 0.08);
+}
+
+.rt-deposit-edit-btn img {
+	width: 24px;
+	height: 24px;
+	object-fit: contain;
+}
+
+.rt-deposit-input {
+	width: 180px;
+	max-width: 100%;
+	margin: 0 auto;
+	text-align: center;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+/* ตาราง 7 คอลัมน์: checkbox | รหัส | รายการ | ของแถม | จำนวน | หมายเลข SN | เพิ่มเติม
+   เขียนทับความกว้างฐาน .so-product-table th/td:nth-child() ของ register-supbrcshos.css */
+#rt_product_table th:nth-child(2),
+#rt_product_table td:nth-child(2) { width: 16%; }
+#rt_product_table th:nth-child(3),
+#rt_product_table td:nth-child(3) { width: 26%; }
+#rt_product_table th:nth-child(4),
+#rt_product_table td:nth-child(4) { width: 10%; text-align: center; }
+#rt_product_table th:nth-child(5),
+#rt_product_table td:nth-child(5) { width: 10%; text-align: center; }
+#rt_product_table th:nth-child(6),
+#rt_product_table td:nth-child(6) { width: 18%; text-align: left; }
+#rt_product_table th:nth-child(7),
+#rt_product_table td:nth-child(7) { width: 110px; text-align: center; }
+
+/* คอลัมน์ "เพิ่มเติม": ปุ่มแก้ไข (edit.png) + ลบ (trash.svg) กรอบสี่เหลี่ยมมุมมน
+   ตาม .credinot-delete-btn ของ register-credinot.css */
+.rt-row-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.rt-row-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid #EAE3F7;
+	border-radius: 8px;
+	background: #FFFFFF;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 4px rgba(97, 41, 137, 0.04);
+}
+
+.rt-row-action-btn:hover {
+	background-color: #F6EFFD;
+	border-color: #612989;
+}
+
+.rt-row-action-btn.is-delete:hover {
+	background-color: #FFF1F1;
+	border-color: #EF5350;
+}
+
+.rt-row-action-btn img {
+	width: 18px;
+	height: 18px;
+	object-fit: contain;
+}
+
 /* ===== แท็บวงใน 3 แท็บ "ข้อมูลการคืนเงิน / รายละเอียดการชำระเงิน / ข้อมูลการรับส่งสินค้า"
    (Figma node 683:2615 tab-widget) — ไม่มีคอลัมน์ฐานข้อมูลใดผูกกับแท็บที่ 2-3 ในหน้าสร้างใหม่นี้
    (register_suprental.php ไม่มี edit-mode/ref_id query แบบ register_supchange.php) จึง render
