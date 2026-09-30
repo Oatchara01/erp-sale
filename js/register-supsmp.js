@@ -147,8 +147,8 @@
 	function buildRow(data) {
 		data = data || {};
 		var p = 'products[' + (rowSeq++) + ']';
-		return '<tr class="so-product-row smp-row" draggable="false">' +
-			'<td class="smp-drag-cell"><i class="fas fa-grip-vertical cs-drag-handle" draggable="true" title="ลากเพื่อจัดเรียง" aria-hidden="true" data-smp-drag></i></td>' +
+		return '<tr class="so-product-row smp-row">' +
+			'<td class="smp-drag-cell"><i class="fas fa-grip-vertical cs-drag-handle rd-handle" title="ลากเพื่อจัดเรียง" aria-hidden="true"></i></td>' +
 			'<td class="smp-select-cell"><label class="so-row-checkbox-wrap" aria-label="เลือกรายการ">' +
 				'<input type="checkbox" class="so-row-checkbox smp-row-selector">' +
 				'<span class="so-row-checkbox-dot" aria-hidden="true"></span></label></td>' +
@@ -233,43 +233,13 @@
 		});
 	};
 
-	/* ===================== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง ===================== */
-	var draggedRow = null;
-	tbody().addEventListener('dragstart', function (event) {
-		var handle = event.target.closest ? event.target.closest('[data-smp-drag]') : null;
-		if (!handle) return;
-		draggedRow = handle.closest('tr.smp-row');
-		event.dataTransfer.effectAllowed = 'move';
-		try { event.dataTransfer.setData('text/plain', 'smp-row'); } catch (e) {}
-		if (draggedRow) draggedRow.classList.add('dragging');
-	});
-	tbody().addEventListener('dragover', function (event) {
-		if (!draggedRow) return;
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-	});
-	tbody().addEventListener('dragenter', function (event) {
-		var row = event.target.closest ? event.target.closest('tr.smp-row') : null;
-		if (row && draggedRow && row !== draggedRow) row.classList.add('drag-over');
-	});
-	tbody().addEventListener('dragleave', function (event) {
-		var row = event.target.closest ? event.target.closest('tr.smp-row') : null;
-		if (row && !row.contains(event.relatedTarget)) row.classList.remove('drag-over');
-	});
-	tbody().addEventListener('drop', function (event) {
-		var targetRow = event.target.closest ? event.target.closest('tr.smp-row') : null;
-		event.preventDefault();
-		if (targetRow) targetRow.classList.remove('drag-over');
-		if (!draggedRow || !targetRow || draggedRow === targetRow) return;
-		var rows = Array.prototype.slice.call(targetRow.parentNode.children);
-		var from = rows.indexOf(draggedRow);
-		var to = rows.indexOf(targetRow);
-		if (from < 0 || to < 0) return;
-		targetRow.parentNode.insertBefore(draggedRow, from < to ? targetRow.nextSibling : targetRow);
-	});
-	tbody().addEventListener('dragend', function () {
-		tbody().querySelectorAll('tr.smp-row').forEach(function (row) { row.classList.remove('dragging', 'drag-over'); });
-		draggedRow = null;
+	/* ===================== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) ===================== */
+	RowDrag.register({
+		within: '#smp_tbody',
+		row: 'tr.smp-row',
+		onDrop: function (fromRow, toRow, after) {
+			toRow.parentNode.insertBefore(fromRow, after ? toRow.nextSibling : toRow);
+		}
 	});
 
 	tbody().addEventListener('change', function (event) {

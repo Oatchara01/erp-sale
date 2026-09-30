@@ -395,14 +395,6 @@
 	background-color: #f1e1ff;
 }
 
-.so-product-row.dragging {
-	opacity: 0.4;
-}
-
-.so-product-row.drag-over {
-	border-top: 2px solid var(--so-primary);
-}
-
 /* Purple highlight while a row's "เพิ่มเติม" panel is expanded - matches
    register_credinot.php's tr.credinot-row.is-open / tr.credinot-detail-row.is-open. */
 .so-product-table tbody tr.so-product-row.is-open {

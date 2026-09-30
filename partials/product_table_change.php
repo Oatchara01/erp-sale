@@ -17,6 +17,7 @@ $ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_produc
    เพื่อ enforce close_pro/group1/แผนกให้ตรงกับ autocomplete ด้านบน */
 $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 ?>
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/../js/row-drag.js'); ?>"></script>
 <script type="text/javascript">
 	if (typeof Swal === 'undefined') {
 		var ptcSwalScript = document.createElement('script');
@@ -31,7 +32,6 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 	   ตัดฟิลด์ warranty/cal/pm/pm_year/print_name/discount_unit ออกเพราะ hos__subchange
 	   ไม่มีคอลัมน์เหล่านี้) ===== */
 	var ptcFieldNames = ['product_codet', 'product_id', 'product_name', 'product_name_view', 'unit_name', 'count_stock', 'count_sale', 'product_price', 'sum_amount', 'sn', 'sale_remarkk'];
-	var ptcDraggedRowIndex = null;
 
 	/* กรองสินค้าตามบริษัทที่เลือกใน #company_select (1=AWL/2=NBM ตามหน้านี้) - พอร์ตจาก
 	   csGetSelectedTypeCompany() ของ detail_brschos_so.php, อ่านค่าสดทุกครั้งที่เรียกใช้
@@ -105,47 +105,14 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 		}
 	}
 
-	function ptcHandleDragStart(event, rowIndex) {
-		ptcDraggedRowIndex = rowIndex;
-		event.dataTransfer.effectAllowed = 'move';
-		try {
-			event.dataTransfer.setData('text/plain', String(rowIndex));
-		} catch (e) {}
-		var row = document.getElementById('ptc_row' + rowIndex);
-		if (row) row.classList.add('dragging');
-	}
-
-	function ptcHandleDragOver(event) {
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-	}
-
-	function ptcHandleDragEnter(event) {
-		var row = event.currentTarget;
-		if (row) row.classList.add('drag-over');
-	}
-
-	function ptcHandleDragLeave(event) {
-		var row = event.currentTarget;
-		if (row) row.classList.remove('drag-over');
-	}
-
-	function ptcHandleDrop(event, rowIndex) {
-		event.preventDefault();
-		var row = event.currentTarget;
-		if (row) row.classList.remove('drag-over');
-		if (ptcDraggedRowIndex !== null && ptcDraggedRowIndex !== rowIndex) {
-			ptcShiftRows(ptcDraggedRowIndex, rowIndex);
+	/* ลากสลับแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) */
+	RowDrag.register({
+		within: '#ptc_product_table',
+		row: 'tr.so-product-row',
+		onDrop: function(fromRow, toRow) {
+			ptcShiftRows(parseInt(fromRow.id.replace('ptc_row', ''), 10), parseInt(toRow.id.replace('ptc_row', ''), 10));
 		}
-		ptcDraggedRowIndex = null;
-	}
-
-	function ptcHandleDragEnd(event) {
-		document.querySelectorAll('.so-product-row').forEach(function(row) {
-			row.classList.remove('dragging', 'drag-over');
-		});
-		ptcDraggedRowIndex = null;
-	}
+	});
 
 	/* ===== เติมข้อมูลสินค้าลงแถวว่างแรกจากรหัสที่เลือกจากช่องค้นหาเดียวด้านบนตาราง
 	   (ปลายทาง $ptcDetailEndpoint - data_product_hos1_ptc.php เฉพาะ flow นี้) ===== */
@@ -424,16 +391,11 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 			{
 			?>
 				<tr class="so-product-row" id="ptc_row<?php echo $i; ?>"
-					<?php if ($i > 1) { ?>style="display:none;" <?php } ?>
-					ondragover="ptcHandleDragOver(event)" ondragenter="ptcHandleDragEnter(event)"
-					ondragleave="ptcHandleDragLeave(event)" ondrop="ptcHandleDrop(event,<?php echo $i; ?>)">
+					<?php if ($i > 1) { ?>style="display:none;" <?php } ?>>
 					<td>
-						<i class="fas fa-grip-vertical cs-drag-handle"
-							draggable="true"
+						<i class="fas fa-grip-vertical cs-drag-handle rd-handle"
 							title="ลากเพื่อจัดเรียง"
-							aria-hidden="true"
-							ondragstart="ptcHandleDragStart(event,<?php echo $i; ?>)"
-							ondragend="ptcHandleDragEnd(event)"></i>
+							aria-hidden="true"></i>
 					</td>
 					<td>
 						<span class="cs-code-text" id="product_codet<?php echo $i; ?>"></span>

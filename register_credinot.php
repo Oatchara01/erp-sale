@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 <body>
     <?php
@@ -693,7 +694,7 @@
                         }
 
                         ?>
-                        <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . $objResult1['sol_name']), ENT_QUOTES, 'UTF-8'); ?>" draggable="true" ondragstart="handleCreditItemDragStart(event)" ondragend="handleCreditItemDragEnd(event)" ondragover="handleCreditItemDragOver(event)" ondrop="handleCreditItemDrop(event)">
+                        <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . $objResult1['sol_name']), ENT_QUOTES, 'UTF-8'); ?>">
                             <?php
                             if ($count2 == '0') {
                             } else {
@@ -706,7 +707,7 @@
                                 <td class="credinot-code-col">
                                     <div class="credinot-code-cell-inner">
                                         <div class="credinot-row-controls-inner">
-                                            <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
+                                            <span class="credinot-drag-handle rd-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
                                             <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
                                                 <i class="fas fa-caret-down"></i>
                                             </button>
@@ -816,11 +817,11 @@
                             $total_qty += (float)$count2;
                             $grand_total_amount += $sum_amount;
                     ?>
-                    <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . ($objResult1['sol_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" draggable="true" ondragstart="handleCreditItemDragStart(event)" ondragend="handleCreditItemDragEnd(event)" ondragover="handleCreditItemDragOver(event)" ondrop="handleCreditItemDrop(event)">
+                    <tr class="credinot-row" data-search-text="<?php echo htmlspecialchars(strtolower($objResult1['product_id'] . ' ' . ($objResult1['sol_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">
                         <td class="credinot-code-col">
                             <div class="credinot-code-cell-inner">
                                 <div class="credinot-row-controls-inner">
-                                    <span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
+                                    <span class="credinot-drag-handle rd-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>
                                     <button type="button" class="credinot-caret" aria-expanded="false" aria-label="ขยายรายละเอียด" onclick="toggleCreditItemDetail(this)">
                                         <i class="fas fa-caret-down"></i>
                                     </button>
@@ -1518,55 +1519,31 @@
             });
         }
 
-        /* ===== ลากจัดเรียงรายการสินค้า (client-side เท่านั้น ไม่บันทึกลงฐานข้อมูล — reset เมื่อ reload) ===== */
-        var creditItemDragRow = null;
-
-        function handleCreditItemDragStart(event) {
-            creditItemDragRow = event.currentTarget;
-            event.dataTransfer.effectAllowed = 'move';
-            // Firefox ต้องเรียก setData ก่อน ไม่งั้น drag จะไม่เริ่ม
-            event.dataTransfer.setData('text/plain', '');
-            creditItemDragRow.classList.add('is-dragging');
+        /* ===== ลากจัดเรียงรายการสินค้า (client-side เท่านั้น ไม่บันทึกลงฐานข้อมูล — reset เมื่อ reload)
+           js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว ===== */
+        function creditItemDetailRow(row) {
+            var detail = row.nextElementSibling;
+            return detail && detail.classList.contains('credinot-detail-row') ? detail : null;
         }
 
-        function handleCreditItemDragEnd(event) {
-            event.currentTarget.classList.remove('is-dragging');
-            document.querySelectorAll('.credinot-row.is-drop-target').forEach(function(row) {
-                row.classList.remove('is-drop-target');
-            });
-            creditItemDragRow = null;
-        }
-
-        function handleCreditItemDragOver(event) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            var targetRow = event.currentTarget;
-            if (!creditItemDragRow || targetRow === creditItemDragRow) return;
-
-            document.querySelectorAll('.credinot-row.is-drop-target').forEach(function(row) {
-                row.classList.remove('is-drop-target');
-            });
-            targetRow.classList.add('is-drop-target');
-        }
-
-        function handleCreditItemDrop(event) {
-            event.preventDefault();
-            var targetRow = event.currentTarget;
-            targetRow.classList.remove('is-drop-target');
-            if (!creditItemDragRow || creditItemDragRow === targetRow) return;
-
-            var tbody = targetRow.parentNode;
-            if (!tbody) return;
-
-            // ย้ายแถวหลักที่ลาก พร้อมแถวรายละเอียด (ถ้ามี) ไปวางก่อนแถวเป้าหมาย เพื่อให้ทั้งคู่ยังติดกัน
-            var dragDetail = creditItemDragRow.nextElementSibling;
-            var dragDetailIsPair = dragDetail && dragDetail.classList.contains('credinot-detail-row');
-
-            tbody.insertBefore(creditItemDragRow, targetRow);
-            if (dragDetailIsPair) {
-                tbody.insertBefore(dragDetail, targetRow);
+        RowDrag.register({
+            within: '#credinotTableBody',
+            row: 'tr.credinot-row',
+            // นิ้วอยู่บนแถวรายละเอียด (มีตาราง SN ซ้อนอยู่ข้างใน) → นับเป็นแถวหลักของมัน
+            resolveRow: function(el) {
+                var row = el.closest('#credinotTableBody > tr');
+                if (row && row.classList.contains('credinot-detail-row')) row = row.previousElementSibling;
+                return row && row.classList.contains('credinot-row') ? row : null;
+            },
+            // ย้ายแถวหลักที่ลาก พร้อมแถวรายละเอียด (ถ้ามี) เพื่อให้ทั้งคู่ยังติดกัน
+            onDrop: function(fromRow, toRow, after) {
+                var tbody = toRow.parentNode;
+                var fromDetail = creditItemDetailRow(fromRow);
+                var anchor = after ? (creditItemDetailRow(toRow) || toRow).nextSibling : toRow;
+                tbody.insertBefore(fromRow, anchor);
+                if (fromDetail) tbody.insertBefore(fromDetail, anchor);
             }
-        }
+        });
 
         // พับ/กางแถวรายละเอียด (หมายเลข SN / Lot No. / Exp. Date) ของรายการสินค้า พร้อมสลับทิศทางลูกศร
         function toggleCreditItemDetail(btn) {
@@ -2575,16 +2552,11 @@
             var row = document.createElement('tr');
             row.className = 'credinot-row';
             row.setAttribute('data-search-text', String(prod.access_code + ' ' + prod.sol_name).toLowerCase());
-            row.setAttribute('draggable', 'true');
-            row.addEventListener('dragstart', handleCreditItemDragStart);
-            row.addEventListener('dragend', handleCreditItemDragEnd);
-            row.addEventListener('dragover', handleCreditItemDragOver);
-            row.addEventListener('drop', handleCreditItemDrop);
             row.innerHTML =
                 '<td class="credinot-code-col">' +
                 '<div class="credinot-code-cell-inner">' +
                 '<div class="credinot-row-controls-inner">' +
-                '<span class="credinot-drag-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>' +
+                '<span class="credinot-drag-handle rd-handle" title="ลากเพื่อจัดเรียง (ไม่บันทึกลงฐานข้อมูล)" aria-hidden="true"><i class="fas fa-grip-vertical"></i></span>' +
                 '</div>' +
                 '<input type="hidden" name="id[' + key + ']" value="">' +
                 '<input type="text" class="so-input credinot-code-input" value="' + escapeDocRefHtml(prod.access_code || '') + '" readonly>' +

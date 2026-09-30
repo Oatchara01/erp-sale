@@ -23,6 +23,7 @@ $sprRowsToJs = function (array $rows) {
 };
 ?>
 
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/../js/row-drag.js'); ?>"></script>
 <script type="text/javascript">
 	var SPR_SAVED_ITEMS = <?php echo json_encode($sprRowsToJs($sprSavedItems), JSON_UNESCAPED_UNICODE); ?>;
 	var sprRowSeq = 0;
@@ -52,12 +53,9 @@ $sprRowsToJs = function (array $rows) {
 		var idx = sprRowSeq++;
 		var p = 'items[' + idx + ']';
 
-		var html = '<tr class="so-product-row spr-row" draggable="false"' +
-			' ondragover="sprHandleDragOver(event)" ondragenter="sprHandleDragEnter(event)"' +
-			' ondragleave="sprHandleDragLeave(event)" ondrop="sprHandleDrop(event, this)">';
+		var html = '<tr class="so-product-row spr-row">';
 
-		html += '<td class="spr-drag-cell"><i class="fas fa-grip-vertical cs-drag-handle" draggable="true" title="ลากเพื่อจัดเรียง" aria-hidden="true"' +
-			' ondragstart="sprHandleDragStart(event, this)" ondragend="sprHandleDragEnd(event)"></i></td>';
+		html += '<td class="spr-drag-cell"><i class="fas fa-grip-vertical cs-drag-handle rd-handle" title="ลากเพื่อจัดเรียง" aria-hidden="true"></i></td>';
 
 		html += '<td class="spr-select-cell"><label class="so-row-checkbox-wrap" aria-label="เลือกรายการ">' +
 			'<input type="checkbox" class="so-row-checkbox spr-row-selector" onchange="sprToggleRowSelection(this);">' +
@@ -211,48 +209,14 @@ $sprRowsToJs = function (array $rows) {
 		});
 	}
 
-	/* ===== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง ===== */
-	var sprDraggedRow = null;
-
-	function sprHandleDragStart(event, handle) {
-		sprDraggedRow = handle.closest('tr');
-		event.dataTransfer.effectAllowed = 'move';
-		try { event.dataTransfer.setData('text/plain', 'spr-row'); } catch (e) {}
-		if (sprDraggedRow) sprDraggedRow.classList.add('dragging');
-	}
-
-	function sprHandleDragOver(event) {
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-	}
-
-	function sprHandleDragEnter(event) {
-		if (event.currentTarget) event.currentTarget.classList.add('drag-over');
-	}
-
-	function sprHandleDragLeave(event) {
-		if (event.currentTarget) event.currentTarget.classList.remove('drag-over');
-	}
-
-	function sprHandleDrop(event, targetRow) {
-		event.preventDefault();
-		if (targetRow) targetRow.classList.remove('drag-over');
-		if (!sprDraggedRow || sprDraggedRow === targetRow) return;
-
-		var rows = Array.prototype.slice.call(targetRow.parentNode.children);
-		var from = rows.indexOf(sprDraggedRow);
-		var to = rows.indexOf(targetRow);
-		if (from < 0 || to < 0) return;
-
-		targetRow.parentNode.insertBefore(sprDraggedRow, from < to ? targetRow.nextSibling : targetRow);
-	}
-
-	function sprHandleDragEnd() {
-		document.querySelectorAll('tr.spr-row').forEach(function(row) {
-			row.classList.remove('dragging', 'drag-over');
-		});
-		sprDraggedRow = null;
-	}
+	/* ===== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) ===== */
+	RowDrag.register({
+		within: '#spr_table',
+		row: 'tr.spr-row',
+		onDrop: function(fromRow, toRow, after) {
+			toRow.parentNode.insertBefore(fromRow, after ? toRow.nextSibling : toRow);
+		}
+	});
 
 	/* ===== เติมสินค้าจากช่องค้นหา ===== */
 	function sprFetchProduct(accessCode) {

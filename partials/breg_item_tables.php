@@ -22,6 +22,7 @@ $bregRowsToJs = function (array $rows) {
 };
 ?>
 
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/../js/row-drag.js'); ?>"></script>
 <script type="text/javascript">
 	/* ===== ข้อมูลตั้งต้นจากฝั่ง PHP ===== */
 	var BREG_TYPE_PRODUCT_OPTIONS = <?php echo json_encode(array_values($bregTypeProductOptions), JSON_UNESCAPED_UNICODE); ?>;
@@ -69,12 +70,9 @@ $bregRowsToJs = function (array $rows) {
 		var hasType = BREG_GROUPS[group].hasType;
 		var p = group + '_';
 
-		var html = '<tr class="so-product-row breg-row" draggable="false"' +
-			' ondragover="bregHandleDragOver(event)" ondragenter="bregHandleDragEnter(event)"' +
-			' ondragleave="bregHandleDragLeave(event)" ondrop="bregHandleDrop(event, this)">';
+		var html = '<tr class="so-product-row breg-row">';
 
-		html += '<td><i class="fas fa-grip-vertical cs-drag-handle" draggable="true" title="ลากเพื่อจัดเรียง" aria-hidden="true"' +
-			' ondragstart="bregHandleDragStart(event, this)" ondragend="bregHandleDragEnd(event)"></i></td>';
+		html += '<td><i class="fas fa-grip-vertical cs-drag-handle rd-handle" title="ลากเพื่อจัดเรียง" aria-hidden="true"></i></td>';
 
 		html += '<td>' +
 			'<span class="cs-code-text breg-cell-code">' + bregEscapeHtml(data.access_code) + '</span>' +
@@ -190,50 +188,15 @@ $bregRowsToJs = function (array $rows) {
 		});
 	}
 
-	/* ===== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง ===== */
-	var bregDraggedRow = null;
-
-	function bregHandleDragStart(event, handle) {
-		bregDraggedRow = handle.closest('tr');
-		event.dataTransfer.effectAllowed = 'move';
-		try { event.dataTransfer.setData('text/plain', 'breg-row'); } catch (e) {}
-		if (bregDraggedRow) bregDraggedRow.classList.add('dragging');
-	}
-
-	function bregHandleDragOver(event) {
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-	}
-
-	function bregHandleDragEnter(event) {
-		if (event.currentTarget) event.currentTarget.classList.add('drag-over');
-	}
-
-	function bregHandleDragLeave(event) {
-		if (event.currentTarget) event.currentTarget.classList.remove('drag-over');
-	}
-
-	function bregHandleDrop(event, targetRow) {
-		event.preventDefault();
-		if (targetRow) targetRow.classList.remove('drag-over');
-		if (!bregDraggedRow || bregDraggedRow === targetRow) return;
-		// ห้ามลากข้ามกลุ่ม — สองตารางเป็นคนละ hos__subbreg
-		if (bregDraggedRow.parentNode !== targetRow.parentNode) return;
-
-		var rows = Array.prototype.slice.call(targetRow.parentNode.children);
-		var from = rows.indexOf(bregDraggedRow);
-		var to = rows.indexOf(targetRow);
-		if (from < 0 || to < 0) return;
-
-		targetRow.parentNode.insertBefore(bregDraggedRow, from < to ? targetRow.nextSibling : targetRow);
-	}
-
-	function bregHandleDragEnd() {
-		document.querySelectorAll('tr.breg-row').forEach(function(row) {
-			row.classList.remove('dragging', 'drag-over');
-		});
-		bregDraggedRow = null;
-	}
+	/* ===== ลากจัดเรียง — ย้าย <tr> จริง ลำดับ POST จึงตามไปเอง (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว)
+	   RowDrag วางได้เฉพาะแถวใน tbody เดียวกัน จึงลากข้ามกลุ่มไม่ได้ (สองตารางเป็นคนละ hos__subbreg) ===== */
+	RowDrag.register({
+		within: '.breg-product-table',
+		row: 'tr.breg-row',
+		onDrop: function(fromRow, toRow, after) {
+			toRow.parentNode.insertBefore(fromRow, after ? toRow.nextSibling : toRow);
+		}
+	});
 
 	/* ===== เติมสินค้าจากช่องค้นหา =====
 	   ค้นหาแล้วเลือก → ยิง data_product_hos1.php (format=json) เอารายละเอียดสินค้า

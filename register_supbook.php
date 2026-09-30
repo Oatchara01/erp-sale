@@ -86,6 +86,7 @@ if ($savedRefId !== "") {
 <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/customer-popup.js"></script>
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, credit-term modal, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -1013,7 +1014,6 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 	// ===== รายการสินค้าแบบไดนามิก =====
 	var productRows = <?php echo count($savedProducts) > 0 ? json_encode($savedProducts, JSON_UNESCAPED_UNICODE) : '[]'; ?>;
 	var productSearchTimer = null;
-	var productDragIndex = null;
 
 	function escapeProductHtml(value) {
 		return String(value == null ? '' : value).replace(/[&<>"']/g, function(char) {
@@ -1044,9 +1044,8 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 			var remarkBlock = row.remark ?
 				('<div class="product-row-remark-text">' + escapeProductHtml(row.remark) + '</div>') : '';
 
-			return '<tr draggable="true" class="product-row" data-idx="' + idx + '" ' +
-				'ondragstart="productDragStart(event,' + idx + ')" ondragover="productDragOver(event,' + idx + ')" ondrop="productDrop(event,' + idx + ')" ondragend="productDragEnd(event)" ondragleave="productDragLeave(event)">' +
-				'<td class="col-handle"><i class="fas fa-grip-vertical"></i></td>' +
+			return '<tr class="product-row" data-idx="' + idx + '">' +
+				'<td class="col-handle rd-handle"><i class="fas fa-grip-vertical"></i></td>' +
 				'<td>' + escapeProductHtml(row.product_code) + '</td>' +
 				'<td>' + escapeProductHtml(row.product_name) + remarkBlock + '</td>' +
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
@@ -1187,36 +1186,16 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 		closeProductRemarkModal();
 	}
 
-	function productDragStart(e, idx) {
-		productDragIndex = idx;
-		e.dataTransfer.effectAllowed = 'move';
-		try {
-			e.dataTransfer.setData('text/plain', String(idx));
-		} catch (err) {}
-	}
-
-	function productDragOver(e, idx) {
-		e.preventDefault();
-		e.currentTarget.classList.add('drag-over');
-	}
-
-	function productDragLeave(e) {
-		e.currentTarget.classList.remove('drag-over');
-	}
-
-	function productDrop(e, idx) {
-		e.preventDefault();
-		e.currentTarget.classList.remove('drag-over');
-		if (productDragIndex === null || productDragIndex === idx) return;
-		var moved = productRows.splice(productDragIndex, 1)[0];
-		productRows.splice(idx, 0, moved);
-		productDragIndex = null;
-		renderProductTable();
-	}
-
-	function productDragEnd(e) {
-		productDragIndex = null;
-	}
+	// ลากสลับแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว)
+	RowDrag.register({
+		within: '#productTableBody',
+		row: 'tr.product-row',
+		onDrop: function(fromRow, toRow) {
+			var moved = productRows.splice(parseInt(fromRow.getAttribute('data-idx'), 10), 1)[0];
+			productRows.splice(parseInt(toRow.getAttribute('data-idx'), 10), 0, moved);
+			renderProductTable();
+		}
+	});
 
 	// ควบคุมเหตุการณ์หลังโหลดเอกสารเสร็จสิ้น
 	document.addEventListener('DOMContentLoaded', function() {

@@ -594,14 +594,6 @@
 	background-color: #F4EFFF;
 }
 
-.so-product-row.dragging {
-	opacity: 0.4;
-}
-
-.so-product-row.drag-over {
-	border-top: 2px solid var(--so-primary);
-}
-
 .br-edit-popup-box {
 	width: min(1096px, 96vw);
 	height: auto;

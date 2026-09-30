@@ -1,6 +1,7 @@
 <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 <script type="text/javascript">
 	if (typeof Swal === 'undefined') {
@@ -14,7 +15,6 @@
 	var RT_ROW_COUNT = 10;
 	var rtRowFields = ['product_id', 'product_name', 'unit_name', 'sale_count', 'product_price', 'sum_amount', 'sn_number', 'warranty', 'sale_remarkk', 'display_name', 'free_count', 'delivery_cost'];
 	var rtActiveEditRowIndex = null;
-	var rtDragSourceIndex = null;
 
 	var RT_DELETE_ICON_HTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">' +
 		'<path d="M4 6H20V8H4V6Z" fill="#EF5350"/>' +
@@ -79,44 +79,14 @@
 		if (row) row.classList.toggle('checked-row', !!data.checked);
 	}
 
-	/* ===== ลาก-วางสลับตำแหน่งแถว ===== */
-	function rtHandleDragStart(e, i) {
-		rtDragSourceIndex = i;
-		e.dataTransfer.effectAllowed = 'move';
-		e.currentTarget.classList.add('dragging');
-	}
-
-	function rtHandleDragOver(e) {
-		e.preventDefault();
-		e.dataTransfer.dropEffect = 'move';
-	}
-
-	function rtHandleDragEnter(e) {
-		if (e.currentTarget.id !== 'rt_row' + rtDragSourceIndex) {
-			e.currentTarget.classList.add('drag-over');
+	/* ===== ลาก-วางสลับตำแหน่งแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) ===== */
+	RowDrag.register({
+		within: '#rt_product_table',
+		row: 'tr.rt-product-row',
+		onDrop: function(fromRow, toRow) {
+			rtShiftRows(parseInt(fromRow.id.replace('rt_row', ''), 10), parseInt(toRow.id.replace('rt_row', ''), 10));
 		}
-	}
-
-	function rtHandleDragLeave(e) {
-		e.currentTarget.classList.remove('drag-over');
-	}
-
-	function rtHandleDrop(e, targetIndex) {
-		e.preventDefault();
-		e.currentTarget.classList.remove('drag-over');
-		if (rtDragSourceIndex !== null && rtDragSourceIndex !== targetIndex) {
-			rtShiftRows(rtDragSourceIndex, targetIndex);
-		}
-		rtDragSourceIndex = null;
-	}
-
-	function rtHandleDragEnd(e) {
-		e.currentTarget.classList.remove('dragging');
-		document.querySelectorAll('.rt-product-row').forEach(function(row) {
-			row.classList.remove('drag-over');
-			row.removeAttribute('draggable');
-		});
-	}
+	});
 
 	function rtShiftRows(fromIndex, toIndex) {
 		var allData = [];
@@ -596,19 +566,12 @@
 			function rt_product_row($i)
 			{
 			?>
-				<tr class="so-product-row rt-product-row" id="rt_row<?php echo $i; ?>" style="display:none;"
-					ondragover="rtHandleDragOver(event)" ondragenter="rtHandleDragEnter(event)"
-					ondragleave="rtHandleDragLeave(event)" ondrop="rtHandleDrop(event,<?php echo $i; ?>)">
+				<tr class="so-product-row rt-product-row" id="rt_row<?php echo $i; ?>" style="display:none;">
 					<td>
 						<div class="cs-row-controls-inner">
-							<i class="fas fa-grip-vertical cs-drag-handle"
+							<i class="fas fa-grip-vertical cs-drag-handle rd-handle"
 								title="ลากเพื่อจัดเรียง"
-								aria-hidden="true"
-								onmousedown="document.getElementById('rt_row<?php echo $i; ?>').setAttribute('draggable', true)"
-								onmouseup="document.getElementById('rt_row<?php echo $i; ?>').removeAttribute('draggable')"
-								onmouseleave="document.getElementById('rt_row<?php echo $i; ?>').removeAttribute('draggable')"
-								ondragstart="rtHandleDragStart(event,<?php echo $i; ?>)"
-								ondragend="rtHandleDragEnd(event)"></i>
+								aria-hidden="true"></i>
 							<label class="so-row-checkbox-wrap">
 								<input type="checkbox" class="so-row-checkbox" id="rt_ck<?php echo $i; ?>" aria-label="เลือกรายการที่ <?php echo $i; ?>" onchange="rtToggleRowHighlight(this,<?php echo $i; ?>);">
 								<span class="so-row-checkbox-dot" aria-hidden="true"></span>

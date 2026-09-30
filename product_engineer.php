@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="css/autocomplete.css"  type="text/css"/>
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 
 </head>
@@ -421,7 +422,7 @@ ele.onKeyPress=vchar;
 <?php for($i=1; $i<=30; $i++): ?>
     <tr class="so-product-row" id="product_row_<?php echo $i; ?>" <?php if($i>3) echo 'style="display:none;"'; ?>>
         <td style="text-align: center;">
-            <i class="fas fa-grip-vertical drag-handle"></i>
+            <i class="fas fa-grip-vertical drag-handle rd-handle"></i>
             <input type="checkbox" class="so-row-checkbox" onchange="toggleRowHighlight(this, <?php echo $i; ?>)">
             
             <!-- Hidden inputs for backward compatibility -->
@@ -529,6 +530,50 @@ function toggleRowHighlight(checkbox, rowIndex) {
         row.classList.remove('checked-row');
     }
 }
+
+// --- ลากสลับแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) ---
+// ทุกแถวมีช่องกรอกชุดเดียวกันเรียงลำดับเหมือนกัน จึงย้ายค่าตามตำแหน่งช่องในแถวได้เลย
+function engGetRowData(row) {
+    return {
+        display: row.style.display,
+        values: Array.prototype.map.call(row.querySelectorAll('input, textarea'), function(el) {
+            return el.type === 'checkbox' ? el.checked : el.value;
+        })
+    };
+}
+
+function engSetRowData(row, data) {
+    row.style.display = data.display;
+    Array.prototype.forEach.call(row.querySelectorAll('input, textarea'), function(el, k) {
+        if (el.type === 'checkbox') {
+            el.checked = data.values[k];
+            row.classList.toggle('checked-row', data.values[k]);
+        } else {
+            el.value = data.values[k];
+        }
+    });
+}
+
+function engShiftRows(fromIndex, toIndex) {
+    var rows = [];
+    var allData = [];
+    for (var i = 1; i <= 30; i++) {
+        rows.push(document.getElementById('product_row_' + i));
+        allData.push(engGetRowData(rows[i - 1]));
+    }
+    var moved = allData.splice(fromIndex - 1, 1)[0];
+    allData.splice(toIndex - 1, 0, moved);
+    for (var j = 0; j < 30; j++) engSetRowData(rows[j], allData[j]);
+    calculateSummary();
+}
+
+RowDrag.register({
+    within: '#product_table',
+    row: 'tr.so-product-row',
+    onDrop: function(fromRow, toRow) {
+        engShiftRows(parseInt(fromRow.id.replace('product_row_', ''), 10), parseInt(toRow.id.replace('product_row_', ''), 10));
+    }
+});
 
 function clearRow(rowIndex) {
     document.getElementById('product_codet' + rowIndex).value = '';

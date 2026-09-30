@@ -2,20 +2,10 @@
 function br_product_row_hos($i)
 {
 ?>
-	<tr class="so-product-row" id="br_row<?php echo $i; ?>"
-		style="display:none;"
-		ondragstart="brHandleDragStart(event, <?php echo $i; ?>)"
-		ondragover="brHandleDragOver(event)"
-		ondragenter="brHandleDragEnter(event)"
-		ondragleave="brHandleDragLeave(event)"
-		ondrop="brHandleDrop(event, <?php echo $i; ?>)"
-		ondragend="brHandleDragEnd(event)">
+	<tr class="so-product-row" id="br_row<?php echo $i; ?>" style="display:none;">
 		<td class="br-row-handle-cell">
 			<div class="br-row-handle-wrap">
-				<i class="fas fa-grip-vertical br-drag-handle"
-					onmousedown="document.getElementById('br_row<?php echo $i; ?>').setAttribute('draggable', true)"
-					onmouseup="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"
-					onmouseleave="document.getElementById('br_row<?php echo $i; ?>').removeAttribute('draggable')"></i>
+				<i class="fas fa-grip-vertical br-drag-handle rd-handle"></i>
 				<label class="so-row-checkbox-wrap">
 					<input type="checkbox" class="so-row-checkbox" id="br_ck<?php echo $i; ?>" onchange="brToggleRowHighlight(this, <?php echo $i; ?>);">
 					<span class="so-row-checkbox-dot" aria-hidden="true"></span>
@@ -140,11 +130,11 @@ function br_product_row_hos($i)
 	</div>
 </div>
 
+<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 <script type="text/javascript">
-	var BR_ROW_COUNT = <?php echo (int)$brRowCount; ?>; // เท่ากับจำนวนแถว <tr> ที่ render จริง (>= 8 เมื่อเอกสารมีองค์ประกอบ BOM เกิน 8 รายการ)
+	var BR_ROW_COUNT =<?php echo (int)$brRowCount; ?>; // เท่ากับจำนวนแถว <tr> ที่ render จริง (>= 8 เมื่อเอกสารมีองค์ประกอบ BOM เกิน 8 รายการ)
 	var brSearchDept = <?php echo ($_SESSION['department'] ?? '') === 'วิศวกรรม' ? "'eng'" : "'sale'"; ?>;
 	var brGlobalSearchTimer = null;
-	var brDragSourceIndex = null;
 	var brRowFields = ['product_codet', 'product_c', 'product_id', 'unit_name', 'product_name', 'warranty', 'br_period', 'sale_remarkk', 'product_code', 'sale_count', 'product_price', 'sum_amount', 'store', 'store_remark', 'display_name'];
 
 	var BR_DELETE_ICON_HTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">' +
@@ -204,7 +194,8 @@ function br_product_row_hos($i)
 		if (row) row.classList.toggle('checked-row', !!data.checked);
 	}
 
-	/* ===== ลาก-วางสลับตำแหน่งแถว ===== */
+	/* ===== ลาก-วางสลับตำแหน่งแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) ===== */
+	// กันเบราว์เซอร์เปิดไฟล์ที่เผลอลากมาวางบนหน้า
 	document.addEventListener('dragover', function(e) {
 		e.preventDefault();
 	}, false);
@@ -212,46 +203,13 @@ function br_product_row_hos($i)
 		e.preventDefault();
 	}, false);
 
-	function brHandleDragStart(e, i) {
-		brDragSourceIndex = i;
-		e.dataTransfer.effectAllowed = 'move';
-		e.currentTarget.classList.add('dragging');
-	}
-
-	function brHandleDragOver(e) {
-		e.preventDefault();
-		e.dataTransfer.dropEffect = 'move';
-		return false;
-	}
-
-	function brHandleDragEnter(e) {
-		if (e.currentTarget.id !== 'br_row' + brDragSourceIndex) {
-			e.currentTarget.classList.add('drag-over');
+	RowDrag.register({
+		within: '#br_product_table',
+		row: 'tr.so-product-row',
+		onDrop: function(fromRow, toRow) {
+			brShiftRows(parseInt(fromRow.id.replace('br_row', ''), 10), parseInt(toRow.id.replace('br_row', ''), 10));
 		}
-	}
-
-	function brHandleDragLeave(e) {
-		e.currentTarget.classList.remove('drag-over');
-	}
-
-	function brHandleDrop(e, targetIndex) {
-		e.preventDefault();
-		e.stopPropagation();
-		e.currentTarget.classList.remove('drag-over');
-		if (brDragSourceIndex !== null && brDragSourceIndex !== targetIndex) {
-			brShiftRows(brDragSourceIndex, targetIndex);
-		}
-		brDragSourceIndex = null;
-		return false;
-	}
-
-	function brHandleDragEnd(e) {
-		e.currentTarget.classList.remove('dragging');
-		document.querySelectorAll('.so-product-row').forEach(function(row) {
-			row.classList.remove('drag-over');
-			row.removeAttribute('draggable');
-		});
-	}
+	});
 
 	function brShiftRows(fromIndex, toIndex) {
 		var allData = [];

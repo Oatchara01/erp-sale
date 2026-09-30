@@ -4,6 +4,7 @@
 	<link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
 	<script type="text/javascript" src="js/autocomplete.js"></script>
 	<script type="text/javascript" src="js/jquery.min.js"></script>
+	<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 	<script type="text/javascript">
 		/* โหลด SweetAlert2 เฉพาะตอนยังไม่มี (เผื่อหน้าแม่โหลดไว้แล้ว) - ตามแพทเทิร์นเดียวกับ
 		   product_salehos.php ที่ใช้ Swal.fire() คอนเฟิร์มก่อนลบรายการอยู่แล้ว */
@@ -27,7 +28,6 @@
 
 	/* ===== Drag-reorder + checkbox multi-select + bulk delete + Summary + Modal (Figma 627-2753 & 984-5469) ===== */
 	var csFieldNames = ['product_codet', 'product_id', 'product_name', 'product_name_view', 'unit_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'warranty', 'cal', 'pm', 'pm_year', 'sale_remarkk', 'sn'];
-	var csDraggedRowIndex = null;
 	var csActiveEditRowIndex = null;
 
 	/* product_codet/product_name_view are plain <span> display tags (no .value), everything
@@ -79,47 +79,14 @@
 		csRecalcSummary();
 	}
 
-	function csHandleDragStart(event, rowIndex) {
-		csDraggedRowIndex = rowIndex;
-		event.dataTransfer.effectAllowed = 'move';
-		try {
-			event.dataTransfer.setData('text/plain', String(rowIndex));
-		} catch (e) {}
-		var row = document.getElementById('cs_row' + rowIndex);
-		if (row) row.classList.add('dragging');
-	}
-
-	function csHandleDragOver(event) {
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-	}
-
-	function csHandleDragEnter(event) {
-		var row = event.currentTarget;
-		if (row) row.classList.add('drag-over');
-	}
-
-	function csHandleDragLeave(event) {
-		var row = event.currentTarget;
-		if (row) row.classList.remove('drag-over');
-	}
-
-	function csHandleDrop(event, rowIndex) {
-		event.preventDefault();
-		var row = event.currentTarget;
-		if (row) row.classList.remove('drag-over');
-		if (csDraggedRowIndex !== null && csDraggedRowIndex !== rowIndex) {
-			csShiftRows(csDraggedRowIndex, rowIndex);
+	/* ลากสลับแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) */
+	RowDrag.register({
+		within: '#cs_product_table',
+		row: 'tr.so-product-row',
+		onDrop: function(fromRow, toRow) {
+			csShiftRows(parseInt(fromRow.id.replace('cs_row', ''), 10), parseInt(toRow.id.replace('cs_row', ''), 10));
 		}
-		csDraggedRowIndex = null;
-	}
-
-	function csHandleDragEnd(event) {
-		document.querySelectorAll('.so-product-row').forEach(function(row) {
-			row.classList.remove('dragging', 'drag-over');
-		});
-		csDraggedRowIndex = null;
-	}
+	});
 
 	function csToggleRowHighlight(checkbox, rowIndex) {
 		var row = document.getElementById('cs_row' + rowIndex);
@@ -591,17 +558,12 @@
 				function cs_product_row($i)
 				{
 				?>
-					<tr class="so-product-row" id="cs_row<?php echo $i; ?>"
-						ondragover="csHandleDragOver(event)" ondragenter="csHandleDragEnter(event)"
-						ondragleave="csHandleDragLeave(event)" ondrop="csHandleDrop(event,<?php echo $i; ?>)">
+					<tr class="so-product-row" id="cs_row<?php echo $i; ?>">
 						<td>
 							<div class="cs-row-controls-inner">
-								<i class="fas fa-grip-vertical cs-drag-handle"
-									draggable="true"
+								<i class="fas fa-grip-vertical cs-drag-handle rd-handle"
 									title="ลากเพื่อจัดเรียง"
-									aria-hidden="true"
-									ondragstart="csHandleDragStart(event,<?php echo $i; ?>)"
-									ondragend="csHandleDragEnd(event)"></i>
+									aria-hidden="true"></i>
 								<label class="so-row-checkbox-wrap">
 									<input type="checkbox" class="so-row-checkbox" id="cs_ck<?php echo $i; ?>" aria-label="เลือกรายการที่ <?php echo $i; ?>" onchange="csToggleRowHighlight(this,<?php echo $i; ?>);">
 									<span class="so-row-checkbox-dot" aria-hidden="true"></span>

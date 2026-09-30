@@ -288,10 +288,6 @@
 	padding: 24px !important;
 }
 
-.product-row.drag-over {
-	background: #F1E1FF;
-}
-
 .so-customer-address-wrap {
 	grid-column: 1 / span 2;
 	grid-row: 2;
