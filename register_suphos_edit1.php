@@ -30,21 +30,6 @@ $redirect_to = isset($_POST["redirect_to"]) ? $_POST["redirect_to"] : "register_
 
 date_default_timezone_set("Asia/Bangkok");
 
-function applyDeliveryTimeRangeToPost()
-{
-	$timeRange = $_POST["time_range"] ?? "";
-	$timeRangeMap = array(
-		"morning" => array("08:00", "12:00"),
-		"afternoon" => array("13:00", "17:00"),
-		"allday" => array("08:00", "17:00")
-	);
-
-	if (isset($timeRangeMap[$timeRange])) {
-		$_POST["start_time"] = $timeRangeMap[$timeRange][0];
-		$_POST["end_time"] = $timeRangeMap[$timeRange][1];
-	}
-}
-
 function getDeptCommentItemsFromPost()
 {
 	$itemsJson = $_POST["dept_comment_items"] ?? "[]";
@@ -167,8 +152,6 @@ function applyHosSubsoInsertExtras($conn, $newRowId, $snValue, $pmYearValue, $ad
 }
 
 if ($_POST["submit"] = "submit") {
-
-	applyDeliveryTimeRangeToPost();
 
 	$ref_id = trim($_POST["ref_id"]);
 	$type_doc = $_POST["type_doc"];
@@ -307,7 +290,6 @@ if ($_POST["submit"] = "submit") {
 	$ic_ckk = isset($_POST["ic_ckk"]) && $_POST["ic_ckk"] !== '' ? $_POST["ic_ckk"] : '0';
 	$et_ckk = isset($_POST["et_ckk"]) && $_POST["et_ckk"] !== '' ? $_POST["et_ckk"] : '0';
 	$repeat_cus = isset($_POST["repeat_cus"]) && $_POST["repeat_cus"] !== '' ? $_POST["repeat_cus"] : '0';
-	$time_range = $_POST["time_range"] ?? '';
 	$status_comment = $_POST["status_comment"] ?? '';
 
 	// ใบสั่งขาย E-Tax (et_ckk=1) ต้องมี E-Mail รูปแบบถูกต้องก่อน Update — ยกเว้นเฉพาะเอกสารที่ยังเป็น

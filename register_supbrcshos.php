@@ -863,6 +863,14 @@ if ($csPrefillSource !== null) {
 					return false;
 				}
 
+				if (!validateDeliveryDateRange()) {
+					return false;
+				}
+
+				if (!validateDeliveryTimeRange()) {
+					return false;
+				}
+
 				if (document.frmMain.start_time.value == "") {
 
 					alert('กรุณาใส่เวลาส่ง');
@@ -1265,17 +1273,13 @@ if ($csPrefillSource !== null) {
 					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
 				]],
-				['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true],
-				['type' => 'select', 'span' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'options' => [
-					'' => 'เลือกช่วงเวลา',
-					'morning' => 'ช่วงเช้า',
-					'afternoon' => 'ช่วงบ่าย',
-					'allday' => 'ทั้งวัน',
-					'specific' => 'กำหนดเวลา',
-				]],
-				['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true],
-				['type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'ช่วงวันที่โดยประมาณ', 'clearable' => true],
-				['type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
+				['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+				['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
+				['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
+				// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
+				['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
+				['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
 			],
 			'toggle_buttons' => [
 				['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
@@ -1292,82 +1296,6 @@ if ($csPrefillSource !== null) {
 		include __DIR__ . '/partials/delivery_info_tab.php';
 		?>
 		<script src="js/delivery-transport.js?v=<?php echo filemtime(__DIR__ . '/js/delivery-transport.js'); ?>"></script>
-		<input type="hidden" name="end_time" id="end_time" value="<?php echo so_saved_h($savedEndTime ?? ''); ?>">
-		<script>
-			function syncDeliveryTimeRange() {
-				var timeRange = document.getElementById('time_range');
-				var startTime = document.querySelector('input[name="start_time"]');
-				var endTime = document.getElementById('end_time') || document.querySelector('input[name="end_time"]');
-				if (!timeRange || !startTime) return;
-
-				var timeRangeMap = {
-					morning: ['08:00', '12:00'],
-					afternoon: ['13:00', '17:00'],
-					allday: ['08:00', '17:00']
-				};
-
-				var val = timeRange.value;
-				if (timeRangeMap[val]) {
-					startTime.value = timeRangeMap[val][0];
-					if (endTime) endTime.value = timeRangeMap[val][1];
-				} else if (val === 'specific') {
-					var normStart = (startTime.value || '').trim().substring(0, 5);
-					var normEnd = endTime ? (endTime.value || '').trim().substring(0, 5) : '';
-					if ((normStart === '08:00' && (normEnd === '12:00' || normEnd === '17:00')) ||
-						(normStart === '13:00' && normEnd === '17:00')) {
-						startTime.value = '';
-						if (endTime) endTime.value = '';
-					}
-					startTime.focus();
-				} else if (val === '') {
-					startTime.value = '';
-					if (endTime) endTime.value = '';
-				}
-			}
-
-			function syncDeliveryTimeRangeFromInputs() {
-				var timeRange = document.getElementById('time_range');
-				var startTime = document.querySelector('input[name="start_time"]');
-				var endTime = document.getElementById('end_time') || document.querySelector('input[name="end_time"]');
-				if (!timeRange || !startTime) return;
-
-				var startVal = (startTime.value || '').trim().substring(0, 5);
-				var endVal = endTime ? (endTime.value || '').trim().substring(0, 5) : '';
-				var currentRange = timeRange.value;
-
-				if (!startVal && !endVal) {
-					timeRange.value = '';
-					return;
-				}
-
-				if (startVal === '08:00' && endVal === '12:00') {
-					timeRange.value = 'morning';
-				} else if (startVal === '13:00' && endVal === '17:00') {
-					timeRange.value = 'afternoon';
-				} else if (startVal === '08:00' && endVal === '17:00') {
-					timeRange.value = 'allday';
-				} else if (startVal === '08:00' && !endVal) {
-					if (currentRange !== 'allday' && currentRange !== 'morning') {
-						timeRange.value = 'morning';
-					}
-				} else if (startVal === '13:00' && !endVal) {
-					timeRange.value = 'afternoon';
-				} else {
-					timeRange.value = 'specific';
-				}
-			}
-
-			$(document).ready(function() {
-				var timeRange = document.getElementById('time_range');
-				var startTime = document.querySelector('input[name="start_time"]');
-				if (timeRange) {
-					$(timeRange).on('change', syncDeliveryTimeRange);
-				}
-				if (startTime) {
-					$(startTime).on('input change', syncDeliveryTimeRangeFromInputs);
-				}
-			});
-		</script>
 
 
 		<!-- การ์ดแท็บ: ที่อยู่ / รายละเอียดที่อยู่ / ที่อยู่เพิ่มเติม / ที่อยู่การคืน -->

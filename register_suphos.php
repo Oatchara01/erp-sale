@@ -1415,6 +1415,18 @@ include("head.php"); ?>
 		return so_saved_time_value($savedRegister[$fallbackKey] ?? "");
 	}
 
+	// วันที่ส่งสำหรับกล่องสรุป: ต่อ "ถึง <ถึงวันที่>" เฉพาะเมื่อ date_send_key เป็นวันที่ (YYYY-MM-DD) และต่างจากวันจัดส่ง
+	// เอกสารเก่าที่ date_send_key เป็นข้อความอิสระจะแสดงแค่วันจัดส่งเหมือนเดิม
+	function so_saved_delivery_date_range($savedSo, $savedRegister)
+	{
+		$startDate = trim((string)($savedSo["delivery_date"] ?? ($savedRegister["start_date"] ?? "")));
+		$endDate = trim((string)($savedSo["date_send_key"] ?? ($savedRegister["between_date"] ?? "")));
+		if ($startDate !== "" && $endDate !== $startDate && preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+			return $startDate . " ถึง " . $endDate;
+		}
+		return $startDate;
+	}
+
 
 	function renderSoDocumentReturnStatus($statusDoc)
 	{
@@ -1532,7 +1544,7 @@ include("head.php"); ?>
 					</div>
 					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
 						<div style="font-size: 12px; color: #7a7280;">วันที่ส่ง</div>
-						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display($savedSo["delivery_date"] ?? ($savedRegister["start_date"] ?? "")); ?></div>
+						<div style="font-size: 15px; color: #2d2533; font-weight: 500;"><?php echo so_saved_display(so_saved_delivery_date_range($savedSo, $savedRegister)); ?></div>
 					</div>
 					<div style="background: #F8F7FC; border-radius: 8px; padding: 12px;">
 						<div style="font-size: 12px; color: #7a7280;">เวลาส่ง</div>
@@ -1717,9 +1729,6 @@ include("head.php"); ?>
 				if (typeof syncDeptComments === 'function') {
 					syncDeptComments();
 				}
-				if (typeof syncDeliveryTimeRange === 'function') {
-					syncDeliveryTimeRange();
-				}
 				updateDeliveryContractRequirement();
 				if (!validateDeliveryContractRequirement()) {
 					return false;
@@ -1730,6 +1739,14 @@ include("head.php"); ?>
 				}
 
 				if (!validateTransportCompanyRequirement()) {
+					return false;
+				}
+
+				if (!validateDeliveryDateRange()) {
+					return false;
+				}
+
+				if (!validateDeliveryTimeRange()) {
 					return false;
 				}
 
@@ -1880,9 +1897,6 @@ include("head.php"); ?>
 				if (typeof syncDeptComments === 'function') {
 					syncDeptComments();
 				}
-				if (typeof syncDeliveryTimeRange === 'function') {
-					syncDeliveryTimeRange();
-				}
 
 				// ปุ่มนี้เป็น "Update" ตอนแก้ไขเอกสารที่มีอยู่แล้ว (soIsEditMode) ต้องเช็ควงเงิน
 				// เหมือนปุ่มบันทึกหลัก — ส่วน "Save Draft" ของเอกสารใหม่/คัดลอกใบเดิมปล่อยผ่านเหมือนเดิม
@@ -1906,6 +1920,7 @@ include("head.php"); ?>
 
 				var btn = form.querySelector('[name="save_draft"]');
 				var defaultHtml = btn ? btn.innerHTML : '';
+				var redirecting = false; // บันทึกสำเร็จแล้วค้างปุ่มไว้จนหน้าเปลี่ยน กันกดซ้ำระหว่างรอ redirect
 				var formData = new FormData(form);
 				formData.set('is_draft', '1');
 
@@ -1923,14 +1938,10 @@ include("head.php"); ?>
 					})
 					.then(function(data) {
 						if (data && data.success) {
-							return Swal.fire({
-								title: 'Save Draft success',
-								text: 'Ref ID: ' + data.ref_id,
-								icon: 'success',
-								confirmButtonColor: '#612989'
-							}).then(function() {
-								window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
-							});
+							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
+							redirecting = true;
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							return;
 						}
 
 						var message = data && data.message ? data.message : 'Unable to save draft';
@@ -1940,7 +1951,7 @@ include("head.php"); ?>
 						return Swal.fire('Error', 'Unable to save draft', 'error');
 					})
 					.finally(function() {
-						if (btn) {
+						if (btn && !redirecting) {
 							btn.disabled = false;
 							btn.innerHTML = defaultHtml;
 						}
@@ -1958,6 +1969,7 @@ include("head.php"); ?>
 
 				var btn = form.querySelector('[name="admin_limited_update_btn"]');
 				var defaultHtml = btn ? btn.innerHTML : '';
+				var redirecting = false; // บันทึกสำเร็จแล้วค้างปุ่มไว้จนหน้าเปลี่ยน กันกดซ้ำระหว่างรอ redirect
 				var formData = new FormData(form);
 				formData.set('is_draft', '1');
 				formData.set('admin_limited_update', '1');
@@ -1976,14 +1988,10 @@ include("head.php"); ?>
 					})
 					.then(function(data) {
 						if (data && data.success) {
-							return Swal.fire({
-								title: 'Save Draft success',
-								text: 'Ref ID: ' + data.ref_id,
-								icon: 'success',
-								confirmButtonColor: '#612989'
-							}).then(function() {
-								window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
-							});
+							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
+							redirecting = true;
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							return;
 						}
 
 						var message = data && data.message ? data.message : 'Unable to save draft';
@@ -1993,7 +2001,7 @@ include("head.php"); ?>
 						return Swal.fire('Error', 'Unable to save draft', 'error');
 					})
 					.finally(function() {
-						if (btn) {
+						if (btn && !redirecting) {
 							btn.disabled = false;
 							btn.innerHTML = defaultHtml;
 						}
@@ -2701,17 +2709,13 @@ include("head.php"); ?>
 							// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 							'' => 'เลือกบริษัทขนส่ง',
 						]],
-						['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันที่ในการจัดส่ง', 'required' => true],
-						['type' => 'select', 'span' => 1, 'name' => 'time_range', 'label' => 'ช่วงเวลา', 'options' => [
-							'' => 'เลือกช่วงเวลา',
-							'morning' => 'ช่วงเช้า',
-							'afternoon' => 'ช่วงบ่าย',
-							'allday' => 'ทั้งวัน',
-							'specific' => 'กำหนดเวลา',
-						]],
-						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true, 'value' => so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 0))],
-						['type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'ช่วงวันที่โดยประมาณ', 'clearable' => true],
-						['type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
+						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
+						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true, 'value' => so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 0))],
+						// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
+						['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา', 'value' => so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 1))],
+						['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
 					],
 					'toggle_buttons' => [
 						['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => so_saved_checked($savedRegister, 'call_customer')],
@@ -3677,45 +3681,6 @@ include("head.php"); ?>
 		</div><!-- End Card Container -->
 
 		<script>
-			function syncDeliveryTimeRange() {
-				var timeRange = document.getElementById('time_range');
-				var startTime = document.querySelector('input[name="start_time"]');
-				var endTime = document.querySelector('input[name="end_time"]');
-				if (!timeRange || !startTime || !endTime) {
-					return;
-				}
-
-				var timeRangeMap = {
-					morning: ['08:00', '12:00'],
-					afternoon: ['13:00', '17:00'],
-					allday: ['08:00', '17:00']
-				};
-
-				if (timeRangeMap[timeRange.value]) {
-					startTime.value = timeRangeMap[timeRange.value][0];
-					endTime.value = timeRangeMap[timeRange.value][1];
-				}
-			}
-
-			document.addEventListener('DOMContentLoaded', function() {
-				var timeRange = document.getElementById('time_range');
-				var startTime = document.querySelector('input[name="start_time"]');
-				var form = document.forms['frmMain'];
-				if (timeRange) {
-					timeRange.addEventListener('change', syncDeliveryTimeRange);
-				}
-				if (timeRange && startTime) {
-					startTime.addEventListener('input', function() {
-						if (timeRange.value !== '' && timeRange.value !== 'specific') {
-							timeRange.value = 'specific';
-						}
-					});
-				}
-				if (form) {
-					form.addEventListener('submit', syncDeliveryTimeRange);
-				}
-			});
-
 			function openDelTab(tabId, element) {
 				var contents = document.getElementsByClassName('so-del-tab-content');
 				for (var i = 0; i < contents.length; i++) {
@@ -4057,7 +4022,6 @@ include("head.php"); ?>
 			}
 		</script>
 		<!-- hidden fields กลุ่มนี้ยังคงส่งค่าไปกับ form แม้ไม่มี input ให้ผู้ใช้แก้บนหน้า -->
-		<input type="hidden" name="end_time" value="<?php echo so_saved_h(so_saved_delivery_time_part($savedSo, $savedRegister, 1)); ?>">
 		<input type="hidden" name="mode_name" id="mode_name" value="">
 		<input type="hidden" name="sale_comment" value="">
 		<input type="hidden" name="head_1" value="">
@@ -7318,30 +7282,6 @@ include("head.php"); ?>
 				var savedDeliveryPrint = <?php echo json_encode($savedDeliveryPrint); ?>;
 				var savedShippingAddresses = <?php echo json_encode($savedShippingAddresses); ?>;
 				var savedProducts = <?php echo json_encode($savedProducts); ?>;
-				var inferredTimeRange = (function() {
-					var startTime = '';
-					var endTime = '';
-
-					if (savedRegister) {
-						startTime = ((savedRegister.start_time || '') + '').trim().substring(0, 5);
-						endTime = ((savedRegister.end_time || '') + '').trim().substring(0, 5);
-					}
-
-					if ((!startTime || !endTime) && savedSo && savedSo.delivery_time) {
-						var timeParts = (savedSo.delivery_time.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || []).map(function(part) {
-							return part.substring(0, 5);
-						});
-						startTime = startTime || (timeParts[0] || '');
-						endTime = endTime || (timeParts[1] || '');
-					}
-
-					if (startTime === '08:00' && endTime === '12:00') return 'morning';
-					if (startTime === '13:00' && endTime === '17:00') return 'afternoon';
-					if (startTime === '08:00' && endTime === '17:00') return 'allday';
-					if (startTime || endTime) return 'specific';
-					return '';
-				})();
-
 				function formatSavedAdminDateInput(value) {
 					var raw = String(value || '').trim();
 					var matches;
@@ -7440,8 +7380,7 @@ include("head.php"); ?>
 					'admin_edit_count': savedSo.new_bill || '',
 					'admin_old_doc_date': formatSavedAdminDateInput(savedSo.date_oldbill || ''),
 					'admin_edit_reason': savedSo.desnew_bill || '',
-					'admin_cancel_reason': savedSo.remark_cancel || '',
-					'time_range': inferredTimeRange
+					'admin_cancel_reason': savedSo.remark_cancel || ''
 				};
 
 				// Set simple field values

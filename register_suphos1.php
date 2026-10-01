@@ -22,21 +22,6 @@ if ($isDraftRequest) {
 // ให้ connection ของหน้านี้ใช้พฤติกรรมเดิมของระบบ เมื่อไม่ได้ระบุคอลัมน์เหล่านั้นใน INSERT
 mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
 
-function applyDeliveryTimeRangeToPost()
-{
-	$timeRange = $_POST["time_range"] ?? "";
-	$timeRangeMap = array(
-		"morning" => array("08:00", "12:00"),
-		"afternoon" => array("13:00", "17:00"),
-		"allday" => array("08:00", "17:00")
-	);
-
-	if (isset($timeRangeMap[$timeRange])) {
-		$_POST["start_time"] = $timeRangeMap[$timeRange][0];
-		$_POST["end_time"] = $timeRangeMap[$timeRange][1];
-	}
-}
-
 function getDeptCommentItemsFromPost()
 {
 	$itemsJson = $_POST["dept_comment_items"] ?? "[]";
@@ -327,8 +312,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		}
 	}
 
-	applyDeliveryTimeRangeToPost();
-
 	// Backend validation กันกรณีปิด JS หรือยิง POST ตรงเข้ามาโดยไม่ผ่านฟอร์ม (เดิมพึ่ง JS validation ใน fncSubmit() ฝั่งเดียว)
 	// ข้ามการตรวจนี้เมื่อเป็น Draft เพราะ "Save Draft" ตั้งใจให้บันทึกข้อมูลไม่ครบได้ (saveDraft() ใน register_suphos.php ไม่เรียก fncSubmit())
 	if (!$isDraftRequest) {
@@ -590,7 +573,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$ic_ckk = isset($_POST['ic_ckk']) && $_POST['ic_ckk'] !== '' ? 1 : 0;
 	$et_ckk = isset($_POST['et_ckk']) && $_POST['et_ckk'] !== '' ? 1 : 0;
 	$repeat_cus = isset($_POST['repeat_cus']) ? 1 : 0;
-	$time_range = $_POST["time_range"] ?? '';
 	$status_comment_val = $_POST["status_comment"] ?? '';
 
 	// ออกใบสั่งขายจากใบ PO (register_suphos.php?ref_id=PO... → hidden ref_po)

@@ -76,47 +76,6 @@
 		el(tabId).style.display = 'block';
 		button.classList.add('active');
 	};
-	/* ===================== ช่วงเวลาจัดส่ง (พอร์ตจาก register_supchange.php: syncChgDeliveryTimeRange*) =====================
-	   time_range_ui เป็น UI ล้วน (ไม่ถูกบันทึก) — เติม start_time/end_time ตาม preset; end_time เป็น hidden จึงตั้งได้จาก preset เท่านั้น */
-	var TIME_RANGES = { morning: ['08:00', '12:00'], afternoon: ['13:00', '17:00'], allday: ['08:00', '17:00'] };
-	function hhmm(field) { return field ? String(field.value || '').trim().substring(0, 5) : ''; }
-	function presetMatching(start, end) {
-		return Object.keys(TIME_RANGES).filter(function (key) { return TIME_RANGES[key][0] === start && TIME_RANGES[key][1] === end; })[0] || '';
-	}
-	function syncTimeRange() {
-		var range = named('time_range_ui'), start = named('start_time'), end = named('end_time');
-		if (!range || !start) return;
-		var preset = TIME_RANGES[range.value];
-		if (preset) {
-			start.value = preset[0];
-			if (end) end.value = preset[1];
-		} else if (range.value === 'specific') {
-			if (presetMatching(hhmm(start), hhmm(end))) { /* เดิมเป็นค่าของ preset — ล้างให้กรอกเอง */
-				start.value = '';
-				if (end) end.value = '';
-			}
-			start.focus();
-		} else {
-			start.value = '';
-			if (end) end.value = '';
-		}
-	}
-	function syncTimeRangeFromInputs() {
-		var range = named('time_range_ui'), start = named('start_time'), end = named('end_time');
-		if (!range || !start) return;
-		var s = hhmm(start), e = hhmm(end), matched = presetMatching(s, e);
-		if (!s && !e) range.value = '';
-		else if (matched) range.value = matched;
-		else if (s === '08:00' && !e) { if (range.value !== 'allday' && range.value !== 'morning') range.value = 'morning'; }
-		else if (s === '13:00' && !e) range.value = 'afternoon';
-		else range.value = 'specific';
-	}
-	(function () {
-		var range = named('time_range_ui'), start = named('start_time');
-		if (range) range.addEventListener('change', syncTimeRange);
-		if (start) ['input', 'change'].forEach(function (type) { start.addEventListener(type, syncTimeRangeFromInputs); });
-	})();
-
 	/* ===================== ที่อยู่ส่งสินค้า =====================
 	   ฟอร์มมีช่องเดียว (address_merged_ui เหมือน Change Order) แต่ backend และหน้า edit ยังอ่าน address_1 กับ address_name1 แยกกัน — copy ค่าให้ทั้งคู่ */
 	function syncDeliveryAddress() {
@@ -616,6 +575,8 @@
 		}
 		/* บริษัทขนส่ง/สถานที่รับสินค้า: ตัวเดียวกับ register_suphos.php (js/delivery-transport.js) */
 		if (typeof validateTransportCompanyRequirement === 'function' && !validateTransportCompanyRequirement()) return false;
+		if (typeof validateDeliveryDateRange === 'function' && !validateDeliveryDateRange()) return false;
+		if (typeof validateDeliveryTimeRange === 'function' && !validateDeliveryTimeRange()) return false;
 		var fileProblem = checkFiles();
 		if (fileProblem) return fail(fileProblem, null);
 		return true;
@@ -842,7 +803,6 @@
 	};
 	restoreTransportCompany();
 	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', restoreTransportCompany);
-	syncTimeRangeFromInputs(); /* setValue ไม่ยิง event ให้ช่อง time — ซิงก์ dropdown ช่วงเวลากับเวลาที่โหลดจาก Draft เอง */
 	syncDeliveryAddress(); /* hidden address_1/address_name1 ต้องตรงกับช่องที่แสดง แม้ Draft เก่าสองค่าจะไม่ตรงกัน */
 	if (window.SMP_SAVED_CUSTOMER) fillCustomerCard(window.SMP_SAVED_CUSTOMER);
 	else if (window.SMP_PREFILL && window.SMP_PREFILL.customer_typename) setText('display_customer_typename', window.SMP_PREFILL.customer_typename);

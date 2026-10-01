@@ -1,5 +1,5 @@
-// ใช้ร่วมกันทุกฟอร์มที่ include partials/delivery_info_tab.php (suphos, supbrhos, supbrcshos, supchange, suprental)
-// ฟอร์มที่ใช้ต้องเรียก validateTransportCompanyRequirement() ใน fncSubmit และ
+// ใช้ร่วมกันทุกฟอร์มที่ include partials/delivery_info_tab.php (suphos, supbrhos, supbrcshos, supchange, suprental, supsmp)
+// ฟอร์มที่ใช้ต้องเรียก validateTransportCompanyRequirement(), validateDeliveryDateRange() และ validateDeliveryTimeRange() ใน fncSubmit และ
 // updateTransportCompanyRequirement(String(ค่าที่บันทึกไว้)) หลังเติมค่า delivery_type ตอน edit
 // บริษัทขนส่ง/สถานที่รับสินค้า: ตัวเลือกเปลี่ยนตามวิธีการจัดส่ง และบังคับเลือกเมื่อ delivery_type = 3 หรือ 4
 // 3 = พนักงานรับ/ลูกค้ารับ -> สถานที่รับ, 4 = บริษัทขนส่งภายนอก -> บริษัทขนส่ง, อื่น ๆ -> ซ่อน
@@ -90,4 +90,91 @@ function validateTransportCompanyRequirement() {
 		return false;
 	}
 	return true;
+}
+
+// ช่วงจัดส่ง 2 คู่ใช้กฎเดียวกัน: จัดส่งวันที่ (start_date) / ถึงวันที่ (between_date)
+// และ จัดส่งตั้งแต่เวลา (start_time) / ถึงเวลา (end_time)
+// ช่อง "ถึง" ไม่บังคับ แต่เติมให้เท่ากับช่องเริ่มอัตโนมัติ และต้องไม่ก่อนช่องเริ่ม
+// วันที่เป็น YYYY-MM-DD เวลาเป็น HH:MM จึงเทียบกันแบบ string ได้ (length ตัดวินาทีของเวลาในเอกสารเก่าทิ้งก่อนเทียบ)
+// เอกสารเก่าที่ between_date เป็นข้อความอิสระ date input จะปัดเป็นค่าว่างเอง แล้วถูกเติมเป็นวันที่ตอนบันทึก
+// เอกสารเก่าที่ end_time ค้างค่า preset เดิมจนก่อน start_time จะแสดงตามจริง แล้วแจ้งเตือนตอนบันทึก
+var DELIVERY_RANGES = {
+	date: {
+		startId: 'start_date',
+		endId: 'between_date',
+		length: 10,
+		alert: 'ถึงวันที่ต้องไม่ก่อนจัดส่งวันที่'
+	},
+	time: {
+		startId: 'start_time',
+		endId: 'end_time',
+		length: 5,
+		alert: 'ถึงเวลาต้องไม่ก่อนจัดส่งตั้งแต่เวลา'
+	}
+};
+
+function deliveryRangeValue(input, range) {
+	return input.value.substring(0, range.length);
+}
+
+function bindDeliveryRange(range) {
+	var startInput = document.getElementById(range.startId);
+	var endInput = document.getElementById(range.endId);
+	if (!startInput || !endInput) return;
+	var lastStart = deliveryRangeValue(startInput, range);
+
+	// ค่าที่เติมด้วยโค้ดตอน edit ไม่ยิง change จึงจำค่าเดิมตอน focus แทน
+	startInput.addEventListener('focus', function() {
+		lastStart = deliveryRangeValue(startInput, range);
+	});
+	startInput.addEventListener('change', function() {
+		var start = deliveryRangeValue(startInput, range);
+		var end = deliveryRangeValue(endInput, range);
+		// ช่องถึงเท่ากับช่องเริ่มเดิม = ส่งวัน/เวลาเดียว ให้ขยับตามค่าใหม่ ไม่งั้นแก้ย้อนหลังแล้วจะกลายเป็นช่วงโดยไม่ตั้งใจ
+		if (start && (end === '' || end < start || end === lastStart)) {
+			endInput.value = start;
+		}
+		endInput.min = start;
+		lastStart = start;
+	});
+	endInput.addEventListener('focus', function() {
+		endInput.min = deliveryRangeValue(startInput, range);
+	});
+	// ตรวจตอน blur ไม่ใช่ change: พิมพ์ปีทีละหลักจะยิง change ตั้งแต่ปียังพิมพ์ไม่ครบ
+	endInput.addEventListener('blur', function() {
+		var start = deliveryRangeValue(startInput, range);
+		var end = deliveryRangeValue(endInput, range);
+		if (start && end !== '' && end < start) {
+			alert(range.alert);
+			endInput.value = start;
+		}
+	});
+}
+document.addEventListener('DOMContentLoaded', function() {
+	bindDeliveryRange(DELIVERY_RANGES.date);
+	bindDeliveryRange(DELIVERY_RANGES.time);
+});
+
+function validateDeliveryRange(range) {
+	var startInput = document.getElementById(range.startId);
+	var endInput = document.getElementById(range.endId);
+	if (!startInput || !endInput) return true;
+	var start = deliveryRangeValue(startInput, range);
+	if (start && endInput.value === '') {
+		endInput.value = start;
+	}
+	if (start && deliveryRangeValue(endInput, range) < start) {
+		alert(range.alert);
+		endInput.focus();
+		return false;
+	}
+	return true;
+}
+
+function validateDeliveryDateRange() {
+	return validateDeliveryRange(DELIVERY_RANGES.date);
+}
+
+function validateDeliveryTimeRange() {
+	return validateDeliveryRange(DELIVERY_RANGES.time);
 }

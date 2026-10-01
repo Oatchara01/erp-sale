@@ -8,11 +8,12 @@
  *     'open_fn'  => 'openDelTab',      // JS tab-switch function already defined by the caller page
  *     'grid_fields' => [               // rendered inside a 6-column grid, 'span' out of 6
  *         ['type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => '...', 'required' => true, 'options' => ['1' => 'Sale รับเอง', ...]],
- *         ['type' => 'date',   'span' => 2, 'name' => 'start_date', 'label' => '...', 'required' => true],
- *         ['type' => 'select', 'span' => 1, 'name' => 'time_range', 'label' => '...', 'options' => [...]],
+ *         ['type' => 'date',   'span' => 1, 'name' => 'start_date', 'label' => '...', 'required' => true],
+ *         ['type' => 'date',   'span' => 1, 'name' => 'between_date', 'label' => '...'],   // ถึงวันที่ (ดู js/delivery-transport.js)
  *         ['type' => 'time',   'span' => 1, 'name' => 'start_time', 'label' => '...', 'required' => true, 'value' => $v],
+ *         ['type' => 'time',   'span' => 1, 'name' => 'end_time', 'label' => '...', 'value' => $v],   // ถึงเวลา (ดู js/delivery-transport.js)
  *         ['type' => 'time_pair', 'span' => 2, 'name' => 'start_time', 'end_name' => 'end_time', 'label' => '...', 'required' => true],
- *         ['type' => 'text',   'span' => 4, 'name' => 'between_date', 'label' => '...', 'clearable' => true],
+ *         ['type' => 'text',   'span' => 4, 'name' => 'status_comment', 'label' => '...', 'clearable' => true],
  *     ],
  *     'toggle_buttons' => [
  *         ['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => false],

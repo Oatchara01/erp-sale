@@ -120,18 +120,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 	try {
 
-		// map ช่วงเวลา (time_range) -> start_time/end_time (mirror ของ register_suphos1.php)
-		$timeRange = mysqli_real_escape_string($conn, $_POST["time_range"] ?? "");
-		$timeRangeMap = array(
-			"morning" => array("08:00", "12:00"),
-			"afternoon" => array("13:00", "17:00"),
-			"allday" => array("08:00", "17:00"),
-		);
-		if (isset($timeRangeMap[$timeRange])) {
-			$_POST["start_time"] = $timeRangeMap[$timeRange][0];
-			$_POST["end_time"] = $timeRangeMap[$timeRange][1];
-		}
-
 		$company = mysqli_real_escape_string($conn, $_POST["company"]);
 		$date_br = mysqli_real_escape_string($conn, $_POST["date_br"]);
 		$customer = mysqli_real_escape_string($conn, $_POST["customer"]);

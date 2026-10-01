@@ -444,11 +444,13 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
 				)),
-				array('type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true),
-				array('type' => 'select', 'span' => 1, 'name' => 'time_range_ui', 'label' => 'เลือกช่วงเวลา', 'options' => array('' => 'เลือกช่วงเวลา', 'morning' => 'ช่วงเช้า', 'afternoon' => 'ช่วงบ่าย', 'allday' => 'ทั้งวัน', 'specific' => 'กำหนดเวลา')),
-				array('type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true),
-				array('type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'วันที่ต้องการโดยประมาณ', 'clearable' => true),
-				array('type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true),
+				array('type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true),
+				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+				array('type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'),
+				array('type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true),
+				// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
+				array('type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'),
+				array('type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true),
 			),
 			'toggle_buttons' => array(
 				array('name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'),
@@ -464,8 +466,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 		include __DIR__ . '/partials/delivery_info_tab.php';
 		?>
 		<!-- ไม่แสดงใน UI แล้ว (หน้าตาตาม Change Order) แต่ต้องยังถูก POST: smp_register_data_from_post() และ Preview (report_sample.php) อ่านค่าเหล่านี้,
-		     Draft เดิมที่เคยติ๊กไว้ต้องไม่ถูกรีเซ็ตตอน Save ซ้ำ, และหน้า edit/approve เดิมยังให้ติ๊กต่อได้ — end_time ถูกเติมโดย dropdown เลือกช่วงเวลา -->
-		<input type="hidden" name="end_time" id="end_time" value="">
+		     Draft เดิมที่เคยติ๊กไว้ต้องไม่ถูกรีเซ็ตตอน Save ซ้ำ, และหน้า edit/approve เดิมยังให้ติ๊กต่อได้ -->
 		<input type="hidden" name="status" id="status" value="ส่ง">
 		<input type="hidden" name="fix_datetime" id="fix_datetime" value="0">
 		<input type="hidden" name="on_time" id="on_time" value="0">

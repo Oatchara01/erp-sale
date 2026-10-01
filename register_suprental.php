@@ -724,16 +724,6 @@
 		if ($savedRegister !== null) {
 			$rentalSavedStartTime = substr((string)($savedRegister['start_time'] ?? ''), 0, 5);
 			$rentalSavedEndTime = substr((string)($savedRegister['end_time'] ?? ''), 0, 5);
-			$rentalSavedTimeRange = '';
-			if ($rentalSavedStartTime === '08:00' && $rentalSavedEndTime === '12:00') {
-				$rentalSavedTimeRange = 'morning';
-			} else if ($rentalSavedStartTime === '13:00' && $rentalSavedEndTime === '17:00') {
-				$rentalSavedTimeRange = 'afternoon';
-			} else if ($rentalSavedStartTime === '08:00' && $rentalSavedEndTime === '17:00') {
-				$rentalSavedTimeRange = 'allday';
-			} else if ($rentalSavedStartTime !== '') {
-				$rentalSavedTimeRange = 'specific';
-			}
 			$rentalAddress1OrName = ($savedRegister['address_1'] ?? '') !== '' ? $savedRegister['address_1'] : ($savedRegister['address_name'] ?? '');
 			$rentalPrefill['customer_name'] = $savedRegister['customer_name'];
 			$rentalPrefill['customer_tel'] = $savedRegister['customer_tel'];
@@ -749,7 +739,6 @@
 			$rentalPrefill['no_money'] = $savedRegister['no_price'];
 			$rentalPrefill['start_time'] = $rentalSavedStartTime;
 			$rentalPrefill['end_time'] = $rentalSavedEndTime;
-			$rentalPrefill['time_range_ui'] = $rentalSavedTimeRange;
 		}
 
 		// tb_transaction ('แท็บ รายละเอียดที่อยู่') — ผูกกลับด้านของ mapping ใน register_suprental1.php
@@ -832,6 +821,14 @@
 				if (rtSubmitting) return false;
 
 				if (!validateTransportCompanyRequirement()) {
+					return false;
+				}
+
+				if (!validateDeliveryDateRange()) {
+					return false;
+				}
+
+				if (!validateDeliveryTimeRange()) {
 					return false;
 				}
 
@@ -1793,17 +1790,13 @@
 							// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 							'' => 'เลือกบริษัทขนส่ง',
 						]],
-						['type' => 'date', 'span' => 2, 'name' => 'start_date', 'label' => 'วันในการจัดส่ง', 'required' => true],
-						['type' => 'select', 'span' => 1, 'name' => 'time_range_ui', 'label' => 'เลือกช่วงเวลา', 'options' => [
-							'' => 'เลือกช่วงเวลา',
-							'morning' => 'ช่วงเช้า',
-							'afternoon' => 'ช่วงบ่าย',
-							'allday' => 'ทั้งวัน',
-							'specific' => 'กำหนดเวลา',
-						]],
-						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'เวลาในการจัดส่ง', 'required' => true],
-						['type' => 'text', 'span' => 4, 'name' => 'between_date', 'label' => 'วันที่ต้องการโดยประมาณ', 'clearable' => true],
-						['type' => 'text', 'span' => 6, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
+						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง delivery_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
+						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
+						// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
+						['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
+						['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
 					],
 					'toggle_buttons' => [
 						['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
@@ -1820,7 +1813,6 @@
 				include __DIR__ . '/partials/delivery_info_tab.php';
 				?>
 				<script src="js/delivery-transport.js?v=<?php echo filemtime(__DIR__ . '/js/delivery-transport.js'); ?>"></script>
-				<input type="hidden" name="end_time" id="end_time" value="">
 				<script>
 					function rtOpenDelTab(tabId, element) {
 						var contents = document.getElementsByClassName('so-del-tab-content');
@@ -1836,40 +1828,6 @@
 						if (target) target.style.display = 'block';
 						element.classList.add('active');
 					}
-
-					function syncRentalDeliveryTimeRange() {
-						var timeRange = document.getElementById('time_range_ui');
-						var startTime = document.querySelector('input[name="start_time"]');
-						var endTime = document.querySelector('input[name="end_time"]');
-						if (!timeRange || !startTime) return;
-
-						var timeRangeMap = {
-							morning: ['08:00', '12:00'],
-							afternoon: ['13:00', '17:00'],
-							allday: ['08:00', '17:00']
-						};
-
-						var val = timeRange.value;
-						if (timeRangeMap[val]) {
-							startTime.value = timeRangeMap[val][0];
-							if (endTime) endTime.value = timeRangeMap[val][1];
-						} else if (val === 'specific') {
-							var normStart = (startTime.value || '').trim().substring(0, 5);
-							var normEnd = endTime ? (endTime.value || '').trim().substring(0, 5) : '';
-							if ((normStart === '08:00' && (normEnd === '12:00' || normEnd === '17:00')) ||
-								(normStart === '13:00' && normEnd === '17:00')) {
-								startTime.value = '';
-								if (endTime) endTime.value = '';
-							}
-						}
-					}
-
-					document.addEventListener('DOMContentLoaded', function() {
-						var timeRange = document.getElementById('time_range_ui');
-						if (timeRange) {
-							timeRange.addEventListener('change', syncRentalDeliveryTimeRange);
-						}
-					});
 				</script>
 
 				<!-- ===================== ที่อยู่ ===================== -->
