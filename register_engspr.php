@@ -158,7 +158,12 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title spr-title">ใบเบิกเครื่องและอะไหล่ (SPR)</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="window.location.href='status_spr.php';" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title spr-title">ใบเบิกเครื่องและอะไหล่ (SPR)</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($sprDisplayRefId); ?></span>
@@ -446,7 +451,6 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 					<button type="button" name="save_draft" class="btn-so-draft" onclick="sprSaveDraft();"><i class="far fa-save"></i> <?php echo $sprIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php } ?>
 			<?php } ?>
-			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_spr.php';">ย้อนกลับ</button>
 		</div>
 	</div>
 	<?php if ($sprIsTerminal) { ?>
@@ -456,7 +460,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				if (!form) return;
 				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function(el) {
 					if (el.type === 'hidden') return;
-					if (el.classList.contains('btn-so-cancel-nav')) return;
+					if (el.classList.contains('so-back-btn')) return;
 					if (el.classList.contains('btn-preview-so')) return;
 					if (el.classList.contains('spr-linked-document-input')) return;
 					if (el.classList.contains('spr-linked-document-button')) return;

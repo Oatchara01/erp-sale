@@ -567,15 +567,26 @@ $productTableIsPo = ($productTableContext === 'po');
             }
         }
 
+        /* ปุ่มไอคอนพื้นขาวมุมมน 34x34px (content-box: ขนาดไอคอน + padding = 34px) */
         .action-icon {
+            box-sizing: content-box;
+            padding: 9px;
+            border-radius: 8px;
+            background: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
             cursor: pointer;
-            color: #8E8B94;
-            font-size: 16px;
             margin-left: 8px;
+            vertical-align: middle;
+            transition: box-shadow 0.2s ease;
+        }
+
+        /* trash.svg สูง 18px — ลด padding แนวตั้งให้กล่องยังสูง 34px เท่า edit */
+        .action-icon[src$="trash.svg"] {
+            padding: 8px 9px;
         }
 
         .action-icon:hover {
-            color: #612989;
+            box-shadow: 0 2px 10px rgba(97, 41, 137, 0.28);
         }
 
         /* Modal Styling */
@@ -662,7 +673,6 @@ $productTableIsPo = ($productTableContext === 'po');
             outline: 2px solid rgba(97, 41, 137, 0.45);
             outline-offset: 2px;
             border-radius: 4px;
-            color: #612989;
         }
 
         .so-modal-field label {
@@ -1028,10 +1038,10 @@ $productTableIsPo = ($productTableContext === 'po');
                             <!-- ยอดรวมสุทธิของแถวนี้: คำนวณอัตโนมัติ (จำนวน * ราคา) - (ส่วนลด * จำนวน) -->
                             <input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-transparent-input calc-total" style="text-align:right;" readonly />
                         </td>
-                        <td style="text-align: right; padding-right: 16px;">
+                        <td style="text-align: right; padding-right: 16px; white-space: nowrap;">
                             <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
-                            <i class="far fa-edit action-icon" role="button" tabindex="0" aria-label="ข้อมูลเพิ่มเติมรายการที่ <?php echo $i; ?>" onclick="openEditModal(<?php echo $i; ?>)"></i>
-                            <i class="far fa-trash-alt action-icon" role="button" tabindex="0" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="clearRow(<?php echo $i; ?>)"></i>
+                            <img src="img/icons/edit.svg" alt="" width="16" height="16" class="action-icon" role="button" tabindex="0" aria-label="ข้อมูลเพิ่มเติมรายการที่ <?php echo $i; ?>" onclick="openEditModal(<?php echo $i; ?>)">
+                            <img src="img/icons/trash.svg" alt="" width="16" height="18" class="action-icon" role="button" tabindex="0" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="clearRow(<?php echo $i; ?>)">
                         </td>
                     </tr>
                 <?php endfor; ?>

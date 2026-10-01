@@ -1050,8 +1050,8 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 				'<td>' + escapeProductHtml(row.product_name) + remarkBlock + '</td>' +
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
 				'<td class="col-actions">' +
-				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ" aria-label="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
-				'<button type="button" class="product-row-icon-btn" onclick="askDeleteProductRow(' + idx + ')" title="ลบ" aria-label="ลบรายการสินค้า"><i class="fas fa-trash"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ" aria-label="แก้ไขหมายเหตุ"><img src="img/icons/edit.svg" alt="" width="16" height="16"></button>' +
+				'<button type="button" class="product-row-icon-btn product-row-icon-btn--trash" onclick="askDeleteProductRow(' + idx + ')" title="ลบ" aria-label="ลบรายการสินค้า"><img src="img/icons/trash.svg" alt="" width="16" height="18"></button>' +
 				'</td>' +
 				'</tr>';
 		}).join('');

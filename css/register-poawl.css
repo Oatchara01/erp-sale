@@ -219,7 +219,6 @@
 .po-attach-btn:focus-visible,
 .po-page .btn-so-submit:focus-visible,
 .po-page .btn-so-draft:focus-visible,
-.po-page .btn-so-cancel-nav:focus-visible,
 .po-page .btn-add-customer-pill:focus-visible {
 	outline: 2px solid rgba(97, 41, 137, 0.45);
 	outline-offset: 2px;
@@ -347,8 +346,7 @@
 		width: 100%;
 	}
 
-	.po-actions-main > button,
-	.po-btn-back {
+	.po-actions-main > button {
 		flex: 1 1 100%;
 	}
 

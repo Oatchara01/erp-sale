@@ -29,8 +29,8 @@ function br_product_row_hos($i)
 		<td><input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-input" style="text-align:right" readonly /></td>
 		<td><input type='text' name="br_period<?php echo $i; ?>" id="br_period<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="brCalculateSummary();" /></td>
 		<td class="so-product-remove-cell">
-			<i class="far fa-edit br-action-icon" title="แก้ไขข้อมูลเพิ่มเติม" role="button" tabindex="0" aria-label="แก้ไขข้อมูลเพิ่มเติม" onclick="brOpenEditModal(<?php echo $i; ?>);"></i>
-			<i class="far fa-trash-alt br-action-icon" title="ลบ" role="button" tabindex="0" aria-label="ลบรายการนี้" onclick="brClearRow(<?php echo $i; ?>);"></i>
+			<img src="img/icons/edit.svg" alt="" width="16" height="16" class="br-action-icon" title="แก้ไขข้อมูลเพิ่มเติม" role="button" tabindex="0" aria-label="แก้ไขข้อมูลเพิ่มเติม" onclick="brOpenEditModal(<?php echo $i; ?>);">
+			<img src="img/icons/trash.svg" alt="" width="16" height="18" class="br-action-icon" title="ลบ" role="button" tabindex="0" aria-label="ลบรายการนี้" onclick="brClearRow(<?php echo $i; ?>);">
 		</td>
 	</tr>
 <?php

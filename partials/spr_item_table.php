@@ -88,8 +88,8 @@ $sprRowsToJs = function (array $rows) {
 			'<input type="hidden" name="' + p + '[sn]" class="spr-f-sn" value="' + sprEscapeHtml(data.sn) + '">' +
 			'<input type="hidden" name="' + p + '[clear_br]" class="spr-f-clear_br" value="' + (data.clear_br === '1' ? '1' : '0') + '">' +
 			'<input type="hidden" name="' + p + '[clear_ivno]" class="spr-f-clear_ivno" value="' + sprEscapeHtml(data.clear_ivno) + '">' +
-			'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" onclick="sprOpenEditModal(this);"><i class="far fa-edit" aria-hidden="true"></i></button>' +
-			'<button type="button" class="so-product-remove-btn" title="ลบรายการ" onclick="sprRemoveRow(this);"><i class="far fa-trash-alt" aria-hidden="true"></i></button>' +
+			'<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" onclick="sprOpenEditModal(this);"><img src="img/icons/edit.svg" alt="" width="16" height="16"></button>' +
+			'<button type="button" class="so-product-remove-btn" title="ลบรายการ" onclick="sprRemoveRow(this);"><img src="img/icons/trash.svg" alt="" width="16" height="18"></button>' +
 			'</td>';
 
 		html += '</tr>';

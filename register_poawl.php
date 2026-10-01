@@ -191,7 +191,12 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title po-title">ใบสั่งซื้อ (PO)</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="window.location.href=<?php echo so_saved_h(json_encode($poBackUrl)); ?>;" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title po-title">ใบสั่งซื้อ (PO)</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($poDisplayRefId); ?></span>
@@ -503,7 +508,6 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 						<button type="button" class="btn-so-draft po-action-btn" data-po-action="update" onclick="poSave('update', this);"><i class="far fa-save" aria-hidden="true"></i> Update</button>
 					<?php } ?>
 				<?php } ?>
-				<button type="button" class="btn-so-cancel-nav po-btn-back" onclick="window.location.href=<?php echo so_saved_h(json_encode($poBackUrl)); ?>;">ย้อนกลับ</button>
 			</div>
 		</div>
 	</div>

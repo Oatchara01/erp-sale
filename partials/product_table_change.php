@@ -429,9 +429,9 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 						<input type="hidden" name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>">
 						<input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
 						<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="ptcOpenEditModal(<?php echo $i; ?>);">
-							<i class="fas fa-pen" aria-hidden="true"></i>
+							<img src="img/icons/edit.svg" alt="" width="16" height="16">
 						</button>
-						<button type="button" class="so-product-remove-btn" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="ptcClearRow(<?php echo $i; ?>);"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>
+						<button type="button" class="so-product-remove-btn" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="ptcClearRow(<?php echo $i; ?>);"><img src="img/icons/trash.svg" alt="" width="16" height="18"></button>
 					</td>
 				</tr>
 			<?php
