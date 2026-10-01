@@ -11,6 +11,9 @@ up_cuscredit/
 qou/
 manual/
 img_pro/
+/dbconnect.php
+/dbconnect_acc.php
+/dbconnect_sale.php
 /dbconnect_service.php
 /dbconnect_cs.php
 /dbconnect_inter.php
