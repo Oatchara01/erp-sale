@@ -14,7 +14,6 @@ img_pro/
 /dbconnect_service.php
 /dbconnect_cs.php
 /dbconnect_inter.php
-/.env
 /.agents/skills/
 /skills-lock.json
 .claude/

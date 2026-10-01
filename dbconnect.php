@@ -1,7 +1,6 @@
 <?php
-require_once __DIR__ . '/includes/env.php';
-
-$conn = env_db_connect('DB');
+$conn = mysqli_connect("localhost", "root", "", "allwell_sol_test");
+// $conn = mysqli_connect("localhost","root","","allwell_sol_test_1");
 
 if (mysqli_connect_errno()) {
   echo "Failed to connect to MySQL: " . mysqli_connect_error();
@@ -50,7 +49,7 @@ if (mysqli_connect_errno())
 mysqli_set_charset($news,"utf8");*/
 
 
-$new = env_db_connect('DB_STOCK');
+$new = mysqli_connect("localhost","root","","allwell_stock_test");
 
 if (mysqli_connect_errno())
   {
