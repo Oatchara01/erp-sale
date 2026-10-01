@@ -1,6 +1,7 @@
 // ใช้ร่วมกันทุกฟอร์มที่ include partials/delivery_info_tab.php (suphos, supbrhos, supbrcshos, supchange, suprental, supsmp)
 // ฟอร์มที่ใช้ต้องเรียก validateTransportCompanyRequirement(), validateDeliveryDateRange() และ validateDeliveryTimeRange() ใน fncSubmit และ
 // updateTransportCompanyRequirement(String(ค่าที่บันทึกไว้)) หลังเติมค่า delivery_type ตอน edit
+// validateDeliveryTimeRangeChoice() เรียกเฉพาะปุ่มบันทึก/Save Draft ของผู้สร้าง ไม่เรียกตอนอนุมัติหรือ Admin limited update
 // บริษัทขนส่ง/สถานที่รับสินค้า: ตัวเลือกเปลี่ยนตามวิธีการจัดส่ง และบังคับเลือกเมื่อ delivery_type = 3 หรือ 4
 // 3 = พนักงานรับ/ลูกค้ารับ -> สถานที่รับ, 4 = บริษัทขนส่งภายนอก -> บริษัทขนส่ง, อื่น ๆ -> ซ่อน
 // เปลี่ยนวิธีการจัดส่งแล้วค่าเดิมไม่อยู่ในรายการใหม่ -> ล้างค่า
@@ -177,4 +178,17 @@ function validateDeliveryDateRange() {
 
 function validateDeliveryTimeRange() {
 	return validateDeliveryRange(DELIVERY_RANGES.time);
+}
+
+// เลือกช่วงเวลา (time_range): ฟิลด์อิสระ ไม่ผูกกับ start_time/end_time บังคับเลือกที่หน้าฟอร์มอย่างเดียว
+// เอกสารเก่าไม่มีค่านี้ จึงไม่ตรวจฝั่ง backend และไม่ตรวจตอนอนุมัติ ไม่งั้นเอกสารที่ค้างอนุมัติจะเดินต่อไม่ได้
+function validateDeliveryTimeRangeChoice() {
+	var timeRangeSel = document.getElementById('time_range');
+	if (!timeRangeSel) return true;
+	if (timeRangeSel.value === '') {
+		alert('กรุณาเลือกช่วงเวลา');
+		timeRangeSel.focus();
+		return false;
+	}
+	return true;
 }

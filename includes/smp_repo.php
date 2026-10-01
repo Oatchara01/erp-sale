@@ -608,6 +608,15 @@ function smp_persist_from_post($conn, $mode, array $session)
 			'up_img2'       => $uploadPlan['names'][2],
 			'up_img3'       => $uploadPlan['names'][3],
 		);
+		/* ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql) — ใส่เฉพาะค่าที่รู้จักและเมื่อคอลัมน์มีจริง:
+		   smp_db_insert/update ไม่ข้ามคอลัมน์ที่ไม่มี (จะ rollback ทั้ง save) และค่าว่างต้องไม่ล้างค่าที่บันทึกไว้ */
+		$timeRange = smp_post('time_range');
+		if (in_array($timeRange, array('morning', 'afternoon', 'allday', 'specific'), true)) {
+			$timeRangeCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__smp LIKE 'time_range'");
+			if ($timeRangeCheck && mysqli_num_rows($timeRangeCheck) > 0) {
+				$header['time_range'] = $timeRange;
+			}
+		}
 		if ($isUpdate) {
 			/* คงสถานะ Request/ข้อมูลส่งอนุมัติ/ผู้ขอเดิม — ไม่เขียนทับ */
 			unset($header['sale_name'], $header['sale_date'], $header['allwell_ckk']);

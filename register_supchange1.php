@@ -361,6 +361,11 @@ if (!$qsave) {
 // (que_ckk / is_cancel / remark_cancel ย้ายไปอยู่ใน INSERT แล้ว)
 cs_update_column_if_exists($conn, 'hos__change', 'ref_id', $ref_id, 'job_no', cs_post_raw('admin_work_no'));
 
+// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
+if (in_array(cs_post_raw('time_range'), array('morning', 'afternoon', 'allday', 'specific'), true)) {
+	cs_update_column_if_exists($conn, 'hos__change', 'ref_id', $ref_id, 'time_range', cs_post_raw('time_range'));
+}
+
 
 // ===== รายการสินค้า (hos__subchange) =====
 // เดิมเป็น 6 บล็อก if ที่ copy-paste กันมา และไม่เคยบันทึก sn{i} ที่ฟอร์มส่งมา

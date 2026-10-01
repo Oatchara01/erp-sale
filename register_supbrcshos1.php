@@ -409,6 +409,11 @@ if (!$qsave) {
 cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'job_no1', cs_post_raw('admin_work_no'));
 cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'cm_no', cs_post_raw('cm_no'));
 
+// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
+if (in_array(cs_post_raw('time_range'), array('morning', 'afternoon', 'allday', 'specific'), true)) {
+	cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'time_range', cs_post_raw('time_range'));
+}
+
 
 // ===== รายการสินค้า (hos__subconsig) =====
 // เดิมเป็น 10 บล็อกที่ copy-paste กันมา ทำให้แถว 8-10 ไม่เคยถูกอ่าน product_name/unit_name

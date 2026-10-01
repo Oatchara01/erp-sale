@@ -421,6 +421,8 @@ if ($chgSrc !== null) {
 	$savedChgTimeParts = explode(' ', (string)($chgSrc['delivery_time'] ?? ''), 2);
 	$chgPrefill['start_time'] = $savedChgTimeParts[0] ?? '';
 	$chgPrefill['end_time'] = $savedChgTimeParts[1] ?? '';
+	// ช่วงเวลา: โหลดเฉพาะเอกสารที่บันทึกแล้ว ($savedChg) ใบที่คัดลอกต้องเลือกใหม่
+	$chgPrefill['time_range'] = $savedChg['time_range'] ?? '';
 
 	if ($savedOtherBill !== null) {
 		$chgPrefill['no_money'] = $savedOtherBill['ref_12'] ?? '';
@@ -592,6 +594,12 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				}
 
 				if (!validateDeliveryTimeRange()) {
+					return false;
+				}
+
+				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
+				var chgApproveActionField = document.getElementById('chg_approve_action');
+				if (!(chgApproveActionField && chgApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
 					return false;
 				}
 
@@ -1167,17 +1175,26 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 								'' => 'เลือกบริษัทขนส่ง',
 							]],
-							['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+							// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
+							['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
+								'' => 'เลือกช่วงเวลา',
+								'morning' => 'ช่วงเช้า',
+								'afternoon' => 'ช่วงบ่าย',
+								'allday' => 'ทั้งวัน',
+								'specific' => 'กำหนดเวลา',
+							]],
+							// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
+							['type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 							// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 							['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 							['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
 							// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 							['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
-							['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true],
+							['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
+							['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 						],
 						'toggle_buttons' => [
-							['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
-							['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)'],
+							['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
 							['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
 						],
 						'cost_fields' => [
@@ -1976,6 +1993,8 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 	// พอร์ตจาก brcsSaveDraft() (register_supbrcshos.php:206-283) — AJAX POST is_draft=1 ไปยัง
 	// register_supchange_draft1.php แล้ว redirect กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ
 	function chgSaveDraft() {
+		if (!validateDeliveryTimeRangeChoice()) return;
+
 		var form = document.forms['frmMain'];
 		if (!form) return;
 

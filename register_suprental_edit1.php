@@ -229,6 +229,16 @@ try {
 		$saveError = 'hos__rental: ' . mysqli_error($conn);
 	}
 
+	// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): แยก UPDATE เพราะคอลัมน์อาจยังไม่มีใน DB ปลายทาง
+	// เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มา (register_suprental_edit.php) จึงไม่ล้างค่าเดิม
+	$rtTimeRange = $_POST["time_range"] ?? '';
+	if (in_array($rtTimeRange, array('morning', 'afternoon', 'allday', 'specific'), true)) {
+		$rtTimeRangeCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__rental LIKE 'time_range'");
+		if ($rtTimeRangeCheck && mysqli_num_rows($rtTimeRangeCheck) > 0) {
+			mysqli_query($conn, "UPDATE hos__rental SET time_range = '" . $rtTimeRange . "' WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
+		}
+	}
+
 	// ===== รายการสินค้า (hos__subrental) — DELETE แล้ว re-INSERT ใหม่ทั้งหมด กันบั๊ก insert ซ้ำ =====
 	mysqli_query($conn, "DELETE FROM hos__subrental WHERE ref_idd = '" . $ref_id . "'");
 

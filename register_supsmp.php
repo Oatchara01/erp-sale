@@ -165,6 +165,8 @@ if ($smpSource !== null) {
 		'shipping_cost' => ((float)$smpSource['ker_bath'] > 0) ? (string)$smpSource['ker_bath'] : '',
 		'shipping_ref1' => (string)$smpSource['ref_no'],
 		'shipping_ref2' => (string)$smpSource['ref_no1'],
+		/* ช่วงเวลา: โหลดเฉพาะเอกสารที่บันทึกแล้ว ใบที่คัดลอกต้องเลือกใหม่ */
+		'time_range'    => $smpIsCopy ? '' : (string)($smpSource['time_range'] ?? ''),
 	);
 	if ($smpIsCopy) {
 		/* ใบใหม่: วันที่เป็นวันนี้ และไม่พาความเห็นหัวหน้า/ข้อมูลการส่งของใบเดิมมาด้วย (เหมือน register_supsmp_createnew.php เดิม) */
@@ -444,17 +446,26 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
 				)),
-				array('type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true),
+				// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__smp.time_range ดู sql/delivery_time_range.sql)
+				array('type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => array(
+					'' => 'เลือกช่วงเวลา',
+					'morning' => 'ช่วงเช้า',
+					'afternoon' => 'ช่วงบ่าย',
+					'allday' => 'ทั้งวัน',
+					'specific' => 'กำหนดเวลา',
+				)),
+				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
+				array('type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true),
 				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 				array('type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'),
 				array('type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true),
 				// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 				array('type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'),
-				array('type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะเพิ่มเติม', 'clearable' => true),
+				array('type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true),
+				array('type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'),
 			),
 			'toggle_buttons' => array(
-				array('name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'),
-				array('name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบรับสินค้า (ไม่ระบุราคา)'),
+				array('name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'),
 			),
 			'cost_fields' => array(
 				array('type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'),

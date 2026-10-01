@@ -371,6 +371,11 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		// ต้องกำหนดค่า '0' เองแทนการข้าม ไม่เช่นนั้นผู้ใช้ uncheck แล้วกด Save ค่าเดิมจะไม่ถูกล้าง
 		updateHosBrColumnIfExists($conn, $ref_id_br, 'send_cs', (($_POST['send_cs'] ?? '') === '1') ? '1' : '0');
 
+		// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
+		if (in_array($_POST['time_range'] ?? '', array('morning', 'afternoon', 'allday', 'specific'), true)) {
+			updateHosBrColumnIfExists($conn, $ref_id_br, 'time_range', $_POST['time_range']);
+		}
+
 
 		mysqli_query($conn, "DELETE FROM tb_other_bill WHERE ref_id = '" . $ref_id_br . "'");
 		$save56 = "insert into tb_other_bill

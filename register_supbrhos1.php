@@ -330,6 +330,11 @@ values
 		// ต้องกำหนดค่า '0' เองแทนการข้าม ไม่เช่นนั้นจะไม่มีทางเซ็ตค่าเป็น "ไม่ส่ง" ได้
 		updateHosBrColumnIfExists($conn, $ref_id_br, 'send_cs', (($_POST['send_cs'] ?? '') === '1') ? '1' : '0');
 
+		// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
+		if (in_array($_POST['time_range'] ?? '', array('morning', 'afternoon', 'allday', 'specific'), true)) {
+			updateHosBrColumnIfExists($conn, $ref_id_br, 'time_range', $_POST['time_range']);
+		}
+
 
 		$save56 = "insert into tb_other_bill
 (ref_id,head_1,ref_1,ref_2,ref_3,ref_4,ref_5,ref_6,ref_7,ref_8,ref_9,ref_10,ref_11,ref_des,ref_12)

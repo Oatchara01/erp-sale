@@ -8,15 +8,19 @@
  *     'open_fn'  => 'openDelTab',      // JS tab-switch function already defined by the caller page
  *     'grid_fields' => [               // rendered inside a 6-column grid, 'span' out of 6
  *         ['type' => 'select', 'span' => 2, 'name' => 'delivery_type', 'label' => '...', 'required' => true, 'options' => ['1' => 'Sale รับเอง', ...]],
- *         ['type' => 'date',   'span' => 1, 'name' => 'start_date', 'label' => '...', 'required' => true],
+ *         ['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => '...', 'required' => true, 'options' => [...]],   // ช่วงเวลา (ดู sql/delivery_time_range.sql)
+ *         // 'col' (ไม่บังคับ) = คอลัมน์เริ่มต้น ใช้บังคับขึ้นแถวใหม่แม้ช่องก่อนหน้าถูกซ่อน (transport_company ซ่อนตามวิธีการจัดส่ง)
+ *         ['type' => 'date',   'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => '...', 'required' => true],
  *         ['type' => 'date',   'span' => 1, 'name' => 'between_date', 'label' => '...'],   // ถึงวันที่ (ดู js/delivery-transport.js)
  *         ['type' => 'time',   'span' => 1, 'name' => 'start_time', 'label' => '...', 'required' => true, 'value' => $v],
  *         ['type' => 'time',   'span' => 1, 'name' => 'end_time', 'label' => '...', 'value' => $v],   // ถึงเวลา (ดู js/delivery-transport.js)
  *         ['type' => 'time_pair', 'span' => 2, 'name' => 'start_time', 'end_name' => 'end_time', 'label' => '...', 'required' => true],
  *         ['type' => 'text',   'span' => 4, 'name' => 'status_comment', 'label' => '...', 'clearable' => true],
+ *         // ปุ่ม toggle ที่วางใน grid (คีย์เดียวกับ toggle_buttons) — ปุ่มที่เหลือยังอยู่แถวล่างผ่าน toggle_buttons
+ *         ['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => false],
  *     ],
  *     'toggle_buttons' => [
- *         ['name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => false],
+ *         ['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS', 'checked' => false],
  *     ],
  *     'cost_fields' => [
  *         ['name' => 'shipping_date', 'label' => '...', 'type' => 'date'],
@@ -68,9 +72,18 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 				$fLabel = so_saved_h($field['label'] ?? '');
 				$fRequired = !empty($field['required']);
 				$fClearable = !empty($field['clearable']);
+				$fGridColumn = (isset($field['col']) ? (int)$field['col'] . ' / ' : '') . 'span ' . (int)$fSpan;
 				?>
-				<div class="so-field-group" style="grid-column: span <?php echo (int)$fSpan; ?>;">
-					<?php if ($fType === 'time_pair') {
+				<div class="so-field-group<?php echo $fType === 'toggle' ? ' so-field-group--toggle' : ''; ?>" style="grid-column: <?php echo $fGridColumn; ?>;">
+					<?php if ($fType === 'toggle') {
+						$tId = so_saved_h($field['id'] ?? ($field['name'] ?? ''));
+						$tChecked = !empty($field['checked']);
+						?>
+						<label class="so-toggle-btn">
+							<input type="checkbox" id="<?php echo $tId; ?>" name="<?php echo $fName; ?>" value="1" style="display:none;"<?php echo $tChecked ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+							<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;"><?php echo $fLabel; ?></span>
+						</label>
+					<?php } elseif ($fType === 'time_pair') {
 						$fEndName = so_saved_h($field['end_name'] ?? 'end_time');
 						?>
 						<label class="so-label"><?php echo $fLabel; ?><?php if ($fRequired) { ?><span style="color:red">*</span><?php } ?></label>
@@ -113,7 +126,7 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 		</div>
 
 		<?php if ($deliveryToggleButtons) { ?>
-			<div class="so-delivery-toggle-row" style="display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap;">
+			<div class="so-delivery-toggle-row">
 				<?php foreach ($deliveryToggleButtons as $toggle) {
 					$tName = so_saved_h($toggle['name'] ?? '');
 					$tId = so_saved_h($toggle['id'] ?? $tName);
@@ -158,4 +171,4 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 	</div>
 </div>
 <?php
-unset($deliveryOpenFn, $deliveryInfoId, $deliveryCostId, $deliveryGridFields, $deliveryToggleButtons, $deliveryCostFields, $field, $fType, $fSpan, $fName, $fLabel, $fRequired, $fClearable, $fEndName, $fOptions, $optValue, $optLabel, $fValue, $toggle, $tName, $tId, $tLabel, $tChecked);
+unset($deliveryOpenFn, $deliveryInfoId, $deliveryCostId, $deliveryGridFields, $deliveryToggleButtons, $deliveryCostFields, $field, $fType, $fSpan, $fName, $fLabel, $fRequired, $fClearable, $fGridColumn, $fEndName, $fOptions, $optValue, $optLabel, $fValue, $toggle, $tName, $tId, $tLabel, $tChecked);

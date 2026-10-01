@@ -1612,11 +1612,11 @@ form[name="frmMain"] {
   }
 
   #del_info .so-delivery-toggle-row {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr !important;
   }
 
-  #del_info .so-delivery-toggle-row .so-toggle-btn {
+  #del_info .so-delivery-toggle-row .so-toggle-btn,
+  #del_info .so-field-group--toggle .so-toggle-btn {
     width: 100%;
     min-height: 44px;
     height: auto;
@@ -1796,6 +1796,23 @@ form[name="frmMain"] {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
+}
+
+/* แถวปุ่ม toggle ใต้ grid: 3 คอลัมน์ gap เท่า grid หลัก ปุ่มจึงกว้างเท่าช่อง span 2 ของ .so-grid-6-col พอดี */
+#del_info .so-delivery-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+/* ปุ่ม toggle ที่วางใน grid (type => 'toggle'): ไม่มี label จึงดันลงชิดล่างให้ตรงแนวช่องกรอกข้าง ๆ */
+#del_info .so-field-group--toggle {
+  justify-content: flex-end;
+}
+
+#del_info .so-field-group--toggle .so-toggle-btn {
+  flex: 0 0 auto;
 }
 
 #del_info .so-toggle-btn {

@@ -804,12 +804,17 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			'shipping_ref2' => 'order_refer_code1',
 			'shipping_cost' => 'ker_bath',
 			'transport_company' => 'transport_company',
-			'sale_channel' => 'sale_channel'
+			'sale_channel' => 'sale_channel',
+			// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql) — ค่าว่างถูกข้ามใน updateHosSoColumnIfExists
+			'time_range' => 'time_range'
 		);
 
 		foreach ($optionalHosSoFieldMap as $postField => $columnName) {
 			if (isset($_POST[$postField])) {
 				$optionalValue = $_POST[$postField];
+				if ($postField === 'time_range' && !in_array($optionalValue, array('morning', 'afternoon', 'allday', 'specific'), true)) {
+					continue;
+				}
 				if ($postField === 'admin_edit_count') {
 					$optionalValue = $admin_edit_count;
 				}

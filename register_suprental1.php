@@ -222,8 +222,18 @@ values
 ('".$ref_id."','".$type_doc."','".$register_date."','".$rental_name."','".$connect_name."','".$start_promis."','".$install_date."','".$rental_address."','".$rental_id."','".$rental_tel."','".$connect_tel."','".$end_promis."','".$des_sale."','".$sale_code."','".$add_date."','".$add_by."','".$install_address."','".$bill_name."','".$bill_tel."','".$bill_address."','".$tax_no."','".$payment."','".$patient_name."','".$emergency_name."','".$emergency_tel."','".$count_m."','".$unit."','".$bill_vat."','".$delivery_type."','".$delivery_date."','".$delivery_key."','".$bank_name."','".$accbank_name."','".$bank_no."','".$bank_img."','".$type_product."','".$des_productunit."','".$iv_no."','".$iv_date."','".$job_no."','".$sr_no."','".$order_no."','".$new_bill."','".$date_oldbill."','".$desnew_bill."','".$remark_cancel."','".$cancel_flag."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."',".$deposit_amount_sql.",'".$rental_addr_detail."','".$rental_province."','".$rental_district."','".$rental_zipcode."','".$status_doc."','".$send_sup_val."','".$sup_name_val."','".$sup_date_val."')";
 
 $qsave=mysqli_query($conn,$save);
-	
-	
+
+// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): แยก UPDATE เพราะคอลัมน์อาจยังไม่มีใน DB ปลายทาง
+// เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มา (register_suprentalnb.php) จึงได้ค่า default ''
+$rtTimeRange = $_POST["time_range"] ?? '';
+if (in_array($rtTimeRange, array('morning', 'afternoon', 'allday', 'specific'), true)) {
+	$rtTimeRangeCheck = mysqli_query($conn, "SHOW COLUMNS FROM hos__rental LIKE 'time_range'");
+	if ($rtTimeRangeCheck && mysqli_num_rows($rtTimeRangeCheck) > 0) {
+		mysqli_query($conn, "UPDATE hos__rental SET time_range = '" . $rtTimeRange . "' WHERE ref_id = '" . mysqli_real_escape_string($conn, $ref_id) . "'");
+	}
+}
+
+
 $save1 = "insert into hos__rental_runiv (ref_idren,date_runiv,sale_area,area) values ('".$ref_id."','".$start_promis."','".$sale_code."','".$sup_code."')";
 $qsave1=mysqli_query($conn,$save1);	
 	

@@ -552,7 +552,8 @@
 		if (field) { field.focus(); if (field.scrollIntoView) field.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 		return false;
 	}
-	function validateSubmit() {
+	/* skipTimeRange: อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเลือกช่วงเวลาเฉพาะปุ่มบันทึกของผู้สร้าง */
+	function validateSubmit(skipTimeRange) {
 		for (var i = 0; i < requiredFields.length; i++) {
 			if (getValue(requiredFields[i][0]) === '') return fail(requiredFields[i][1], named(requiredFields[i][0]));
 		}
@@ -577,6 +578,7 @@
 		if (typeof validateTransportCompanyRequirement === 'function' && !validateTransportCompanyRequirement()) return false;
 		if (typeof validateDeliveryDateRange === 'function' && !validateDeliveryDateRange()) return false;
 		if (typeof validateDeliveryTimeRange === 'function' && !validateDeliveryTimeRange()) return false;
+		if (!skipTimeRange && typeof validateDeliveryTimeRangeChoice === 'function' && !validateDeliveryTimeRangeChoice()) return false;
 		var fileProblem = checkFiles();
 		if (fileProblem) return fail(fileProblem, null);
 		return true;
@@ -721,7 +723,7 @@
 			notify('มีการแก้ไขที่ยังไม่ได้บันทึก', 'กรุณากด Update เพื่อบันทึกการแก้ไขก่อนอนุมัติ เพราะระบบอนุมัติตามข้อมูลที่บันทึกไว้แล้ว', 'warning');
 			return;
 		}
-		if (!validateSubmit()) return;
+		if (!validateSubmit(true)) return;
 		var refInput = el('ref_idsmp');
 		var refId = refInput ? refInput.value.trim() : '';
 		var approve = function () { submitApproveAction('approve', '', false); };
@@ -745,6 +747,7 @@
 	};
 	window.smpSaveDraft = function () {
 		if (busy) return;
+		if (typeof validateDeliveryTimeRangeChoice === 'function' && !validateDeliveryTimeRangeChoice()) return;
 		var fileProblem = checkFiles();
 		if (fileProblem) { notify('แนบไฟล์ไม่ได้', fileProblem, 'warning'); return; }
 		var button = el('smp_btn_draft');
