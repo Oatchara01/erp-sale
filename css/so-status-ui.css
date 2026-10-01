@@ -895,8 +895,8 @@ body.has-sidebar.sidebar-collapsed {
 	}
 }
 
-@media (max-width: 768px) {
-	/* Sidebar overlays on mobile, so cancel the desktop body offset.
+@media (max-width: 1024px) {
+	/* Sidebar overlays on mobile/iPad, so cancel the desktop body offset.
 	   Must be !important to beat the !important base rule above. */
 	body.has-sidebar,
 	body.has-sidebar.sidebar-collapsed {
