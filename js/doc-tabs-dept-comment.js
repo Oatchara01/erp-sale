@@ -42,6 +42,8 @@ function setTechnicianRequired(required) {
 	const button = document.getElementById('technician_required_btn');
 	if (hidden) hidden.value = required ? '1' : '0';
 	if (button) button.classList.toggle('btn-dept-active', !!required);
+	// จุด ● บนแท็บ (js/doc-tabs-dots.js) — ค่านี้ถูกตั้งจากโค้ดตอน restore จึงไม่มี event ให้ดัก
+	if (typeof docTabsRefreshDots === 'function') docTabsRefreshDots();
 }
 
 function toggleTechnicianRequired(button) {

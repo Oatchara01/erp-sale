@@ -30,16 +30,28 @@ if ($showAttachFile && $activeTabId === null) $activeTabId = 'tab_attach_file';
 if ($showRelatedDocs && $activeTabId === null) $activeTabId = 'tab_related_docs';
 if ($showProductChecklists && $activeTabId === null) $activeTabId = 'tab_product_checklists';
 if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_document_return_log';
+
+// จุด ● บนแท็บ = แท็บนั้นมีข้อมูลที่ผู้ใช้กรอก — ค่าเริ่มต้นของ "เอกสารเพิ่มเติม" คิดจาก PHP กันกะพริบ
+// ส่วน "ข้อความแจ้งแผนก"/"แนบไฟล์" วาดด้วย JS จึงให้ js/doc-tabs-dots.js ตัดสินและอัปเดตทุกแท็บขณะกรอก
+// ไม่นับ checkbox ซ่อน (hidden_compat, checkbox ของ other_field) เพราะผู้ใช้มองไม่เห็น
+$docExtraHasData = trim((string)($docExtraOtherField['text_value'] ?? '')) !== '';
+foreach ($docExtraPills as $pill) {
+	if (!empty($pill['checked'])) $docExtraHasData = true;
+}
+foreach ($docExtraTextPairs as $pair) {
+	if (!empty($pair['checkbox_checked']) || trim((string)($pair['text_value'] ?? '')) !== '') $docExtraHasData = true;
+}
+$docTabDotStyle = 'color: #E81A70; margin-right: 6px;';
 ?>
 <div class="so-tabs-container" style="margin-top: 24px;">
 	<?php if ($showDocExtra) { ?>
-		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_doc_extra') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_doc_extra', this)"><span style="color: #E81A70; margin-right: 6px;">●</span>เอกสารเพิ่มเติม</button>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_doc_extra') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_doc_extra', this)"><span class="so-tab-dot" data-tab-dot="tab_doc_extra" aria-hidden="true" style="<?php echo $docTabDotStyle; ?><?php echo $docExtraHasData ? '' : ' display: none;'; ?>">●</span>เอกสารเพิ่มเติม</button>
 	<?php } ?>
 	<?php if ($showDeptComment) { ?>
-		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_dept_comment') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_dept_comment', this)">ข้อความแจ้งแผนก</button>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_dept_comment') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_dept_comment', this)"><span class="so-tab-dot" data-tab-dot="tab_dept_comment" aria-hidden="true" style="<?php echo $docTabDotStyle; ?> display: none;">●</span>ข้อความแจ้งแผนก</button>
 	<?php } ?>
 	<?php if ($showAttachFile) { ?>
-		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_attach_file') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_attach_file', this)">แนบไฟล์</button>
+		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_attach_file') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_attach_file', this)"><span class="so-tab-dot" data-tab-dot="tab_attach_file" aria-hidden="true" style="<?php echo $docTabDotStyle; ?> display: none;">●</span>แนบไฟล์</button>
 	<?php } ?>
 	<?php if ($showRelatedDocs) { ?>
 		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_related_docs') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_related_docs', this)">เอกสารที่เกี่ยวข้อง</button>
@@ -48,10 +60,11 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 		<button type="button" class="so-tab-btn <?php echo ($activeTabId === 'tab_product_checklists') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_product_checklists', this)">ใบตรวจทานสินค้า</button>
 	<?php } ?>
 	<?php if ($showDocumentReturnLog) { ?>
-		<button type="button" class="so-tab-btn so-document-return-tab-btn <?php echo ($activeTabId === 'tab_document_return_log') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_document_return_log', this)">การส่งกลับเอกสาร</button>
+		<?php // จุดแดง (.so-document-return-tab-btn::before ใน css/so-core.css) แสดงเฉพาะเมื่อมีรายการส่งกลับ ?>
+		<button type="button" class="so-tab-btn <?php echo !empty($documentReturnLogRows) ? 'so-document-return-tab-btn ' : ''; ?><?php echo ($activeTabId === 'tab_document_return_log') ? 'active' : ''; ?>" onclick="<?php echo $docOpenFn; ?>('tab_document_return_log', this)">การส่งกลับเอกสาร</button>
 	<?php } ?>
 </div>
-<div class="so-card" style="padding: 24px;">
+<div class="so-card" data-doc-tabs-card style="padding: 24px;">
 
 	<?php if ($showDocExtra) { ?>
 		<!-- TAB 1: เอกสารเพิ่มเติม -->
@@ -320,5 +333,6 @@ if ($showDocumentReturnLog && $activeTabId === null) $activeTabId = 'tab_documen
 		</div>
 	<?php } ?>
 </div>
+<script src="js/doc-tabs-dots.js?v=<?php echo filemtime(__DIR__ . '/../js/doc-tabs-dots.js'); ?>"></script>
 <?php
-unset($docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $productChecklists, $productChecklistRows, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showProductChecklists, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked, $productChecklistRow, $documentReturnLogRow, $attachPrefix, $attachSlots, $attachFirstSlot, $attachBaseUrl, $attachMaxBytes, $attachAllowedExt, $attachAccept, $attachHint, $attachSlot);
+unset($docExtraHasData, $docTabDotStyle, $docOpenFn, $docExtra, $docExtraPills, $docExtraOtherField, $docExtraTextPairs, $docExtraHiddenCompat, $deptComment, $attachFile, $relatedDocs, $productChecklists, $productChecklistRows, $documentReturnLog, $documentReturnLogRows, $showDocExtra, $showDeptComment, $showAttachFile, $showRelatedDocs, $showProductChecklists, $showDocumentReturnLog, $activeTabId, $pill, $pName, $pLabel, $pChecked, $pSpan, $pStyle, $ofTextName, $ofTextValue, $ofCbName, $ofCbId, $ofCbChecked, $hidden, $hName, $hChecked, $pair, $prCbName, $prCbId, $prCbChecked, $prCbLabel, $prTextName, $prTextId, $prTextValue, $dcTechChecked, $productChecklistRow, $documentReturnLogRow, $attachPrefix, $attachSlots, $attachFirstSlot, $attachBaseUrl, $attachMaxBytes, $attachAllowedExt, $attachAccept, $attachHint, $attachSlot);
