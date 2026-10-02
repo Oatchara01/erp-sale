@@ -1776,6 +1776,11 @@ include("head.php"); ?>
 					}
 				}
 
+				// ปุ่มอนุมัติไม่ตรวจ — เอกสารเก่าที่แถวมี SN แต่ยังไม่มีรับประกันต้องอนุมัติได้
+				if (!window.soPendingApproveAction && !productTableValidateWarrantyRows()) {
+					return false;
+				}
+
 				// กรณีที่ 2: ตรวจสอบวงเงินไม่เพียงพอสีส้มก่อนบันทึก
 				if (isCreditOverLimitBlocking()) {
 					return false;
@@ -1846,6 +1851,10 @@ include("head.php"); ?>
 				}
 
 				if (!validateEmailFieldRequired()) {
+					return;
+				}
+
+				if (!productTableValidateWarrantyRows()) {
 					return;
 				}
 
@@ -2619,6 +2628,8 @@ include("head.php"); ?>
 						// if ($_SESSION["department"] == 'วิศวกรรม') {
 						// 	include('product_engineer.php');
 						// } else {
+							// บังคับรับประกันเฉพาะแถวที่มีเลขที่ SN (ต้องเป็นตัวเลขมากกว่า 0)
+							$productTableWarrantyBySn = true;
 							include('product_salehos.php');
 						// }
 						?>

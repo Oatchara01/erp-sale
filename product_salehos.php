@@ -4,6 +4,9 @@
 //   'po' = ใบ PO (register_poawl.php): popup เฉพาะ รับประกัน / CAL / PM(ปี) / หมายเหตุสินค้า ไม่บังคับกรอก
 $productTableContext = (isset($productTableContext) && $productTableContext === 'po') ? 'po' : 'so';
 $productTableIsPo = ($productTableContext === 'po');
+// $productTableWarrantyBySn = true (register_suphos.php): บังคับรับประกันเฉพาะแถวที่มีเลขที่ SN และต้องเป็นตัวเลขมากกว่า 0
+//   ไม่ตั้ง = พฤติกรรมเดิมของใบสั่งขาย: บังคับกรอกรับประกันทุกแถว
+$productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBySn);
 ?>
 <html>
 
@@ -1580,8 +1583,8 @@ $productTableIsPo = ($productTableContext === 'po');
                         '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
                         '</span>';
                 }
-                // ใบ PO ไม่บังคับกรอกรับประกัน จึงไม่แสดงเครื่องหมาย *
-                var requiredMark = productTableContext === 'po' ? '' : '<span class="so-modal-required">*</span>';
+                // แสดงเครื่องหมาย * เฉพาะแถวที่บังคับกรอกรับประกัน (ดู productTableWarrantyRequired)
+                var requiredMark = productTableWarrantyRequired(document.getElementById('product_sn' + rowIndex).value) ? '<span class="so-modal-required">*</span>' : '';
                 warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')' + requiredMark + iconHtml;
             }
 
@@ -1629,9 +1632,9 @@ $productTableIsPo = ($productTableContext === 'po');
         function saveEditModal() {
             var rowIndex = document.getElementById('current_editing_row').value;
 
-            // รับประกันบังคับกรอก (ดอกจันที่ label) ยกเว้นใบ PO — ว่างแล้วขึ้นกรอบแดงและไม่ปิด popup
+            // รับประกันบังคับกรอก (ดอกจันที่ label) ตามกฎของ productTableWarrantyValid — ไม่ผ่านแล้วขึ้นกรอบแดงและไม่ปิด popup
             var warrantyField = document.getElementById('m_warranty');
-            if (productTableContext !== 'po' && warrantyField.value.trim() === '') {
+            if (!productTableWarrantyValid(warrantyField.value, document.getElementById('m_product_sn').value)) {
                 warrantyField.classList.add('so-field-invalid');
                 warrantyField.focus();
                 return;
@@ -1664,7 +1667,7 @@ $productTableIsPo = ($productTableContext === 'po');
             });
 
             document.getElementById('m_warranty').addEventListener('input', function() {
-                if (this.value.trim() !== '') this.classList.remove('so-field-invalid');
+                if (productTableWarrantyValid(this.value, document.getElementById('m_product_sn').value)) this.classList.remove('so-field-invalid');
             });
 
             document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
@@ -1858,6 +1861,41 @@ $productTableIsPo = ($productTableContext === 'po');
         }
 
         var productTableContext = <?php echo json_encode($productTableContext); ?>;
+        var productTableWarrantyBySn = <?php echo json_encode($productTableWarrantyBySn); ?>;
+
+        // ใบ PO ไม่บังคับรับประกัน; หน้าที่เปิด productTableWarrantyBySn บังคับเฉพาะแถวที่มีเลขที่ SN; หน้าอื่นบังคับทุกแถว
+        function productTableWarrantyRequired(sn) {
+            if (productTableContext === 'po') return false;
+            if (productTableWarrantyBySn) return String(sn || '').trim() !== '';
+            return true;
+        }
+
+        // แถวที่มี SN (productTableWarrantyBySn) ต้องเป็นตัวเลขมากกว่า 0 ทศนิยมได้; กรณีบังคับแบบเดิมแค่ไม่ว่างก็ผ่าน
+        function productTableWarrantyValid(warranty, sn) {
+            if (!productTableWarrantyRequired(sn)) return true;
+            var value = String(warranty || '').trim();
+            if (productTableWarrantyBySn) return /^\d*\.?\d+$/.test(value) && parseFloat(value) > 0;
+            return value !== '';
+        }
+
+        // ตรวจรับประกันทุกแถวตอนบันทึกเอกสาร — แถวที่ไม่เคยเปิด popup ไม่ผ่าน saveEditModal จึงต้องตรวจซ้ำที่นี่
+        // ไม่ผ่าน: เปิด popup ของแถวแรกที่ไม่ผ่านพร้อมกรอบแดง คืน false
+        function productTableValidateWarrantyRows() {
+            for (var i = 1; i <= 30; i++) {
+                var row = document.getElementById('product_row_' + i);
+                if (!row || row.style.display === 'none') continue;
+                var productId = document.getElementById('product_id' + i);
+                if (!productId || productId.value.trim() === '') continue;
+                var warranty = document.getElementById('warranty' + i);
+                var sn = document.getElementById('product_sn' + i);
+                if (productTableWarrantyValid(warranty ? warranty.value : '', sn ? sn.value : '')) continue;
+
+                openEditModal(i);
+                document.getElementById('m_warranty').classList.add('so-field-invalid');
+                return false;
+            }
+            return true;
+        }
 
         function productTableHasItems() {
             for (var i = 1; i <= 30; i++) {
