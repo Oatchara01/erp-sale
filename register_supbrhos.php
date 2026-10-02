@@ -926,6 +926,7 @@
 		formData.set('is_draft', '1');
 
 		var isUpdateMode = /Update/.test(defaultHtml);
+		var redirecting = false;
 
 		if (btn) {
 			btn.disabled = true;
@@ -941,14 +942,10 @@
 			})
 			.then(function(data) {
 				if (data && data.success) {
-					return Swal.fire({
-						title: 'Save Draft success',
-						text: 'Ref ID: ' + data.ref_id,
-						icon: 'success',
-						confirmButtonColor: '#612989'
-					}).then(function() {
-						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
-					});
+					// popup สำเร็จแสดงหลังรีโหลดผ่าน ?saved=1 (ดูต้นไฟล์) ล็อกปุ่มค้างไว้กันกดซ้ำระหว่างรอ redirect
+					redirecting = true;
+					window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					return;
 				}
 
 				var message = data && data.message ? data.message : 'Unable to save draft';
@@ -958,7 +955,7 @@
 				return Swal.fire('Error', 'Unable to save draft', 'error');
 			})
 			.finally(function() {
-				if (btn) {
+				if (btn && !redirecting) {
 					btn.disabled = false;
 					btn.innerHTML = defaultHtml;
 				}
@@ -1116,6 +1113,7 @@
 		var formData = new FormData(form);
 		formData.set('is_draft', '1');
 		formData.set('admin_limited_update', '1');
+		var redirecting = false;
 
 		if (btn) {
 			btn.disabled = true;
@@ -1131,14 +1129,10 @@
 			})
 			.then(function(data) {
 				if (data && data.success) {
-					return Swal.fire({
-						title: 'Save Draft success',
-						text: 'Ref ID: ' + data.ref_id,
-						icon: 'success',
-						confirmButtonColor: '#612989'
-					}).then(function() {
-						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
-					});
+					// popup สำเร็จแสดงหลังรีโหลดผ่าน ?saved=1 (ดูต้นไฟล์) ล็อกปุ่มค้างไว้กันกดซ้ำระหว่างรอ redirect
+					redirecting = true;
+					window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					return;
 				}
 
 				var message = data && data.message ? data.message : 'Unable to save draft';
@@ -1148,7 +1142,7 @@
 				return Swal.fire('Error', 'Unable to save draft', 'error');
 			})
 			.finally(function() {
-				if (btn) {
+				if (btn && !redirecting) {
 					btn.disabled = false;
 					btn.innerHTML = defaultHtml;
 				}
