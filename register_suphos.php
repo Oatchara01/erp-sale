@@ -5258,7 +5258,7 @@ include("head.php"); ?>
 				if (!customerName && customerPopupSelected) {
 					customerName = customerPopupSelected.customer_name || customerPopupSelected.bill_name || '';
 				}
-				refreshCreditLimitStatus(selectedCustId, customerName);
+				refreshCreditLimitStatus(selectedCustId, customerName, true);
 
 				closeCustomerPopup();
 			});
@@ -5329,7 +5329,8 @@ include("head.php"); ?>
 
 		// showCreditWarningModal ถ้าเกินวงเงิน/มีหนี้ค้าง — เรียกทั้งตอนเลือกลูกค้าจาก popup
 		// และตอน restore เอกสารที่โหลดมา (ref_id/copy_from) เพื่อให้เช็คทันทีตอนโหลดหน้า
-		function refreshCreditLimitStatus(custId, customerName) {
+		// suppressPopup = true (ตอนเลือกลูกค้า): อัปเดตวงเงินคงเหลือและสถานะปุ่ม Submit ตามปกติ แต่ไม่เด้ง popup
+		function refreshCreditLimitStatus(custId, customerName, suppressPopup) {
 			if (!custId) return;
 
 			fetch('ajax_credit_term_modal.php?bill_id=' + encodeURIComponent(custId), {
@@ -5361,6 +5362,8 @@ include("head.php"); ?>
 						});
 
 						updateSubmitButtonState(status.shouldBlock);
+
+						if (suppressPopup) return;
 
 						// กรณีที่ 1: มียอดหนี้คงค้างจริง (totalOutstanding > 0) เตือนสีแดง
 						if (status.hasDebt) {
@@ -7138,7 +7141,7 @@ include("head.php"); ?>
 					<label class="clear-loan-search-label" for="clearLoanSearch">ค้นหา</label>
 					<div class="clear-loan-search">
 						<i class="fas fa-search" aria-hidden="true"></i>
-						<input type="text" id="clearLoanSearch" placeholder="ค้นหาจากเลขที่ใบจอง/รหัสสมาชิก/ชื่อลูกค้า/รหัสสินค้า/ชื่อสินค้า">
+						<input type="text" id="clearLoanSearch" placeholder="ค้นหาจากเลขที่เอกสาร/ชื่อลูกค้า/รหัสสินค้า/ชื่อสินค้า">
 					</div>
 				</div>
 			</div>
