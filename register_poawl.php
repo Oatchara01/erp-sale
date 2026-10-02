@@ -24,6 +24,7 @@ $poCopyFromRefId = ($poRequestedRefId === '' && isset($_GET['copy_from']) && !is
 <link rel="stylesheet" href="css/register-poawl.css?v=<?php echo filemtime(__DIR__ . '/css/register-poawl.css'); ?>">
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <?php
 date_default_timezone_set("Asia/Bangkok");

@@ -87,6 +87,7 @@ if ($savedRefId !== "") {
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, credit-term modal, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -167,7 +168,7 @@ if ($savedRefId !== "") {
 		</div>
 	<?php } ?>
 
-	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return lockSubmitForm(this);">
+	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onsubmit="return lockSubmitForm(this);">
 		<?php if ($savedJong !== null && !$isCopy) { ?>
 			<input type="hidden" name="ref_id" value="<?php echo htmlspecialchars($savedJong['ref_id'], ENT_QUOTES, 'UTF-8'); ?>">
 		<?php } else { ?>
@@ -192,7 +193,7 @@ if ($savedRefId !== "") {
 				<div class="so-field-group">
 					<label class="so-label">ประเภท <span style="color:red;">*</span></label>
 					<div class="so-select-wrapper">
-						<select name="type_jong" id="type_jong" class="so-select" required>
+						<select name="type_jong" id="type_jong" class="so-select">
 							<option value="">**Please Select**</option>
 							<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
 							<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
@@ -209,7 +210,7 @@ if ($savedRefId !== "") {
 
 					if ($_SESSION['code'] == 'SS1') {
 					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
+						<select name="sale_code" id="sale_code" class="so-select">
 							<option value="">**Please Select**</option>
 							<?php
 							$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
@@ -225,7 +226,7 @@ if ($savedRefId !== "") {
 					<?php
 					} else if ($_SESSION['code'] == 'SS2') {
 					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
+						<select name="sale_code" id="sale_code" class="so-select">
 							<option value="">**Please Select**</option>
 							<?php
 							$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
@@ -241,7 +242,7 @@ if ($savedRefId !== "") {
 					<?php
 					} else if ($_SESSION['code'] == 'SS5') {
 					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
+						<select name="sale_code" id="sale_code" class="so-select">
 							<option value="">**Please Select**</option>
 							<?php
 							$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
@@ -257,7 +258,7 @@ if ($savedRefId !== "") {
 					<?php
 					} else if ($_SESSION['code'] == 'SUP_EN') {
 					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
+						<select name="sale_code" id="sale_code" class="so-select">
 							<option value="">**Please Select**</option>
 							<?php
 							$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
@@ -273,7 +274,7 @@ if ($savedRefId !== "") {
 					<?php
 					} else {
 					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
+						<select name="sale_code" id="sale_code" class="so-select">
 							<option value="">**Please Select**</option>
 							<?php
 							$strSQL5 = "SELECT * FROM tb_team_all ORDER BY sale_code ASC";
@@ -304,7 +305,7 @@ if ($savedRefId !== "") {
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
-					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
+					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>">
 				</div>
 				<?php $adminDocNo = ($savedJong !== null && !$isCopy) ? trim((string)$savedJong['iv_no']) : ''; ?>
 				<?php if ($adminDocNo !== '') { ?>
@@ -399,7 +400,7 @@ if ($savedRefId !== "") {
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="address_send">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');" role="button" tabindex="0" aria-label="ล้างที่อยู่ลูกค้า"></i>
 						</div>
 					</div>
@@ -1313,35 +1314,20 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 		<?php } ?>
 	});
 
+	// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่อาจเพิ่มทีหลัง
+	var SO_APPROVE_REQUIRED_FIELDS = ['type_jong', 'sale_code', 'date_receive', 'address_send'];
+
 	function fncSubmit(form) {
 		if (window.soSkipValidation) {
 			window.soSkipValidation = false;
 			return true;
 		}
-		var requiredFields = [{
-				id: 'type_jong',
-				label: 'ประเภท'
-			},
-			{
-				id: 'sale_code',
-				label: 'แผนก/เขตการขาย'
-			},
-			{
-				id: 'date_receive',
-				label: 'วันที่ต้องการสินค้า'
-			},
-			{
-				id: 'address_send',
-				label: 'ที่อยู่ลูกค้า'
-			}
-		];
 
-		for (var i = 0; i < requiredFields.length; i++) {
-			var field = document.getElementById(requiredFields[i].id);
-			if (field && field.hasAttribute('required') && !field.value.trim()) {
-				Swal.fire('แจ้งเตือน', 'กรุณากรอก "' + requiredFields[i].label + '" ให้ครบถ้วน', 'warning');
-				return false;
-			}
+		var soRequiredOpts = window.soPendingApproveAction ? {
+			only: SO_APPROVE_REQUIRED_FIELDS
+		} : null;
+		if (!soValidateRequired(document.forms['frmMain'], soRequiredOpts)) {
+			return false;
 		}
 
 		if (!productRows.length) {
@@ -1400,6 +1386,11 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 	function saveDraft() {
 		var form = document.forms['frmMain'];
 		if (!form) return;
+
+		// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+		if (!soValidateRequired(form)) {
+			return;
+		}
 
 		var btn = form.querySelector('[name="save_draft"]');
 		var defaultHtml = btn ? btn.innerHTML : '';

@@ -283,7 +283,9 @@ $sprRowsToJs = function (array $rows) {
 		sprEditingRow = button.closest('tr');
 		if (!sprEditingRow) return;
 
-		document.getElementById('spr_modal_warranty_year').value = (sprEditingRow.querySelector('.spr-f-warranty_year') || {}).value || '';
+		var warrantyField = document.getElementById('spr_modal_warranty_year');
+		warrantyField.value = (sprEditingRow.querySelector('.spr-f-warranty_year') || {}).value || '';
+		soClearFieldInvalid(warrantyField);
 		document.getElementById('spr_modal_remark').value = (sprEditingRow.querySelector('.spr-f-remark') || {}).value || '';
 		document.getElementById('spr_modal_clear_ivno').value = (sprEditingRow.querySelector('.spr-f-clear_ivno') || {}).value || '';
 
@@ -301,7 +303,13 @@ $sprRowsToJs = function (array $rows) {
 		if (sprEditingRow) {
 			var warrantyInput = document.getElementById('spr_modal_warranty_year');
 			var warrantyYear = String(warrantyInput.value || '').trim();
-			if (warrantyYear === '' || !/^\d+(?:\.\d+)?$/.test(warrantyYear)) {
+			if (warrantyYear === '') {
+				warrantyInput.classList.add('so-field-invalid');
+				warrantyInput.focus();
+				return;
+			}
+			if (!/^\d+(?:\.\d+)?$/.test(warrantyYear)) {
+				soMarkFieldInvalid(warrantyInput);
 				sprNotify('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุจำนวนปีรับประกันเป็นตัวเลข', 'warning');
 				warrantyInput.focus();
 				return;

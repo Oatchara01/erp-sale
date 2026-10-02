@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <script src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 <body>
@@ -211,7 +212,7 @@
 
 
     <!--action="register_office1.php"-->
-    <form action='register_credinot1.php' method="post" name="frmMain" enctype="multipart/form-data">
+    <form action='register_credinot1.php' method="post" name="frmMain" enctype="multipart/form-data" novalidate onsubmit="return fncSubmit();">
         <div class="w3-container register-so-main" style="max-width: 1096px; margin: 0 auto;"><!-- main div -->
 
             <!-- Header Section -->
@@ -495,7 +496,7 @@
                         <div class="so-field-group">
                             <label class="so-label" for="date_receive">วันที่<span style="color:#D32F2F;">*</span></label>
                             <div class="so-input-wrapper calendar-wrapper">
-                                <input type="date" name="date_receive" id="date_receive" value="<?php echo htmlspecialchars($rs['date_receive'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input" required>
+                                <input type="date" name="date_receive" id="date_receive" value="<?php echo htmlspecialchars($rs['date_receive'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
                             </div>
                         </div>
                         <?php } ?>
@@ -523,7 +524,7 @@
                         <div class="so-field-group">
                             <label class="so-label" for="date_credit">วันที่ลดหนี้<span style="color:#D32F2F;">*</span></label>
                             <div class="so-input-wrapper calendar-wrapper">
-                                <input type="date" name="date_credit" id="date_credit" value="<?php echo htmlspecialchars(!empty($rs['date_credit']) ? $rs['date_credit'] : $today, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" required>
+                                <input type="date" name="date_credit" id="date_credit" value="<?php echo htmlspecialchars(!empty($rs['date_credit']) ? $rs['date_credit'] : $today, ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
                             </div>
                         </div>
 
@@ -546,7 +547,7 @@
                             <label class="so-label" for="type_return">วิธีชำระเงินคืน<span style="color:#D32F2F;">*</span></label>
                             <div class="so-select-wrapper">
                                 <?php $typeReturnVal = $rs['type_return'] ?? ''; ?>
-                                <select class="so-select" name="type_return" id="type_return" required>
+                                <select class="so-select" name="type_return" id="type_return">
                                     <option value="">เลือกวิธีชำระเงินคืน</option>
                                     <option value="1" <?php echo ($typeReturnVal === '1') ? 'selected' : ''; ?>>เงินสด</option>
                                     <option value="2" <?php echo ($typeReturnVal === '2') ? 'selected' : ''; ?>>โอนเงินเข้าบัญชี</option>
@@ -1025,11 +1026,11 @@
                         <?php if (!$creditCanShowApproveBar || $creditIsDraftDoc): ?>
                             <?php /* ใบปิดแล้วไม่มีปุ่มอนุมัติ ; ใบ Draft ส่งเข้าคิวด้วยปุ่ม Submit ด้านล่าง (send_sup ไม่เปลี่ยน status_doc) */ ?>
                         <?php elseif ($creditBucket === 0): ?>
-                            <button type="submit" name="approve_action" value="send_sup" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                            <button type="submit" name="approve_action" value="send_sup" onclick="window.creditPendingApprove = true;" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
                                 <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php else: ?>
-                            <button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                            <button type="submit" name="approve_action" value="approve" onclick="window.creditPendingApprove = true;" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
                                 <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php endif; ?>
@@ -2279,14 +2280,24 @@
             modal.setAttribute('aria-hidden', 'true');
         }
 
+        // ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่เคยตรวจผ่าน attribute required มาแต่เดิม
+        var CREDIT_APPROVE_REQUIRED_FIELDS = ['type_return', 'date_receive', 'date_credit'];
+
+        // ปุ่ม Submit / อนุมัติ เป็น submit button จริง จึงต้องคืน true ให้ browser ส่งฟอร์มเองเพื่อคง name/value ของปุ่ม
+        // ปุ่มอนุมัติตั้งธง creditPendingApprove ตอนคลิก (ไม่ใช้ event.submitter เพราะ Safari เก่าไม่รองรับ)
+        function fncSubmit() {
+            var requiredOpts = window.creditPendingApprove ? {
+                only: CREDIT_APPROVE_REQUIRED_FIELDS
+            } : null;
+            window.creditPendingApprove = false;
+            return soValidateRequired(document.forms['frmMain'], requiredOpts);
+        }
+
         function saveDraftCredit() {
             var form = document.forms['frmMain'];
             if (!form) return;
 
-            // Save Draft (สร้างใหม่ หรือใบที่ยังเป็น Draft) บันทึกข้อมูลไม่ครบได้เหมือน register_suphos.php
-            // ส่วน Update ของเอกสารที่ส่งเข้าคิวอนุมัติไปแล้วยังต้องกรอก field บังคับให้ครบ
-            var isDraftSave = <?php echo json_encode(!$creditIsEditMode || $creditIsDraftDoc); ?>;
-            if (!isDraftSave && typeof form.reportValidity === 'function' && !form.reportValidity()) {
+            if (!soValidateRequired(form)) {
                 return;
             }
 

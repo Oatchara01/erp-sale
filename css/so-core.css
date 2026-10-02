@@ -564,6 +564,25 @@ body {
 	outline: none;
 }
 
+/* ===== ฟิลด์บังคับที่ยังไม่กรอก (js/so-required-fields.js ใส่/ถอด class นี้) =====
+ * !important: input หลายตัวมี inline border:none/background-color
+ * #del_info: register-suphos.css ตั้ง border/background ของแท็บจัดส่งด้วย id + !important จึงต้อง specificity สูงกว่า
+ */
+.so-input.so-field-invalid,
+.so-select.so-field-invalid,
+.so-textarea.so-field-invalid,
+#del_info .so-input.so-field-invalid,
+#del_info .so-select.so-field-invalid {
+	border: 1px solid #DC3545 !important;
+	background-color: #FEECEB !important;
+}
+
+.so-input.so-field-invalid:focus,
+.so-select.so-field-invalid:focus,
+.so-textarea.so-field-invalid:focus {
+	box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+}
+
 .so-select {
 	padding-right: 32px;
 	cursor: pointer;

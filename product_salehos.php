@@ -794,6 +794,14 @@ $productTableIsPo = ($productTableContext === 'po');
             background: #F8F7FB;
         }
 
+        /* ฟิลด์บังคับใน popup ที่ยังไม่กรอก (saveEditModal) — สีเดียวกับ .so-field-invalid ใน css/so-core.css */
+        .so-modal-field input[type="text"].so-field-invalid,
+        .so-modal-field input[type="text"].so-field-invalid:focus {
+            border-color: #DC3545;
+            box-shadow: none;
+            background: #FEECEB;
+        }
+
         .so-modal-clear {
             position: absolute;
             right: 14px;
@@ -1585,6 +1593,7 @@ $productTableIsPo = ($productTableContext === 'po');
             document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
             document.getElementById('m_product_sn').value = document.getElementById('product_sn' + rowIndex).value;
 
+            document.getElementById('m_warranty').classList.remove('so-field-invalid');
             syncModalClearButtons();
             productEditModalReturnFocus = document.activeElement;
             document.getElementById('productEditModal').style.display = 'flex';
@@ -1620,6 +1629,14 @@ $productTableIsPo = ($productTableContext === 'po');
         function saveEditModal() {
             var rowIndex = document.getElementById('current_editing_row').value;
 
+            // รับประกันบังคับกรอก (ดอกจันที่ label) ยกเว้นใบ PO — ว่างแล้วขึ้นกรอบแดงและไม่ปิด popup
+            var warrantyField = document.getElementById('m_warranty');
+            if (productTableContext !== 'po' && warrantyField.value.trim() === '') {
+                warrantyField.classList.add('so-field-invalid');
+                warrantyField.focus();
+                return;
+            }
+
             // Save data back to hidden inputs
             document.getElementById('warranty' + rowIndex).value = document.getElementById('m_warranty').value;
             document.getElementById('cal' + rowIndex).value = document.getElementById('m_cal').value;
@@ -1644,6 +1661,10 @@ $productTableIsPo = ($productTableContext === 'po');
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('[data-clearable="true"]').forEach(function(input) {
                 input.addEventListener('input', syncModalClearButtons);
+            });
+
+            document.getElementById('m_warranty').addEventListener('input', function() {
+                if (this.value.trim() !== '') this.classList.remove('so-field-invalid');
             });
 
             document.querySelectorAll('.so-modal-clear').forEach(function(btn) {

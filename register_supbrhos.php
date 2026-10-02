@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrhos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrhos.css'); ?>">
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
@@ -899,6 +900,8 @@
 	}
 
 	function brSaveDraft() {
+		// กดอนุมัติแล้วไม่ผ่าน validation ค่า approve_action จะค้างอยู่ ถ้าไม่ล้างก่อน Update จะกลายเป็นอนุมัติเอกสาร
+		brClearApproveAction();
 		brWriteObjectiveDesHidden();
 		if (typeof syncDeptComments === 'function') {
 			syncDeptComments();
@@ -907,12 +910,13 @@
 			syncReturnTimeRangeFromTime();
 		}
 
-		if (!validateDeliveryTimeRangeChoice()) {
+		var form = document.forms['frmMain'];
+		if (!form) {
 			return;
 		}
 
-		var form = document.forms['frmMain'];
-		if (!form) {
+		// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+		if (!soValidateRequired(form)) {
 			return;
 		}
 
@@ -1605,7 +1609,7 @@ $adminInfoTab = [
 <?php
 // create mode -> INSERT handler, edit mode -> UPDATE handler (pattern เดียวกับ register_suphos.php)
 ?>
-<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 
 		<div class="so-header-container">
@@ -1824,11 +1828,25 @@ $adminInfoTab = [
 					});
 			}
 
+			// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
+			var BR_APPROVE_REQUIRED_FIELDS = [
+				'transport_company', 'start_time', 'customer_name', 'customer_tel', 'province_name', 'address_name', 'address_send',
+				'returns_date', 'return_time_range', 'returns_time', 'returns_name', 'returns_contact', 'returns_address'
+			];
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
 				if (brSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				brWriteObjectiveDesHidden();
+
+				// อนุมัติเอกสารเก่าที่ยังไม่มีค่าฟิลด์บังคับรุ่นใหม่ (ช่วงเวลา, ลูกค้า, จัดส่งวันที่ ฯลฯ) ต้องทำได้
+				// จึงตรวจครบทุกดอกจันเฉพาะปุ่มบันทึกของผู้สร้าง ส่วนปุ่มอนุมัติตรวจเท่าชุดเดิม
+				var brApproveActionField = document.getElementById('br_approve_action');
+				var brRequiredOpts = (brApproveActionField && brApproveActionField.value) ? {
+					only: BR_APPROVE_REQUIRED_FIELDS
+				} : null;
+				if (!soValidateRequired(document.forms['frmMain'], brRequiredOpts)) {
 					return false;
 				}
 
@@ -1840,82 +1858,9 @@ $adminInfoTab = [
 					return false;
 				}
 
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var brApproveActionField = document.getElementById('br_approve_action');
-				if (!(brApproveActionField && brApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				brWriteObjectiveDesHidden();
-
-				if (document.frmMain.start_time.value == "") {
-
-					alert('กรุณาใส่เวลาส่ง');
-					brFocusField(document.frmMain.start_time);
-					return false;
-				}
-
-				if (document.frmMain.customer_name.value == "") {
-					alert('กรุณาใส่ชื่อลูกค้า');
-					brFocusField(document.frmMain.customer_name);
-					return false;
-				}
-
-				if (document.frmMain.customer_tel.value == "") {
-					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					brFocusField(document.frmMain.customer_tel);
-					return false;
-				}
-				if (document.frmMain.address_name.value == "") {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					brFocusField(document.frmMain.address_name);
-					return false;
-				}
-
-				if (document.frmMain.address_send.value == "") {
-					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					brFocusField(document.frmMain.address_send);
-					return false;
-				}
-				if (document.frmMain.returns_date.value == "") {
-					alert('กรุณาใส่วันที่รับคืนสินค้า');
-					brFocusField(document.frmMain.returns_date);
-					return false;
-				}
-				if (document.frmMain.return_time_range.value == "") {
-					alert('กรุณาเลือกช่วงเวลารับคืนสินค้า');
-					brFocusField(document.frmMain.return_time_range);
-					return false;
-				}
-				if (document.frmMain.returns_time.value == "") {
-					alert('กรุณาใส่เวลารับคืนสินค้า');
-					brFocusField(document.frmMain.returns_time);
-					return false;
-				}
 				if (document.frmMain.returns_date_to.value != "" && document.frmMain.returns_date_to.value < document.frmMain.returns_date.value) {
 					alert('ถึงวันที่ต้องไม่น้อยกว่าวันที่รับคืน');
 					brFocusField(document.frmMain.returns_date_to);
-					return false;
-				}
-				if (document.frmMain.returns_name.value == "") {
-					alert('กรุณาใส่ชื่อผู้ติดต่อในการรับคืนสินค้า');
-					brFocusField(document.frmMain.returns_name);
-					return false;
-				}
-				if (document.frmMain.returns_contact.value == "") {
-					alert('กรุณาใส่เบอร์โทรศัพท์ติดต่อในการรับคืนสินค้า');
-					brFocusField(document.frmMain.returns_contact);
-					return false;
-				}
-				if (document.frmMain.returns_address.value == "") {
-					alert('กรุณาใส่รายละเอียดสถานที่รับคืนสินค้า');
-					brFocusField(document.frmMain.returns_address);
-					return false;
-				}
-
-				if (document.frmMain.province_name.value == "") {
-					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					brFocusField(document.frmMain.province_name);
 					return false;
 				}
 
@@ -1994,7 +1939,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="type_breng">ประเภท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
-							<select name="type_breng" id="type_breng" class="so-select" required>
+							<select name="type_breng" id="type_breng" class="so-select">
 								<option value="1" selected>ใบยืมลูกค้า (BRNP)</option>
 								<option value="2">ใบยืมช่าง (BRES)</option>
 							</select>
@@ -2006,7 +1951,7 @@ $adminInfoTab = [
 							<?php
 							if ($_SESSION['code'] == 'SS1') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
@@ -2021,7 +1966,7 @@ $adminInfoTab = [
 							<?php
 							} else if ($_SESSION['code'] == 'SS2') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
@@ -2036,7 +1981,7 @@ $adminInfoTab = [
 							<?php
 							} else if ($_SESSION['code'] == 'SS3') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM  tb_team_ss3  ORDER BY sale_code ASC";
@@ -2051,7 +1996,7 @@ $adminInfoTab = [
 							<?php
 							} else if ($_SESSION['code'] == 'SS5') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM  tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
@@ -2066,7 +2011,7 @@ $adminInfoTab = [
 							<?php
 							} else if ($_SESSION['code'] == 'MK2') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
@@ -2081,7 +2026,7 @@ $adminInfoTab = [
 							<?php
 							} else if ($_SESSION['code'] == 'SUP_EN') {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
@@ -2096,7 +2041,7 @@ $adminInfoTab = [
 							<?php
 							} else {
 							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
+								<select name="sale_code" id="sale_code" class="so-select">
 									<option value="">**Please Select**</option>
 									<?php
 									$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
@@ -2124,7 +2069,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="date_br">วันที่ <span style="color:red;">*</span></label>
 						<div class="calendar-wrapper">
-							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" required onchange="brUpdateReturnDate();">
+							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" onchange="brUpdateReturnDate();">
 						</div>
 					</div>
 					<div class="so-field-group">
@@ -2166,7 +2111,7 @@ $adminInfoTab = [
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="customer">ชื่อลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 						</div>
 					</div>
@@ -2233,7 +2178,7 @@ $adminInfoTab = [
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="address">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="address" id="address" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+							<input type="text" name="address" id="address" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 						</div>
 					</div>
@@ -2259,7 +2204,7 @@ $adminInfoTab = [
 				<div class="so-field-group">
 					<label class="so-label" for="objective">วัตถุประสงค์ในการยืม <span style="color:red;">*</span></label>
 					<div class="so-select-wrapper">
-						<select name="objective" id="objective" class="so-select" required onchange="brSyncObjectiveDes();">
+						<select name="objective" id="objective" class="so-select" onchange="brSyncObjectiveDes();">
 							<option value="">เลือกวัตถุประสงค์</option>
 							<?php
 							$strSQLObjective = "SELECT objective_id, objective_name, need_des, des_label FROM tb_objective WHERE close_ckk = '0' ORDER BY number ASC";
@@ -2484,7 +2429,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="customer_name">ชื่อผู้ติดต่อ <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input name="customer_name" class="so-input" type='text' id="customer_name">
+							<input name="customer_name" class="so-input" type='text' id="customer_name" placeholder="ใส่ชื่อผู้ติดต่อ">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
@@ -2515,7 +2460,7 @@ $adminInfoTab = [
 				<div class="so-field-group" style="margin-top: 16px;">
 					<label class="so-label" for="address_name">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
-						<input class="so-input" type="text" name="address_name" id="address_name">
+						<input class="so-input" type="text" name="address_name" id="address_name" placeholder="ใส่ที่อยู่ส่งสินค้า">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value=''; clearShippingAddressParts();" aria-label="ล้างค่า"></button>
 					</div>
 					<?php
@@ -2532,14 +2477,14 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="address_send">สถานที่ติดตั้งเครื่อง <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input class="so-input" type="text" name="address_send" id="address_send">
+							<input class="so-input" type="text" name="address_send" id="address_send" placeholder="ใส่ที่ติดตั้งเครื่อง">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="location_link">Location Link</label>
 						<div class="so-input-wrapper">
-							<input name="location_link" type='text' id="location_link" class="so-input">
+							<input name="location_link" type='text' id="location_link" class="so-input" placeholder="วางลิงก์ Google Maps หรือพิกัด">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>

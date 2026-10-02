@@ -691,6 +691,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 </script>
 <script src="js/doc-tabs-attach.js?v=<?php echo $assetVersion('js/doc-tabs-attach.js'); ?>"></script>
 <script src="js/delivery-transport.js?v=<?php echo $assetVersion('js/delivery-transport.js'); ?>"></script>
+<script src="js/so-required-fields.js?v=<?php echo $assetVersion('js/so-required-fields.js'); ?>"></script>
 <script src="js/row-drag.js?v=<?php echo $assetVersion('js/row-drag.js'); ?>"></script>
 <script src="js/register-supsmp.js?v=<?php echo $assetVersion('js/register-supsmp.js'); ?>"></script>
 <?php if ($smpReadOnly) { ?>

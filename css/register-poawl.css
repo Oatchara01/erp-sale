@@ -224,6 +224,12 @@
 	outline-offset: 2px;
 }
 
+/* ยังไม่เลือกลูกค้า (ดอกจันอยู่บนปุ่ม ไม่ใช่ช่องกรอก) — สีเดียวกับ .so-field-invalid ใน css/so-core.css */
+.po-page .btn-add-customer-pill.so-field-invalid {
+	border: 1px solid #DC3545 !important;
+	background-color: #FEECEB !important;
+}
+
 /* แท็บ "แนบไฟล์" / "การส่งกลับเอกสาร" เหนือการ์ด 5 — คงขนาดตามเนื้อหาและโค้งมุมบนทั้งสองข้างทุกความกว้าง
    (register-suphos.css ยืดแท็บเต็มแถว/โค้งทุกมุมใน @container 860px และ @media 768px) */
 .po-page .po-attach-tabs {

@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-suprental.css?v=<?php echo filemtime(__DIR__ . '/css/register-suprental.css'); ?>">
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
@@ -779,7 +780,7 @@
 	?>
 
 	<!--action="register_office1.php"-->
-	<form action="<?php echo $rentalIsEditMode ? 'register_suprental_edit1.php' : 'register_suprental1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action="<?php echo $rentalIsEditMode ? 'register_suprental_edit1.php' : 'register_suprental1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
 			var rtSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
@@ -818,11 +819,46 @@
 				return rtForm;
 			}
 
+			// ฟิลด์บังคับ (name/id) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
+			// (แผนก/เขตการขาย, จัดส่งวันที่, จัดส่งตั้งแต่เวลา, ช่วงเวลา) ไม่งั้นเอกสารเก่าที่ค้างอนุมัติจะเดินต่อไม่ได้
+			var RT_APPROVE_REQUIRED_FIELDS = [
+				'start_promis', 'count_m', 'rental_name', 'rental_tel', 'rental_addr_detail', 'rental_province',
+				'rental_district', 'rental_zipcode', 'customer_name', 'customer_tel', 'province_name', 'address_send',
+				'address_merged_ui', 'bank_name', 'bank_no', 'accbank_name', 'transport_company'
+			];
+
+			// แนบไฟล์ Book Bank ใช้ตัวตรวจกลางไม่ได้: เป็น file input ที่ซ่อนอยู่ในกล่อง .so-file-picker และ edit mode มีไฟล์เดิมที่ input มองไม่เห็น
+			// กรอบแดงขึ้นที่กล่อง (css/register-suprental.css) หายเองเมื่อเลือกไฟล์ (soOnFieldEdited ฟัง change)
+			function rtValidateBankImg() {
+				var bankImgInput = document.frmMain['bank_img'];
+				if (!bankImgInput) return true;
+				soClearFieldInvalid(bankImgInput);
+				var bankImgExistingInput = document.frmMain['bank_img_existing'];
+				var bankImgHasExisting = bankImgExistingInput && bankImgExistingInput.value.trim() !== '';
+				if (bankImgHasExisting || (bankImgInput.files && bankImgInput.files.length > 0)) return true;
+				soMarkFieldInvalid(bankImgInput);
+				return false;
+			}
+
+			// ตรวจดอกจันทั้งหมดรวมไฟล์ Book Bank (รันทั้งสองเพื่อให้กรอบแดงขึ้นพร้อมกัน) แล้วเปิดแท็บ/เลื่อนไปที่ไฟล์ถ้าตัวอื่นผ่านหมด
+			function rtValidateRequiredFields(requiredOpts) {
+				var mainOk = soValidateRequired(document.forms['frmMain'], requiredOpts);
+				var bankImgOk = rtValidateBankImg();
+				if (mainOk && !bankImgOk) soRevealField(document.frmMain['bank_img']);
+				return mainOk && bankImgOk;
+			}
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
 				if (rtSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				// อนุมัติเอกสารเก่าที่ยังไม่มีค่าฟิลด์บังคับรุ่นใหม่ต้องทำได้ จึงตรวจครบทุกดอกจันเฉพาะปุ่มบันทึกของผู้สร้าง
+				// ส่วนปุ่มอนุมัติตรวจเท่าชุดเดิม (ไฟล์ Book Bank ตรวจทั้งสองกรณีเหมือนเดิม)
+				var rtApproveActionField = document.getElementById('rt_approve_action');
+				var rtRequiredOpts = (rtApproveActionField && rtApproveActionField.value) ? {
+					only: RT_APPROVE_REQUIRED_FIELDS
+				} : null;
+				if (!rtValidateRequiredFields(rtRequiredOpts)) {
 					return false;
 				}
 
@@ -831,56 +867,6 @@
 				}
 
 				if (!validateDeliveryTimeRange()) {
-					return false;
-				}
-
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var rtApproveActionField = document.getElementById('rt_approve_action');
-				if (!(rtApproveActionField && rtApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				var rtRequiredFields = [
-					['start_promis', 'กรุณาระบุวันเริ่มสัญญา'],
-					['count_m', 'กรุณาระบุระยะเวลาเช่า'],
-					['rental_name', 'กรุณาใส่ชื่อผู้เช่า'],
-					['rental_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้เช่า'],
-					['rental_addr_detail', 'กรุณาใส่ที่อยู่ผู้เช่า'],
-					['rental_province', 'กรุณาเลือกจังหวัดผู้เช่า'],
-					['rental_district', 'กรุณาเลือกเขต/อำเภอผู้เช่า'],
-					['rental_zipcode', 'กรุณาใส่รหัสไปรษณีย์ผู้เช่า'],
-					['customer_name', 'กรุณาใส่ชื่อผู้ติดต่อ'],
-					['customer_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้ติดต่อ'],
-					['province_name', 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง'],
-					['address_send', 'กรุณาใส่สถานที่ติดตั้งเครื่อง'],
-					['bank_name', 'กรุณาเลือกวิธีชำระเงินคืน'],
-					['bank_no', 'กรุณาใส่เบอร์โทรศัพท์/เลขที่บัญชี'],
-					['accbank_name', 'กรุณาใส่ชื่อบัญชี']
-				];
-
-				for (var i = 0; i < rtRequiredFields.length; i++) {
-					var fieldName = rtRequiredFields[i][0];
-					var field = document.frmMain[fieldName];
-					if (field && String(field.value).trim() === '') {
-						alert(rtRequiredFields[i][1]);
-						rtFocusField(field);
-						return false;
-					}
-				}
-
-				var addressMergedInput = document.getElementById('address_merged_ui');
-				if (addressMergedInput && addressMergedInput.value.trim() === '') {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					rtFocusField(addressMergedInput);
-					return false;
-				}
-
-				var bankImgInput = document.frmMain['bank_img'];
-				var bankImgExistingInput = document.frmMain['bank_img_existing'];
-				var bankImgHasExisting = bankImgExistingInput && bankImgExistingInput.value.trim() !== '';
-				if (bankImgInput && !bankImgHasExisting && (!bankImgInput.files || bankImgInput.files.length === 0)) {
-					alert('กรุณาแนบไฟล์รูป Book Bank');
-					rtFocusField(bankImgInput);
 					return false;
 				}
 
@@ -902,10 +888,11 @@
 			// บันทึกร่าง: AJAX POST is_draft=1 ไปยัง register_suprental_draft1.php แล้ว redirect
 			// กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ — พอร์ตจาก register_supchange.php: chgSaveDraft
 			function rtSaveDraft() {
-				if (!validateDeliveryTimeRangeChoice()) return;
-
 				var form = document.forms['frmMain'];
 				if (!form) return;
+
+				// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+				if (!rtValidateRequiredFields(null)) return;
 
 				var btn = form.querySelector('[name="save_draft"]');
 				var defaultHtml = btn ? btn.innerHTML : '';
@@ -1178,12 +1165,12 @@
 							</div>
 
 							<div class="so-field-group">
-								<label class="so-label">แผนก/เขตการขาย</label>
+								<label class="so-label" for="sale_code">แผนก/เขตการขาย<span style="color: #dc3545;">*</span></label>
 								<div class="so-select-wrapper">
 									<?php
 									if ($_SESSION['code'] == 'SS1') {
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 
@@ -1200,7 +1187,7 @@
 									} else 	if ($_SESSION['code'] == 'SS2') {
 
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 
@@ -1218,7 +1205,7 @@
 									} else 	if ($_SESSION['code'] == 'SS3') {
 
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 
@@ -1235,7 +1222,7 @@
 									} else 	if ($_SESSION['code'] == 'MK2') {
 
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 
@@ -1254,7 +1241,7 @@
 									} else 	if ($_SESSION['code'] == 'SUP_EN') {
 
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 
@@ -1272,7 +1259,7 @@
 									<?php
 									} else {
 									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 
 											<?php
@@ -1909,7 +1896,7 @@
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="address_merged_ui">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" class="so-input" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" required oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
+									<input type="text" class="so-input" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_merged_ui').value=''; document.getElementById('address_1').value=''; document.getElementById('address_name').value='';" aria-label="ล้างค่า"></button>
 								</div>
 								<input type="hidden" name="address_1" id="address_1">
@@ -2121,7 +2108,7 @@
 										'ธนาคารอิสลามแห่งประเทศไทย'
 									];
 									?>
-									<select name="bank_name" id="bank_name" class="so-select" required>
+									<select name="bank_name" id="bank_name" class="so-select">
 										<option value="">เลือกวิธีชำระเงินคืน / ธนาคาร</option>
 										<?php foreach ($rentalBankNames as $bName) { ?>
 											<option value="<?php echo htmlspecialchars($bName, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($bName, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -2134,7 +2121,7 @@
 							<div class="so-field-group">
 								<label class="so-label" for="bank_no">เบอร์โทรศัพท์ / เลขที่บัญชี <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="bank_no" id="bank_no" class="so-input" placeholder="ใส่เฉพาะตัวเลข" required>
+									<input type="text" name="bank_no" id="bank_no" class="so-input" placeholder="ใส่เฉพาะตัวเลข">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('bank_no').value='';" aria-label="ล้างเลขที่บัญชี"></button>
 								</div>
 							</div>
@@ -2143,7 +2130,7 @@
 							<div class="so-field-group">
 								<label class="so-label" for="accbank_name">ชื่อบัญชี <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="accbank_name" id="accbank_name" class="so-input" placeholder="กรอกชื่อบัญชี" required>
+									<input type="text" name="accbank_name" id="accbank_name" class="so-input" placeholder="กรอกชื่อบัญชี">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('accbank_name').value='';" aria-label="ล้างชื่อบัญชี"></button>
 								</div>
 							</div>
@@ -2152,11 +2139,11 @@
 						<!-- แถวที่ 2: แนบไฟล์ Book Bank -->
 						<div class="so-grid-3" style="margin-top: 16px;">
 							<div class="so-field-group">
-								<label class="so-label" for="bank_img">แนบไฟล์รูป Book Bank <span style="color:red;">*</span></label>
+								<label class="so-label">แนบไฟล์รูป Book Bank <span style="color:red;">*</span></label>
 								<label class="so-file-picker" for="bank_img">
 									<span class="so-file-picker-text" id="bank_img_text"><?php echo ($rentalIsEditMode && !empty($savedRental['bank_img'])) ? 'ไฟล์ที่แนบไว้: ' . so_saved_h($savedRental['bank_img']) : 'Choose File'; ?></span>
 									<i class="far fa-image so-file-picker-icon"></i>
-									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" <?php echo $rentalIsEditMode ? '' : 'required'; ?> onchange="showRentalBankImgName(this)">
+									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" onchange="showRentalBankImgName(this)">
 								</label>
 								<?php if ($rentalIsEditMode && !empty($savedRental['bank_img'])) {
 									$rtBankImgFile = basename((string)$savedRental['bank_img']);

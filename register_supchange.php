@@ -12,6 +12,7 @@ include('dbconnect_sale.php');
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 <script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>
@@ -237,16 +238,6 @@ include('dbconnect_sale.php');
 		for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
 		document.getElementById(tabId).style.display = 'block';
 		element.classList.add('active');
-	}
-
-	function chgFocusField(field) {
-		if (!field) return;
-		var parentAddrTab = field.closest('.so-addr-tab-content');
-		if (parentAddrTab && parentAddrTab.id) {
-			var tabBtn = document.querySelector(".so-tab-btn[onclick*='" + parentAddrTab.id + "']");
-			if (tabBtn) brOpenAddrTab(parentAddrTab.id, tabBtn);
-		}
-		field.focus();
 	}
 </script>
 
@@ -550,7 +541,7 @@ $chgLatestDocumentReasonTitle = $chgLatestDocumentReasonTitleMap[$chgLatestDocum
 $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDocumentReasonStatus);
 ?>
 
-<form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container" style="max-width:1320px;margin:0 auto;">
 
 		<div class="so-header-container">
@@ -582,10 +573,18 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 		<script language="javascript">
 			var chgSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
 
+			// ฟิลด์บังคับ (name/id) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม (ไม่รวม customer, start_date, time_range, delivery_type)
+			var CHG_APPROVE_REQUIRED_FIELDS = ['sale_code', 'start_time', 'customer_name', 'customer_tel', 'province_name', 'address_merged_ui', 'address_send', 'transport_company'];
+
 			function fncSubmit() {
 				if (chgSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				// อนุมัติตรวจเฉพาะชุดฟิลด์ที่เคยตรวจมาแต่เดิม เพื่อให้เอกสารเก่าที่ยังไม่มีลูกค้า/วันจัดส่ง/ช่วงเวลาอนุมัติต่อได้
+				var chgApproveActionField = document.getElementById('chg_approve_action');
+				var chgIsApproving = !!(chgApproveActionField && chgApproveActionField.value);
+				if (!soValidateRequired(document.forms['frmMain'], chgIsApproving ? {
+						only: CHG_APPROVE_REQUIRED_FIELDS
+					} : null)) {
 					return false;
 				}
 
@@ -594,59 +593,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				}
 
 				if (!validateDeliveryTimeRange()) {
-					return false;
-				}
-
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var chgApproveActionField = document.getElementById('chg_approve_action');
-				if (!(chgApproveActionField && chgApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				if (document.frmMain.start_time.value == "") {
-					alert('กรุณาใส่เวลาส่ง');
-					chgFocusField(document.frmMain.start_time);
-					return false;
-				}
-
-				if (document.frmMain.customer_name.value == "") {
-					alert('กรุณาใส่ชื่อลูกค้า');
-					chgFocusField(document.frmMain.customer_name);
-					return false;
-				}
-
-				if (document.frmMain.customer_tel.value == "") {
-					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					chgFocusField(document.frmMain.customer_tel);
-					return false;
-				}
-				if (document.frmMain.address_1.value == "") {
-					alert('กรุณาใส่สถานที่ส่งสินค้า');
-					chgFocusField(document.frmMain.address_1);
-					return false;
-				}
-
-				if (document.frmMain.address_name.value == "") {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					chgFocusField(document.frmMain.address_name);
-					return false;
-				}
-
-				if (document.frmMain.address_send.value == "") {
-					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					chgFocusField(document.frmMain.address_send);
-					return false;
-				}
-
-				if (document.frmMain.province_name.value == "") {
-					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					chgFocusField(document.frmMain.province_name);
-					return false;
-				}
-
-				if (document.frmMain.sale_code.value == "") {
-					alert('กรุณาเลือกแผนก/เขตการขาย');
-					chgFocusField(document.frmMain.sale_code);
 					return false;
 				}
 
@@ -787,7 +733,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
 									<label class="so-label">บริษัท</label>
 									<div class="so-select-wrapper">
-										<select class="so-select" name="company" id="company_select" required>
+										<select class="so-select" name="company" id="company_select">
 											<option value="1" selected>AWL</option>
 											<option value="2">NBM</option>
 										</select>
@@ -815,7 +761,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 											$chgSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
 										}
 										?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
+										<select name="sale_code" id="sale_code" class="so-select">
 											<option value="">**Please Select**</option>
 											<?php
 											$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
@@ -1036,7 +982,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							<div class="so-field-group" style="margin-bottom: 0;">
 								<label class="so-label" for="customer">ชื่อลูกค้า/รพ. <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+									<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 								</div>
 								<input type="hidden" name="customer_id" id="customer_id">
@@ -1268,7 +1214,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="address_merged_ui">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" class="so-input" name="address_merged_ui" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" required oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
+									<input type="text" class="so-input" name="address_merged_ui" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_merged_ui').value=''; document.getElementById('address_1').value=''; document.getElementById('address_name').value='';" aria-label="ล้างค่า"></button>
 								</div>
 								<input type="hidden" name="address_1" id="address_1">
@@ -1993,10 +1939,10 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 	// พอร์ตจาก brcsSaveDraft() (register_supbrcshos.php:206-283) — AJAX POST is_draft=1 ไปยัง
 	// register_supchange_draft1.php แล้ว redirect กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ
 	function chgSaveDraft() {
-		if (!validateDeliveryTimeRangeChoice()) return;
-
 		var form = document.forms['frmMain'];
 		if (!form) return;
+
+		if (!soValidateRequired(form)) return;
 
 		var btn = form.querySelector('[name="save_draft"]');
 		var defaultHtml = btn ? btn.innerHTML : '';

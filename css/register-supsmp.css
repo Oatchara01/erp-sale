@@ -94,7 +94,6 @@
 .smp-doc-card .smp-align-end .so-field-group { margin-bottom: 0; }
 .smp-doc-card #order_id { background: #F5F6F8; color: #3B3B3B; cursor: default; }
 .smp-doc-card #crm_ref:disabled { background: #F4F3F7; color: #8A8690; cursor: not-allowed; }
-.smp-doc-card #crm_ref.is-invalid { border-color: #DC3545; }
 
 .smp-pill-toggle { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; height: 42px; padding: 0 16px; border-radius: 10px; background: #F4F3F7; color: #6E6E6E; font: 500 14px 'Prompt', sans-serif; cursor: pointer; user-select: none; transition: background-color .2s ease, color .2s ease; }
 .smp-pill-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }

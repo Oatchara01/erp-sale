@@ -126,22 +126,6 @@ include("head.php"); ?>
 		}
 	}
 
-	function validateDeliveryContractRequirement() {
-		var haveOrderCheckbox = document.getElementById('have_order');
-		var deliveryContractInput = document.getElementById('delivery_contract');
-		if (!haveOrderCheckbox || !deliveryContractInput) {
-			return true;
-		}
-
-		if (haveOrderCheckbox.checked && deliveryContractInput.value === '') {
-			alert('กรุณาระบุวันที่กำหนดส่งตามสัญญา เมื่อเลือกออเดอร์ฝาก');
-			deliveryContractInput.focus();
-			return false;
-		}
-
-		return true;
-	}
-
 	function syncShippingFieldsToLegacy() {
 		var contactName = document.querySelector('input[name="contact_name"]');
 		var contactTel = document.querySelector('input[name="contact_tel"]');
@@ -1680,7 +1664,7 @@ include("head.php"); ?>
 	<?php } ?>
 
 	<!--action="register_office1.php"-->
-	<form action='<?php echo ($savedSo !== null) ? "register_suphos_edit1.php" : "register_suphos1.php"; ?>' method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action='<?php echo ($savedSo !== null) ? "register_suphos_edit1.php" : "register_suphos1.php"; ?>' method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
 			window.soIsEditMode = <?php echo ($savedSo !== null) ? 'true' : 'false'; ?>;
@@ -1719,6 +1703,12 @@ include("head.php"); ?>
 				return false;
 			}
 
+			// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
+			var SO_APPROVE_REQUIRED_FIELDS = [
+				'sale_code', 'email', 'delivery_contract', 'transport_company', 'start_time',
+				'contact_name', 'contact_tel', 'contact_province', 'shipping_address', 'install_location'
+			];
+
 			function fncSubmit() //ตรวจสอบข้อมูลก่อนบันทึก
 			{
 				if (window.soSkipValidation) {
@@ -1730,15 +1720,17 @@ include("head.php"); ?>
 					syncDeptComments();
 				}
 				updateDeliveryContractRequirement();
-				if (!validateDeliveryContractRequirement()) {
+
+				// อนุมัติเอกสารเก่าที่ยังไม่มีค่าฟิลด์บังคับรุ่นใหม่ (ช่วงเวลา, ช่องทางการขาย, ข้อมูลออกบิล ฯลฯ) ต้องทำได้
+				// จึงตรวจครบทุกดอกจันเฉพาะปุ่มบันทึกของผู้สร้าง ส่วนปุ่มอนุมัติตรวจเท่าชุดเดิม
+				var soRequiredOpts = window.soPendingApproveAction ? {
+					only: SO_APPROVE_REQUIRED_FIELDS
+				} : null;
+				if (!soValidateRequired(document.forms['frmMain'], soRequiredOpts)) {
 					return false;
 				}
 
 				if (!validateEmailFieldRequired()) {
-					return false;
-				}
-
-				if (!validateTransportCompanyRequirement()) {
 					return false;
 				}
 
@@ -1750,16 +1742,6 @@ include("head.php"); ?>
 					return false;
 				}
 
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				if (!window.soPendingApproveAction && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				if (document.frmMain.sale_code && document.frmMain.sale_code.value == "") {
-					alert('กรุณาเลือกแผนก/เขตการขาย');
-					document.frmMain.sale_code.focus();
-					return false;
-				}
 				if (getMainFormFieldValue('payment') != "") {
 					if (getMainFormFieldValue('payment') == "7") {
 
@@ -1771,54 +1753,6 @@ include("head.php"); ?>
 							return false;
 						}
 					}
-				}
-
-				if (getMainFormFieldValue('start_time') == "") {
-
-					alert('กรุณาใส่เวลาส่ง');
-					var startTimeField = getMainFormField('start_time');
-					if (startTimeField) startTimeField.focus();
-					return false;
-				}
-
-				if (getMainFormFieldValue('customer_name') == "") {
-					alert('กรุณาใส่ชื่อลูกค้า');
-					var customerNameField = getMainFormField('customer_name');
-					if (customerNameField) customerNameField.focus();
-					return false;
-				}
-
-				if (getMainFormFieldValue('customer_tel') == "") {
-					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					var customerTelField = getMainFormField('customer_tel');
-					if (customerTelField) customerTelField.focus();
-					return false;
-				}
-				if (getMainFormFieldValue('address_1') == "") {
-					alert('กรุณาใส่สถานที่ส่งสินค้า');
-					var address1Field = getMainFormField('address_1');
-					if (address1Field) address1Field.focus();
-					return false;
-				}
-
-				if (getMainFormFieldValue('address_name') == "") {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					var addressNameField = getMainFormField('address_name');
-					if (addressNameField) addressNameField.focus();
-					return false;
-				}
-
-				if (getMainFormFieldValue('address_send') == "") {
-					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					var addressSendField = getMainFormField('address_send');
-					if (addressSendField) addressSendField.focus();
-					return false;
-				}
-				if (getMainFormFieldValue('province_name') == "") {
-					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					var provinceNameField = getMainFormField('province_name');
-					if (provinceNameField) provinceNameField.focus();
-					return false;
 				}
 
 				for (var soRowIndex = 1; soRowIndex <= 30; soRowIndex++) {
@@ -1903,27 +1837,24 @@ include("head.php"); ?>
 					syncDeptComments();
 				}
 
+				var form = document.forms['frmMain'];
+				if (!form) {
+					return;
+				}
+
+				// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+				updateDeliveryContractRequirement();
+				if (!soValidateRequired(form)) {
+					return;
+				}
+
+				if (!validateEmailFieldRequired()) {
+					return;
+				}
+
 				// ปุ่มนี้เป็น "Update" ตอนแก้ไขเอกสารที่มีอยู่แล้ว (soIsEditMode) ต้องเช็ควงเงิน
 				// เหมือนปุ่มบันทึกหลัก — ส่วน "Save Draft" ของเอกสารใหม่/คัดลอกใบเดิมปล่อยผ่านเหมือนเดิม
 				if (window.soIsEditMode && isCreditOverLimitBlocking()) {
-					return;
-				}
-
-				// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" (เอกสารใหม่/persisted Draft จริง ปล่อยว่าง E-Mail ได้)
-				// และ "Update" (เอกสาร persisted ที่ไม่ใช่ Draft แล้ว เช่น Request ต้องบังคับ E-Mail เมื่อเป็น E-Tax)
-				// แยกด้วย soPersistedStatusDoc เพราะ is_draft=1 ถูกส่งเหมือนกันทั้งสองกรณี
-				if (window.soIsEditMode && window.soPersistedStatusDoc !== 'Draft') {
-					if (!validateEmailFieldRequired()) {
-						return;
-					}
-				}
-
-				if (!validateDeliveryTimeRangeChoice()) {
-					return;
-				}
-
-				var form = document.forms['frmMain'];
-				if (!form) {
 					return;
 				}
 
@@ -2174,7 +2105,8 @@ include("head.php"); ?>
 							}
 							document.addEventListener('DOMContentLoaded', syncEmailFieldVisibility);
 
-							// คืน true ถ้าผ่าน (ไม่ใช่ E-Tax หรือกรอกอีเมลถูกต้อง), false แล้ว alert+focus ถ้าไม่ผ่าน
+							// คืน true ถ้าผ่าน (ไม่ใช่ E-Tax หรือกรอกอีเมลถูกต้อง), false แล้วกรอบแดง+alert+focus ถ้าไม่ผ่าน
+							// กรณีว่างถูก soValidateRequired() จับไปก่อนแล้ว alert นี้จึงเหลือไว้อธิบายกรณีรูปแบบผิด
 							function validateEmailFieldRequired() {
 								var docTypeSel = document.getElementById('doc_type_select');
 								var emailInput = document.getElementById('email');
@@ -2185,6 +2117,7 @@ include("head.php"); ?>
 								emailInput.value = emailVal;
 								var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 								if (!emailVal || !emailPattern.test(emailVal)) {
+									soMarkFieldInvalid(emailInput);
 									alert('กรุณาใส่ E-Mail ให้ถูกต้องสำหรับใบสั่งขาย E-Tax');
 									emailInput.focus();
 									return false;
@@ -2573,9 +2506,9 @@ include("head.php"); ?>
 					<div class="so-grid-3">
 						<!-- ผู้แนะนำ -->
 						<div class="so-field-group">
-							<label class="so-label" for="suggest">ผู้แนะนำ</label>
+							<label class="so-label" for="suggest">ผู้แนะนำ<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type="text" name="suggest" id="suggest" class="so-input" placeholder="ระบุชื่อผู้แนะนำ..." required style="padding-right: 32px;">
+								<input type="text" name="suggest" id="suggest" class="so-input" placeholder="ระบุชื่อผู้แนะนำ..." style="padding-right: 32px;">
 								<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('suggest').value=''"></i>
 							</div>
 						</div>
@@ -2750,6 +2683,7 @@ include("head.php"); ?>
 				include __DIR__ . '/partials/delivery_info_tab.php';
 				?>
 				<script src="js/delivery-transport.js?v=<?php echo filemtime(__DIR__ . '/js/delivery-transport.js'); ?>"></script>
+				<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 				<!-- NEW DELIVERY CARD END -->
 
 				<!-- NEW ADDRESS CARD -->
