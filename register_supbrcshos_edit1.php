@@ -125,7 +125,7 @@ if (!function_exists('cs_dept_comment_items_from_post')) {
 		}
 
 		$items = array();
-		$allowedDepartments = array(1, 2, 3, 4);
+		$allowedDepartments = array(1, 2, 3, 4, 5);
 		foreach ($decodedItems as $index => $item) {
 			$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
 			$message = isset($item["message"]) ? trim($item["message"]) : "";

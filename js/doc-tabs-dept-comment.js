@@ -10,13 +10,15 @@ const deptCodeToId = {
 	cs: '1',
 	en: '2',
 	st: '3',
-	ad: '4'
+	ad: '4',
+	ac: '5'
 };
 const deptIdToCode = {
 	'1': 'cs',
 	'2': 'en',
 	'3': 'st',
-	'4': 'ad'
+	'4': 'ad',
+	'5': 'ac'
 };
 
 function normalizeDeptValue(dept) {
@@ -51,7 +53,7 @@ function toggleTechnicianRequired(button) {
 	setTechnicianRequired(isActive);
 }
 
-function addDeptComment(defaultDept = '', defaultText = '') {
+function addDeptComment(defaultDept = '', defaultText = '', lockDept = false) {
 	const list = document.getElementById('dept_comment_list');
 	if (!list) return;
 
@@ -66,14 +68,14 @@ function addDeptComment(defaultDept = '', defaultText = '') {
 	row.innerHTML = `
         <div style="flex: 0 0 200px;">
             <label style="color: #612989; font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">แผนก</label>
-            <div class="so-select-wrapper">
-                <select class="so-select" onchange="syncDeptComments()">
+            <div class="so-select-wrapper${lockDept ? ' dept-locked' : ''}">
+                <select class="so-select" onchange="syncDeptComments()" ${lockDept ? 'disabled' : ''}>
                     <option value="">เลือกแผนก</option>
                     <option value="1" ${selectedDept === '1' ? 'selected' : ''}>จัดส่ง</option>
                     <option value="2" ${selectedDept === '2' ? 'selected' : ''}>ช่าง</option>
                     <option value="3" ${selectedDept === '3' ? 'selected' : ''}>คลังสินค้า</option>
                     <option value="4" ${selectedDept === '4' ? 'selected' : ''}>Admin</option>
-                    <option value="4" ${selectedDept === '5' ? 'selected' : ''}>บัญชี</option>
+                    <option value="5" ${selectedDept === '5' ? 'selected' : ''}>บัญชี</option>
                 </select>
             </div>
         </div>
@@ -143,7 +145,7 @@ function restoreDeptComments() {
 	if (Array.isArray(savedCommentSoItemsForDept) && savedCommentSoItemsForDept.length > 0) {
 		savedCommentSoItemsForDept.forEach(function(item) {
 			if (item.message && item.message.trim() !== '') {
-				addDeptComment(item.department_id, item.message);
+				addDeptComment(item.department_id, item.message, true);
 				addedAny = true;
 			}
 		});
@@ -153,7 +155,7 @@ function restoreDeptComments() {
 			if (commentText && commentText.trim() !== '') {
 				commentText.split('\n').forEach(function(line) {
 					if (line.trim() !== '') {
-						addDeptComment(dept, line);
+						addDeptComment(dept, line, true);
 						addedAny = true;
 					}
 				});
