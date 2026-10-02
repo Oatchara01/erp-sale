@@ -716,11 +716,9 @@ include("head.php"); ?>
 		var radCredit = document.getElementById('pay_mode_credit');
 		var radCash = document.getElementById('pay_mode_cash');
 		var creditLabel = document.getElementById('lbl-pay_mode_credit');
-		var creditDaysInput = document.getElementById('display_credit_days');
 
 		if (isCredit) {
 			if (radCredit) radCredit.disabled = false;
-			if (creditDaysInput) creditDaysInput.disabled = false;
 			if (creditLabel) creditLabel.classList.remove('is-disabled');
 			if (radCredit) radCredit.checked = true;
 			document.getElementById('lbl-pay_mode_credit')?.classList.add('active');
@@ -745,7 +743,6 @@ include("head.php"); ?>
 		} else {
 			var shouldDisableCredit = hasSelectedCustomerForPaymentMode() && getResolvedCustomerPaymentMode() === 'cash';
 			if (radCredit) radCredit.disabled = shouldDisableCredit;
-			if (creditDaysInput) creditDaysInput.disabled = true;
 			if (creditLabel) creditLabel.classList.toggle('is-disabled', shouldDisableCredit);
 			if (radCash) radCash.checked = true;
 			document.getElementById('lbl-pay_mode_cash')?.classList.add('active');
@@ -778,12 +775,12 @@ include("head.php"); ?>
 		var creditDays = selectedText.match(/\d+/) ? selectedText.match(/\d+/)[0] : '';
 
 		var displayDays = document.getElementById('display_credit_days');
-		if (displayDays) displayDays.value = creditDays || '30';
+		if (displayDays) displayDays.textContent = creditDays || '30';
 
 		var creditLimit = document.getElementById('credit_thb').value || '0';
 		var formattedLimit = parseFloat(creditLimit.replace(/,/g, '')) || 0;
 		var displayLimit = document.getElementById('display_credit_limit');
-		if (displayLimit) displayLimit.value = formattedLimit.toLocaleString('en-US');
+		if (displayLimit) displayLimit.textContent = formattedLimit.toLocaleString('en-US');
 	}
 </script>
 
@@ -2557,14 +2554,14 @@ include("head.php"); ?>
 					<div class="so-grid-2" id="row-credit-fields" style="display: none;">
 						<!-- จำนวนเครดิต (วัน) -->
 						<div class="so-field-group">
-							<label class="so-label" for="display_credit_days">จำนวนเครดิต (วัน)</label>
-							<input type="text" id="display_credit_days" class="so-input" readonly placeholder="30">
+							<label class="so-label">จำนวนเครดิต (วัน)</label>
+							<div id="display_credit_days" style="padding:10px 0;">30</div>
 						</div>
 
 						<!-- ยอดเงินเครดิต -->
 						<div class="so-field-group">
-							<label class="so-label" for="display_credit_limit">ยอดเงินเครดิต</label>
-							<input type="text" id="display_credit_limit" class="so-input" readonly placeholder="0.00">
+							<label class="so-label">ยอดเงินเครดิต</label>
+							<div id="display_credit_limit" style="padding:10px 0;">0</div>
 						</div>
 					</div>
 
