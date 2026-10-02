@@ -520,20 +520,20 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				</div>
 				<div class="so-grid-3 smp-addr-gap">
 					<div class="so-field-group"><label class="so-label">ห้องที่ติดตั้ง</label><div class="smp-radio-row"><label><input type="radio" name="room_type" value="1" checked> ห้องโถง</label><label><input type="radio" name="room_type" value="2"> ห้องนอน</label></div></div>
-					<div class="so-field-group"><label class="so-label">ขนาดประตูห้อง</label><div class="smp-pair"><input class="so-input" name="door_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="door_height" placeholder="ความสูง (ซม.)"></div></div>
-					<div class="so-field-group"><label class="so-label">ขนาดบันได</label><div class="smp-pair"><input class="so-input" name="stair_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="stair_height" placeholder="ความสูง (ซม.)"></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดประตูห้อง (ซม.)</label><div class="smp-pair"><input class="so-input" name="door_width" placeholder="กว้าง"><input class="so-input" name="door_height" placeholder="สูง"></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดบันได (ซม.)</label><div class="smp-pair"><input class="so-input" name="stair_width" placeholder="กว้าง"><input class="so-input" name="stair_height" placeholder="สูง"></div></div>
 				</div>
 				<div class="so-grid-3 smp-addr-gap">
-					<div class="so-field-group"><label class="so-label">ประตูลิฟต์</label><div class="smp-pair"><input class="so-input" name="elev_door_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="elev_door_height" placeholder="ความสูง (ซม.)"></div></div>
-					<div class="so-field-group"><label class="so-label">ขนาดห้องลิฟต์</label><div class="smp-pair"><input class="so-input" name="elev_width" placeholder="ความกว้าง (ซม.)"><input class="so-input" name="elev_height" placeholder="ความสูง (ซม.)"><input class="so-input" name="elev_depth" placeholder="ความลึก (ซม.)"></div></div>
-					<div class="so-field-group"><label class="so-label" for="elev_capacity">ขนาดบรรทุกของลิฟต์</label><input class="so-input" name="elev_capacity" id="elev_capacity" placeholder="น้ำหนัก (กก.)"></div>
+					<div class="so-field-group"><label class="so-label">ประตูลิฟต์ (ซม.)</label><div class="smp-pair"><input class="so-input" name="elev_door_width" placeholder="กว้าง"><input class="so-input" name="elev_door_height" placeholder="สูง"></div></div>
+					<div class="so-field-group"><label class="so-label">ขนาดห้องลิฟต์ (ซม.)</label><div class="smp-pair"><input class="so-input" name="elev_width" placeholder="กว้าง"><input class="so-input" name="elev_height" placeholder="สูง"><input class="so-input" name="elev_depth" placeholder="ลึก"></div></div>
+					<div class="so-field-group"><label class="so-label" for="elev_capacity">ขนาดบรรทุกของลิฟต์ (กก.)</label><input class="so-input" name="elev_capacity" id="elev_capacity" placeholder="น้ำหนัก"></div>
 				</div>
 				<div class="so-grid-3 smp-addr-gap">
 					<div class="so-field-group"><label class="so-label">การย้ายเฟอร์นิเจอร์</label><div class="smp-radio-row"><label><input type="radio" name="move_furn" value="0" checked> ไม่</label><label><input type="radio" name="move_furn" value="1"> ย้าย</label></div></div>
 					<div class="so-field-group"><label class="so-label" for="move_furn_count">จำนวนชิ้นที่ย้าย</label><input class="so-input" name="move_furn_count" id="move_furn_count" inputmode="numeric" placeholder="ใส่เฉพาะตัวเลข"></div>
 					<div class="so-field-group"><label class="so-label" for="move_furn_detail">รายละเอียดเฟอร์นิเจอร์</label><input class="so-input" name="move_furn_detail" id="move_furn_detail" placeholder="รายละเอียดเฟอร์นิเจอร์"></div>
 				</div>
-				<div class="so-field-group smp-addr-gap"><label class="so-label" for="addr_note">หมายเหตุเพิ่มเติม</label><input class="so-input" name="addr_note" id="addr_note" placeholder="รายละเอียดเพิ่มเติม"></div>
+				<div class="so-field-group smp-addr-gap"><label class="so-label" for="addr_note">หมายเหตุเพิ่มเติม</label><input class="so-input" name="addr_note" id="addr_note" placeholder="ใส่หมายเหตุ"></div>
 			</div>
 		</div>
 
