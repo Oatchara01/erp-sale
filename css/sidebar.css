@@ -528,9 +528,11 @@ body.has-sidebar.sidebar-collapsed {
 }
 
 .navbar-caret {
-	font-size: 12px;
-	color: #666666;
 	transition: transform 0.2s ease;
+}
+
+.navbar-caret.open {
+	transform: rotate(180deg);
 }
 
 .navbar-dropdown {
