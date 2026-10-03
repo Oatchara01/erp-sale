@@ -154,6 +154,7 @@ function bindDeliveryRange(range) {
 document.addEventListener('DOMContentLoaded', function() {
 	bindDeliveryRange(DELIVERY_RANGES.date);
 	bindDeliveryRange(DELIVERY_RANGES.time);
+	bindDeliveryTimeRangePreset();
 });
 
 function validateDeliveryRange(range) {
@@ -180,7 +181,7 @@ function validateDeliveryTimeRange() {
 	return validateDeliveryRange(DELIVERY_RANGES.time);
 }
 
-// เลือกช่วงเวลา (time_range): ฟิลด์อิสระ ไม่ผูกกับ start_time/end_time บังคับเลือกที่หน้าฟอร์มอย่างเดียว
+// เลือกช่วงเวลา (time_range): เก็บแยกคอลัมน์จาก start_time/end_time บังคับเลือกที่หน้าฟอร์มอย่างเดียว
 // เอกสารเก่าไม่มีค่านี้ จึงไม่ตรวจฝั่ง backend และไม่ตรวจตอนอนุมัติ ไม่งั้นเอกสารที่ค้างอนุมัติจะเดินต่อไม่ได้
 function validateDeliveryTimeRangeChoice() {
 	var timeRangeSel = document.getElementById('time_range');
@@ -191,4 +192,40 @@ function validateDeliveryTimeRangeChoice() {
 		return false;
 	}
 	return true;
+}
+
+// เลือกช่วงเวลาแล้วเติม start_time/end_time ให้ (กฎเดียวกับ return_time_range ของส่วนที่อยู่การคืน)
+// ผูกทางเดียว: แก้เวลาเองแล้วช่วงเวลาไม่เปลี่ยนตาม และไม่ sync ตอนโหลดหน้า เอกสารเดิมจึงแสดงตามที่บันทึก
+var DELIVERY_TIME_RANGE_PRESETS = {
+	morning: ['08:00', '12:00'],
+	afternoon: ['13:00', '17:00'],
+	allday: ['08:00', '17:00']
+};
+
+function bindDeliveryTimeRangePreset() {
+	var timeRangeSel = document.getElementById('time_range');
+	var startInput = document.getElementById(DELIVERY_RANGES.time.startId);
+	var endInput = document.getElementById(DELIVERY_RANGES.time.endId);
+	if (!timeRangeSel || !startInput || !endInput) return;
+
+	timeRangeSel.addEventListener('change', function() {
+		var preset = DELIVERY_TIME_RANGE_PRESETS[timeRangeSel.value];
+		if (preset) {
+			startInput.value = preset[0];
+			endInput.value = preset[1];
+		} else if (timeRangeSel.value === 'specific') {
+			// เวลาเริ่มที่เป็นค่า preset ค้างอยู่ให้ล้าง เวลาที่ผู้ใช้กรอกเองคงไว้
+			var start = deliveryRangeValue(startInput, DELIVERY_RANGES.time);
+			if (start === '08:00' || start === '13:00') {
+				startInput.value = '';
+			}
+			endInput.value = '';
+			startInput.focus();
+		} else {
+			startInput.value = '';
+			endInput.value = '';
+		}
+		// ค่าที่เติมด้วยโค้ดไม่ยิง change ของ bindDeliveryRange จึงต้องขยับ min เอง ไม่งั้น min เดิมค้างจนช่องถึงเวลาไม่ผ่าน
+		endInput.min = deliveryRangeValue(startInput, DELIVERY_RANGES.time);
+	});
 }
