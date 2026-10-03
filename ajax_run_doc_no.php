@@ -25,7 +25,7 @@
  *    และ register_supbrcshos_edit1.php / register_supchange1.php และ
  *    register_supchange_edit1.php) และการกด Run ซ้ำก่อนบันทึกจะได้เลขเดิมเสมอ
  *
- * 3) โหมดตารางตัวนับกลาง ($docSharedCounterTable) — BRES/BREQ (register_supbrhos.php)
+ * 3) โหมดตารางตัวนับกลาง ($docSharedCounterTable) — BRNP/BRES (register_supbrhos.php), BREQ (register_breng_brgq.php)
  *    ใช้ตาราง "tb_docbreng" ร่วมกับตัวนับของระบบเดิม เพื่อให้เลขออกเป็น series เดียวกัน
  *    ตารางนี้ถูกใช้ร่วมกับหลายโมดูล จึงต้องกรอง/ล็อกด้วย head_no แทนชื่อตาราง
  *    เลขถูกจองทันทีที่กดปุ่ม (INSERT เลย) เหมือนโหมด 1
@@ -67,8 +67,9 @@ $docTypePrefix = [
 	'5' => 'BRSC', // ใบยืม/หนี้ฝากขาย (register_supbrcshos.php) - เอกสารประเภทเดียวของหน้านั้น
 	'6' => 'EXC', // ใบเปลี่ยนสินค้า (register_supchange.php) - เอกสารประเภทเดียวของหน้านั้น
 	'7' => 'JN', // ใบเช่า (register_suprental.php) - เอกสารประเภทเดียวของหน้านั้น
-	'8' => 'BRES', // Borrow Order (register_supbrhos.php) type_breng=1
-	'9' => 'BREQ', // Borrow Order (register_supbrhos.php) type_breng=2
+	'8' => 'BRES', // Borrow Order (register_supbrhos.php) type_breng=2 ใบยืมช่าง
+	'9' => 'BREQ', // ใบขอเบิกช่าง (register_breng_brgq.php)
+	'10' => 'BRNP', // Borrow Order (register_supbrhos.php) type_breng=1 ใบยืมลูกค้า / 3 ใบยืมออกบูท
 ];
 $adminOnlyPrefix = ['IE'];
 
@@ -134,6 +135,16 @@ $docSharedCounterTable = [
 		'table'            => 'tb_docbreng',
 		'column'           => 'run_iv',
 		'headNoByCompany'  => ['3' => 'BREQ', '4' => 'BREQN'],
+		'companies'        => ['3', '4'],
+		'separator'        => '',
+		'pad'              => 3,
+	],
+	// head_no 'BRNP' / 'BRN.P' เดียวกับตัวนับเดิมของ register_adminbrhos_edit1.php และ register_admin_edit1.php
+	// จึงได้เลข BRNP6910001 / BRN.P6910001 เป็น series เดียวกับระบบเดิม
+	'BRNP' => [
+		'table'            => 'tb_docbreng',
+		'column'           => 'run_iv',
+		'headNoByCompany'  => ['3' => 'BRNP', '4' => 'BRN.P'],
 		'companies'        => ['3', '4'],
 		'separator'        => '',
 		'pad'              => 3,

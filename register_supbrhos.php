@@ -1708,7 +1708,8 @@ $adminInfoTab = [
 				}
 
 				var companyForDocRun = companySelect.value === '2' ? '4' : '3';
-				var docTypeForDocRun = typeBrengSelect.value === '2' ? '9' : '8';
+				// ต้องตรงกับค่า default ที่ register_supbrhos1.php / register_supbrhos_edit1.php ใส่ไว้: 2 ใบยืมช่าง = BRES, นอกนั้น (1 ลูกค้า / 3 ออกบูท) = BRNP
+				var docTypeForDocRun = typeBrengSelect.value === '2' ? '8' : '10';
 				var payload = new URLSearchParams();
 				payload.append('company', companyForDocRun);
 				payload.append('doc_type', docTypeForDocRun);
