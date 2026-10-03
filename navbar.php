@@ -27,7 +27,7 @@ $userSurname = isset($_SESSION['surname']) ? htmlspecialchars($_SESSION['surname
         <div class="navbar-user-container">
             <button type="button" class="navbar-user-btn" id="navbar-user-trigger">
                 <div class="navbar-avatar">
-                    <i class="fa fa-user"></i>
+                    <img src="img/icons/user.svg" alt="" width="32" height="32">
                 </div>
                 <span class="navbar-username"><?php echo $userName; ?></span>
                 <img src="img/icons/arrow_down.svg" alt="" width="12" height="6" class="navbar-caret">
