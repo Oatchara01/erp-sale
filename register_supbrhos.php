@@ -1934,8 +1934,9 @@ $adminInfoTab = [
 						<label class="so-label" for="type_breng">ประเภท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
 							<select name="type_breng" id="type_breng" class="so-select">
-								<option value="1" selected>ใบยืมลูกค้า (BRNP)</option>
-								<option value="2">ใบยืมช่าง (BRES)</option>
+								<option value="1" selected>ใบยืมลูกค้า/สาธิต/โชว์รูม</option>
+								<option value="3">ใบยืมออกบูท</option>
+								<option value="2">ใบยืมช่าง</option>
 							</select>
 						</div>
 					</div>

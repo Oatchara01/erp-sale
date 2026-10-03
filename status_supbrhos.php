@@ -498,8 +498,9 @@ include "dbconnect_sale.php";
 									<label class="so-label">ประเภทใบยืม</label>
 									<select name="type_br" id="modal_type_br" class="so-select">
 										<option value="">Select</option>
-										<option value="1" <?php if ($type_br == '1') echo 'selected'; ?>>ใบยืมลูกค้า</option>
-										<option value="2" <?php if ($type_br == '2') echo 'selected'; ?>>ใบยืมพนักงาน</option>
+										<option value="1" <?php if ($type_br == '1') echo 'selected'; ?>>ใบยืมลูกค้า/สาธิต/โชว์รูม</option>
+										<option value="3" <?php if ($type_br == '3') echo 'selected'; ?>>ใบยืมออกบูท</option>
+										<option value="2" <?php if ($type_br == '2') echo 'selected'; ?>>ใบยืมช่าง</option>
 									</select>
 								</div>
 							</div>
