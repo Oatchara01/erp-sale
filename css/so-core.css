@@ -726,6 +726,16 @@ body {
 	box-sizing: border-box;
 }
 
+/* จอกว้างกว่า 768px แถบลอยติดล่างจอ — จอเล็กปุ่มเรียงแนวตั้งสูงเกินไป จึงปล่อยไว้ท้ายฟอร์มตามเดิม
+   z-index ต่ำกว่า dropdown ในฟอร์ม (10 ขึ้นไป) เพื่อให้รายการ dropdown ทับแถบได้ ไม่ถูกแถบบัง */
+@media (min-width: 769px) {
+	.so-sticky-actions {
+		position: sticky;
+		bottom: 0;
+		z-index: 5;
+	}
+}
+
 .so-sticky-actions-inner {
 	max-width: 1200px;
 	width: 100%;

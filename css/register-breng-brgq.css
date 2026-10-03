@@ -179,7 +179,8 @@
 
 /* แถบปุ่มท้ายฟอร์ม — form ครอบ container 1096px แล้ว (ดู register_breng_brgq.php) แถบจึงกว้างเต็มพื้นที่เนื้อหา
    และให้ form สูงอย่างน้อยเท่าจอ (หัก padding-top ของ body) แล้วดันแถบไปท้ายสุดด้วย margin-top: auto
-   เนื้อหาสั้นแถบก็ยังชิดล่างจอ เนื้อหายาวแถบอยู่ท้ายหน้าตามปกติ — ไม่ลอย (ไม่ใช่ position: sticky) */
+   เนื้อหาสั้นแถบก็ยังชิดล่างจอ เนื้อหายาวแถบลอยติดล่างจอด้วย position: sticky ของ .so-sticky-actions
+   ใน so-core.css (เฉพาะจอกว้างกว่า 768px — จอเล็กแถบอยู่ท้ายหน้าตามปกติ) */
 .breq-page-form {
 	display: flex;
 	flex-direction: column;

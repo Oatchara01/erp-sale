@@ -72,7 +72,7 @@ include "dbconnect_sale.php";
 									<select name="status_approve" id="status_approve" class="so-select">
 										<option value="">-- ทั้งหมด --</option>
 										<option value="Request" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'Request') ? 'selected' : ''; ?>>รอหัวหน้า</option>
-										<option value="Draft" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'Draft') ? 'selected' : ''; ?>>ร่าง</option>
+										<option value="Draft" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'Draft') ? 'selected' : ''; ?>>Draft</option>
 										<option value="Approve" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'Approve') ? 'selected' : ''; ?>>อนุมัติแล้ว</option>
 										<option value="ส่งกลับ" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'ส่งกลับ') ? 'selected' : ''; ?>>ส่งกลับ</option>
 										<option value="ยกเลิก" <?php echo (isset($_GET['status_approve']) && $_GET['status_approve'] == 'ยกเลิก') ? 'selected' : ''; ?>>ยกเลิก</option>
@@ -242,7 +242,7 @@ include "dbconnect_sale.php";
 									<?php } else if ($objResult["status_doc"] == 'Request') { ?>
 										<span class="badge-status pending-mgr">รอหัวหน้า</span>
 									<?php } else if ($objResult["status_doc"] == 'Draft') { ?>
-										<span class="badge-status draft">ร่าง</span>
+										<span class="badge-status draft">Draft</span>
 									<?php } else if ($objResult["status_doc"] == 'ส่งกลับ') { ?>
 										<span class="badge-status returned">ส่งกลับ</span>
 									<?php } else { ?>
