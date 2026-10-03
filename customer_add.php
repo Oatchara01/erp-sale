@@ -84,6 +84,7 @@ $customerData = array(
     'type_customer' => '',
     'mode_name' => '',
     'credit_ckk' => '',
+    'credit_thb' => '',
     'vip_ckk' => '0',
     'cus_address' => '',
     'cus_province' => '',
@@ -1242,6 +1243,8 @@ if (empty($shippingRecords)) {
                 <input type="hidden" name="customer_id" value="<?php echo h($customerData['customer_id']); ?>">
                 <input type="hidden" name="customer_no" value="<?php echo h($customerData['customer_no']); ?>">
                 <input type="hidden" name="close_ckk" value="<?php echo h($customerData['close_ckk']); ?>">
+                <input type="hidden" name="credit_ckk" value="<?php echo h($customerData['credit_ckk']); ?>">
+                <input type="hidden" name="credit_thb" value="<?php echo h($customerData['credit_thb']); ?>">
 
                 <div class="customer-header">
                     <h1>ข้อมูลลูกค้า</h1>
@@ -1301,18 +1304,6 @@ if (empty($shippingRecords)) {
                                     <input type="text" id="customer_code_display" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly>
                                 </div>
                                 <input type="hidden" name="customer_code" id="customer_code" value="<?php echo h($customerData['customer_code']); ?>">
-                            </div>
-
-                            <div class="field">
-                                <label class="field-label" for="credit_ckk">วิธีชำระเงิน</label>
-                                <div class="select-shell">
-                                    <select name="credit_ckk" id="credit_ckk" class="form-select">
-                                        <option value="">Select</option>
-                                        <?php foreach ($creditBanks as $creditBank) { ?>
-                                            <option value="<?php echo h($creditBank['id']); ?>" <?php echo ((string)$customerData['credit_ckk'] === (string)$creditBank['id']) ? 'selected' : ''; ?>><?php echo h($creditBank['pay_in']); ?></option>
-                                        <?php } ?>
-                                    </select>
-                                </div>
                             </div>
 
                             <div class="field">
