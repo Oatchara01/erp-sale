@@ -693,6 +693,16 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$ivDateValue = $isDraftRequest ? "" : $iv_date;
 	$ivTimeValue = $isDraftRequest ? "" : $iv_time;
 
+	// จำนวนที่ดึงจากใบจองห้ามเกินยอดคงเหลือ — Draft/ยกเลิก ยังไม่กินยอดจอง จึงไม่ตรวจ
+	require_once __DIR__ . '/includes/jong_repo.php';
+	if (!$isDraftRequest && !$isCancelDoc) {
+		$jongShortages = jong_find_shortages($conn, jong_post_demand($_POST));
+		if (!empty($jongShortages)) {
+			echo "<script>alert(" . json_encode(jong_shortage_message($conn, $jongShortages), JSON_UNESCAPED_UNICODE) . ");history.back();</script>";
+			exit();
+		}
+	}
+
 	// PHP 8.1+ ตั้ง mysqli.report_mode = ERROR|STRICT เป็นค่า default ทำให้ query ที่ล้มเหลว "โยน exception"
 	// ไม่ใช่คืน false ดังนั้น or die() และ if (!$result) ที่มีอยู่เดิมทั้งไฟล์จึงไม่เคยทำงาน
 	// ครอบ try/catch ไว้เพื่อดักทุก query ตั้งแต่จุดนี้ (ที่เริ่มมีการเขียนข้อมูลจริง) แล้วรายงานสาเหตุจริงตอนท้าย
@@ -843,30 +853,8 @@ values
 
 
 
-		if ($book_no != '') {
+		// การปิดใบจองไม่ได้ตัดสินจาก book_no แล้ว — ดู jong_apply_so_change() ท้าย try นี้ (หลัง insert แถวสินค้าครบ)
 
-			$strSQL = "SELECT ref_id FROM hos__jongproduct WHERE iv_no = '" . $book_no . "' ";
-			$objQuery = mysqli_query($conn, $strSQL) or die(mysqli_error());
-			$objResult = mysqli_fetch_array($objQuery);
-
-			if (!empty($objResult["ref_id"])) {
-				$remark_jong = "เปิดใบสั่งขายเลขที่อ้างอิง $ref_id";
-
-				$save2 = "UPDATE  hos__jongproduct SET close_jong='1',remark='" . $remark_jong . "'  where ref_id = '" . $objResult["ref_id"] . "'";
-				$qsave2 = mysqli_query($conn, $save2);
-
-				$save3 = "UPDATE hos__subjongpro SET close_ckk='1'  where ref_idd = '" . $objResult["ref_id"] . "'";
-				$qsave3 = mysqli_query($conn, $save3);
-			}
-		}
-
-
-		/*if($book_clear=='1'){
-		
-$save="Update  hos__jongproduct set  close_jong = '1'    where  iv_no LIKE '%".$book_no."%'";
-$qsave=mysqli_query($conn,$save);
-			
-	}	*/
 		if ($linkedPo !== null) {
 			// อัปเดตแบบมีเงื่อนไข (open_so = 0) — ถ้ามีคนออก SO จาก PO ใบนี้แซงไปแล้ว ต้องล้มทั้ง transaction
 			if (!po_mark_sale_order_opened($conn, (string)$linkedPo['ref_id'], $ref_id, $add_by, $add_date)) {
@@ -4354,6 +4342,9 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 				}
 			}
 		}
+
+		// ปิดใบจองที่ถูกใช้ครบจากแถวสินค้าของใบสั่งขายใบนี้ (Draft ไม่กินยอด จึงไม่มีผล)
+		jong_apply_so_change($conn, $ref_id, array());
 	} catch (mysqli_sql_exception $e) {
 		$saveOk = false;
 		$saveFailures[] = $e->getMessage();

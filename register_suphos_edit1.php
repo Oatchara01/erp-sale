@@ -7,6 +7,7 @@ include("dbconnect.php");
 mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 'STRICT_TRANS_TABLES', ''), 'STRICT_ALL_TABLES', '')");
 require_once __DIR__ . "/includes/invoice_receipt_sync.php";
 require_once __DIR__ . "/includes/hos_so_submission_status.php";
+require_once __DIR__ . "/includes/jong_repo.php";
 
 if (!function_exists('tableExists')) {
 	function tableExists($conn, $tableName)
@@ -315,6 +316,29 @@ if ($_POST["submit"] = "submit") {
 		}
 	}
 
+	// ยอดจองที่ใบสั่งขายใบนี้ถืออยู่ก่อนบันทึก — ใช้เทียบท้ายไฟล์ว่ามีการคืนยอดให้ใบจองหรือไม่
+	$jongHoldingsBefore = jong_so_holdings($conn, $ref_id);
+
+	// จำนวนที่ดึงจากใบจองห้ามเกินยอดคงเหลือ ตรวจเฉพาะเมื่อหลังบันทึกเอกสารจะอยู่ในสถานะที่กินยอดจอง
+	// (Submit, อนุมัติ, หรือ Update เอกสารที่ส่งไปแล้ว) — Save Draft ของใบร่าง และ ส่งกลับ/ไม่อนุมัติ/ยกเลิก ไม่ตรวจ
+	$jongStatusDecision = resolveHosSoStatusFields($soIsDraftPostFlag, $_POST["cancel_doc"] ?? null, $_POST['admin_action'] ?? '');
+	$jongNextStatusDoc = $jongStatusDecision['status_doc'] !== null ? $jongStatusDecision['status_doc'] : $soPersistedStatusDoc;
+	$jongSkipCheck = in_array($jongNextStatusDoc, jong_non_holding_so_statuses(), true)
+		|| in_array($_POST['approve_action'] ?? '', array('return', 'reject'), true);
+	if (!$jongSkipCheck) {
+		$jongShortages = jong_find_shortages($conn, jong_post_demand($_POST), $ref_id);
+		if (!empty($jongShortages)) {
+			$jongShortageMessage = jong_shortage_message($conn, $jongShortages);
+			if ($soIsDraftPostFlag) {
+				header('Content-Type: application/json; charset=utf-8');
+				echo json_encode(array('success' => false, 'message' => $jongShortageMessage), JSON_UNESCAPED_UNICODE);
+				exit();
+			}
+			echo "<script>alert(" . json_encode($jongShortageMessage, JSON_UNESCAPED_UNICODE) . ");history.back();</script>";
+			exit();
+		}
+	}
+
 	/*if($po_no!=''){	
 $strSQL23 = "SELECT * FROM hos__so WHERE po_no = '".$po_no."'";
 $objQuery23 = mysqli_query($conn,$strSQL23);
@@ -609,27 +633,7 @@ head_1='" . $head_1 . "',ref_1='" . $ref_1 . "',ref_2='" . $ref_2 . "',ref_3='" 
 	}
 
 
-	/*if($book_clear=='1'){
-		
-$save="Update  hos__jongproduct set  close_jong = '1'    where  iv_no LIKE '%".$book_no."%'";
-$qsave=mysqli_query($conn,$save);
-			
-	}*/
-
-	if ($book_no != '') {
-
-		$strSQL = "SELECT ref_id FROM hos__jongproduct WHERE iv_no = '" . $book_no . "' ";
-		$objQuery = mysqli_query($conn, $strSQL) or die(mysqli_error());
-		$objResult = mysqli_fetch_array($objQuery);
-
-		$remark_jong = "เปิดใบสั่งขายเลขที่อ้างอิง $ref_id";
-
-		$save2 = "UPDATE  hos__jongproduct SET close_jong='1',remark='" . $remark_jong . "'  where ref_id = '" . $objResult["ref_id"] . "'";
-		$qsave2 = mysqli_query($conn, $save2);
-
-		$save3 = "UPDATE hos__subjongpro SET close_ckk='1'  where ref_idd = '" . $objResult["ref_id"] . "'";
-		$qsave3 = mysqli_query($conn, $save3);
-	}
+	// การปิด/เปิดใบจองไม่ได้ตัดสินจาก book_no แล้ว — ดู jong_apply_so_change() ท้ายไฟล์
 
 
 	if ($po_no != '') {
@@ -859,50 +863,8 @@ $qsave=mysqli_query($conn,$save);
 					$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new, $sort_order_new);
 					$objQuery = mysqli_query($conn, $strSQL);
 				}
-			} else if ($jong_no_new != '') {
-				$strSQL = "SELECT * FROM hos__jongproduct WHERE iv_no = '" . $jong_no_new . "' ";
-				$objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");
-				$objResult = mysqli_fetch_array($objQuery);
-				$ref_id_jong = (is_array($objResult) && isset($objResult["ref_id"])) ? $objResult["ref_id"] : '';
-				$iv_no_jong = (is_array($objResult) && isset($objResult["iv_no"])) ? $objResult["iv_no"] : '';
-
-				$strSQL1 = "SELECT * FROM hos__subjongpro WHERE ref_idd = '" . $ref_id_jong . "' and product_id ='" . $product_id_new . "'";
-				$objQuery1 = mysqli_query($conn, $strSQL1) or die("Error Query [" . $strSQL1 . "]");
-				$objResult1 = mysqli_fetch_array($objQuery1);
-				$product_id_subjong = (is_array($objResult1) && isset($objResult1['product_id'])) ? $objResult1['product_id'] : '';
-				$count_subjong = (is_array($objResult1) && isset($objResult1["count"])) ? (float)$objResult1["count"] : 0;
-
-				$sql3 = "SELECT sum(sale_count) as count3 FROM so__submain where product_id = '" . $product_id_subjong . "' and jong_ckk = '1' and jong_no ='" . $iv_no_jong . "' and status_sol ='Approve'";
-				$qry3 = mysqli_query($conn, $sql3) or die(mysqli_error($conn));
-				$rs3 = mysqli_fetch_assoc($qry3);
-
-				$sql13 = "SELECT sum(count) as count3 FROM hos__subso where product_id = '" . $product_id_subjong . "' and jong_ckk = '1' and jong_no ='" . $iv_no_jong . "' and status_so ='Approve'";
-				$qry13 = mysqli_query($conn, $sql13) or die(mysqli_error($conn));
-				$rs13 = mysqli_fetch_assoc($qry13);
-
-				$count3 = (is_array($rs3) && isset($rs3["count3"])) ? (float)$rs3["count3"] : 0;
-				$count13 = (is_array($rs13) && isset($rs13["count3"])) ? (float)$rs13["count3"] : 0;
-
-				$count2 = $count_subjong - ($count3 + $count13);
-
-				if ($count2 == '0') {
-
-					$strSQL1 = "Update hos__subjongpro set close_ckk ='1' where ref_idd = '" . $ref_id_jong . "' and product_id ='" . $product_id_new . "'";
-					$objQuery1 = mysqli_query($conn, $strSQL1);
-				}
-				if ($count2 < 0) {
-
-					echo "<script language=\"JavaScript\">";
-					echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
-					echo "</script>";
-					exit();
-				} else {
-
-
-					$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new, $sort_order_new);
-					$objQuery = mysqli_query($conn, $strSQL);
-				}
 			} else {
+				// แถวที่ดึงจากใบจอง (jong_no) ตรวจยอดคงเหลือไว้แล้วก่อนบันทึก และปรับสถานะใบจองท้ายไฟล์ (includes/jong_repo.php)
 
 				$strSQL = buildHosSubsoUpdateQuery($conn, $id_new, $ref_id, $sale_count_new, $product_price_new, $sum_amount_new, $sale_remarkk_new, $warranty_new, $pm_new, $pm_year_new, $cal_new, $product_id_new, $discount_unit_new, $have_order, $clear_br_new, $clear_ivno_new, $sn_new, $jong_ckk_new, $jong_no_new, $admin_remark_new, $sort_order_new);
 
@@ -4055,6 +4017,11 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		mysqli_query($conn, $strDeliveryBillInsert) or die(mysqli_error($conn));
 	}
 
+	// ปรับสถานะใบจองจากแถวสินค้าที่เพิ่งบันทึก ก่อนเข้าขั้นอนุมัติ เพราะขั้นอนุมัติมี exit() กลางทาง
+	// (เคลียร์ยืมไม่ผ่าน) ซึ่งจะข้ามการปรับสถานะท้ายไฟล์ไป แล้วเก็บยอดใหม่ไว้เทียบรอบหลังเปลี่ยนสถานะเอกสาร
+	jong_apply_so_change($conn, $ref_id, $jongHoldingsBefore);
+	$jongHoldingsBefore = jong_so_holdings($conn, $ref_id);
+
 	// ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ ของ Sup (register_suphos.php) — ทำงานหลังบันทึกข้อมูลฟอร์มปกติเสร็จแล้ว
 	$soApproveAction = $_POST['approve_action'] ?? '';
 	if ($soApproveAction !== '' && $qsave) {
@@ -4138,26 +4105,7 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 					}
 				}
 
-				if ($jong_no_new !== '') {
-					$objResultj = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM hos__jongproduct WHERE iv_no = '" . mysqli_real_escape_string($conn, $jong_no_new) . "'"));
-					$objResultj1 = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM hos__subjongpro WHERE ref_idd = '" . ($objResultj['ref_id'] ?? '') . "' AND product_id = '" . mysqli_real_escape_string($conn, $product_id_new) . "'"));
-
-					$rsj3 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(sale_count) AS count3 FROM so__submain WHERE product_id = '" . ($objResultj1['product_id'] ?? '') . "' AND jong_ckk='1' AND jong_no='" . ($objResultj['iv_no'] ?? '') . "' AND status_sol='Approve'"));
-					$rsj13 = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(count) AS count3 FROM hos__subso WHERE product_id = '" . ($objResultj1['product_id'] ?? '') . "' AND jong_ckk='1' AND jong_no='" . ($objResultj['iv_no'] ?? '') . "' AND status_so='Approve'"));
-
-					$countj2 = ($objResultj1['count'] ?? 0) - (($rsj3['count3'] ?? 0) + ($rsj13['count3'] ?? 0));
-
-					if ($countj2 < 0) {
-						echo "<script language=\"JavaScript\">";
-						echo "alert('สินค้าในใบจองนี้มีไม่พอในการเคลียร์จองครั้งนี้ค่ะ');window.location='" . $redirect_to . "?ref_id=$ref_id';";
-						echo "</script>";
-						exit();
-					}
-
-					if ((float)$countj2 == 0.0) {
-						mysqli_query($conn, "UPDATE hos__subjongpro SET close_ckk='1' WHERE ref_idd='" . ($objResultj['ref_id'] ?? '') . "' AND product_id='" . mysqli_real_escape_string($conn, $product_id_new) . "'");
-					}
-				}
+				// เคลียร์จอง (jong_no): ตรวจยอดคงเหลือไว้แล้วก่อนบันทึก และปิดรายการ/ใบจองด้วย jong_apply_so_change() ด้านล่าง
 			}
 
 			// คำนวณ send_cm ตามประเภทเอกสาร (IC) / ยอดรวม+วิธีชำระเป็นเครดิต ≤2000 (พอร์ตจาก salehos_approve.php)
@@ -4175,6 +4123,11 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 				mysqli_query($conn, "UPDATE hos__subso SET status_so='Approve' WHERE ref_idd='" . mysqli_real_escape_string($conn, $ref_id) . "'");
 			}
 		}
+	}
+
+	// ปรับสถานะใบจองอีกรอบหลังขั้นอนุมัติ: ไม่อนุมัติ = คืนยอด จึงเปิดใบจองคืน
+	if ($soApproveAction !== '') {
+		jong_apply_so_change($conn, $ref_id, $jongHoldingsBefore);
 	}
 
 	if ($qsave && tableExists($conn, 'tb_document_status_log')) {

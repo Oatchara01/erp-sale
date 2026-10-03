@@ -1271,8 +1271,9 @@ include("head.php"); ?>
 				'sale_remarkk' => (string)($savedProduct["sale_remark"] ?? ""),
 				'clear_br' => (string)($savedProduct["clear_br"] ?? ""),
 				'clear_ivno' => (string)($savedProduct["clear_ivno"] ?? ""),
-				'jong_ckk' => (string)($savedProduct["jong_ckk"] ?? ""),
-				'jong_no' => (string)($savedProduct["jong_no"] ?? ""),
+				// คัดลอกใบเดิม = การขายใหม่ ไม่ได้เคลียร์ใบจองของใบต้นทางซ้ำ จึงไม่พกการผูกใบจองมาด้วย
+				'jong_ckk' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_ckk"] ?? ""),
+				'jong_no' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_no"] ?? ""),
 				'display_name' => (string)($savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? ""),
 				'subso_db_id' => (string)($savedProduct["id"] ?? ""),
 				'remark_hc' => (string)($savedProduct["master_remark_hc"] ?? "")
@@ -6408,9 +6409,9 @@ include("head.php"); ?>
 				}));
 			}
 
-			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อ (1) ให้แสดงผลได้ และ (2) ให้
-			// register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit จริง
-			// (เดิม popup เคลียร์จอง/ยืมไม่เคยเขียนฟิลด์นี้เลย ทำให้ใบจองไม่ถูกปิดและกลับมาเลือกซ้ำได้)
+			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อให้แสดงผลและเก็บลง hos__so.book_no เท่านั้น
+			// การปิด/เปิดใบจองตัดสินจากแถวสินค้า (jong_ckk{i}/jong_no{i}) เทียบยอดคงเหลือ ไม่ได้ดู book_no แล้ว
+			// — ดู includes/jong_repo.php ที่ register_suphos1.php / register_suphos_edit1.php เรียกหลังบันทึก
 			// หมายเหตุ: ฝั่งใบยืม (loan) ใช้กลไกปิดเอกสารคนละทาง (per-row clear_br{i}/clear_ivno{i})
 			// brn_no ไม่มี logic ปิด hos__br ต่อจากนั้น จึงยังไม่ implement ส่วนนี้
 			if (!isClearLoanBorrowType(documentRow.doc_type)) {
@@ -7224,6 +7225,8 @@ include("head.php"); ?>
 			'slip5' => '',
 			'stock_print' => '',
 			'ref_idst' => '',
+			'book_clear' => '',
+			'book_no' => '',
 		));
 	}
 	if ($soJsPrefillSource === null && $rentalPrefill !== null) {
