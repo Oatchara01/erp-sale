@@ -1113,7 +1113,6 @@
 		var formData = new FormData(form);
 		formData.set('is_draft', '1');
 		formData.set('admin_limited_update', '1');
-		var redirecting = false;
 
 		if (btn) {
 			btn.disabled = true;
@@ -1129,10 +1128,14 @@
 			})
 			.then(function(data) {
 				if (data && data.success) {
-					// popup สำเร็จแสดงหลังรีโหลดผ่าน ?saved=1 (ดูต้นไฟล์) ล็อกปุ่มค้างไว้กันกดซ้ำระหว่างรอ redirect
-					redirecting = true;
-					window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
-					return;
+					return Swal.fire({
+						title: 'Save Draft success',
+						text: 'Ref ID: ' + data.ref_id,
+						icon: 'success',
+						confirmButtonColor: '#612989'
+					}).then(function() {
+						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					});
 				}
 
 				var message = data && data.message ? data.message : 'Unable to save draft';
@@ -1142,7 +1145,7 @@
 				return Swal.fire('Error', 'Unable to save draft', 'error');
 			})
 			.finally(function() {
-				if (btn && !redirecting) {
+				if (btn) {
 					btn.disabled = false;
 					btn.innerHTML = defaultHtml;
 				}
@@ -1309,20 +1312,152 @@ $brIsApproved = in_array($brStatusDoc, ['Approve', 'อนุมัติแล�
 $brIsCancelled = in_array($brStatusDoc, ['ยกเลิก', 'Cancelled'], true);
 $brIsClosed = in_array($brStatusDoc, ['Approve', 'อนุมัติแล้ว', 'ยกเลิก', 'Cancelled', 'Rejected'], true);
 // Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
-$brHideSubmit = $brIsEditMode && ($brSendSup === '1' || $brIsClosed);
-$brIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
-$brSendDm = $brIsEditMode ? ($savedBr['send_dm'] ?? '0') : '0';
-// แถบอนุมัติโชว์ตอนแก้ไขเอกสารที่ยังรออนุมัติ (status_doc='Request') และผู้ใช้ไม่ใช่ Sale
-// รวม Flow อนุมัติของ Sup และผู้บริหารไว้ในหน้าเดียวกัน: ถ้า send_dm='1' แสดงว่าอยู่ขั้นผู้บริหารแล้ว (stage='dm')
-$brCanShowApproveBar = $brIsEditMode && $brIsSupApprover && ($brStatusDoc === 'Request');
-$brApproveStage = ($brSendDm === '1') ? 'dm' : 'sup';
-// ซ่อนปุ่ม Update ตัวหลักเมื่อเอกสารจบแล้ว หรือแถบอนุมัติกำลังโชว์อยู่ (มีปุ่ม Update ของตัวเองอยู่แล้ว)
-$brHideUpdate = $brIsClosed || $brCanShowApproveBar;
-// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารได้ ผ่านปุ่ม Update แบบจำกัดสิทธิ์แทนปุ่ม Update ปกติ
-// หน้านี้ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin') จึงเช็ค role เดียวกันตรงนี้
-// เพื่อให้คนที่แก้ไขฟิลด์ในแท็บ Admin ได้ เป็นคนเดียวกับที่กดปุ่ม Update แบบจำกัดสิทธิ์นี้ได้
-$brIsAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
-$brShowAdminLimitedUpdate = $brIsClosed && !$brIsApproved && !$brIsCancelled && $brIsAdminUser && $brIsEditMode;
+
+// =========================================================
+// APPROVAL FLOW / PERMISSION
+// =========================================================
+
+$type_login_lower = strtolower(
+    trim((string)($_SESSION['type_login'] ?? ''))
+);
+
+
+// =========================================================
+// สิทธิ์ SUP
+// =========================================================
+
+$brSupApproverRoles = [
+    'owner',
+    'sup_sale',
+    'sup_mk1',
+    'sup_en',
+    'it'
+];
+
+$brIsSupApprover = in_array(
+    $type_login_lower,
+    $brSupApproverRoles,
+    true
+);
+
+
+// =========================================================
+// สิทธิ์ DM
+// =========================================================
+
+$brDmApproverRoles = [
+    'owner',
+    'it'
+];
+
+$brIsDmApprover = in_array(
+    $type_login_lower,
+    $brDmApproverRoles,
+    true
+);
+
+
+// =========================================================
+// CURRENT DOCUMENT STATE
+// =========================================================
+
+$brApprove = $brIsEditMode
+    ? trim((string)($savedBr['approve'] ?? ''))
+    : '';
+
+$brSendDm = $brIsEditMode
+    ? trim((string)($savedBr['send_dm'] ?? '0'))
+    : '0';
+
+
+// =========================================================
+// WAITING SUP
+// =========================================================
+
+$brWaitingSup =
+    $brIsEditMode
+    && $brStatusDoc === 'Request'
+    && $brSendSup === '1'
+    && $brSendDm !== '1'
+    && $brApprove === '';
+
+
+// =========================================================
+// WAITING DM
+// =========================================================
+
+$brWaitingDm =
+    $brIsEditMode
+    && $brStatusDoc === 'Request'
+    && $brSendDm === '1';
+
+
+// =========================================================
+// SHOW APPROVAL BAR
+// แยกสิทธิ์ Sup / DM ชัดเจน
+// =========================================================
+
+$brCanShowApproveBar =
+    (
+        $brWaitingSup
+        && $brIsSupApprover
+    )
+    ||
+    (
+        $brWaitingDm
+        && $brIsDmApprover
+    );
+
+
+// =========================================================
+// APPROVAL STAGE
+// =========================================================
+
+$brApproveStage =
+    $brWaitingDm
+        ? 'dm'
+        : 'sup';
+
+
+// =========================================================
+// SUBMIT
+// =========================================================
+
+$brHideSubmit =
+    $brIsEditMode
+    && (
+        $brSendSup === '1'
+        || $brIsClosed
+        || $brCanShowApproveBar
+    );
+
+
+// =========================================================
+// UPDATE
+// =========================================================
+
+$brHideUpdate =
+    $brIsClosed
+    || $brCanShowApproveBar;
+
+
+// =========================================================
+// ADMIN LIMITED UPDATE
+// =========================================================
+
+$brIsAdminUser = in_array(
+    $type_login_lower,
+    ['it', 'admin'],
+    true
+);
+
+$brShowAdminLimitedUpdate =
+    $brIsClosed
+    && !$brIsApproved
+    && !$brIsCancelled
+    && $brIsAdminUser
+    && $brIsEditMode;
+
 
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
@@ -1941,119 +2076,205 @@ $adminInfoTab = [
 							</select>
 						</div>
 					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-						<div class="so-select-wrapper">
-							<?php
-							if ($_SESSION['code'] == 'SS1') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS2') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS3') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM  tb_team_ss3  ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS5') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM  tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'MK2') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SUP_EN') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select">
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							}
-							?>
-						</div>
-					</div>
+				<div class="so-field-group">
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		<?php
+		// =========================================================
+		// SESSION
+		// =========================================================
+		$emid = isset($_SESSION['code'])
+			? trim($_SESSION['code'])
+			: '';
+
+		$type_login = isset($_SESSION['type_login'])
+			? trim($_SESSION['type_login'])
+			: '';
+
+		$type_login_lower = strtolower($type_login);
+		$typeLoginLower = strtolower($type_login);
+
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+
+
+		// =========================================================
+		// SALE : ล็อกเขตของตัวเอง
+		// =========================================================
+		if ($type_login_lower == 'sale') {
+		?>
+
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars(
+					$emid,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars(
+					$emid,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php
+		} else {
+
+			// =====================================================
+			// ADMIN / IT / OWNER
+			// เห็นทุกเขต
+			// =====================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// ENGINEER / SUP_EN
+			// =====================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// SOL
+			// =====================================================
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// USER อื่น
+			// อิงสิทธิ์จาก user_sale_permission
+			// =====================================================
+			else {
+
+				$strSQL5 = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$objQuery5 = mysqli_query($com, $strSQL5);
+
+				if ($objQuery5) {
+
+					while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+						>
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+
+				}
+				?>
+
+			</select>
+
+		<?php
+		}
+		?>
+
+	</div>
+</div>
 				</div>
 
 				<div class="so-section-title-container" style="margin-top: 8px;">
@@ -2351,6 +2572,14 @@ $adminInfoTab = [
 
 		<!-- การ์ดแท็บ: ข้อมูลการจัดส่ง / ค่าจัดส่ง -->
 		<?php
+		
+	$canSendCs = in_array(
+	$type_login_lower,
+	['admin', 'it', 'owner','sol'],
+	true
+);
+		
+		
 		$deliveryTab = [
 			'open_fn' => 'brOpenDelTab',
 			'grid_fields' => [
@@ -2381,10 +2610,21 @@ $adminInfoTab = [
 				['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 				['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 			],
-			'toggle_buttons' => [
-				['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-				['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-			],
+			'toggle_buttons' => array_filter([
+    [
+        'name' => 'ref_12',
+        'id' => 'ref_12',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin','sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 			'cost_fields' => [
 				['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง', 'value' => so_saved_h($savedBr['date_ker'] ?? '')],
 				['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1', 'value' => so_saved_h($savedBr['order_refer_code'] ?? '')],
