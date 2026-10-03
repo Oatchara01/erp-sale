@@ -486,6 +486,7 @@ include "dbconnect_sale.php";
 									<label class="so-label">สถานะการอนุมัติ</label>
 									<select name="status_doc" id="modal_status_doc" class="so-select">
 										<option value="">Select</option>
+										<option value="Draft" <?php if ($status_doc == 'Draft') echo 'selected'; ?>>Draft</option>
 										<option value="รอหัวหน้า" <?php if ($status_doc == 'รอหัวหน้า' || $status_doc == 'Request') echo 'selected'; ?>>รอหัวหน้า</option>
 										<option value="ส่งกลับ" <?php if ($status_doc == 'ส่งกลับ') echo 'selected'; ?>>ส่งกลับ</option>
 										<option value="รอผู้บริหาร" <?php if ($status_doc == 'รอผู้บริหาร') echo 'selected'; ?>>รอผู้บริหาร</option>
@@ -695,7 +696,7 @@ include "dbconnect_sale.php";
 									// Sup อนุมัติแล้ว รอผู้บริหารอนุมัติ (status_doc ยังเป็น 'Request' แต่ send_dm='1')
 									$status_class = 'pending-exec';
 									$status_text = 'รอผู้บริหาร';
-								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า' || $objResult["status_doc"] == 'Draft') {
+								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า') {
 									$status_class = 'pending-mgr';
 									$status_text = 'รอหัวหน้า';
 								} else if ($objResult["status_doc"] == 'ส่งกลับ') {
