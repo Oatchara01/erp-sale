@@ -1,6 +1,24 @@
 <?php header("Content-Type: text/html; charset=utf-8");
 include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
+<?php
+
+		$userSaleCode = isset($_SESSION['code'])
+			? trim($_SESSION['code'])
+			: '';
+
+		$typeLogin = isset($_SESSION['type_login'])
+			? trim($_SESSION['type_login'])
+			: '';
+
+		$typeLoginLower = strtolower($typeLogin);
+
+		$userSaleCodeSafe = mysqli_real_escape_string(
+			$com,
+			$userSaleCode
+		);
+
+		?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=20260704">
 
@@ -1271,9 +1289,8 @@ include("head.php"); ?>
 				'sale_remarkk' => (string)($savedProduct["sale_remark"] ?? ""),
 				'clear_br' => (string)($savedProduct["clear_br"] ?? ""),
 				'clear_ivno' => (string)($savedProduct["clear_ivno"] ?? ""),
-				// คัดลอกใบเดิม = การขายใหม่ ไม่ได้เคลียร์ใบจองของใบต้นทางซ้ำ จึงไม่พกการผูกใบจองมาด้วย
-				'jong_ckk' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_ckk"] ?? ""),
-				'jong_no' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_no"] ?? ""),
+				'jong_ckk' => (string)($savedProduct["jong_ckk"] ?? ""),
+				'jong_no' => (string)($savedProduct["jong_no"] ?? ""),
 				'display_name' => (string)($savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? ""),
 				'subso_db_id' => (string)($savedProduct["id"] ?? ""),
 				'remark_hc' => (string)($savedProduct["master_remark_hc"] ?? "")
@@ -2071,7 +2088,24 @@ include("head.php"); ?>
 			<!-- Tab buttons -->
 			<div class="so-tabs-container">
 				<button type="button" class="so-tab-btn active" onclick="switchSoTab(event, 'tab-document-info')">ข้อมูลเอกสาร</button>
-				<button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tab-admin-info')">Admin</button>
+				<!--button type="button" class="so-tab-btn" onclick="switchSoTab(event, 'tab-admin-info')">Admin</button-->
+				<?php if (
+	in_array(
+		$typeLoginLower,
+		['admin', 'it', 'owner'],
+		true
+	)
+) { ?>
+
+	<button
+		type="button"
+		class="so-tab-btn"
+		onclick="switchSoTab(event, 'tab-admin-info')"
+	>
+		Admin
+	</button>
+
+<?php } ?>
 			</div>
 
 			<input type="hidden" name="ref_id" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['ref_id']) : so_saved_h($so . $nextId); ?>">
@@ -2179,61 +2213,348 @@ include("head.php"); ?>
 							</div>
 
 							<!-- แผนก/เขตการขาย* -->
-							<div class="so-field-group">
-								<label class="so-label" for="sale_code">แผนก/เขตการขาย<span class="required">*</span></label>
-								<div class="so-select-wrapper">
-									<?php
-									$saleCodeQueries = array(
-										'SS1' => "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC",
-										'SS2' => "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC",
-										'SS3' => "SELECT * FROM tb_team_ss3 WHERE ckk_1='0' ORDER BY sale_code ASC",
-										'SS5' => "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC",
-										'SUP_MK' => "SELECT * FROM tb_team_adm WHERE ckk='1' ORDER BY sale_code ASC",
-										'SUP_EN' => "SELECT * FROM tb_team_en ORDER BY sale_code ASC"
-									);
-									$userSaleCode = isset($_SESSION['code']) ? $_SESSION['code'] : '';
-									$saleCodeSql = isset($saleCodeQueries[$userSaleCode]) ? $saleCodeQueries[$userSaleCode] : "SELECT * FROM tb_team_adm WHERE ckk='0' ORDER BY sale_code ASC";
-									$saleCodeQuery = mysqli_query($com, $saleCodeSql);
-									?>
-									<select name="sale_code" id="sale_code" class="so-select">
-										<option value="">เลือกแผนก/เขตการขาย</option>
-										<?php if ($saleCodeQuery) { ?>
-											<?php while ($saleCodeRow = mysqli_fetch_array($saleCodeQuery, MYSQLI_ASSOC)) { ?>
-												<option value="<?php echo htmlspecialchars($saleCodeRow['sale_code'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'], ENT_QUOTES, 'UTF-8'); ?></option>
-											<?php } ?>
-										<?php } ?>
-									</select>
-								</div>
-							</div>
+<div class="so-field-group">
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย<span class="required">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		
+
+
+		<?php
+		/* =====================================================
+		   TYPE LOGIN = SALE
+		   ล็อกเขตเป็นรหัสของตัวเอง
+		   ===================================================== */
+		if ($typeLoginLower == 'sale') {
+		?>
+
+			<!-- ส่งค่าจริงตอน Submit -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars(
+					$userSaleCode,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+			>
+
+			<?php
+
+			/*
+			 * ดึงชื่อเขตจาก tb_team_adm
+			 */
+			$saleName = '';
+
+			$sqlSaleSelf = "
+				SELECT sale_code, sale_name
+				FROM tb_team_adm
+				WHERE sale_code = '".$userSaleCodeSafe."'
+				LIMIT 1
+			";
+
+			$querySaleSelf = mysqli_query(
+				$com,
+				$sqlSaleSelf
+			);
+
+			if (
+				$querySaleSelf &&
+				mysqli_num_rows($querySaleSelf) > 0
+			) {
+
+				$rowSaleSelf = mysqli_fetch_assoc(
+					$querySaleSelf
+				);
+
+				$saleName = $rowSaleSelf['sale_name'];
+
+			}
+
+
+			$saleDisplay = $userSaleCode;
+
+			if ($saleName != '') {
+				$saleDisplay .= ' - ' . $saleName;
+			}
+
+			?>
+
+			<!-- แสดงผลอย่างเดียว -->
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars(
+					$saleDisplay,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+				readonly
+				style="
+					background:#f5f5f5;
+					cursor:not-allowed;
+				"
+			>
+
+
+		<?php
+		/* =====================================================
+		   USER อื่น ๆ
+		   ===================================================== */
+		} else {
+
+			/*
+			 * Admin / IT / Owner
+			 * เห็นเขตทั้งหมดจาก tb_team_adm
+			 */
+			if (
+				$typeLoginLower == 'admin' ||
+				$typeLoginLower == 'it' ||
+				$typeLoginLower == 'owner'
+			) {
+
+				$saleCodeSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE 1
+					ORDER BY sale_code ASC
+				";
+
+
+			/*
+			 * Engineer / SUP_EN
+			 */
+			} else if (
+				$userSaleCode == 'SUP_EN' ||
+				$typeLoginLower == 'engineer'
+			) {
+
+				$saleCodeSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+
+			/*
+			 * SOL
+			 */
+			} else if ($typeLoginLower == 'sol') {
+
+				$saleCodeSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+
+			/*
+ * Supervisor / User อื่น
+ * อ่านสิทธิ์จาก user_sale_permission
+ */
+} else {
+
+    $saleCodeSql = "
+        SELECT DISTINCT
+            t.sale_code,
+            t.sale_name
+        FROM tb_team_adm t
+
+        INNER JOIN user_sale_permission p
+            ON p.sale_code COLLATE utf8mb3_general_ci
+             = t.sale_code COLLATE utf8mb3_general_ci
+
+        WHERE p.em_id COLLATE utf8mb3_general_ci
+            = '".$userSaleCodeSafe."' COLLATE utf8mb3_general_ci
+
+        ORDER BY t.sale_code ASC
+    ";
+
+}
+
+
+			$saleCodeQuery = mysqli_query(
+				$com,
+				$saleCodeSql
+			);
+
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+
+				<option value="">
+					เลือกแผนก/เขตการขาย
+				</option>
+
+
+				<?php
+
+				if ($saleCodeQuery) {
+
+					while (
+						$saleCodeRow =
+						mysqli_fetch_array(
+							$saleCodeQuery,
+							MYSQLI_ASSOC
+						)
+					) {
+
+				?>
+
+					<option
+						value="<?php echo htmlspecialchars(
+							$saleCodeRow['sale_code'],
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>"
+					>
+
+						<?php
+						echo htmlspecialchars(
+							$saleCodeRow['sale_code'] .
+							' - ' .
+							$saleCodeRow['sale_name'],
+							ENT_QUOTES,
+							'UTF-8'
+						);
+						?>
+
+					</option>
+
+				<?php
+
+					}
+
+				}
+
+				?>
+
+			</select>
+
+		<?php
+		}
+		?>
+
+	</div>
+</div>
 
 							<!-- ช่องทางการขาย* -->
-							<div class="so-field-group">
-								<label class="so-label" for="sale_channel">ช่องทางการขาย<span class="required">*</span></label>
-								<div class="so-select-wrapper">
-									<select name="sale_channel" id="sale_channel" class="so-select">
-										<option value="">เลือกช่องทางการขาย</option>
-										<?php
-										// ซ่อนช่องทางที่ถูกลบ (delete_ckk = 1) แต่ตอนแก้ไขใบเดิมต้องคงช่องทางที่ใบนั้นเลือกไว้
-										// ไม่งั้น dropdown จะว่างและบันทึกใบเดิมไม่ได้ (ช่องนี้บังคับกรอก)
-										$currentChannelId = ($savedSo !== null) ? (int)($savedSo['sale_channel'] ?? 0) : 0;
-										$sqlchannel = "SELECT * FROM tb_salechannel WHERE delete_ckk = 0 OR salechannel_ID = " . $currentChannelId . " ORDER BY salechannel_ID";
-										$querychannel = false;
-										$saleChannelTable = mysqli_query($conn, "SHOW TABLES LIKE 'tb_salechannel'");
-										if ($saleChannelTable && mysqli_num_rows($saleChannelTable) > 0) {
-											$querychannel = mysqli_query($conn, $sqlchannel);
-										}
-										if ($querychannel) {
-											while ($fetchchannel = mysqli_fetch_array($querychannel, MYSQLI_ASSOC)) {
-												$channelLabel = trim($fetchchannel['salechannel_nameshort'] . ' ' . $fetchchannel['description_chanel']);
-										?>
-												<option value="<?php echo htmlspecialchars($fetchchannel['salechannel_ID'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($channelLabel, ENT_QUOTES, 'UTF-8'); ?></option>
-										<?php
-											}
-										}
-										?>
-									</select>
-								</div>
-							</div>
+<div class="so-field-group" id="sale_channel_field_group" style="display:none;">
+	<label class="so-label" for="sale_channel">
+		ช่องทางการขาย<span class="required">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+		<select name="sale_channel" id="sale_channel" class="so-select">
+			<option value="">เลือกช่องทางการขาย</option>
+
+			<?php
+			// ซ่อนช่องทางที่ถูกลบ (delete_ckk = 1)
+			// แต่ตอนแก้ไขใบเดิมต้องคงช่องทางที่ใบนั้นเลือกไว้
+			$currentChannelId = ($savedSo !== null)
+				? (int)($savedSo['sale_channel'] ?? 0)
+				: 0;
+
+			$sqlchannel = "
+				SELECT *
+				FROM tb_salechannel
+				WHERE delete_ckk = 0
+				   OR salechannel_ID = " . $currentChannelId . "
+				ORDER BY salechannel_ID
+			";
+
+			$querychannel = false;
+
+			$saleChannelTable = mysqli_query(
+				$conn,
+				"SHOW TABLES LIKE 'tb_salechannel'"
+			);
+
+			if (
+				$saleChannelTable &&
+				mysqli_num_rows($saleChannelTable) > 0
+			) {
+				$querychannel = mysqli_query(
+					$conn,
+					$sqlchannel
+				);
+			}
+
+			if ($querychannel) {
+
+				while (
+					$fetchchannel = mysqli_fetch_array(
+						$querychannel,
+						MYSQLI_ASSOC
+					)
+				) {
+
+					$channelLabel = trim(
+						$fetchchannel['salechannel_nameshort']
+						. ' '
+						. $fetchchannel['description_chanel']
+					);
+			?>
+
+					<option
+						value="<?php echo htmlspecialchars(
+							$fetchchannel['salechannel_ID'],
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>"
+						<?php
+						echo (
+							$currentChannelId > 0 &&
+							(int)$fetchchannel['salechannel_ID'] === $currentChannelId
+						)
+							? 'selected'
+							: '';
+						?>
+					>
+						<?php echo htmlspecialchars(
+							$channelLabel,
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>
+					</option>
+
+			<?php
+				}
+			}
+			?>
+
+		</select>
+	</div>
+</div>
 
 							<!-- Extra document options that were next to type_doc in original: ใบฝากขาย, ขอบิล E-Tax (Hidden since it's now in the dropdown) -->
 							<div class="so-field-group" style="display: none;">
@@ -2269,7 +2590,7 @@ include("head.php"); ?>
 							<div class="so-field-group">
 								<label class="so-label" for="date_so">วันที่</label>
 								<div class="so-input-wrapper calendar-wrapper">
-									<input type="date" name="date_so" id="date_so" value="<?php echo $today; ?>" class="so-input">
+									<input type="date" name="date_so" id="date_so" value="<?php echo $today; ?>" class="so-input" readonly>
 								</div>
 							</div>
 
@@ -2309,10 +2630,20 @@ include("head.php"); ?>
 							</div>
 
 							<!-- เลขที่ใบงานบริการ -->
-							<div class="so-field-group">
-								<label class="so-label" for="cm_no">เลขที่ใบงานบริการ</label>
-								<input name="cm_no" id="cm_no" class="so-input" placeholder="เช่น 932813829r7">
-							</div>
+							<?php if (
+	in_array($typeLoginLower, ['engineer', 'admin', 'it', 'owner'], true)
+	|| $userSaleCode === 'SUP_EN'
+) { ?>
+	<div class="so-field-group">
+		<label class="so-label" for="cm_no">เลขที่ใบงานบริการ</label>
+		<input
+			name="cm_no"
+			id="cm_no"
+			class="so-input"
+			placeholder="เช่น 932813829r7"
+		>
+	</div>
+<?php } ?>
 						</div>
 					</div>
 
@@ -2648,6 +2979,13 @@ include("head.php"); ?>
 
 				<!-- ข้อมูลการจัดส่ง -->
 				<?php
+				
+				$canSendCs = in_array(
+	$typeLoginLower,
+	['admin', 'it', 'owner','sol'],
+	true
+);
+				
 				$deliveryTab = [
 					'open_fn' => 'openDelTab',
 					'grid_fields' => [
@@ -2663,7 +3001,7 @@ include("head.php"); ?>
 						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
-						// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__so.time_range ดู sql/delivery_time_range.sql)
+						// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__so.time_range ดู sql/delivery_time_range.sql)
 						// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 						['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 							'' => 'เลือกช่วงเวลา',
@@ -2678,10 +3016,30 @@ include("head.php"); ?>
 						['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 						['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง', 'checked' => so_saved_checked($savedRegister, 'call_customer')],
 					],
-					'toggle_buttons' => [
-						['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)', 'checked' => so_saved_checked($savedOtherBill, 'ref_12')],
-						['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS', 'checked' => in_array((string)($savedSo['send_cs'] ?? ''), ['1', '2'], true)],
-					],
+					'toggle_buttons' => array_merge(
+	[
+		[
+			'name' => 'ref_12',
+			'id' => 'ref_12',
+			'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)',
+			'checked' => so_saved_checked($savedOtherBill, 'ref_12')
+		],
+	],
+	$canSendCs
+		? [
+			[
+				'name' => 'send_cs',
+				'id' => 'send_cs',
+				'label' => 'ส่งข้อมูลลงระบบ CS',
+				'checked' => in_array(
+					(string)($savedSo['send_cs'] ?? ''),
+					['1', '2'],
+					true
+				)
+			],
+		]
+		: []
+),
 					'cost_fields' => [
 						['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
 						['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
@@ -3663,35 +4021,265 @@ include("head.php"); ?>
 		<!-- ปุ่ม action ติดล่างของฟอร์มหลัก: submit จริงและปุ่ม draft สำหรับต่อยอด logic ภายหลัง -->
 		</div>
 		<?php
-		$soStatusDoc = $savedSo['status_doc'] ?? '';
-		$soSendCm = $savedSo['send_cm'] ?? '';
-		$soSendSup = $savedSo['send_sup'] ?? '0';
-		// เอกสารจบแล้ว (อนุมัติ/ยกเลิก/ไม่อนุมัติ) กับ "ส่งบัญชีแล้ว" ต้องแยกกัน เพราะสเปคให้
-		// send_cm='1'+Request ยังมีปุ่ม Update อยู่ แต่ปุ่ม Submit ต้องหาย
-		$soIsClosed = in_array($soStatusDoc, ['Approve', 'ยกเลิก', 'Rejected'], true);
-		$soSentToCm = ($soSendCm === '1' && $soStatusDoc === 'Request');
-		$soFinalStates = $soIsClosed || $soSentToCm;
-		// Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') ตามสเปค "หลังจากกด Submit ปุ่ม Submit จะหาย"
-		$soHideSubmit = ($savedSo !== null) && ($soSendSup === '1' || $soFinalStates);
-		$soIsEditMode = ($savedSo !== null);
-		$soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
-		// send_cm='1' ส่งบัญชีแล้ว / send_cm='2' เอกสาร IC ส่งอนุมัติต่อแล้ว ทั้งคู่ต้องไม่ให้แถบอนุมัติ
-		// โผล่ซ้ำ ไม่งั้นกดอนุมัติซ้ำได้อีกรอบทั้งที่ส่งต่อไปแล้ว (status_doc ยังค้างเป็น Request)
-		$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover
-			&& ($soStatusDoc === 'Request')
-			&& !in_array($soSendCm, ['1', '2'], true);
-		// Update ยังใช้แก้ไขต่อได้จนกว่าเอกสารจะจบ (ไม่ผูกกับ send_sup และไม่ผูกกับ send_cm)
-		// ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่แล้ว เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองอยู่แล้ว กันไม่ให้เห็นปุ่ม Update ซ้ำสองปุ่ม
-		$soHideUpdate = $soIsClosed || $soCanShowApproveBar;
-		// พิมพ์ใบเบิกสต็อกแล้ว / ผูกเอกสารสต็อกแล้ว ห้ามยกเลิกเอกสาร จึงซ่อนเมนูยกเลิกในแถบอนุมัติ
-		$soCancelLocked = ($savedSo !== null) && (
-			!empty(trim((string)($savedSo['stock_print'] ?? ''))) ||
-			!empty(trim((string)($savedSo['ref_idst'] ?? '')))
-		);
-		// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารที่ Run ค้างไว้ได้ (ไม่งั้นรีหน้าแล้วเลขหาย)
-		// แต่ห้ามแก้ข้อมูลอื่นของเอกสารที่จบแล้ว จึงเปิดปุ่ม Update แบบจำกัดเฉพาะ Admin แทนปุ่ม Update ปกติ
-		$soIsAdminUser = (($_SESSION['type_login'] ?? '') === 'Admin');
-		$soShowAdminLimitedUpdate = $soIsClosed && $soIsAdminUser && $soIsEditMode;
+		// =========================================================
+// DOCUMENT ACTION PERMISSION
+// =========================================================
+
+$soStatusDoc = trim((string)($savedSo['status_doc'] ?? ''));
+$soSendCm    = trim((string)($savedSo['send_cm'] ?? '0'));
+$soSendSup   = trim((string)($savedSo['send_sup'] ?? '0'));
+
+$soIsEditMode = ($savedSo !== null);
+
+
+// =========================================================
+// NORMALIZE LEGACY DATA
+// =========================================================
+
+// เอกสารเก่าบางใบ send_cm อาจเป็นค่าว่าง
+// ให้ถือว่าเป็น Step แรกเหมือน send_cm = 0
+if ($soSendCm === '') {
+	$soSendCm = '0';
+}
+
+
+// =========================================================
+// USER ROLE
+// =========================================================
+
+$soTypeLogin = strtolower(
+	trim((string)($_SESSION['type_login'] ?? ''))
+);
+
+
+// =========================================================
+// APPROVAL PERMISSION
+// =========================================================
+
+/*
+ * Approval Level 1
+ *
+ * ใช้เมื่อ:
+ * status_doc = Request
+ * send_cm    = 0
+ *
+ * ผู้มีสิทธิ์:
+ * Sup_sale
+ * Owner
+ * IT
+ * Sup_en
+ */
+$soCanLevel1Approve = in_array(
+	$soTypeLogin,
+	array(
+		'sup_sale',
+		'owner',
+		'it',
+		'sup_en'
+	),
+	true
+);
+
+
+/*
+ * Approval Level 2
+ *
+ * ใช้เมื่อ:
+ * status_doc = Request
+ * send_cm    = 2
+ *
+ * ผู้มีสิทธิ์:
+ * Owner
+ * IT
+ */
+$soCanLevel2Approve = in_array(
+	$soTypeLogin,
+	array(
+		'owner',
+		'it'
+	),
+	true
+);
+
+
+// =========================================================
+// UPDATE PERMISSION AFTER DOCUMENT WAS FORWARDED
+// =========================================================
+
+/*
+ * เมื่อ Request และ send_cm = 1 หรือ 2
+ *
+ * คนที่แก้ไขเอกสารได้:
+ * Sup_sale
+ * Owner
+ * IT
+ * Sup_en
+ */
+$soCanRestrictedUpdate = in_array(
+	$soTypeLogin,
+	array(
+		'sup_sale',
+		'owner',
+		'it',
+		'sup_en'
+	),
+	true
+);
+
+
+// =========================================================
+// CLOSED DOCUMENT
+// =========================================================
+
+$soIsClosed = in_array(
+	$soStatusDoc,
+	array(
+		'Approve',
+		'ยกเลิก',
+		'Rejected',
+		'Cancelled'
+	),
+	true
+);
+
+
+// =========================================================
+// SUBMIT BUTTON
+// =========================================================
+
+/*
+ * หลัง Submit แล้ว send_sup = 1
+ * ปุ่ม Submit ต้องหาย
+ */
+$soHideSubmit = (
+	$soIsEditMode
+	&& (
+		$soSendSup === '1'
+		|| $soIsClosed
+	)
+);
+
+
+// =========================================================
+// APPROVE BAR
+// =========================================================
+
+$soCanShowApproveBar = false;
+
+if (
+	$soIsEditMode
+	&& $soStatusDoc === 'Request'
+) {
+
+	/*
+	 * Level 1
+	 * Request + send_cm = 0
+	 */
+	if (
+		$soSendCm === '0'
+		&& $soCanLevel1Approve
+	) {
+
+		$soCanShowApproveBar = true;
+
+	/*
+	 * Level 2
+	 * Request + send_cm = 2
+	 */
+	} elseif (
+		$soSendCm === '2'
+		&& $soCanLevel2Approve
+	) {
+
+		$soCanShowApproveBar = true;
+	}
+}
+
+
+// =========================================================
+// UPDATE BUTTON
+// =========================================================
+
+$soCanShowUpdate = true;
+
+
+/*
+ * เอกสารจบแล้ว
+ * ห้าม Update ปกติ
+ */
+if ($soIsClosed) {
+
+	$soCanShowUpdate = false;
+
+
+/*
+ * Request + send_cm = 1 หรือ 2
+ *
+ * แก้ได้เฉพาะ:
+ * Sup_sale / Owner / IT / Sup_en
+ */
+} elseif (
+	$soIsEditMode
+	&& $soStatusDoc === 'Request'
+	&& in_array(
+		$soSendCm,
+		array('1', '2'),
+		true
+	)
+) {
+
+	$soCanShowUpdate = $soCanRestrictedUpdate;
+}
+
+
+/*
+ * ถ้ามี Approve Bar อยู่แล้ว
+ * จะใช้ปุ่ม Update ที่อยู่ใน Approve Bar
+ *
+ * ไม่ต้องแสดง Update ปกติซ้ำ
+ */
+$soShowNormalUpdate = (
+	$soCanShowUpdate
+	&& !$soCanShowApproveBar
+);
+
+
+// =========================================================
+// CANCEL DOCUMENT
+// =========================================================
+
+/*
+ * พิมพ์ใบเบิก Stock แล้ว
+ * หรือผูกเอกสาร Stock แล้ว
+ *
+ * ห้าม Cancel
+ */
+$soCancelLocked = (
+	$soIsEditMode
+	&& (
+		trim((string)($savedSo['stock_print'] ?? '')) !== ''
+		|| trim((string)($savedSo['ref_idst'] ?? '')) !== ''
+	)
+);
+
+
+// =========================================================
+// ADMIN LIMITED UPDATE
+// =========================================================
+
+/*
+ * เอกสารจบแล้ว
+ * Admin ยังแก้เฉพาะเลขที่/วันที่เอกสารได้
+ */
+$soIsAdminUser = (
+	$soTypeLogin === 'admin'
+);
+
+$soShowAdminLimitedUpdate = (
+	$soIsClosed
+	&& $soIsAdminUser
+	&& $soIsEditMode
+);
 		?>
 		<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
 			<div class="so-sticky-actions-inner" style="max-width: 1200px; width: 100%; display: flex; gap: 16px; justify-content: flex-end; margin: 0 auto; padding-right: 24px; align-items: center;">
@@ -3722,7 +4310,7 @@ include("head.php"); ?>
 						<i class="far fa-paper-plane"></i> Submit
 					</button>
 				<?php endif; ?>
-				<?php if (!$soHideUpdate): ?>
+				<?php if ($soShowNormalUpdate): ?>
 					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
 						<i class="far fa-save"></i> <?php echo $soIsEditMode ? 'Update' : 'Save Draft'; ?>
 					</button>
@@ -3735,71 +4323,285 @@ include("head.php"); ?>
 					</button>
 				<?php endif; ?>
 				<?php
-				// ใบกำกับภาษีเปิดจากข้อมูลที่บันทึกแล้วเท่านั้น (เหมือนเมนูใน status_adminhos.php): ET -> report_EThos, อื่นๆ -> report_IEhos
-				$soPreviewSavedRefId = ($savedSo !== null) ? (string)($savedSo['ref_id'] ?? '') : '';
-				$soPreviewEtCkk = ($savedSo !== null) ? (string)($savedSo['et_ckk'] ?? '') : '';
-				$soPreviewTaxReport = (substr((string)($savedSo['iv_no'] ?? ''), 0, 2) === 'ET') ? 'report_EThos.php' : 'report_IEhos.php';
-				?>
-				<div class="so-preview-menu-wrap">
-					<button type="button" name="preview_so" id="btn_preview_menu" onclick="toggleSoPreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="soPreviewMenu" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
-						<img src="img/icons/preview.png" alt="" style="width: 16px; height: 16px;"> Preview
-					</button>
-					<div id="soPreviewMenu" class="so-preview-menu" hidden>
-						<div class="so-preview-menu-label">Preview</div>
-						<div class="so-preview-menu-box" role="menu">
-							<button type="button" role="menuitem" onclick="soPreviewSelect('so');">ใบสั่งขาย</button>
-							<button type="button" role="menuitem" onclick="soPreviewSelect('tax');">ใบกำกับภาษี</button>
-						</div>
-					</div>
-				</div>
-				<script>
-					var soPreviewTaxInfo = {
-						refId: <?php echo json_encode($soPreviewSavedRefId); ?>,
-						etCkk: <?php echo json_encode($soPreviewEtCkk); ?>,
-						report: <?php echo json_encode($soPreviewTaxReport); ?>
-					};
 
-					function setSoPreviewMenuOpen(open) {
-						var menu = document.getElementById('soPreviewMenu');
-						var trigger = document.getElementById('btn_preview_menu');
-						if (!menu || !trigger) return;
-						menu.hidden = !open;
-						trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-					}
+// =========================================================
+// Preview data
+// =========================================================
 
-					function toggleSoPreviewMenu(event) {
-						if (event) event.stopPropagation();
-						var menu = document.getElementById('soPreviewMenu');
-						setSoPreviewMenuOpen(menu ? menu.hidden : false);
-					}
+$soPreviewSavedRefId = ($savedSo !== null)
+	? trim((string)($savedSo['ref_id'] ?? ''))
+	: '';
 
-					function soPreviewSelect(kind) {
-						setSoPreviewMenuOpen(false);
-						if (kind === 'so') {
-							openPrintReport();
-						} else if (kind === 'tax') {
-							if (!soPreviewTaxInfo.refId) {
-								Swal.fire('แจ้งเตือน', 'กรุณาบันทึกเอกสารก่อนเปิดใบกำกับภาษี', 'warning');
-								return;
-							}
-							if (soPreviewTaxInfo.etCkk !== '1') {
-								Swal.fire('แจ้งเตือน', 'เอกสารนี้ไม่ได้เป็น E-Tax จึงไม่มีใบกำกับภาษี', 'warning');
-								return;
-							}
-							window.open(soPreviewTaxInfo.report + '?ref_id=' + encodeURIComponent(soPreviewTaxInfo.refId), '_blank');
-						}
-					}
+$soPreviewEtCkk = ($savedSo !== null)
+	? trim((string)($savedSo['et_ckk'] ?? ''))
+	: '';
 
-					document.addEventListener('click', function(event) {
-						var wrap = document.querySelector('.so-preview-menu-wrap');
-						if (wrap && !wrap.contains(event.target)) setSoPreviewMenuOpen(false);
-					});
-					document.addEventListener('keydown', function(event) {
-						if (event.key === 'Escape') setSoPreviewMenuOpen(false);
-					});
-				</script>
+$soPreviewIvNo = ($savedSo !== null)
+	? trim((string)($savedSo['iv_no'] ?? ''))
+	: '';
+
+$ivPrefix = strtoupper(substr($soPreviewIvNo, 0, 2));
+
+
+// =========================================================
+// Permission
+// =========================================================
+
+// ปุ่ม Preview แสดงเฉพาะหลังมี ref_id แล้ว
+$canShowPreview = ($soPreviewSavedRefId !== '');
+
+
+// report_IEhos.php
+// แสดงเฉพาะ iv_no ขึ้นต้น IE
+// และ type_login = Admin / IT / Owner
+$canShowIEReport = (
+	$ivPrefix === 'IE'
+	&& in_array(
+		$typeLoginLower,
+		['admin', 'it', 'owner'],
+		true
+	)
+);
+
+
+// report_EThos.php
+// เอกสารขึ้นต้น ET
+$canShowETReport = ($ivPrefix === 'ET');
+
+?>
+
+
+<?php if ($canShowPreview) { ?>
+
+	<div class="so-preview-menu-wrap">
+
+		<button
+			type="button"
+			name="preview_so"
+			id="btn_preview_menu"
+			onclick="toggleSoPreviewMenu(event);"
+			aria-haspopup="true"
+			aria-expanded="false"
+			aria-controls="soPreviewMenu"
+			style="
+				background-color: white;
+				color: #612989;
+				border: 1px solid #EBEBEB;
+				border-radius: 24px;
+				padding: 10px 28px;
+				font-family: 'Prompt', sans-serif;
+				font-size: 16px;
+				font-weight: 500;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				height: 40px;
+			"
+		>
+			<img
+				src="img/icons/preview.png"
+				alt=""
+				style="width: 16px; height: 16px;"
+			>
+
+			Preview
+		</button>
+
+
+		<div
+			id="soPreviewMenu"
+			class="so-preview-menu"
+			hidden
+		>
+
+			<div class="so-preview-menu-label">
+				Preview
 			</div>
+
+
+			<div
+				class="so-preview-menu-box"
+				role="menu"
+			>
+
+				<!-- ใบสั่งขาย -->
+				<button
+					type="button"
+					role="menuitem"
+					onclick="soPreviewSelect('so');"
+				>
+					ใบสั่งขาย
+				</button>
+
+
+				<!-- ET -->
+				<?php if ($canShowETReport) { ?>
+
+					<button
+						type="button"
+						role="menuitem"
+						onclick="soPreviewSelect('et');"
+					>
+						ใบกำกับภาษี
+					</button>
+
+				<?php } ?>
+
+
+				<!-- IE เฉพาะ Admin / IT / Owner -->
+				<?php if ($canShowIEReport) { ?>
+
+					<button
+						type="button"
+						role="menuitem"
+						onclick="soPreviewSelect('ie');"
+					>
+						ใบกำกับภาษี IE
+					</button>
+
+				<?php } ?>
+
+			</div>
+
 		</div>
+
+	</div>
+
+
+	<script>
+
+		var soPreviewTaxInfo = {
+			refId: <?php echo json_encode($soPreviewSavedRefId); ?>
+		};
+
+
+		function setSoPreviewMenuOpen(open) {
+
+			var menu =
+				document.getElementById('soPreviewMenu');
+
+			var trigger =
+				document.getElementById('btn_preview_menu');
+
+			if (!menu || !trigger) {
+				return;
+			}
+
+			menu.hidden = !open;
+
+			trigger.setAttribute(
+				'aria-expanded',
+				open ? 'true' : 'false'
+			);
+		}
+
+
+		function toggleSoPreviewMenu(event) {
+
+			if (event) {
+				event.stopPropagation();
+			}
+
+			var menu =
+				document.getElementById('soPreviewMenu');
+
+			setSoPreviewMenuOpen(
+				menu ? menu.hidden : false
+			);
+		}
+
+
+		function soPreviewSelect(kind) {
+
+			setSoPreviewMenuOpen(false);
+
+
+			// ==============================
+			// ใบสั่งขาย
+			// ==============================
+
+			if (kind === 'so') {
+
+				openPrintReport();
+
+				return;
+			}
+
+
+			// ==============================
+			// E-Tax
+			// ==============================
+
+			if (kind === 'et') {
+
+				window.open(
+					'report_EThos.php'
+					+ '?ref_id='
+					+ encodeURIComponent(
+						soPreviewTaxInfo.refId
+					),
+					'_blank'
+				);
+
+				return;
+			}
+
+
+			// ==============================
+			// IE
+			// ==============================
+
+			if (kind === 'ie') {
+
+				window.open(
+					'report_IEhos.php'
+					+ '?ref_id='
+					+ encodeURIComponent(
+						soPreviewTaxInfo.refId
+					),
+					'_blank'
+				);
+
+				return;
+			}
+		}
+
+
+		// ปิดเมนูเมื่อคลิกด้านนอก
+		document.addEventListener(
+			'click',
+			function(event) {
+
+				var wrap =
+					document.querySelector(
+						'.so-preview-menu-wrap'
+					);
+
+				if (
+					wrap &&
+					!wrap.contains(event.target)
+				) {
+					setSoPreviewMenuOpen(false);
+				}
+			}
+		);
+
+
+		// ESC ปิดเมนู
+		document.addEventListener(
+			'keydown',
+			function(event) {
+
+				if (event.key === 'Escape') {
+					setSoPreviewMenuOpen(false);
+				}
+			}
+		);
+
+	</script>
+
+<?php } ?>
 		<script>
 			function soEnsureSubmitMarker() {
 				var form = document.forms['frmMain'];
@@ -6336,40 +7138,125 @@ include("head.php"); ?>
 		}
 
 		function setClearLoanSelectValue(id, value, addMissingOption) {
-			var select = document.getElementById(id);
-			if (!select) return;
-			var normalizedValue = value == null ? '' : String(value);
-			for (var index = 0; index < select.options.length; index++) {
-				if (select.options[index].value === normalizedValue) {
-					var valueChanged = select.value !== normalizedValue;
-					select.value = normalizedValue;
-					if (valueChanged) {
-						select.dispatchEvent(new Event('change', {
-							bubbles: true
-						}));
-					} else {
-						select.setAttribute('data-prev', normalizedValue);
-					}
-					return;
-				}
-			}
-			if (addMissingOption && normalizedValue !== '') {
-				var option = document.createElement('option');
-				option.value = normalizedValue;
-				option.textContent = normalizedValue;
-				select.appendChild(option);
-				var valueChangedNew = select.value !== normalizedValue;
-				select.value = normalizedValue;
-				if (valueChangedNew) {
-					select.dispatchEvent(new Event('change', {
-						bubbles: true
-					}));
-				} else {
-					select.setAttribute('data-prev', normalizedValue);
-				}
-			}
+
+	var field = document.getElementById(id);
+
+	if (!field) {
+		return;
+	}
+
+	var normalizedValue =
+		value == null
+			? ''
+			: String(value);
+
+
+	/* =====================================================
+	   ไม่ใช่ SELECT
+	   เช่น Sale ใช้ hidden sale_code
+	===================================================== */
+
+	if (
+		field.tagName.toLowerCase() !== 'select'
+	) {
+
+		/*
+		 * sale_code ของ Sale ถูกล็อกจาก Session อยู่แล้ว
+		 * ไม่ต้องเปลี่ยนค่าตามเอกสาร
+		 */
+		if (id === 'sale_code') {
+			return;
 		}
 
+		var valueChanged =
+			String(field.value || '') !== normalizedValue;
+
+		field.value = normalizedValue;
+
+		if (valueChanged) {
+
+			field.dispatchEvent(
+				new Event('change', {
+					bubbles: true
+				})
+			);
+		}
+
+		return;
+	}
+
+
+	/* =====================================================
+	   SELECT ปกติ
+	===================================================== */
+
+	for (
+		var index = 0;
+		index < field.options.length;
+		index++
+	) {
+
+		if (
+			field.options[index].value === normalizedValue
+		) {
+
+			var valueChanged =
+				field.value !== normalizedValue;
+
+			field.value =
+				normalizedValue;
+
+			if (valueChanged) {
+
+				field.dispatchEvent(
+					new Event('change', {
+						bubbles: true
+					})
+				);
+
+			} else {
+
+				field.setAttribute(
+					'data-prev',
+					normalizedValue
+				);
+			}
+
+			return;
+		}
+	}
+
+
+	/* =====================================================
+	   ไม่พบ option
+	===================================================== */
+
+	if (
+		addMissingOption &&
+		normalizedValue !== ''
+	) {
+
+		var option =
+			document.createElement('option');
+
+		option.value =
+			normalizedValue;
+
+		option.textContent =
+			normalizedValue;
+
+		field.appendChild(option);
+
+		field.value =
+			normalizedValue;
+
+		field.dispatchEvent(
+			new Event('change', {
+				bubbles: true
+			})
+		);
+	}
+}
 		function mapClearLoanCompanyToDocType(company) {
 			var companyMap = {
 				'1': '3',
@@ -6409,9 +7296,9 @@ include("head.php"); ?>
 				}));
 			}
 
-			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อให้แสดงผลและเก็บลง hos__so.book_no เท่านั้น
-			// การปิด/เปิดใบจองตัดสินจากแถวสินค้า (jong_ckk{i}/jong_no{i}) เทียบยอดคงเหลือ ไม่ได้ดู book_no แล้ว
-			// — ดู includes/jong_repo.php ที่ register_suphos1.php / register_suphos_edit1.php เรียกหลังบันทึก
+			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อ (1) ให้แสดงผลได้ และ (2) ให้
+			// register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit จริง
+			// (เดิม popup เคลียร์จอง/ยืมไม่เคยเขียนฟิลด์นี้เลย ทำให้ใบจองไม่ถูกปิดและกลับมาเลือกซ้ำได้)
 			// หมายเหตุ: ฝั่งใบยืม (loan) ใช้กลไกปิดเอกสารคนละทาง (per-row clear_br{i}/clear_ivno{i})
 			// brn_no ไม่มี logic ปิด hos__br ต่อจากนั้น จึงยังไม่ implement ส่วนนี้
 			if (!isClearLoanBorrowType(documentRow.doc_type)) {
@@ -6451,6 +7338,9 @@ include("head.php"); ?>
 			var productCode = item.product_code || productId || '';
 			var productName = item.product_name || productId || productCode || '';
 			var productSn = item.sn || '';
+			var productSnCkk = String(
+	item.sn_ckk || '0'
+).trim();
 			var warrantyUnit = String(item.warranty_unit || '').trim();
 			if (!warrantyUnit || !isNaN(warrantyUnit)) {
 				warrantyUnit = 'ปี';
@@ -6511,6 +7401,45 @@ include("head.php"); ?>
 			if (typeof updateRowTotal === 'function') {
 				updateRowTotal(rowIndex);
 			}
+			
+	
+
+/* =====================================================
+   ตรวจสอบรับประกัน
+   เคลียร์จอง / เคลียร์ยืม / ยืมฝากขาย
+===================================================== */
+
+if (productSnCkk === '1') {
+
+	var warrantyMessage = 'สินค้านี้ต้องใส่ข้อมูลปีรับประกัน';
+
+	if (productCode !== '') {
+		warrantyMessage += '\nรหัสสินค้า: ' + productCode;
+	}
+
+	if (productName !== '') {
+		warrantyMessage += '\nสินค้า: ' + productName;
+	}
+
+
+	if (typeof Swal !== 'undefined') {
+
+		Swal.fire({
+			icon: 'warning',
+			title: 'กรุณาตรวจสอบปีรับประกัน',
+			text: warrantyMessage,
+			confirmButtonColor: '#612989',
+			confirmButtonText: 'ตกลง',
+			customClass: {
+				container: 'clear-loan-swal-front'
+			}
+		});
+
+	} else {
+
+		alert(warrantyMessage);
+	}
+}
 		}
 
 		function requestClearLoanDocumentItems(docIndex, onComplete) {
@@ -6551,6 +7480,8 @@ include("head.php"); ?>
 					document_id: documentRow.internal_id
 				}
 			}).done(function(response) {
+				
+				
 				documentRow.items_loading = false;
 				if (!response || response.success !== true) {
 					renderClearLoanPopupRows(clearLoanPopupDocuments);
@@ -7225,8 +8156,6 @@ include("head.php"); ?>
 			'slip5' => '',
 			'stock_print' => '',
 			'ref_idst' => '',
-			'book_clear' => '',
-			'book_no' => '',
 		));
 	}
 	if ($soJsPrefillSource === null && $rentalPrefill !== null) {
@@ -7726,4 +8655,70 @@ include("head.php"); ?>
 			});
 		</script>
 	<?php endif; ?>
+	<script>
+	function syncSaleChannelVisibility() {
+
+		var saleCodeElement = document.getElementById('sale_code');
+		var saleChannelGroup = document.getElementById('sale_channel_field_group');
+		var saleChannelSelect = document.getElementById('sale_channel');
+
+		if (!saleCodeElement || !saleChannelGroup || !saleChannelSelect) {
+			return;
+		}
+
+		var saleCode = String(
+			saleCodeElement.value || ''
+		).trim().toUpperCase();
+
+
+		// แสดงเฉพาะ sale_code ที่มีคำว่า SOL
+		var isSOL = saleCode.indexOf('SOL') !== -1;
+
+
+		if (isSOL) {
+
+			// ==============================
+			// SOL
+			// ==============================
+			saleChannelGroup.style.display = '';
+
+			// บังคับกรอก
+			saleChannelSelect.required = true;
+
+		} else {
+
+			// ==============================
+			// ไม่ใช่ SOL
+			// ==============================
+			saleChannelGroup.style.display = 'none';
+
+			// ไม่บังคับกรอก
+			saleChannelSelect.required = false;
+
+			// ล้าง error validation เดิม
+			saleChannelSelect.setCustomValidity('');
+
+			// ล้างค่า
+			saleChannelSelect.value = '';
+		}
+	}
+
+
+	document.addEventListener('DOMContentLoaded', function() {
+
+		syncSaleChannelVisibility();
+
+		var saleCodeElement = document.getElementById('sale_code');
+
+		if (saleCodeElement) {
+
+			saleCodeElement.addEventListener(
+				'change',
+				syncSaleChannelVisibility
+			);
+
+		}
+
+	});
+</script>
 	<script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>

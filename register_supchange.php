@@ -715,7 +715,13 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 
 		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : so_saved_h($so . $nextId); ?>">
 		<input name="add_by" value="<?php echo so_saved_h(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')); ?>" type='hidden'>
+<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
 
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
 		<div class="chg-layout">
 
 			<div class="chg-content-col">
@@ -724,7 +730,9 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				<div id="step-doc">
 					<div class="so-tabs-container">
 						<button type="button" class="so-tab-btn active" onclick="switchBrMainTab(this, 'tab-document-info')">ข้อมูลเอกสาร</button>
+						<?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
 						<button type="button" class="so-tab-btn" onclick="switchBrMainTab(this, 'tab-admin-info')">Admin</button>
+						<?php } ?>
 					</div>
 
 					<div id="tab-document-info" class="so-tab-content active">
@@ -741,41 +749,162 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								</div>
 
 								<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
-									<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-									<div class="so-select-wrapper">
-										<?php
-										// mirror ของ register_supbrcshos.php:984-999 — ทีมขายตาม $_SESSION['code']
-										if ($_SESSION['code'] == 'SS1') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS2') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS3') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS5') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'MK2') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SUP_EN') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-										} else {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-										}
-										?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
-											$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
-											if ($chgSaleTeamQuery) {
-												while ($chgSaleTeamRow = mysqli_fetch_array($chgSaleTeamQuery)) {
-											?>
-												<option value="<?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?>"><?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?> - <?php echo so_saved_h($chgSaleTeamRow["sale_name"]); ?></option>
-											<?php
-												}
-											}
-											?>
-										</select>
-									</div>
-								</div>
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		
+
+		<?php if ($type_login_lower == 'sale') { ?>
+
+			<!-- Sale ล็อกเขตตัวเอง -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo so_saved_h($emid); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo so_saved_h($emid); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php } else { ?>
+
+			<?php
+
+			// =========================================================
+			// Admin / IT / Owner เห็นทั้งหมด
+			// =========================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// Engineer / SUP_EN
+			// =========================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// SOL
+			// =========================================================
+			else if ($type_login_lower == 'sol') {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// User อื่น
+			// ดูสิทธิ์จาก user_sale_permission
+			// =========================================================
+			else {
+
+				$chgSaleTeamSql = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+			?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
+
+				if ($chgSaleTeamQuery) {
+
+					while ($chgSaleTeamRow = mysqli_fetch_assoc($chgSaleTeamQuery)) {
+				?>
+
+						<option
+							value="<?php echo so_saved_h($chgSaleTeamRow['sale_code']); ?>"
+						>
+							<?php echo so_saved_h($chgSaleTeamRow['sale_code']); ?>
+							-
+							<?php echo so_saved_h($chgSaleTeamRow['sale_name']); ?>
+						</option>
+
+				<?php
+					}
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 								<!-- "งานด่วน" — hos__change.que_ckk เป็นคอลัมน์ใหม่ (sql/supchange_optional_columns.sql)
 								     register_supchange1.php เขียนผ่าน cs_update_column_if_exists จึงไม่พังถ้ายังไม่ได้รัน ALTER -->
@@ -1124,7 +1253,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 							// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 							['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
-							// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
+							// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
 							// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 							['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 								'' => 'เลือกช่วงเวลา',
@@ -1139,10 +1268,21 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 							['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 						],
-						'toggle_buttons' => [
-							['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-							['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-						],
+						'toggle_buttons' => array_filter([
+    [
+        'name' => 'no_money',
+        'id' => 'no_money',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 						'cost_fields' => [
 							['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
 							['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],

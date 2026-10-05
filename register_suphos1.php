@@ -525,32 +525,43 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 	$deptCommentItems = getDeptCommentItemsFromPost();
 
 
-	if ($name == 'ธัญนุช' or $name == 'ปวัน​รัตน์​') {
-		$sup_code = 'MK';
-		$approve  = $name;
-	} else {
-		if ($sale_code == 'S23' or $sale_code == 'S24' or $sale_code == 'S17' or $sale_code == 'S11' or $sale_code == 'S12' or $sale_code == 'S13' or $sale_code == 'S14') {
-			$sup_code = 'SS2';
-			$approve  = 'นรินทิพย์';
-		} else if ($sale_code == 'S15' or $sale_code == 'S22' or $sale_code == 'S21' or $sale_code == 'S51' or $sale_code == 'S16') {
+	// =========================================================
+// APPROVER / SUBMIT PERMISSION
+// =========================================================
 
-			$sup_code = 'SS1';
-			$approve  = 'พรรณิภา';
-		} else if ($sale_code == 'SM1' or $sale_code == 'MM2') {
+$type_login = trim((string)($_SESSION['type_login'] ?? ''));
+$type_login_lower = strtolower($type_login);
 
-			$sup_code = 'SM1';
-			$approve  = 'ลักษณาวรรณ';
-		} else if ($sale_code == 'S32' or $sale_code == 'S31' or $sale_code == 'MM1') {
-			$sup_code = 'SS3';
-			$approve  = 'มาลินี';
-		} else if ($sale_code == 'EN') {
-			$sup_code = 'SUP_EN';
-			$approve  = 'ศิรวิทย์';
-		} else if ($sale_code == 'CM') {
-			$sup_code = 'CM';
-			$approve  = 'ชลชินี';
-		}
-	}
+/*
+ * กลุ่มที่กด Submit แล้วถือว่าเป็นผู้อนุมัติเอง
+ *
+ * Sup_sale
+ * Owner
+ * Sup_en
+ */
+$isDirectApprover = in_array(
+    $type_login_lower,
+    array(
+        'sup_sale',
+        'owner',
+        'sup_en'
+    ),
+    true
+);
+
+if ($isDirectApprover) {
+
+    // ผู้สร้างเอกสารเป็นผู้มีสิทธิ์อนุมัติเอง
+    $approve  = $_SESSION['name'] ?? '';
+    $sup_code = $_SESSION['code'] ?? '';
+
+} else {
+
+    // ผู้ใช้อื่นสร้างเอกสาร
+    // ยังไม่มีผู้อนุมัติจนกว่าจะมีคนกด Approve
+    $approve  = '';
+    $sup_code = '';
+}
 
 	$head_1 = $_POST["head_1"];
 	$ref_1 = $_POST["ref_1"];
@@ -683,25 +694,61 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		$iv_no = "";
 	}
 
-	$isCancelDoc = (isset($_POST['cancel_doc']) && (string)$_POST['cancel_doc'] === '1');
-	$statusDoc = $isCancelDoc ? "ยกเลิก" : ($isDraftRequest ? "Draft" : "Request");
-	$sendSup = $isDraftRequest ? "0" : "1";
-	$approveValue = $isDraftRequest ? "" : $approve;
-	$approveCodeValue = $isDraftRequest ? "" : $sup_code;
-	$approveDateValue = $isDraftRequest ? "" : $sale_date;
-	$approveTimeValue = $isDraftRequest ? "" : $approve_time;
-	$ivDateValue = $isDraftRequest ? "" : $iv_date;
-	$ivTimeValue = $isDraftRequest ? "" : $iv_time;
+	$isCancelDoc = (
+    isset($_POST['cancel_doc']) &&
+    (string)$_POST['cancel_doc'] === '1'
+);
 
-	// จำนวนที่ดึงจากใบจองห้ามเกินยอดคงเหลือ — Draft/ยกเลิก ยังไม่กินยอดจอง จึงไม่ตรวจ
-	require_once __DIR__ . '/includes/jong_repo.php';
-	if (!$isDraftRequest && !$isCancelDoc) {
-		$jongShortages = jong_find_shortages($conn, jong_post_demand($_POST));
-		if (!empty($jongShortages)) {
-			echo "<script>alert(" . json_encode(jong_shortage_message($conn, $jongShortages), JSON_UNESCAPED_UNICODE) . ");history.back();</script>";
-			exit();
-		}
-	}
+// =========================================================
+// INITIAL DOCUMENT STATUS
+// =========================================================
+
+if ($isCancelDoc) {
+
+    $statusDoc = 'ยกเลิก';
+    $sendSup   = '0';
+
+} elseif ($isDraftRequest) {
+
+    $statusDoc = 'Draft';
+    $sendSup   = '0';
+
+} else {
+
+    /*
+     * Submit ทุกกรณีเริ่มต้นเป็น Request ก่อน
+     * หลัง INSERT จะจัด flow ตามสิทธิ์อีกครั้ง
+     */
+    $statusDoc = 'Request';
+    $sendSup   = '1';
+}
+
+
+// =========================================================
+// APPROVER INFO
+// =========================================================
+
+if (!$isDraftRequest && $isDirectApprover) {
+
+    $approveValue     = $approve;
+    $approveCodeValue = $sup_code;
+    $approveDateValue = $sale_date;
+    $approveTimeValue = $approve_time;
+
+} else {
+
+    /*
+     * ผู้ใช้ทั่วไป Submit
+     * ต้องยังไม่มีชื่อผู้อนุมัติ
+     */
+    $approveValue     = '';
+    $approveCodeValue = '';
+    $approveDateValue = '';
+    $approveTimeValue = '';
+}
+
+$ivDateValue = $isDraftRequest ? '' : $iv_date;
+$ivTimeValue = $isDraftRequest ? '' : $iv_time;
 
 	// PHP 8.1+ ตั้ง mysqli.report_mode = ERROR|STRICT เป็นค่า default ทำให้ query ที่ล้มเหลว "โยน exception"
 	// ไม่ใช่คืน false ดังนั้น or die() และ if (!$result) ที่มีอยู่เดิมทั้งไฟล์จึงไม่เคยทำงาน
@@ -760,13 +807,106 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 				throw $e; // error อื่นให้ throw ต่อไปเหมือนพฤติกรรมเดิม (ไฟล์นี้ไม่มี try/catch ครอบทั้งไฟล์)
 			}
 		}
-
+		
 		if (!$refGenerated) {
-			// เดิมต้อง exit() ทันทีเพราะไม่มี transaction ครอบ กลัวโค้ดข้างล่างสร้างแถวลูกที่ผูกกับ ref_id ที่ไม่มี header row จริง
-			// ตอนนี้ทุกอย่างอยู่ใน transaction เดียวกันแล้ว ปล่อยให้โค้ดที่เหลือรันต่อได้อย่างปลอดภัย
-			// เพราะถ้า $saveOk เป็น false จะ rollback ทั้งหมดตอนจบไฟล์ ไม่มีทางมีแถวกำพร้าหลงเหลือ
+			// ถ้าออกเลขเอกสารไม่สำเร็จ ห้ามทำ flow Submit ต่อ
+			// transaction จะ rollback ทั้งหมดตอนท้าย
 			$saveOk = false;
 			$saveFailures[] = 'hos__so: ไม่สามารถออกเลขเอกสารได้ (เลขชนกันเกิน ' . $maxRefAttempts . ' ครั้ง)';
+		} else {
+
+			// =========================================================
+			// SUBMIT / APPROVAL FLOW
+			// =========================================================
+			if (!$isDraftRequest && !$isCancelDoc) {
+
+				$ref_id_safe = mysqli_real_escape_string($conn, $ref_id);
+				$safeAddBy = mysqli_real_escape_string($conn, $add_by);
+				$safeAddDate = mysqli_real_escape_string($conn, $add_date);
+
+				/*
+				 * CASE 1: Sup_sale / Owner / Sup_en เป็นคนกด Submit
+				 * ถือว่าเป็นผู้อนุมัติชั้นแรกเอง
+				 */
+				if ($isDirectApprover) {
+
+					$safeApprove = mysqli_real_escape_string($conn, $approve);
+					$safeSupCode = mysqli_real_escape_string($conn, $sup_code);
+					$safeSaleDate = mysqli_real_escape_string($conn, $sale_date);
+					$safeApproveTime = mysqli_real_escape_string($conn, $approve_time);
+
+					/*
+					 * ใบฝากขาย IC
+					 * ผู้มีสิทธิ์อนุมัติชั้นแรกแล้ว ส่งต่อ Owner / IT โดย send_cm = 2
+					 */
+					if ((string)$ic_ckk === '1') {
+
+						$sqlSubmitStatus = "
+							UPDATE hos__so
+							SET
+								send_sup = '1',
+								send_supname = '$safeAddBy',
+								send_supdate = '$safeAddDate',
+								send_admin = '0',
+								status_doc = 'Request',
+								send_cm = '2',
+								approve = '$safeApprove',
+								approve_code = '$safeSupCode',
+								approve_date = '$safeSaleDate',
+								approve_time = '$safeApproveTime'
+							WHERE ref_id = '$ref_id_safe'
+						";
+
+					} else {
+
+						/*
+						 * ไม่ใช่ IC
+						 * Sup_sale / Owner / Sup_en อนุมัติจบทันที
+						 */
+						$sqlSubmitStatus = "
+							UPDATE hos__so
+							SET
+								send_sup = '1',
+								send_supname = '$safeAddBy',
+								send_supdate = '$safeAddDate',
+								send_admin = '1',
+								send_cm = '0',
+								status_doc = 'Approve',
+								approve = '$safeApprove',
+								approve_code = '$safeSupCode',
+								approve_date = '$safeSaleDate',
+								approve_time = '$safeApproveTime'
+							WHERE ref_id = '$ref_id_safe'
+						";
+					}
+
+					mysqli_query($conn, $sqlSubmitStatus);
+
+				} else {
+
+					/*
+					 * CASE 2: ผู้ใช้อื่นกด Submit
+					 * ส่งเข้าคิวอนุมัติชั้นแรก และยังไม่มีชื่อผู้อนุมัติ
+					 */
+					$sqlSubmitStatus = "
+						UPDATE hos__so
+						SET
+							send_sup = '1',
+							send_supname = '$safeAddBy',
+							send_supdate = '$safeAddDate',
+							send_admin = '0',
+							send_cm = '0',
+							status_doc = 'Request',
+							approve = '',
+							approve_code = '',
+							approve_date = '',
+							approve_time = ''
+						WHERE ref_id = '$ref_id_safe'
+					";
+
+					mysqli_query($conn, $sqlSubmitStatus);
+				}
+			}
 		}
 
 		function updateHosSoColumnIfExists($conn, $ref_id, $column, $value)
@@ -853,8 +993,30 @@ values
 
 
 
-		// การปิดใบจองไม่ได้ตัดสินจาก book_no แล้ว — ดู jong_apply_so_change() ท้าย try นี้ (หลัง insert แถวสินค้าครบ)
+		if ($book_no != '') {
 
+			$strSQL = "SELECT ref_id FROM hos__jongproduct WHERE iv_no = '" . $book_no . "' ";
+			$objQuery = mysqli_query($conn, $strSQL) or die(mysqli_error());
+			$objResult = mysqli_fetch_array($objQuery);
+
+			if (!empty($objResult["ref_id"])) {
+				$remark_jong = "เปิดใบสั่งขายเลขที่อ้างอิง $ref_id";
+
+				$save2 = "UPDATE  hos__jongproduct SET close_jong='1',remark='" . $remark_jong . "'  where ref_id = '" . $objResult["ref_id"] . "'";
+				$qsave2 = mysqli_query($conn, $save2);
+
+				$save3 = "UPDATE hos__subjongpro SET close_ckk='1'  where ref_idd = '" . $objResult["ref_id"] . "'";
+				$qsave3 = mysqli_query($conn, $save3);
+			}
+		}
+
+
+		/*if($book_clear=='1'){
+		
+$save="Update  hos__jongproduct set  close_jong = '1'    where  iv_no LIKE '%".$book_no."%'";
+$qsave=mysqli_query($conn,$save);
+			
+	}	*/
 		if ($linkedPo !== null) {
 			// อัปเดตแบบมีเงื่อนไข (open_so = 0) — ถ้ามีคนออก SO จาก PO ใบนี้แซงไปแล้ว ต้องล้มทั้ง transaction
 			if (!po_mark_sale_order_opened($conn, (string)$linkedPo['ref_id'], $ref_id, $add_by, $add_date)) {
@@ -3732,6 +3894,27 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		}
 
 
+		// =========================================================
+		// DIRECT APPROVER : SYNC PRODUCT STATUS
+		// =========================================================
+		// กรณี Sup_sale / Owner / Sup_en กด Submit และไม่ใช่ IC
+		// Header ถูกอนุมัติทันที จึงต้องตั้งสถานะสินค้าทุกรายการเป็น Approve ด้วย
+		if (
+			!$isDraftRequest &&
+			!$isCancelDoc &&
+			$isDirectApprover &&
+			(string)$ic_ckk !== '1'
+		) {
+			$safeRefIdApprove = mysqli_real_escape_string($conn, $ref_id);
+			$sqlApproveSubSo = "
+				UPDATE hos__subso
+				SET status_so = 'Approve'
+				WHERE ref_idd = '$safeRefIdApprove'
+			";
+			mysqli_query($conn, $sqlApproveSubSo);
+		}
+
+
 		$strSQL29 = "SELECT SUM(amount) AS unit_cash FROM hos__subso WHERE ref_idd = '" . $ref_id . "' ";
 		$objQuery29 = mysqli_query($conn, $strSQL29) or die("Error Query [" . $strSQL29 . "]");
 		$rs = mysqli_fetch_assoc($objQuery29);
@@ -4342,9 +4525,6 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 				}
 			}
 		}
-
-		// ปิดใบจองที่ถูกใช้ครบจากแถวสินค้าของใบสั่งขายใบนี้ (Draft ไม่กินยอด จึงไม่มีผล)
-		jong_apply_so_change($conn, $ref_id, array());
 	} catch (mysqli_sql_exception $e) {
 		$saveOk = false;
 		$saveFailures[] = $e->getMessage();

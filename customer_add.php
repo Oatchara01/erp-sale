@@ -57,7 +57,146 @@ function h($value)
 $typeCustomers = fetchRows($conn, "SELECT type_id, type_name FROM tb_typecustomer ORDER BY type_id");
 $creditBanks = fetchRows($code, "SELECT id, pay_in FROM tb_bank WHERE close_ckk = '0' ORDER BY id");
 $provinces = fetchRows($conn, "SELECT province_name FROM tb_province ORDER BY province_name");
-$saleTeams = fetchRows($com, "SELECT sale_code FROM tb_team_all WHERE 1 ORDER BY sale_code");
+/* =========================================================
+   สิทธิ์การมองเห็นเขตการขาย
+========================================================= */
+
+$userSaleCode = isset($_SESSION['code'])
+    ? trim($_SESSION['code'])
+    : '';
+
+$typeLogin = isset($_SESSION['type_login'])
+    ? trim($_SESSION['type_login'])
+    : '';
+
+$typeLoginLower = strtolower($typeLogin);
+
+$saleTeams = array();
+
+
+/* =========================================================
+   Admin / IT / Owner
+   เห็นเขตทั้งหมด
+========================================================= */
+
+if (in_array($typeLoginLower, ['admin', 'it', 'owner'], true)) {
+
+    $saleTeams = fetchRows(
+        $com,
+        "
+        SELECT sale_code
+        FROM tb_team_adm
+        WHERE ckk = '0'
+        ORDER BY sale_code ASC
+        "
+    );
+
+
+/* =========================================================
+   Sale
+   เห็นเฉพาะเขตของตัวเอง
+========================================================= */
+
+} elseif ($typeLoginLower === 'sale') {
+
+    $userSaleCodeSafe = mysqli_real_escape_string(
+        $com,
+        $userSaleCode
+    );
+
+    $saleTeams = fetchRows(
+        $com,
+        "
+        SELECT sale_code
+        FROM tb_team_adm
+        WHERE sale_code = '{$userSaleCodeSafe}'
+        ORDER BY sale_code ASC
+        "
+    );
+
+
+/* =========================================================
+   Engineer / SUP_EN
+   เห็นเฉพาะเขต EN
+========================================================= */
+
+} elseif (
+    $typeLoginLower === 'engineer'
+    || $typeLoginLower === 'sup_en'
+    || $userSaleCode === 'SUP_EN'
+) {
+
+    $saleTeams = fetchRows(
+        $com,
+        "
+        SELECT sale_code
+        FROM tb_team_adm
+        WHERE sale_code LIKE '%EN%'
+        ORDER BY sale_code ASC
+        "
+    );
+
+
+/* =========================================================
+   SOL
+========================================================= */
+
+} elseif ($typeLoginLower === 'sol') {
+
+    $saleTeams = fetchRows(
+        $com,
+        "
+        SELECT sale_code
+        FROM tb_team_adm
+        WHERE sale_code IN (
+            'SOL1',
+            'SOL2',
+            'SOL3',
+            'SOL4',
+            'SOL5',
+            'SOL6',
+            'SOL7',
+            'SOL8',
+            'SOL9',
+            'SOL0',
+            'SM1'
+        )
+        ORDER BY sale_code ASC
+        "
+    );
+
+
+/* =========================================================
+   Supervisor / User อื่น ๆ
+   ดูจาก user_sale_permission
+========================================================= */
+
+} else {
+
+    $userSaleCodeSafe = mysqli_real_escape_string(
+        $com,
+        $userSaleCode
+    );
+
+    $saleTeams = fetchRows(
+        $com,
+        "
+        SELECT DISTINCT
+            t.sale_code
+
+        FROM tb_team_adm t
+
+        INNER JOIN user_sale_permission p
+            ON p.sale_code COLLATE utf8mb3_general_ci
+             = t.sale_code COLLATE utf8mb3_general_ci
+
+        WHERE p.em_id COLLATE utf8mb3_general_ci
+            = '{$userSaleCodeSafe}' COLLATE utf8mb3_general_ci
+
+        ORDER BY t.sale_code ASC
+        "
+    );
+}
 // กรองกลุ่มลูกค้าตาม session แบบเดียวกับ data_mode_cus.php
 $modeSaleFilter = (($_SESSION['name'] ?? '') === 'มาลินี' || ($_SESSION['code'] ?? '') === 'S31') ? "WHERE sale_code = 'S31' OR sale_code = 'S32'" : '';
 $modeCustomers = fetchRows($conn, "SELECT id_mode, mode_name FROM tb_mode_customer {$modeSaleFilter} ORDER BY mode_name");
@@ -84,7 +223,7 @@ $customerData = array(
     'type_customer' => '',
     'mode_name' => '',
     'credit_ckk' => '',
-    'credit_thb' => '',
+	'credit_thb' => '',
     'vip_ckk' => '0',
     'cus_address' => '',
     'cus_province' => '',
@@ -1243,7 +1382,7 @@ if (empty($shippingRecords)) {
                 <input type="hidden" name="customer_id" value="<?php echo h($customerData['customer_id']); ?>">
                 <input type="hidden" name="customer_no" value="<?php echo h($customerData['customer_no']); ?>">
                 <input type="hidden" name="close_ckk" value="<?php echo h($customerData['close_ckk']); ?>">
-                <input type="hidden" name="credit_ckk" value="<?php echo h($customerData['credit_ckk']); ?>">
+				<input type="hidden" name="credit_ckk" value="<?php echo h($customerData['credit_ckk']); ?>">
                 <input type="hidden" name="credit_thb" value="<?php echo h($customerData['credit_thb']); ?>">
 
                 <div class="customer-header">
@@ -1649,33 +1788,89 @@ if (empty($shippingRecords)) {
                     </section>
 
                     <section class="section-block">
-                        <h2 class="section-title">สิทธิ์การใช้งาน</h2>
-                        <div class="field-grid">
-                            <div class="field span-3">
-                                <label class="field-label">เขตการขาย<span class="required-mark">*</span></label>
-                                <div class="multi-select" id="saleCodeSelect">
-                                    <input type="text" class="multi-select-summary" id="saleCodeSummary" value="Select" readonly aria-haspopup="listbox">
-                                    <div class="multi-select-panel">
-                                        <?php foreach ($saleTeams as $saleTeam) { ?>
-                                            <label class="multi-option">
-                                                <input type="checkbox" name="sale_code[]" value="<?php echo h($saleTeam['sale_code']); ?>" <?php echo in_array($saleTeam['sale_code'], $selectedSaleCodes) ? 'checked' : ''; ?>>
-                                                <span><?php echo h($saleTeam['sale_code']); ?></span>
-                                            </label>
-                                        <?php } ?>
-                                    </div>
-                                </div>
-                                <div class="field-error" id="saleCodeError"></div>
-                            </div>
-                        </div>
+    <h2 class="section-title">สิทธิ์การใช้งาน</h2>
 
-                        <div class="customer-actions">
-                            <button type="submit" class="primary-button">
-                                <?php if (!$isEditMode) { ?><img src="img/icons/add_user.png" alt="Add User"><?php } ?>
-                                <span id="submitCustomerButtonText"><?php echo $isEditMode ? 'อัพเดต' : 'เพิ่มลูกค้า'; ?></span>
-                            </button>
-                            <a href="register_suphos.php" class="ghost-button">ยกเลิก</a>
-                        </div>
-                    </section>
+    <div class="field-grid">
+        <div class="field span-3">
+
+            <label class="field-label">
+                เขตการขาย<span class="required-mark">*</span>
+            </label>
+
+            <?php if ($typeLoginLower === 'sale') { ?>
+
+                <!-- Sale: ล็อกเขตเป็นของตัวเอง -->
+                <input
+                    type="hidden"
+                    name="sale_code[]"
+                    value="<?php echo h($userSaleCode); ?>"
+                >
+
+                <div class="input-shell">
+                    <input
+                        type="text"
+                        class="form-input"
+                        value="<?php echo h($userSaleCode); ?>"
+                        readonly
+                        style="
+                            background:#f5f5f5;
+                            cursor:not-allowed;
+                        "
+                    >
+                </div>
+
+            <?php } else { ?>
+
+                <!-- User อื่น: เลือกได้ตามสิทธิ์ -->
+                <div class="multi-select" id="saleCodeSelect">
+
+                    <input
+                        type="text"
+                        class="multi-select-summary"
+                        id="saleCodeSummary"
+                        value="Select"
+                        readonly
+                        aria-haspopup="listbox"
+                    >
+
+                    <div class="multi-select-panel">
+
+                        <?php foreach ($saleTeams as $saleTeam) { ?>
+
+                            <label class="multi-option">
+
+                                <input
+                                    type="checkbox"
+                                    name="sale_code[]"
+                                    value="<?php echo h($saleTeam['sale_code']); ?>"
+                                    <?php
+                                    echo in_array(
+                                        $saleTeam['sale_code'],
+                                        $selectedSaleCodes,
+                                        true
+                                    ) ? 'checked' : '';
+                                    ?>
+                                >
+
+                                <span>
+                                    <?php echo h($saleTeam['sale_code']); ?>
+                                </span>
+
+                            </label>
+
+                        <?php } ?>
+
+                    </div>
+
+                </div>
+
+            <?php } ?>
+
+            <div class="field-error" id="saleCodeError"></div>
+
+        </div>
+    </div>
+</section>
 
                     <div class="hidden-fields">
                         <input type="hidden" name="bill_name" id="legacy_bill_name" value="<?php echo h($customerData['bill_name']); ?>">

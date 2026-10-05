@@ -13,7 +13,6 @@ if (empty($_SESSION['UserID'])) {
 }
 
 include 'dbconnect.php';
-require_once __DIR__ . '/includes/jong_repo.php';
 
 function clearLoanJsonResponse($payload, $statusCode = 200)
 {
@@ -87,158 +86,166 @@ function clearLoanSplitSnLines($sn)
     return array_values($parts);
 }
 
-function clearLoanReserveSaleFilter($conn)
+function clearLoanSalePermissionFilter($conn)
 {
     $saleCode = isset($_SESSION['code']) ? trim((string)$_SESSION['code']) : '';
-    $userType = isset($_SESSION['user_type']) ? trim((string)$_SESSION['user_type']) : '';
+    $typeLogin = isset($_SESSION['type_login']) ? trim((string)$_SESSION['type_login']) : '';
+    $typeLoginLower = strtolower($typeLogin);
 
-    if ($userType === 'Engineer') {
-        return "h.sale_code LIKE '%EN%'";
-    }
-
-    if ($saleCode === 'SS1') {
-        return "h.sale_code IN ('S15','S16','S21','S22','S14')";
-    }
-
-    if ($saleCode === 'SS2') {
-        return "h.sale_code IN ('S11','S12','S17','S24','S13')";
-    }
-
-    if ($saleCode === 'SS3') {
-        return "h.sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-    }
-
-    if ($saleCode === 'SS5') {
-        return "h.sale_code IN ('S31','S32')";
-    }
-
-    if ($saleCode === 'SUP_MK') {
-        return "h.sale_code IN ('SOL91','SOL92','SOL93','SOL94','MK')";
-    }
-
-    if ($saleCode === 'SM1') {
-        return "h.sale_code IN ('S31','S32','S33','MM1','MM2','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL0','SOL99')";
-    }
-
-    if ($saleCode === 'SUP_EN') {
-        return "h.sale_code LIKE '%EN%'";
-    }
-
-    if ($saleCode !== '') {
-        if (preg_match('/^(S\d{2}|EN\d+|SOL\d+|MM\d+|PM|MK)$/', $saleCode)) {
-            return "h.sale_code = '" . clearLoanEscape($conn, $saleCode) . "'";
-        }
-
+    // Admin / IT / Owner เห็นเอกสารทุกเขต
+    if (in_array($typeLoginLower, array('admin', 'it', 'owner'), true)) {
         return '1=1';
     }
 
-    return '1=1';
-}
+    // Sale เห็นเฉพาะเอกสารของเขตตัวเอง
+    if ($typeLoginLower === 'sale') {
+        if ($saleCode === '') {
+            return '1=0';
+        }
 
-function clearLoanLoanSaleFilter()
-{
-    $employeeCode = isset($_SESSION['code']) ? trim((string)$_SESSION['code']) : '';
-
-    if ($employeeCode === 'SS1') {
-        return "h.sale_code IN ('S15','S16','S21','S22','S14')";
+        return "h.sale_code = '" . clearLoanEscape($conn, $saleCode) . "'";
     }
 
-    if ($employeeCode === 'SS2') {
-        return "h.sale_code IN ('S11','S12','S17','S24','S13')";
-    }
-
-    if ($employeeCode === 'SS3') {
-        return "h.sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-    }
-
-    if ($employeeCode === 'SS5') {
-        return "h.sale_code IN ('S31','S32')";
-    }
-
-    if ($employeeCode === 'SUP_EN') {
+    // Engineer / SUP_EN เห็นเฉพาะเขต EN
+    if ($typeLoginLower === 'engineer' || $saleCode === 'SUP_EN') {
         return "h.sale_code LIKE '%EN%'";
     }
 
-    return '1=1';
+    // SOL เห็นเฉพาะกลุ่ม SOL และ SM1
+    if ($typeLoginLower === 'sol') {
+        return "h.sale_code IN ('SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL9','SOL0','SOL99','SM1')";
+    }
+
+    // สิทธิ์อื่น ๆ อ่านเขตที่ได้รับอนุญาตจาก user_sale_permission
+    if ($saleCode === '') {
+        return '1=0';
+    }
+
+    $saleCodeSafe = clearLoanEscape($conn, $saleCode);
+
+return "EXISTS (
+    SELECT 1
+    FROM user_sale_permission usp
+    WHERE usp.em_id COLLATE utf8mb3_general_ci
+          = '{$saleCodeSafe}' COLLATE utf8mb3_general_ci
+      AND usp.sale_code COLLATE utf8mb3_general_ci
+          = h.sale_code COLLATE utf8mb3_general_ci
+)";
 }
 
-// ใบยืมฝากขาย (hos__consig) — สิทธิ์การมองเห็นมิเรอร์ $sddd ของ status_craeteso_brscsup.php
-function clearLoanConsigSaleFilter()
+function clearLoanReserveSaleFilter($conn)
 {
-    $employeeCode = isset($_SESSION['code']) ? trim((string)$_SESSION['code']) : '';
+    return clearLoanSalePermissionFilter($conn);
+}
 
-    if ($employeeCode === 'SS1') {
-        return "h.sale_code IN ('S15','S16','S21','S22')";
-    }
+function clearLoanLoanSaleFilter($conn)
+{
+    return clearLoanSalePermissionFilter($conn);
+}
 
-    if ($employeeCode === 'SS2') {
-        return "h.sale_code IN ('S11','S12','S17','S24')";
-    }
-
-    if ($employeeCode === 'SS3') {
-        return "h.sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-    }
-
-    if ($employeeCode === 'SS5') {
-        return "h.sale_code IN ('S31','S32')";
-    }
-
-    if ($employeeCode === 'SUP_EN') {
-        return "h.sale_code LIKE '%EN%'";
-    }
-
-    if ($employeeCode === 'SUP_MK') {
-        return "h.sale_code IN ('MK','SOL91','SOL92','SOL93','SOL94','SOL99')";
-    }
-
-    return '1=1';
+// ใบยืมฝากขาย (hos__consig) ใช้สิทธิ์เดียวกับเอกสารประเภทอื่น
+function clearLoanConsigSaleFilter($conn)
+{
+    return clearLoanSalePermissionFilter($conn);
 }
 
 function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
 {
-    $detailSql = "SELECT
-            d.product_id,
+    $referenceNoSafe = clearLoanEscape(
+        $conn,
+        $referenceNo
+    );
+
+    $detailSql = "
+        SELECT
+            d.product_ID AS product_id,
             d.`count` AS qty,
+
             p.sol_name,
             p.access_code,
             p.war_hc,
             p.unit_hc,
-            p.remark_hc
+            p.remark_hc,
+            p.sn_ckk
+
         FROM hos__subjongpro d
-        LEFT JOIN tb_product p ON d.product_ID = p.product_id
-        WHERE d.ref_idd = '" . clearLoanEscape($conn, $referenceNo) . "'
-        AND COALESCE(d.close_ckk, '0') <> '1'";
-    $detailQuery = mysqli_query($conn, $detailSql);
+
+        LEFT JOIN tb_product p
+            ON d.product_ID = p.product_ID
+
+        WHERE d.ref_idd = '{$referenceNoSafe}'
+    ";
+
+    $detailQuery = mysqli_query(
+        $conn,
+        $detailSql
+    );
+
     $items = array();
     $itemIndex = 1;
 
-    // แสดงเฉพาะยอดคงเหลือ: หักยอดที่ใบสั่งขายที่ส่งแล้ว/อนุมัติแล้วใช้ไป (includes/jong_repo.php)
-    // สินค้าเดียวกันที่อยู่หลายแถวในใบจองจะถูกตัดยอดคงเหลือไล่ไปทีละแถว
-    $remaining = jong_remaining_map($conn, array('ref_id' => $referenceNo, 'iv_no' => $documentNo));
 
     if ($detailQuery) {
-        while ($detail = mysqli_fetch_assoc($detailQuery)) {
-            $productId = clearLoanNormalizeText($detail['product_id']);
-            $available = min((float)$detail['qty'], max(0, $remaining[$productId] ?? 0));
-            if ($available <= JONG_QTY_EPSILON) {
-                continue;
-            }
-            $remaining[$productId] -= $available;
+
+        while (
+            $detail = mysqli_fetch_assoc(
+                $detailQuery
+            )
+        ) {
 
             $items[] = array(
-                'item_key' => 'reserve-' . $documentNo . '-' . $itemIndex,
-                'product_id' => $productId,
-                'product_name' => clearLoanNormalizeText($detail['sol_name']),
-                'product_code' => clearLoanNormalizeText($detail['access_code']),
-                'quantity' => jong_format_qty($available),
-                'warranty' => clearLoanNormalizeText($detail['war_hc']),
-                'warranty_unit' => clearLoanNormalizeText($detail['unit_hc']),
-                'warranty_remark' => clearLoanNormalizeText($detail['remark_hc']),
+
+                'item_key' =>
+                    'reserve-'
+                    . $documentNo
+                    . '-'
+                    . $itemIndex,
+
+                'product_id' =>
+                    clearLoanNormalizeText(
+                        $detail['product_id']
+                    ),
+
+                'product_name' =>
+                    clearLoanNormalizeText(
+                        $detail['sol_name']
+                    ),
+
+                'product_code' =>
+                    clearLoanNormalizeText(
+                        $detail['access_code']
+                    ),
+
+                'quantity' =>
+                    (string)$detail['qty'],
+
+                'warranty' =>
+                    clearLoanNormalizeText(
+                        $detail['war_hc']
+                    ),
+
+                'warranty_unit' =>
+                    clearLoanNormalizeText(
+                        $detail['unit_hc']
+                    ),
+
+                'warranty_remark' =>
+                    clearLoanNormalizeText(
+                        $detail['remark_hc']
+                    ),
+
+                'sn_ckk' =>
+                    clearLoanNormalizeText(
+                        isset($detail['sn_ckk']) ? $detail['sn_ckk'] : '0'
+                    ),
+
                 'sn' => ''
             );
+
             $itemIndex++;
         }
     }
+
 
     return $items;
 }
@@ -250,7 +257,8 @@ function clearLoanBuildLoanItems($conn, $referenceNo, $documentNo)
             d.`count` AS qty,
             d.sn,
             p.sol_name,
-            p.access_code
+            p.access_code,
+            p.sn_ckk
         FROM hos__subbr d
         LEFT JOIN tb_product p ON d.product_id = p.product_ID
         WHERE d.ref_idd_br = '" . clearLoanEscape($conn, $referenceNo) . "'
@@ -271,6 +279,7 @@ function clearLoanBuildLoanItems($conn, $referenceNo, $documentNo)
                         'product_name' => clearLoanNormalizeText($detail['sol_name']),
                         'product_code' => clearLoanNormalizeText($detail['access_code']),
                         'quantity' => '1',
+                        'sn_ckk' => clearLoanNormalizeText(isset($detail['sn_ckk']) ? $detail['sn_ckk'] : '0'),
                         'sn' => $snValue
                     );
                     $itemIndex++;
@@ -284,6 +293,7 @@ function clearLoanBuildLoanItems($conn, $referenceNo, $documentNo)
                 'product_name' => clearLoanNormalizeText($detail['sol_name']),
                 'product_code' => clearLoanNormalizeText($detail['access_code']),
                 'quantity' => (string)$detail['qty'],
+                'sn_ckk' => clearLoanNormalizeText(isset($detail['sn_ckk']) ? $detail['sn_ckk'] : '0'),
                 'sn' => ''
             );
             $itemIndex++;
@@ -300,7 +310,8 @@ function clearLoanBuildConsigItems($conn, $referenceNo, $documentNo)
             d.`count` AS qty,
             d.sn,
             p.sol_name,
-            p.access_code
+            p.access_code,
+            p.sn_ckk
         FROM hos__subconsig d
         LEFT JOIN tb_product p ON d.product_id = p.product_ID
         WHERE d.ref_idd = '" . clearLoanEscape($conn, $referenceNo) . "'
@@ -321,6 +332,7 @@ function clearLoanBuildConsigItems($conn, $referenceNo, $documentNo)
                         'product_name' => clearLoanNormalizeText($detail['sol_name']),
                         'product_code' => clearLoanNormalizeText($detail['access_code']),
                         'quantity' => '1',
+                        'sn_ckk' => clearLoanNormalizeText(isset($detail['sn_ckk']) ? $detail['sn_ckk'] : '0'),
                         'sn' => $snValue
                     );
                     $itemIndex++;
@@ -334,6 +346,7 @@ function clearLoanBuildConsigItems($conn, $referenceNo, $documentNo)
                 'product_name' => clearLoanNormalizeText($detail['sol_name']),
                 'product_code' => clearLoanNormalizeText($detail['access_code']),
                 'quantity' => (string)$detail['qty'],
+                'sn_ckk' => clearLoanNormalizeText(isset($detail['sn_ckk']) ? $detail['sn_ckk'] : '0'),
                 'sn' => ''
             );
             $itemIndex++;
@@ -449,7 +462,6 @@ function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit, $compa
                 SELECT 1
                 FROM hos__subjongpro d
                 WHERE d.ref_idd = h.ref_id
-                AND COALESCE(d.close_ckk, '0') <> '1'
             ) AS has_items
         FROM hos__jongproduct h
         WHERE " . implode(' AND ', $filters) . "
@@ -519,7 +531,7 @@ function clearLoanFetchLoanDocuments($conn, $keyword, $lastId, $limit, $company)
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
         clearLoanCompanyFilter($company),
-        clearLoanLoanSaleFilter(),
+        clearLoanLoanSaleFilter($conn),
         "EXISTS (
             SELECT 1
             FROM hos__subbr d
@@ -618,7 +630,7 @@ function clearLoanFetchConsigDocuments($conn, $keyword, $lastId, $limit, $compan
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
         clearLoanCompanyFilter($company),
-        clearLoanConsigSaleFilter(),
+        clearLoanConsigSaleFilter($conn),
         "EXISTS (
             SELECT 1
             FROM hos__subconsig d
@@ -724,7 +736,9 @@ function clearLoanFetchReserveDocumentItems($conn, $documentId, $company)
         "h.close_jong = '0'",
         "h.cancel_ckk = '0'",
         "h.status_doc = 'Approve'",
-        clearLoanCompanyFilter($company),
+        // รายการเอกสารถูกกรอง company ตอน action=list อยู่แล้ว
+        // ตอนโหลดสินค้าด้วย document_id ไม่กรอง company ซ้ำ เพื่อไม่ให้เอกสารที่เลือกได้แล้ว
+        // ถูกตัดทิ้งก่อนโหลด hos__subjongpro
         clearLoanReserveSaleFilter($conn),
         "h.id_jong = {$documentId}"
     );
@@ -760,7 +774,7 @@ function clearLoanFetchLoanDocumentItems($conn, $documentId, $company)
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
         clearLoanCompanyFilter($company),
-        clearLoanLoanSaleFilter(),
+        clearLoanLoanSaleFilter($conn),
         "EXISTS (
             SELECT 1
             FROM hos__subbr d
@@ -802,7 +816,7 @@ function clearLoanFetchConsigDocumentItems($conn, $documentId, $company)
         "h.close_br = '0'",
         "h.status_doc = 'Approve'",
         clearLoanCompanyFilter($company),
-        clearLoanConsigSaleFilter(),
+        clearLoanConsigSaleFilter($conn),
         "EXISTS (
             SELECT 1
             FROM hos__subconsig d

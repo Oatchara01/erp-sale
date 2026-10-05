@@ -286,31 +286,186 @@
 
                         <!-- แผนก/เขตการขาย -->
                         <div class="so-field-group">
-                            <label class="so-label" for="sale_code">แผนก/เขตการขาย</label>
-                            <div class="so-select-wrapper">
-                                <?php
-                                $saleCodeQueries = array(
-                                    'SS1' => "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC",
-                                    'SS2' => "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC",
-                                    'SS3' => "SELECT * FROM tb_team_ss3 WHERE ckk_1='0' ORDER BY sale_code ASC",
-                                    'SS5' => "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC",
-                                    'SUP_MK' => "SELECT * FROM tb_team_adm WHERE ckk='1' ORDER BY sale_code ASC",
-                                    'SUP_EN' => "SELECT * FROM tb_team_en ORDER BY sale_code ASC"
-                                );
-                                $userSaleCode = isset($_SESSION['code']) ? $_SESSION['code'] : '';
-                                $saleCodeSql = isset($saleCodeQueries[$userSaleCode]) ? $saleCodeQueries[$userSaleCode] : "SELECT * FROM tb_team_adm WHERE ckk='0' ORDER BY sale_code ASC";
-                                $saleCodeQuery = mysqli_query($com, $saleCodeSql);
-                                ?>
-                                <select name="sale_code" id="sale_code" class="so-select">
-                                    <option value="">เลือกแผนก/เขตการขาย</option>
-                                    <?php if ($saleCodeQuery) { ?>
-                                        <?php while ($saleCodeRow = mysqli_fetch_array($saleCodeQuery, MYSQLI_ASSOC)) { ?>
-                                            <option value="<?php echo htmlspecialchars($saleCodeRow['sale_code'], ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($saleCodeRow['sale_code'] == ($rs['sale_code'] ?? '')) ? 'selected' : ''; ?>><?php echo htmlspecialchars($saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'], ENT_QUOTES, 'UTF-8'); ?></option>
-                                        <?php } ?>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
+    <label class="so-label" for="sale_code">แผนก/เขตการขาย</label>
+
+    <div class="so-select-wrapper">
+
+        <?php
+        $emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+        $type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+        $type_login_lower = strtolower($type_login);
+        $emid_safe = mysqli_real_escape_string($com, $emid);
+
+        $current_sale_code = isset($rs['sale_code'])
+            ? trim($rs['sale_code'])
+            : '';
+        ?>
+
+        <?php if ($type_login_lower == 'sale') { ?>
+
+            <!-- Sale ล็อกเขตตัวเอง -->
+            <input
+                type="hidden"
+                name="sale_code"
+                id="sale_code"
+                value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+            >
+
+            <input
+                type="text"
+                class="so-select"
+                value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+                readonly
+                style="background:#f5f5f5; cursor:not-allowed;"
+            >
+
+        <?php } else { ?>
+
+            <?php
+
+            // =========================================================
+            // Admin / IT / Owner
+            // เห็นทุกเขตที่เปิดใช้งาน
+            // =========================================================
+            if (
+                $type_login_lower == 'admin' ||
+                $type_login_lower == 'it' ||
+                $type_login_lower == 'owner'
+            ) {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // Engineer / SUP_EN
+            // =========================================================
+            else if (
+                $emid == 'SUP_EN' ||
+                $type_login_lower == 'engineer'
+            ) {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                      AND sale_code LIKE '%EN%'
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // SOL
+            // =========================================================
+            else if ($type_login_lower == 'sol') {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                      AND sale_code IN (
+                        'SOL1',
+                        'SOL2',
+                        'SOL3',
+                        'SOL4',
+                        'SOL5',
+                        'SOL6',
+                        'SOL7',
+                        'SOL8',
+                        'SOL9',
+                        'SOL0',
+                        'SM1'
+                      )
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // User อื่น
+            // ดูสิทธิ์จาก user_sale_permission
+            // =========================================================
+            else {
+
+                $saleCodeSql = "
+                    SELECT DISTINCT
+                        t.sale_code,
+                        t.sale_name
+                    FROM tb_team_adm t
+
+                    INNER JOIN user_sale_permission p
+                        ON p.sale_code COLLATE utf8mb3_general_ci
+                         =
+                           t.sale_code COLLATE utf8mb3_general_ci
+
+                    WHERE p.em_id = '".$emid_safe."'
+
+                    ORDER BY t.sale_code ASC
+                ";
+
+            }
+
+            $saleCodeQuery = mysqli_query($com, $saleCodeSql);
+            ?>
+
+            <select
+                name="sale_code"
+                id="sale_code"
+                class="so-select"
+            >
+
+                <option value="">เลือกแผนก/เขตการขาย</option>
+
+                <?php if ($saleCodeQuery) { ?>
+
+                    <?php while ($saleCodeRow = mysqli_fetch_assoc($saleCodeQuery)) { ?>
+
+                        <?php
+                        $selected = (
+                            $saleCodeRow['sale_code'] == $current_sale_code
+                        )
+                            ? 'selected'
+                            : '';
+                        ?>
+
+                        <option
+                            value="<?php echo htmlspecialchars(
+                                $saleCodeRow['sale_code'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ); ?>"
+                            <?php echo $selected; ?>
+                        >
+                            <?php echo htmlspecialchars(
+                                $saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ); ?>
+                        </option>
+
+                    <?php } ?>
+
+                <?php } ?>
+
+            </select>
+
+        <?php } ?>
+
+    </div>
+</div>
 
                         <!-- ประเภทลดหนี้ -->
                         <div class="so-field-group">

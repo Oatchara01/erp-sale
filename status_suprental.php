@@ -96,33 +96,85 @@ include('dbconnect_sale.php');
 	$status_approve = isset($_GET['status_approve']) ? trim($_GET['status_approve']) : '';
 	$rental_status  = isset($_GET['rental_status'])  ? trim($_GET['rental_status'])  : '';
 
-	$emid = $_SESSION['code'] ?? '';
+	/* =========================================================
+					   สิทธิ์การมองเห็นเอกสาร
+					   ========================================================= */
 
-	if ($emid == 'SS1') {
-		$sddd = " sale_code IN ('S15','S16','S21','S22','S14')";
-		$saleQuery = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-	} else if ($emid == 'SS2') {
-		$sddd = " sale_code IN ('S11','S12','S17','S24','S13')";
-		$saleQuery = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-	} else if ($emid == 'SS3') {
-		$sddd = " sale_code IN ('S31','S32','S33','MM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-		$saleQuery = "SELECT * FROM tb_team_ss3 WHERE ckk_1='0' ORDER BY sale_code ASC";
-	} else if ($emid == 'SS5') {
-		$sddd = " sale_code IN ('S31','S32')";
-		$saleQuery = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-	} else if ($emid == 'SUP_EN') {
-		$sddd = " sale_code LIKE '%EN%'";
-		$saleQuery = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-	} else if ($emid == 'SUP_MK') {
-		$sddd = " sale_code IN ('MK','SOL91','SOL92','SOL93','SOL94','SOL99')";
-		$saleQuery = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-	} else if ($emid == 'SM1' || $emid == 'MK2') {
-		$sddd = " sale_code LIKE '%SOL%'";
-		$saleQuery = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-	} else {
-		$sddd = "1";
-		$saleQuery = "SELECT * FROM tb_team_adm WHERE 1 ORDER BY sale_code ASC";
-	}
+					$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+					$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+					$emid_safe = mysqli_real_escape_string($conn, $emid);
+					$type_login_lower = strtolower($type_login);
+
+					$sddd = "1";
+
+					/* IT / Admin / Owner : เห็นเอกสารทั้งหมด */
+					if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
+
+						$sddd = "1";
+
+					/* Sale : เห็นเฉพาะ sale_code ของตัวเอง */
+					} else if ($type_login_lower == 'sale') {
+
+						$sddd = "sale_code = '" . $emid_safe . "'";
+
+					/* Engineer / SUP_EN : เห็นเฉพาะเขต EN */
+					} else if ($emid == 'SUP_EN' || $type_login_lower == 'engineer') {
+
+						$sddd = "sale_code LIKE '%EN%'";
+
+					/* SOL : ใช้สิทธิ์กลุ่ม SOL เดิม */
+					} else if ($type_login_lower == 'sol') {
+
+						$sddd = "sale_code IN (
+							'SOL1','SOL2','SOL3','SOL4','SOL5',
+							'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+						)";
+
+					/* User อื่น ๆ : อ่านสิทธิ์จาก user_sale_permission */
+					} else {
+
+						$sql_permission = "
+							SELECT sale_code
+							FROM user_sale_permission
+							WHERE em_id = '" . $emid_safe . "'
+						";
+
+						$query_permission = mysqli_query($conn, $sql_permission);
+
+						$sale_permission = array();
+
+						if ($query_permission) {
+							while ($row_permission = mysqli_fetch_assoc($query_permission)) {
+
+								if (
+									isset($row_permission['sale_code']) &&
+									trim($row_permission['sale_code']) != ''
+								) {
+
+									$sale_permission[] =
+										"'" .
+										mysqli_real_escape_string(
+											$conn,
+											trim($row_permission['sale_code'])
+										) .
+										"'";
+								}
+							}
+						}
+
+						if (!empty($sale_permission)) {
+
+							$sddd = "sale_code IN (" . implode(',', $sale_permission) . ")";
+
+						} else {
+
+							/*
+							 * ไม่มีสิทธิ์ในตาราง = ไม่ให้เห็นเอกสาร
+							 */
+							$sddd = "1=0";
+						}
+					}
 	?>
 
 	<div class="status-so-page">
@@ -207,26 +259,171 @@ include('dbconnect_sale.php');
 							</div>
 
 							<div class="so-form-row so-form-row-single" style="align-items: flex-start;">
-								<div>
-									<label class="so-label" for="modal_sale_code">เขตการขาย</label>
-									<select name="modal_sale_code" id="modal_sale_code" class="so-select">
-										<option value="">Select</option>
-										<?php
-										$objQuerySale = mysqli_query($com, $saleQuery);
-										if ($objQuerySale) {
-											while ($objResuutSale = mysqli_fetch_array($objQuerySale)) {
-												$sel = ($sale_code == $objResuutSale["sale_code"]) ? "selected" : "";
-										?>
-												<option value="<?php echo htmlspecialchars($objResuutSale["sale_code"]); ?>" <?php echo $sel; ?>>
-													<?php echo htmlspecialchars($objResuutSale["sale_code"]); ?> - <?php echo htmlspecialchars($objResuutSale["sale_name"]); ?>
-												</option>
-										<?php
-											}
-										}
-										?>
-									</select>
-								</div>
-							</div>
+	<div>
+		<label class="so-label" for="modal_sale_code">เขตการขาย</label>
+
+		<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
+
+		<?php if ($type_login_lower == 'sale') { ?>
+
+			<!-- Sale ล็อกเขตของตัวเอง -->
+			<input
+				type="hidden"
+				name="modal_sale_code"
+				id="modal_sale_code"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php } else { ?>
+
+			<?php
+
+			/* Admin / IT / Owner เห็นทั้งหมด */
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$saleQuery = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* Engineer / SUP_EN */
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$saleQuery = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* SOL */
+			else if ($type_login_lower == 'sol') {
+
+				$saleQuery = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* User อื่น ดูสิทธิ์จาก user_sale_permission */
+			else {
+
+				$saleQuery = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+
+			?>
+
+			<select
+				name="modal_sale_code"
+				id="modal_sale_code"
+				class="so-select"
+			>
+				<option value="">Select</option>
+
+				<?php
+				$objQuerySale = mysqli_query($com, $saleQuery);
+
+				if ($objQuerySale) {
+
+					while ($objResuutSale = mysqli_fetch_assoc($objQuerySale)) {
+
+						$sel = (
+							isset($sale_code) &&
+							$sale_code == $objResuutSale['sale_code']
+						)
+							? 'selected'
+							: '';
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$objResuutSale['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+							<?php echo $sel; ?>
+						>
+							<?php echo htmlspecialchars(
+								$objResuutSale['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$objResuutSale['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 							<div class="so-modal-footer">
 								<button type="button" class="btn-filter-submit" onclick="applyFilters()">ตกลง</button>

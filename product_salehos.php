@@ -223,6 +223,25 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
                         }
 
                         document.getElementById(product_id).value = product.product_ID;
+
+                        // แจ้งเตือนทันทีเมื่อสินค้านี้กำหนดให้ใช้ SN
+                        // เงื่อนไขมาจาก tb_product.sn_ckk ที่ส่งกลับจาก data_product_hos1.php
+                        if (String(product.sn_ckk || '0').trim() === '1') {
+                            var warrantyNotice = 'สินค้ารายการนี้ต้องใส่ข้อมูลปีรับประกัน';
+
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'กรุณาตรวจสอบ และใส่ข้อมูลปีรับประกันสินค้า',
+                                    text: warrantyNotice,
+                                    confirmButtonColor: '#612989',
+                                    confirmButtonText: 'ตกลง'
+                                });
+                            } else {
+                                alert(warrantyNotice);
+                            }
+                        }
+
                         // Set hidden input and label span for product_name
                         document.getElementById(product_name).value = product.sol_name;
                         var labelEl = document.getElementById(product_name.replace('product_name', 'product_name_label'));
@@ -982,7 +1001,7 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
                     <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
                     <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
                     <th style="width: 15%; text-align: center;">ยอดรวม</th>
-                    <th style="width: 10%; text-align: center;">PM</th>
+                    <th style="width: 10%; text-align: center;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -1861,7 +1880,7 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
         }
 
         var productTableContext = <?php echo json_encode($productTableContext); ?>;
-        var productTableWarrantyBySn = <?php echo json_encode($productTableWarrantyBySn); ?>;
+		var productTableWarrantyBySn = <?php echo json_encode($productTableWarrantyBySn); ?>;
 
         // ใบ PO ไม่บังคับรับประกัน; หน้าที่เปิด productTableWarrantyBySn บังคับเฉพาะแถวที่มีเลขที่ SN; หน้าอื่นบังคับทุกแถว
         function productTableWarrantyRequired(sn) {

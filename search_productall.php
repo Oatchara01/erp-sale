@@ -1,8 +1,5 @@
 <?php include('head.php'); 
 
-include "dbconnect.php";
-include "dbconnect_sale.php";
-
 $type_login = $_SESSION["type_login"];
 $user_type = $_SESSION['user_type'];
 if($type_login=='Sale' and $user_type=='Engineer'){
@@ -28,7 +25,56 @@ $sale ="adm_ckk='1'";
 
 
 หมวดสินค้า :
-<select name="group" id="group" style="width:160" class="w3-input" >
+	
+<select name="group" id="group" style="width:300px" class="w3-input">
+    <option value="">**Please Select**</option>
+
+<?php
+
+$strMain = "SELECT * 
+            FROM tb_modepro_main
+            ORDER BY main_code ASC";
+$objMain = mysqli_query($new,$strMain);
+
+while($rowMain = mysqli_fetch_assoc($objMain))
+{
+    // แสดงหมวดหลักเป็นหัวข้อ
+    echo '<optgroup label="'.$rowMain["main_code"].' - '.$rowMain["main_name"].'">';
+
+    $main_code = $rowMain["main_code"];
+
+    $strSub = "SELECT *
+               FROM tb_modepro_sub
+               WHERE main_code = '$main_code'
+               ORDER BY sub_code ASC";
+
+    $objSub = mysqli_query($new,$strSub);
+
+    while($rowSub = mysqli_fetch_assoc($objSub))
+    {
+        $sel = "";
+
+        // group1 คือค่าที่บันทึกไว้ในฐานข้อมูล
+        if($_GET["group1"] == $rowSub["sub_code"])
+        {
+            $sel = "selected";
+        }
+
+?>
+        <option value="<?php echo $rowSub["sub_code"]; ?>" <?php echo $sel; ?>>
+            <?php echo $rowSub["sub_code"]." - ".$rowSub["sub_name"]; ?>
+        </option>
+<?php
+    }
+
+    echo '</optgroup>';
+}
+?>
+
+</select>	
+	
+	
+<!--select name="group" id="group" style="width:160" class="w3-input" >
 <option value="">**Please Select**</option>
 <?php
 
@@ -40,7 +86,7 @@ while($objResuut5 = mysqli_fetch_array($objQuery5)){
 <?php
 }
 ?>
-</select>
+</select-->
 
 </div>
 <div class="w3-container w3-third">

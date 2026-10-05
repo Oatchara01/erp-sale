@@ -195,7 +195,7 @@ try {
 
     WHERE r.IV_number NOT LIKE '%ธ%'
       AND r.IV_number NOT LIKE '%R%'
-      AND r.IV_number NOT LIKE 'IC%'
+	  AND r.IV_number NOT LIKE 'IC%'
       AND (
           NULLIF(TRIM(CAST(r.date_bank AS CHAR)), '') IS NULL
           OR TRIM(CAST(r.date_bank AS CHAR)) = '0000-00-00'

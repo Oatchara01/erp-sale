@@ -90,7 +90,7 @@ $timestamp1 = $timestamp*1000;
 	
 
 			
-          if($objResult["name"]=="ริสา" or $objResult["name"]=="ชนิกานต์" or $objResult["name"]=="ปาลิตา")
+          /*if($objResult["name"]=="ริสา" or $objResult["name"]=="ชนิกานต์" or $objResult["name"]=="ปาลิตา")
 			{
 			header("location:main_mk.php");	
 			
@@ -151,9 +151,9 @@ $timestamp1 = $timestamp*1000;
 			}else if ($objResult["type_login"]=="Admin_hos")
 			{
 				header("location:main_adminhos.php");
-			}
+			}*/
 			
-	
+	header("location:main_admin.php");
 
 
 	session_write_close();

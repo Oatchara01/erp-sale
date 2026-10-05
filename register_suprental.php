@@ -1143,12 +1143,26 @@
 
 
 				?>
+	<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
 
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
 				<div class="so-tabs-container">
 					<button type="button" class="so-tab-btn active" onclick="rtOpenDocTab('rt-doc-tab-1', this)">ข้อมูลเอกสาร</button>
-					<button type="button" class="so-tab-btn" onclick="rtOpenDocTab('rt-doc-tab-2', this)">Admin</button>
+					<?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
+    <button
+        type="button"
+        class="so-tab-btn"
+        onclick="rtOpenDocTab('rt-doc-tab-2', this)"
+    >
+        Admin
+    </button>
+<?php } ?>
 				</div>
-
+	
 				<div id="rt-doc-tab-1" class="so-tab-content active">
 
 					<!-- ===================== บริษัท / แผนก-เขตการขาย / ประเภทสินค้าเช่า ===================== -->
@@ -1165,122 +1179,168 @@
 							</div>
 
 							<div class="so-field-group">
-								<label class="so-label" for="sale_code">แผนก/เขตการขาย<span style="color: #dc3545;">*</span></label>
-								<div class="so-select-wrapper">
-									<?php
-									if ($_SESSION['code'] == 'SS1') {
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย<span style="color: #dc3545;">*</span>
+	</label>
 
-											$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-									<?php
-									} else 	if ($_SESSION['code'] == 'SS2') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-
-									<?php
-									} else 	if ($_SESSION['code'] == 'SS3') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_ss3 where ckk_1='0' ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-									<?php
-									} else 	if ($_SESSION['code'] == 'MK2') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+	<div class="so-select-wrapper">
 
 
-									<?php
-									} else 	if ($_SESSION['code'] == 'SUP_EN') {
 
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
-											<?php
+		<?php if ($type_login_lower == 'sale') { ?>
 
-											$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+			<!-- Sale ล็อกเขตของตัวเอง -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			>
 
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
 
-									<?php
-									} else {
-									?>
-										<select name="sale_code" id="sale_code" class="so-select">
-											<option value="">**Please Select**</option>
+		<?php } else {
 
-											<?php
+			// =========================================================
+			// Admin / IT / Owner
+			// เห็นทุกเขตที่ ckk = 0
+			// =========================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
 
-											$strSQL5 = "SELECT * FROM tb_team_adm where ckk = '0' ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE ckk = '0'
+					ORDER BY sale_code ASC
+				";
 
+			}
 
-									<?php
-									}
+			// =========================================================
+			// Engineer / SUP_EN
+			// =========================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
 
-									?>
-								</div>
-							</div>
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// SOL
+			// =========================================================
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// User อื่น
+			// ดูสิทธิ์จาก user_sale_permission
+			// =========================================================
+			else {
+
+				$strSQL5 = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$objQuery5 = mysqli_query($com, $strSQL5);
+
+				if ($objQuery5) {
+
+					while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+						>
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 							<div class="so-field-group">
 								<label class="so-label">ประเภทสินค้าเช่า</label>
@@ -1790,7 +1850,7 @@
 						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง delivery_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
-						// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__rental.time_range ดู sql/delivery_time_range.sql)
+						// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__rental.time_range ดู sql/delivery_time_range.sql)
 						// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 						['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 							'' => 'เลือกช่วงเวลา',
@@ -1805,10 +1865,21 @@
 						['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 						['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 					],
-					'toggle_buttons' => [
-						['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-						['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-					],
+					'toggle_buttons' => array_filter([
+    [
+        'name' => 'no_money',
+        'id' => 'no_money',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 					'cost_fields' => [
 						['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
 						['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],

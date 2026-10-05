@@ -259,23 +259,163 @@ if ($smpDoc !== null) {
 	}
 }
 
-$teamTable = 'tb_team_adm';
-$teamWhere = '';
-switch ($_SESSION['code'] ?? '') {
-	case 'SS1': $teamTable = 'tb_team_ss1'; break;
-	case 'SS2': $teamTable = 'tb_team_ss2'; break;
-	case 'SS3': $teamTable = 'tb_team_ss3'; break;
-	case 'SS5': $teamTable = 'tb_team_ss3'; $teamWhere = " WHERE sale_code IN ('S31','S32')"; break;
-	case 'SUP_MK': $teamTable = 'tb_team_allwell'; break;
-	case 'SUP_EN': $teamTable = 'tb_team_en'; break;
-}
+
+
+$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+$type_login_lower = strtolower($type_login);
+
+$emid_safe = mysqli_real_escape_string($com, $emid);
+
 $saleOptions = array();
-if (($_SESSION['code'] ?? '') === 'HR') {
-	$saleOptions[] = array('sale_code' => 'HR', 'sale_name' => 'HR');
-} else {
-	$q = mysqli_query($com, "SELECT sale_code, sale_name FROM {$teamTable}{$teamWhere} ORDER BY sale_code ASC");
-	if ($q) while ($row = mysqli_fetch_assoc($q)) $saleOptions[] = $row;
+
+
+// =========================================================
+// HR
+// เห็นเฉพาะ HR
+// =========================================================
+if ($emid === 'HR') {
+
+	$saleOptions[] = array(
+		'sale_code' => 'HR',
+		'sale_name' => 'HR'
+	);
+
 }
+
+
+// =========================================================
+// SALE
+// ล็อกเขตเป็นของตัวเอง
+// =========================================================
+else if ($type_login_lower === 'sale') {
+
+	$saleOptions[] = array(
+		'sale_code' => $emid,
+		'sale_name' => $emid
+	);
+
+}
+
+
+// =========================================================
+// USER อื่น
+// =========================================================
+else {
+
+	// -----------------------------------------------------
+	// Admin / IT / Owner
+	// เห็นทุกเขต
+	// -----------------------------------------------------
+	if (
+		$type_login_lower === 'admin' ||
+		$type_login_lower === 'it' ||
+		$type_login_lower === 'owner'
+	) {
+
+		$teamSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// -----------------------------------------------------
+	// Engineer / SUP_EN
+	// -----------------------------------------------------
+	else if (
+		$emid === 'SUP_EN' ||
+		$type_login_lower === 'engineer'
+	) {
+
+		$teamSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			WHERE sale_code LIKE '%EN%'
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// -----------------------------------------------------
+	// SOL
+	// -----------------------------------------------------
+	else if ($type_login_lower === 'sol') {
+
+		$teamSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			WHERE sale_code IN (
+				'SOL1',
+				'SOL2',
+				'SOL3',
+				'SOL4',
+				'SOL5',
+				'SOL6',
+				'SOL7',
+				'SOL8',
+				'SOL9',
+				'SOL0',
+				'SM1'
+			)
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// -----------------------------------------------------
+	// User อื่น
+	// ดูสิทธิ์จาก user_sale_permission
+	// -----------------------------------------------------
+	else {
+
+		$teamSql = "
+			SELECT DISTINCT
+				t.sale_code,
+				t.sale_name
+			FROM tb_team_adm t
+
+			INNER JOIN user_sale_permission p
+				ON p.sale_code COLLATE utf8mb3_general_ci
+				 =
+				   t.sale_code COLLATE utf8mb3_general_ci
+
+			WHERE p.em_id = '".$emid_safe."'
+
+			ORDER BY t.sale_code ASC
+		";
+
+	}
+
+
+	// =====================================================
+	// QUERY
+	// =====================================================
+	$q = mysqli_query($com, $teamSql);
+
+	if ($q) {
+
+		while ($row = mysqli_fetch_assoc($q)) {
+
+			$saleOptions[] = $row;
+
+		}
+
+	}
+
+}
+
+
 $provinces = array();
 $q = mysqli_query($conn, 'SELECT province_name FROM tb_province ORDER BY province_ID');
 if ($q) while ($row = mysqli_fetch_assoc($q)) $provinces[] = $row['province_name'];
@@ -339,7 +479,69 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 		<div class="so-card smp-doc-card">
 			<div class="so-grid-3 smp-doc-top">
 				<div class="so-field-group"><label class="so-label" for="type_company">บริษัท<span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="type_company" id="type_company"><option value="1">AWL</option><option value="2">NBM</option></select></div></div>
-				<div class="so-field-group"><label class="so-label" for="sale_code">แผนก/เขตการขาย<span class="required">*</span></label><div class="so-select-wrapper"><select class="so-select" name="sale_code" id="sale_code"><option value="">Select</option><?php foreach ($saleOptions as $opt) { ?><option value="<?php echo so_saved_h($opt['sale_code']); ?>"><?php echo so_saved_h($opt['sale_code'] . ' - ' . $opt['sale_name']); ?></option><?php } ?></select></div></div>
+				<div class="so-field-group">
+
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย
+		<span class="required">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		<?php if ($type_login_lower === 'sale' || $emid === 'HR') { ?>
+
+			<?php
+			$lockedSaleCode = isset($saleOptions[0]['sale_code'])
+				? $saleOptions[0]['sale_code']
+				: '';
+			?>
+
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo so_saved_h($lockedSaleCode); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo so_saved_h($lockedSaleCode); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php } else { ?>
+
+			<select
+				class="so-select"
+				name="sale_code"
+				id="sale_code"
+				required
+			>
+
+				<option value="">Select</option>
+
+				<?php foreach ($saleOptions as $opt) { ?>
+
+					<option
+						value="<?php echo so_saved_h($opt['sale_code']); ?>"
+					>
+						<?php
+						echo so_saved_h(
+							$opt['sale_code'] . ' - ' . $opt['sale_name']
+						);
+						?>
+					</option>
+
+				<?php } ?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 			</div>
 			<div class="so-section-title-container"><h2 class="so-section-title">ข้อมูลเอกสาร</h2><hr class="so-divider"></div>
 			<div class="so-grid-3 smp-align-end">
@@ -449,7 +651,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				array('type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true),
 				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 				array('type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'),
-				// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__smp.time_range ดู sql/delivery_time_range.sql)
+				// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__smp.time_range ดู sql/delivery_time_range.sql)
 				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 				array('type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => array(
 					'' => 'เลือกช่วงเวลา',

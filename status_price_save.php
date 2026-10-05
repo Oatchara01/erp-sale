@@ -1,7 +1,6 @@
 <?php
 
 include("head.php");
-require_once __DIR__ . '/includes/jong_repo.php';
 
 
 $add_date = date('Y-m-d H:i:s');
@@ -51,19 +50,14 @@ $objQuery = mysqli_query($conn,$strSQL) or die(mysqli_error());
 
 if($canncel_ckk_new=='1'){
 	
-if($ref_id_cut=='SO'){
-
-// ยอดจองที่ใบสั่งขายใบนี้ถืออยู่ก่อนยกเลิก — ใช้เปิดใบจองคืนหลังยกเลิก (includes/jong_repo.php)
-$jongHoldingsBefore = jong_so_holdings($conn,$ref_id_new);
-
+if($ref_id_cut=='SO'){	
+	
 $strSQL="Update  hos__so set status_doc = 'ยกเลิก',cm_name='".$approve_name."',cm_date = '".$add_date."',send_admin='1'  where ref_id='".$ref_id_new."'";
 $objQuery = mysqli_query($conn,$strSQL);
 
 $strSQL28="Update  hos__subso set status_so = 'ยกเลิก' where ref_idd='".$ref_id_new."'";
 $objQuery28 = mysqli_query($conn,$strSQL28);
-
-jong_apply_so_change($conn,$ref_id_new,$jongHoldingsBefore);
-
+	
 }else{	
 	
 $strSQL =  "Update so__main set  cancel_ckk='1',approve_date='".$add_date."',approve_name='".$approve_name."' where ref_id='".$ref_id_new."'";

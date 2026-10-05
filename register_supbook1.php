@@ -21,7 +21,7 @@ if ($_POST["submit"] == "submit") {
 	$type_jong = mysqli_real_escape_string($conn, $_POST["type_jong"]);
 	$send_sup = $isDraftRequest ? '0' : '1';
 	$date_approve = date('Y-m-d');
-	$status_doc = $isDraftRequest ? "Draft" : "Request";
+	$status_doc = "Draft";
 	$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
 	$name =  $_SESSION['name'];
 	$surname =	$_SESSION['surname'];
@@ -76,9 +76,9 @@ if ($_POST["submit"] == "submit") {
 
 
 	$save = "insert into hos__jongproduct
-(ref_id,date_jong,company,customer,drescription,date_receive,address_send,status_doc,sale_code,sale_name,add_date,add_by,date_approve,send_sup,approve_name,customer_id,iv_no,ref_receive,type_jong)
+(ref_id,date_jong,company,customer,drescription,date_receive,address_send,status_doc,sale_code,sale_name,add_date,add_by,customer_id,iv_no,ref_receive,type_jong)
 values
-('" . $ref_id . "','" . $date_jong . "','" . $company . "','" . $customer . "','" . $drescription . "','" . $date_receive . "','" . $address_send . "','" . $status_doc . "','" . $sale_code . "','" . $add_by . "','" . $add_date . "','" . $add_by . "','" . $date_approve . "','" . $send_sup . "','" . $add_by . "','" . $customer_id . "','" . $iv_no . "','" . $ref_receive . "','" . $type_jong . "')";
+('" . $ref_id . "','" . $date_jong . "','" . $company . "','" . $customer . "','" . $drescription . "','" . $date_receive . "','" . $address_send . "','" . $status_doc . "','" . $sale_code . "','" . $add_by . "','" . $add_date . "','" . $add_by . "','" . $customer_id . "','" . $iv_no . "','" . $ref_receive . "','" . $type_jong . "')";
 
 	$qsave = mysqli_query($conn, $save);
 
