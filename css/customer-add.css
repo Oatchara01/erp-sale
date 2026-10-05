@@ -694,7 +694,29 @@ body {
 
 .field-action {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: flex-end;
+	gap: 10px 18px;
+}
+
+.billing-primary-toggle {
+	gap: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	white-space: nowrap;
+	user-select: none;
+}
+
+/* ไอคอนในไฟล์เป็นสีขาว: ตอนยังไม่เลือกปรับเป็นเทาให้เข้ากับตัวอักษร (#696273) ตอนเลือกแล้วใช้สีขาวเดิม */
+.billing-primary-toggle img {
+	width: 17px;
+	height: 18px;
+	flex: none;
+	filter: brightness(0) invert(0.41);
+}
+
+.billing-primary-toggle.is-active img {
+	filter: none;
 }
 
 .field-action .danger-button[hidden] {

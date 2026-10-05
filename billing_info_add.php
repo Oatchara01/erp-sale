@@ -134,7 +134,8 @@ if ($isEditMode) {
             $primaryBillingRow = !empty($billingRows) ? $billingRows[0] : null;
         }
         if (!$primaryBillingRow) {
-            $billingRows = fetchRows($conn, "SELECT * FROM tb_customer_billing_address WHERE customer_id = {$customerId} AND is_primary = 1 ORDER BY id ASC LIMIT 1");
+            // ใบหลัก = แถวบิลลำดับแรก (การ์ดใบที่ 1 ใน customer_add.php) ไม่อิง is_primary เพราะหน้านี้เคยตั้ง 1 ให้ทุกแถวที่ถูกแก้
+            $billingRows = fetchRows($conn, "SELECT * FROM tb_customer_billing_address WHERE customer_id = {$customerId} ORDER BY billing_index ASC, id ASC LIMIT 1");
             $primaryBillingRow = !empty($billingRows) ? $billingRows[0] : null;
         }
 
@@ -223,6 +224,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($errorMessage === '') {
         mysqli_begin_transaction($conn);
         $allOk = ensureCustomerChildTables($conn);
+        // ใบหลัก = แถวบิลลำดับแรกของลูกค้า (ลำดับเดียวกับการ์ดใบที่ 1 ใน customer_add.php) เลือกใบหลักได้จากปุ่ม "ใช้เป็นข้อมูลหลัก" ในหน้านั้นที่เดียว
+        // แก้บิลใบอื่นจากหน้านี้ต้องไม่เขียนทับค่าเริ่มต้นของลูกค้าใน tb_customer
+        $primaryBillingId = $isEditMode ? (int)fetchValue($conn, "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " ORDER BY billing_index ASC, id ASC LIMIT 1", 0) : 0;
+        $isPrimaryBillingRow = $primaryBillingId === 0 || $billingRecordId === 0 || $billingRecordId === $primaryBillingId;
         $existingCustomerRow = null;
         if ($isEditMode) {
             $existingCustomerRows = fetchRows($conn, "SELECT * FROM tb_customer WHERE customer_id = {$customerId} LIMIT 1");
@@ -336,8 +341,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($allOk) {
             if ($isEditMode) {
-                $customerUpdateSql = "UPDATE tb_customer SET " . implode(', ', $customerSqlData) . " WHERE customer_id='" . esc($conn, $customerId) . "'";
-                $allOk = mysqli_query($conn, $customerUpdateSql) ? true : false;
+                if ($isPrimaryBillingRow) {
+                    $customerUpdateSql = "UPDATE tb_customer SET " . implode(', ', $customerSqlData) . " WHERE customer_id='" . esc($conn, $customerId) . "'";
+                    $allOk = mysqli_query($conn, $customerUpdateSql) ? true : false;
+                }
             } else {
                 $customerInsertSql = "INSERT INTO tb_customer SET " . implode(', ', $customerSqlData);
                 $allOk = mysqli_query($conn, $customerInsertSql) ? true : false;
@@ -364,13 +371,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         billing_province='" . esc($conn, $formData['bill_province']) . "',
                         billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
                         billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
-                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "',
-                        is_primary='1'
+                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "'
                         WHERE id='" . esc($conn, $billingRecordId) . "' AND customer_id='" . esc($conn, $customerId) . "'";
                     $allOk = mysqli_query($conn, $existingBillingSql) ? true : false;
                 } else {
-                    $primaryExists = (int)fetchValue($conn, "SELECT COUNT(*) FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " AND is_primary = 1", 0) > 0;
-                    if ($primaryExists) {
+                    if ($primaryBillingId > 0) {
                         $existingPrimaryBillingSql = "UPDATE tb_customer_billing_address SET
                         billing_preface_name='" . esc($conn, $formData['preface_name']) . "',
                         billing_name='" . esc($conn, $formData['bill_name']) . "',
@@ -382,9 +387,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         billing_province='" . esc($conn, $formData['bill_province']) . "',
                         billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
                         billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
-                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "',
-                        is_primary='1'
-                        WHERE customer_id='" . esc($conn, $customerId) . "' AND is_primary='1' LIMIT 1";
+                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "'
+                        WHERE id='" . esc($conn, $primaryBillingId) . "' AND customer_id='" . esc($conn, $customerId) . "'";
                         $allOk = mysqli_query($conn, $existingPrimaryBillingSql) ? true : false;
                     } else {
                         $allOk = mysqli_query($conn, $primaryBillingSql) ? true : false;

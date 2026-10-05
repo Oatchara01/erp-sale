@@ -631,6 +631,12 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
                                         <div class="field field-action">
+                                            <!-- ไม่มี name: ใบหลักสื่อด้วยลำดับการ์ด ตอนบันทึกการ์ดใบหลักถูกย้ายขึ้นเป็นใบที่ 1 (checkbox ที่ไม่ติ๊กไม่ถูก post จะทำให้ billing_*[] เลื่อนตำแหน่ง) -->
+                                            <label class="tag-toggle billing-primary-toggle<?php echo $index === 0 ? ' is-active' : ''; ?>">
+                                                <input type="checkbox" class="billing-primary" <?php echo $index === 0 ? 'checked' : ''; ?>>
+                                                <img src="img/icons/dropdown-arrow-down.svg" alt="" aria-hidden="true">
+                                                <span>ใช้เป็นข้อมูลหลัก</span>
+                                            </label>
                                             <button type="button" class="danger-button remove-billing-card" <?php echo $index === 0 ? 'hidden' : ''; ?>>
                                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                                     <path d="M3 6h18"></path>
@@ -978,6 +984,11 @@ if (empty($shippingRecords)) {
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" inputmode="numeric" maxlength="10" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field field-action">
+                    <label class="tag-toggle billing-primary-toggle">
+                        <input type="checkbox" class="billing-primary">
+                        <img src="img/icons/dropdown-arrow-down.svg" alt="" aria-hidden="true">
+                        <span>ใช้เป็นข้อมูลหลัก</span>
+                    </label>
                     <button type="button" class="danger-button remove-billing-card">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M3 6h18"></path>
@@ -1123,8 +1134,10 @@ if (empty($shippingRecords)) {
                 inputs.value.value = code;
                 inputs.display.value = code !== "" ? code : "Auto";
 
-                // บิล 1 ของ AWL คือ tb_customer.customer_code ให้ช่องรหัสด้านบนตรงกัน
-                if (row.dataset.codeType === "awl" && row.closest(".billing-card") === document.querySelector("#billingCards .billing-card")) {
+                // รหัส AWL ของใบหลักคือ tb_customer.customer_code (ใบหลักขึ้นเป็นบิล 1 ตอนบันทึก) ให้ช่องรหัสด้านบนตรงกัน
+                var primaryToggle = document.querySelector("#billingCards .billing-primary:checked");
+                var primaryCard = primaryToggle ? primaryToggle.closest(".billing-card") : document.querySelector("#billingCards .billing-card");
+                if (row.dataset.codeType === "awl" && row.closest(".billing-card") === primaryCard) {
                     document.getElementById("customer_code").value = code;
                     document.getElementById("customer_code_display").value = code !== "" ? code : "Auto";
                 }
@@ -1318,6 +1331,27 @@ if (empty($shippingRecords)) {
                 document.getElementById("vip_toggle").classList.toggle("is-active", document.getElementById("vip_ckk").checked);
             }
 
+            function getPrimaryBillingCard() {
+                var checked = billingCards.querySelector(".billing-primary:checked");
+                return checked ? checked.closest(".billing-card") : billingCards.querySelector(".billing-card");
+            }
+
+            // ใบหลักมีได้ใบเดียวเสมอ กดซ้ำใบที่เป็นหลักอยู่จึงไม่หลุด
+            function setPrimaryBillingCard(primaryCard) {
+                if (!primaryCard) return;
+                billingCards.querySelectorAll(".billing-card").forEach(function(card) {
+                    var toggle = card.querySelector(".billing-primary");
+                    if (!toggle) return;
+                    toggle.checked = card === primaryCard;
+                    toggle.closest(".billing-primary-toggle").classList.toggle("is-active", toggle.checked);
+                });
+
+                // ช่องรหัสด้านบนคือรหัส AWL ของใบหลัก
+                var primaryCode = primaryCard.querySelector('.js-code-row[data-code-type="awl"] .js-code-value').value.trim();
+                document.getElementById("customer_code").value = primaryCode;
+                document.getElementById("customer_code_display").value = primaryCode !== "" ? primaryCode : "Auto";
+            }
+
             function updateTitles() {
                 billingCards.querySelectorAll(".billing-card").forEach(function(card, index) {
                     card.querySelector(".sub-card-title").textContent = "ที่อยู่ออกบิล " + (index + 1);
@@ -1420,7 +1454,7 @@ if (empty($shippingRecords)) {
             }
 
             function copyBillingToShipping() {
-                var firstBilling = billingCards.querySelector(".billing-card");
+                var firstBilling = getPrimaryBillingCard();
                 if (!firstBilling) return;
                 var billing = {
                     name: firstBilling.querySelector(".billing-name").value.trim(),
@@ -1443,7 +1477,7 @@ if (empty($shippingRecords)) {
             }
 
             function syncLegacyFields() {
-                var firstBilling = billingCards.querySelector(".billing-card");
+                var firstBilling = getPrimaryBillingCard();
                 var firstShipping = shippingCards.querySelector(".shipping-card");
                 if (firstBilling) {
                     document.getElementById("legacy_bill_name").value = firstBilling.querySelector(".billing-name").value.trim();
@@ -1697,11 +1731,18 @@ if (empty($shippingRecords)) {
             });
             document.getElementById("addShippingCard").addEventListener("click", appendShippingCard);
 
-            billingCards.addEventListener("input", function() {
+            billingCards.addEventListener("input", function(event) {
+                // การเลือกใบหลักจัดการใน change ด้านล่าง ไม่ได้แก้ข้อมูลในการ์ด
+                if (event.target.classList.contains("billing-primary")) return;
                 clearActivePills("#copyCustomerToBilling, #copyBillingToShipping");
             });
 
-            billingCards.addEventListener("change", function() {
+            billingCards.addEventListener("change", function(event) {
+                if (event.target.classList.contains("billing-primary")) {
+                    setPrimaryBillingCard(event.target.closest(".billing-card"));
+                    clearActivePills("#copyBillingToShipping");
+                    return;
+                }
                 clearActivePills("#copyCustomerToBilling, #copyBillingToShipping");
             });
 
@@ -1722,6 +1763,10 @@ if (empty($shippingRecords)) {
                         var confirmed = await openDeleteConfirmPopup('คุณต้องการลบ " ' + titleName + ' " ใช่ไหม ?');
                         if (confirmed) {
                             card.remove();
+                            // ลบใบหลักไปแล้ว ให้ใบแรกเป็นหลักแทน
+                            if (!billingCards.querySelector(".billing-primary:checked")) {
+                                setPrimaryBillingCard(billingCards.querySelector(".billing-card"));
+                            }
                             updateTitles();
                         }
                     }
@@ -1770,7 +1815,6 @@ if (empty($shippingRecords)) {
 
             form.addEventListener("submit", function(event) {
                 event.preventDefault();
-                syncModeNameField();
                 syncLegacyFields();
                 if (!validateSaleCodes()) return false;
                 if (!validateBranchNumbers()) {
@@ -1788,6 +1832,12 @@ if (empty($shippingRecords)) {
                     confirmText: "<?php echo $isEditMode ? 'ยืนยันการอัปเดต' : 'ยืนยันการบันทึก'; ?>"
                 }).then(function(submitConfirmed) {
                     if (submitConfirmed && nativeFormSubmit) {
+                        // ฝั่งบันทึกถือบิลตำแหน่งแรกเป็นใบหลัก (รหัสลูกค้า + is_primary) จึงย้ายการ์ดใบหลักขึ้นบนสุดหลังยืนยันแล้วเท่านั้น
+                        var primaryBilling = getPrimaryBillingCard();
+                        if (primaryBilling && primaryBilling !== billingCards.firstElementChild) {
+                            billingCards.insertBefore(primaryBilling, billingCards.firstElementChild);
+                            updateTitles();
+                        }
                         nativeFormSubmit.call(form);
                     }
                 });
