@@ -1,0 +1,15 @@
+<?php
+// Copy to config.php and fill in the credentials for this environment.
+class dbConfig {
+    protected $serverName;
+    protected $userName;
+    protected $password;
+    protected $dbName;
+    function dbConfig() {
+        $this -> serverName = 'localhost:3307';
+        $this -> userName = 'DB_USER';
+        $this -> password = 'DB_PASSWORD';
+        $this -> dbName = 'sol';
+    }
+}
+?>

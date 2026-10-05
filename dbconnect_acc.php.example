@@ -1,0 +1,10 @@
+<?php
+// Copy to dbconnect_acc.php and fill in the credentials for this environment.
+$code = mysqli_connect("localhost","DB_USER","DB_PASSWORD","invoice_receipt_test");
+mysqli_set_charset($code, "utf8");
+if (!$code) {
+	echo mysqli_error_con();
+	}
+ mysqli_set_charset($code,"utf8");
+
+ ?>

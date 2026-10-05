@@ -128,7 +128,7 @@ $token = encryptData(
             <span class="sidebar-icon">
 
                 <img
-                    src="/img/icons/menu_home.svg"
+                    src="img/icons/menu_home.svg"
                     alt="หน้าหลัก"
                     class="sidebar-menu-icon"
                 >
@@ -160,7 +160,7 @@ $token = encryptData(
                 <span class="sidebar-icon">
 
                     <img
-                        src="/img/icons/menu_doc.svg"
+                        src="img/icons/menu_doc.svg"
                         alt="เอกสารขาย"
                         class="sidebar-menu-icon"
                     >
@@ -174,8 +174,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>
@@ -233,8 +233,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -278,8 +278,8 @@ $token = encryptData(
                                     </span>
 
                                     <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                                 </button>
@@ -359,8 +359,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -501,7 +501,7 @@ $token = encryptData(
                 <span class="sidebar-icon">
 
                     <img
-                        src="/img/icons/menu_app.svg"
+                        src="img/icons/menu_app.svg"
                         alt="อนุมัติเอกสาร"
                         class="sidebar-menu-icon"
                     >
@@ -515,8 +515,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>
@@ -573,8 +573,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -657,8 +657,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -814,7 +814,7 @@ $token = encryptData(
                 <span class="sidebar-icon">
 
                     <img
-                        src="/img/icons/menu_regis.svg"
+                        src="img/icons/menu_regis.svg"
                         alt="รายการรับเรื่อง"
                         class="sidebar-menu-icon"
                     >
@@ -828,8 +828,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>
@@ -874,7 +874,7 @@ $token = encryptData(
                 <span class="sidebar-icon">
 
                     <img
-                        src="/img/icons/menu_report.svg"
+                        src="img/icons/menu_report.svg"
                         alt="Report"
                         class="sidebar-menu-icon"
                     >
@@ -888,8 +888,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>
@@ -916,8 +916,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -979,7 +979,7 @@ $token = encryptData(
                 <span class="sidebar-icon">
 
                     <img
-                        src="/img/icons/menu_export.svg"
+                        src="img/icons/menu_export.svg"
                         alt="Report"
                         class="sidebar-menu-icon"
                     >
@@ -993,8 +993,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>
@@ -1021,8 +1021,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -1050,8 +1050,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -1093,8 +1093,8 @@ $token = encryptData(
                         </span>
 
                         <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
                     </button>
@@ -1157,7 +1157,7 @@ $token = encryptData(
         >
 
             <img
-                        src="/img/icons/menu_setting.svg"
+                        src="img/icons/menu_setting.svg"
                         alt="Setting"
                         class="sidebar-menu-icon"
                     >
@@ -1170,8 +1170,8 @@ $token = encryptData(
 
 
             <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
         </button>
@@ -1325,8 +1325,8 @@ $token = encryptData(
 
 
                 <span class="sidebar-caret" aria-hidden="true">
-                    <img src="/img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
-                    <img src="/img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
+                    <img src="img/icons/menu_arrow_down.svg?v=20261002b" alt="" class="sidebar-arrow-down">
+                    <img src="img/icons/menu_arrow_up.svg?v=20261002b" alt="" class="sidebar-arrow-up">
                 </span>
 
             </button>

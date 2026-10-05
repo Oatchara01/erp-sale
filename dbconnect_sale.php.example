@@ -1,0 +1,10 @@
+<?php
+// Copy to dbconnect_sale.php and fill in the credentials for this environment.
+$com = mysqli_connect("localhost","DB_USER","DB_PASSWORD","allwell_saletest");
+mysqli_set_charset($com, "utf8");
+if (!$com) {
+ echo mysqli_error_con();
+ }
+ mysqli_set_charset($com,"utf8");
+
+?>
