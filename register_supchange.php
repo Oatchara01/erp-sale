@@ -1253,7 +1253,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 							// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 							['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
-							// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
+							// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
 							// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 							['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 								'' => 'เลือกช่วงเวลา',

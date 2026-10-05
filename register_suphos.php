@@ -1289,8 +1289,9 @@ include("head.php"); ?>
 				'sale_remarkk' => (string)($savedProduct["sale_remark"] ?? ""),
 				'clear_br' => (string)($savedProduct["clear_br"] ?? ""),
 				'clear_ivno' => (string)($savedProduct["clear_ivno"] ?? ""),
-				'jong_ckk' => (string)($savedProduct["jong_ckk"] ?? ""),
-				'jong_no' => (string)($savedProduct["jong_no"] ?? ""),
+				// คัดลอกใบเดิม = การขายใหม่ ไม่ได้เคลียร์ใบจองของใบต้นทางซ้ำ จึงไม่พกการผูกใบจองมาด้วย
+				'jong_ckk' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_ckk"] ?? ""),
+				'jong_no' => $copySrcSo !== null ? "" : (string)($savedProduct["jong_no"] ?? ""),
 				'display_name' => (string)($savedProduct["admin_remark"] ?? $savedProduct["display_name"] ?? ""),
 				'subso_db_id' => (string)($savedProduct["id"] ?? ""),
 				'remark_hc' => (string)($savedProduct["master_remark_hc"] ?? "")
@@ -3001,7 +3002,7 @@ include("head.php"); ?>
 						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
 						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
 						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
-						// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__so.time_range ดู sql/delivery_time_range.sql)
+						// เลือกช่วงเวลาแล้วเติมเวลาจัดส่งให้ทางเดียว ดู js/delivery-transport.js (เก็บลง hos__so.time_range ดู sql/delivery_time_range.sql)
 						// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
 						['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 							'' => 'เลือกช่วงเวลา',
@@ -7296,9 +7297,9 @@ $canShowETReport = ($ivPrefix === 'ET');
 				}));
 			}
 
-			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อ (1) ให้แสดงผลได้ และ (2) ให้
-			// register_suphos1.php:817-832 ปิด hos__jongproduct.close_jong ตอน submit จริง
-			// (เดิม popup เคลียร์จอง/ยืมไม่เคยเขียนฟิลด์นี้เลย ทำให้ใบจองไม่ถูกปิดและกลับมาเลือกซ้ำได้)
+			// เขียนเลขที่ใบจองกลับเข้า book_no เพื่อให้แสดงผลและเก็บลง hos__so.book_no เท่านั้น
+			// การปิด/เปิดใบจองตัดสินจากแถวสินค้า (jong_ckk{i}/jong_no{i}) เทียบยอดคงเหลือ ไม่ได้ดู book_no แล้ว
+			// — ดู includes/jong_repo.php ที่ register_suphos1.php / register_suphos_edit1.php เรียกหลังบันทึก
 			// หมายเหตุ: ฝั่งใบยืม (loan) ใช้กลไกปิดเอกสารคนละทาง (per-row clear_br{i}/clear_ivno{i})
 			// brn_no ไม่มี logic ปิด hos__br ต่อจากนั้น จึงยังไม่ implement ส่วนนี้
 			if (!isClearLoanBorrowType(documentRow.doc_type)) {
@@ -8156,6 +8157,8 @@ if (productSnCkk === '1') {
 			'slip5' => '',
 			'stock_print' => '',
 			'ref_idst' => '',
+			'book_clear' => '',
+			'book_no' => '',
 		));
 	}
 	if ($soJsPrefillSource === null && $rentalPrefill !== null) {

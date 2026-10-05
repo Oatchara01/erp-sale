@@ -13,6 +13,7 @@ if (empty($_SESSION['UserID'])) {
 }
 
 include 'dbconnect.php';
+require_once __DIR__ . '/includes/jong_repo.php';
 
 function clearLoanJsonResponse($payload, $statusCode = 200)
 {
@@ -174,6 +175,7 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
             ON d.product_ID = p.product_ID
 
         WHERE d.ref_idd = '{$referenceNoSafe}'
+        AND COALESCE(d.close_ckk, '0') <> '1'
     ";
 
     $detailQuery = mysqli_query(
@@ -184,6 +186,10 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
     $items = array();
     $itemIndex = 1;
 
+    // แสดงเฉพาะยอดคงเหลือ: หักยอดที่ใบสั่งขายที่ส่งแล้ว/อนุมัติแล้วใช้ไป (includes/jong_repo.php)
+    // สินค้าเดียวกันที่อยู่หลายแถวในใบจองจะถูกตัดยอดคงเหลือไล่ไปทีละแถว
+    $remaining = jong_remaining_map($conn, array('ref_id' => $referenceNo, 'iv_no' => $documentNo));
+
 
     if ($detailQuery) {
 
@@ -192,6 +198,13 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
                 $detailQuery
             )
         ) {
+
+            $productId = clearLoanNormalizeText($detail['product_id']);
+            $available = min((float)$detail['qty'], max(0, $remaining[$productId] ?? 0));
+            if ($available <= JONG_QTY_EPSILON) {
+                continue;
+            }
+            $remaining[$productId] -= $available;
 
             $items[] = array(
 
@@ -202,9 +215,7 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
                     . $itemIndex,
 
                 'product_id' =>
-                    clearLoanNormalizeText(
-                        $detail['product_id']
-                    ),
+                    $productId,
 
                 'product_name' =>
                     clearLoanNormalizeText(
@@ -217,7 +228,7 @@ function clearLoanBuildReserveItems($conn, $referenceNo, $documentNo)
                     ),
 
                 'quantity' =>
-                    (string)$detail['qty'],
+                    jong_format_qty($available),
 
                 'warranty' =>
                     clearLoanNormalizeText(
@@ -462,6 +473,7 @@ function clearLoanFetchReserveDocuments($conn, $keyword, $lastId, $limit, $compa
                 SELECT 1
                 FROM hos__subjongpro d
                 WHERE d.ref_idd = h.ref_id
+                AND COALESCE(d.close_ckk, '0') <> '1'
             ) AS has_items
         FROM hos__jongproduct h
         WHERE " . implode(' AND ', $filters) . "
