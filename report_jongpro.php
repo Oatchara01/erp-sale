@@ -406,7 +406,7 @@ $pdf->setXY(1.4, 12.1);
 $pdf->MultiCell(10, 0.6, thai_cp874("หมายเหตุ :"), 0, 'L');
 
 $pdf->setXY(3.5, 12.1);
-$pdf->MultiCell(16.5, 0.6, thai_cp874("$drescription $address_send"), 0, 'L');
+$pdf->MultiCell(16.5, 0.6, thai_cp874("$drescription"), 0, 'L');
 
 
 $pdf->setXY(3.5, 12.7);
