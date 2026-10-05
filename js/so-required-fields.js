@@ -34,6 +34,18 @@ function soIsFieldEmpty(control) {
 	return String(control.value || '').trim() === '';
 }
 
+// ฟิลด์ที่แสดงเป็น text: label for= ชี้ hidden input ที่เก็บค่า และ hidden input ประกาศ data-so-display = id ของ element ที่แสดงค่า
+// กรอบแดง/เลื่อนจอทำที่ element แสดงผล (target) ส่วนการเช็คว่างอ่านจาก control เสมอ
+function soFieldTarget(control) {
+	var displayId = control.dataset ? control.dataset.soDisplay : '';
+	return (displayId && document.getElementById(displayId)) || control;
+}
+
+function soFieldControl(target) {
+	if ('value' in target || !target.id) return target;
+	return document.querySelector('[data-so-display="' + target.id + '"]') || target;
+}
+
 var soInvalidFieldTimer = null;
 
 // ค่าที่เติมด้วยโค้ด (เลือกลูกค้า, popup ที่อยู่) ไม่ยิง input/change จึงวนเช็คเฉพาะช่วงที่ยังมีกรอบแดงค้างอยู่
@@ -42,7 +54,7 @@ function soRefreshInvalidFields() {
 	for (var i = 0; i < invalid.length; i++) {
 		// ฟิลด์ที่มาร์กเองเพราะรูปแบบผิด (soMarkFieldInvalid) มีค่าอยู่แล้ว ให้ล้างเมื่อผู้ใช้แก้ค่าเท่านั้น
 		if (invalid[i].dataset.soInvalidValue !== undefined) continue;
-		if (!soIsFieldEmpty(invalid[i])) invalid[i].classList.remove(SO_FIELD_INVALID_CLASS);
+		if (!soIsFieldEmpty(soFieldControl(invalid[i]))) invalid[i].classList.remove(SO_FIELD_INVALID_CLASS);
 	}
 	if (!document.querySelector('.' + SO_FIELD_INVALID_CLASS) && soInvalidFieldTimer) {
 		clearInterval(soInvalidFieldTimer);
@@ -107,11 +119,12 @@ function soValidateRequired(form, opts) {
 
 	for (var i = 0; i < fields.length; i++) {
 		var control = fields[i];
-		soClearFieldInvalid(control);
+		var target = soFieldTarget(control);
+		soClearFieldInvalid(target);
 		if (only && only.indexOf(control.name) === -1 && only.indexOf(control.id) === -1) continue;
 		if (!soIsFieldEmpty(control)) continue;
-		control.classList.add(SO_FIELD_INVALID_CLASS);
-		if (!firstInvalid) firstInvalid = control;
+		target.classList.add(SO_FIELD_INVALID_CLASS);
+		if (!firstInvalid) firstInvalid = target;
 	}
 
 	if (!firstInvalid) return true;

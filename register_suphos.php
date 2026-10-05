@@ -26,6 +26,8 @@ include("head.php"); ?>
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <!-- Page-specific styling for register_suphos.php -->
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
+<!-- ต้องโหลดก่อน setElementValue ด้านล่าง ซึ่งเรียก soSyncDisplayText -->
+<script src="js/so-display-text.js?v=<?php echo filemtime(__DIR__ . '/js/so-display-text.js'); ?>"></script>
 <script>
 	var HttPRequest = false;
 	var clearLoanPopupTimer = null;
@@ -63,6 +65,8 @@ include("head.php"); ?>
 			if (id === 'display_credit_thb') {
 				syncCreditTermTriggerState();
 			}
+			// tax_id/bill_name/bill_address แสดงเป็น text (js/so-display-text.js)
+			soSyncDisplayText(element);
 		}
 	}
 
@@ -350,28 +354,7 @@ include("head.php"); ?>
 		syncShippingFieldsToLegacy();
 	}
 
-	// ตั้งค่า select คำนำหน้าชื่อ ถ้าค่าที่ได้มาไม่มีใน option ให้เพิ่ม option ใหม่ก่อน
-	function setPreNameValue(selectId, value) {
-		var preNameVal = String(value || '').trim();
-		var preNameSelect = document.getElementById(selectId);
-		if (!preNameSelect) return;
-		var exists = false;
-		for (var i = 0; i < preNameSelect.options.length; i++) {
-			if (preNameSelect.options[i].value === preNameVal) {
-				exists = true;
-				break;
-			}
-		}
-		if (!exists && preNameVal !== "") {
-			var opt = document.createElement('option');
-			opt.value = preNameVal;
-			opt.innerHTML = preNameVal;
-			preNameSelect.appendChild(opt);
-		}
-		preNameSelect.value = preNameVal;
-	}
-
-	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, pre_name, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
+	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
 		if (typeof mode === 'function') {
 			onComplete = mode;
 			mode = undefined;
@@ -464,8 +447,6 @@ include("head.php"); ?>
 						setElementValue(bill_address, customerData.bill_address_full);
 						setElementValue(bill_tel, customerData.bill_tel);
 						setElementValue(tax_id, customerData.tax_id);
-
-						setPreNameValue(pre_name, customerData.preface_name);
 					}
 
 					if (isCustomerMode) {
@@ -1085,7 +1066,6 @@ include("head.php"); ?>
 
 			$rentalPrefill = array(
 				'bill_id' => $rentalSourceRow["rental_id"] ?? '',
-				'pre_name' => $rentalSourceCustomer["preface_name"] ?? '',
 				'bill_name' => $rentalSourceCustomer["bill_name"] ?? '',
 				'bill_address' => implode(' ', $rentalBillAddressParts),
 				'bill_tel' => $rentalSourceCustomer["bill_tel"] ?? '',
@@ -2732,8 +2712,8 @@ include("head.php"); ?>
 							<div class="so-field-group">
 								<label class="so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="tax_id" id="tax_id" class="so-input" placeholder="เลขประจำตัวผู้เสียภาษี..." style="padding-right: 32px;">
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('tax_id').value=''"></i>
+									<span id="tax_id_text" class="so-display-text is-empty">-</span>
+									<input type="hidden" name="tax_id" id="tax_id" data-so-display="tax_id_text">
 								</div>
 							</div>
 						</div>
@@ -2802,26 +2782,12 @@ include("head.php"); ?>
 					</div>
 
 					<div class="so-grid-3">
-						<!-- คำนำหน้าชื่อ -->
-						<div class="so-field-group">
-							<label class="so-label" for="pre_name">คำนำหน้าชื่อ<span class="required">*</span></label>
-							<div class="so-select-wrapper">
-								<select name="pre_name" id="pre_name" class="so-select">
-									<option value="">Select</option>
-									<option value="นาย">นาย</option>
-									<option value="นาง">นาง</option>
-									<option value="นางสาว">นางสาว</option>
-									<option value="บริษัท">บริษัท</option>
-									<option value="หจก.">หจก.</option>
-								</select>
-							</div>
-						</div>
-
 						<!-- ชื่อออกบิล -->
 						<div class="so-field-group">
 							<label class="so-label" for="bill_name">ชื่อออกบิล<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_name" id="bill_name" class="so-input" placeholder="ชื่อที่ต้องการออกบิล..." readonly>
+								<span id="bill_name_text" class="so-display-text is-empty">-</span>
+								<input type="hidden" name="bill_name" id="bill_name" data-so-display="bill_name_text">
 							</div>
 						</div>
 
@@ -2829,7 +2795,7 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label" for="bill_tel">เบอร์โทรศัพท์<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_tel" id="bill_tel" class="so-input" placeholder="เบอร์โทรศัพท์..." readonly>
+								<input type='text' name="bill_tel" id="bill_tel" class="so-input" placeholder="เบอร์โทรศัพท์...">
 							</div>
 						</div>
 					</div>
@@ -2838,7 +2804,8 @@ include("head.php"); ?>
 					<div class="so-field-group" style="margin-bottom: 24px;">
 						<label class="so-label" for="bill_address">ที่อยู่ออกบิล<span class="required">*</span></label>
 						<div class="so-input-wrapper" style="width: 100%; max-width: 1032px;">
-							<input type="text" name="bill_address" id="bill_address" class="so-input" style="width: 100%; max-width: 1032px;" placeholder="ที่อยู่ที่ใช้ในการออกบิล..." readonly>
+							<span id="bill_address_text" class="so-display-text is-empty">-</span>
+							<input type="hidden" name="bill_address" id="bill_address" data-so-display="bill_address_text">
 						</div>
 					</div>
 
@@ -5981,7 +5948,6 @@ $canShowETReport = ($ivPrefix === 'ET');
 			}
 
 			// เติมจากแถวออกบิลที่เลือกโดยตรง (ไม่ดึง bill_* จาก tb_customer)
-			setPreNameValue('pre_name', fullBillPopupSelected.preface_name);
 			setElementValue('bill_name', fullBillPopupSelected.bill_name || '');
 			setElementValue('bill_address', fullBillPopupSelected.bill_address_fill || '');
 			setElementValue('bill_tel', fullBillPopupSelected.bill_tel || '');
@@ -6038,7 +6004,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 				displayBillId.textContent = selectedCustId;
 			}
 
-			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
 				if (!success) {
 					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลลูกค้าไม่ครบถ้วน';
 					alert('ไม่สามารถดึงข้อมูลลูกค้าได้ครบ: ' + missingMessage);
@@ -7327,7 +7293,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 			if (hiddenBillId) hiddenBillId.value = customerId;
 			if (displayBillId) displayBillId.textContent = customerId;
 
-			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, onComplete);
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, onComplete);
 		}
 
 		function populateClearLoanRow(rowIndex, entry) {
@@ -8213,7 +8179,6 @@ if (productSnCkk === '1') {
 					'date_so': savedSo.date_so,
 					'suggest': savedSo.suggest,
 					'bill_id': savedSo.bill_id,
-					'pre_name': savedSo.pre_name,
 					'bill_name': savedSo.bill_name,
 					'bill_address': savedSo.bill_address,
 					'bill_tel': savedSo.bill_tel,
@@ -8291,6 +8256,7 @@ if (productSnCkk === '1') {
 						inputs.forEach(function(input) {
 							if (input.type !== 'radio' && input.type !== 'checkbox') {
 								input.value = val;
+								soSyncDisplayText(input);
 							}
 						});
 					}
@@ -8328,14 +8294,13 @@ if (productSnCkk === '1') {
 					setElementValue('display_bill_tel', savedSo.bill_tel || '');
 					setElementValue('display_mode_name', savedSo.mode_cus || '');
 
-					doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
+					doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
 						if (success) {
 							// Restore specific saved order overrides
-							if (savedSo.bill_name) document.getElementById('bill_name').value = savedSo.bill_name;
-							if (savedSo.bill_address) document.getElementById('bill_address').value = savedSo.bill_address;
+							if (savedSo.bill_name) setElementValue('bill_name', savedSo.bill_name);
+							if (savedSo.bill_address) setElementValue('bill_address', savedSo.bill_address);
 							if (savedSo.bill_tel) document.getElementById('bill_tel').value = savedSo.bill_tel;
-							if (savedSo.tax_id) document.getElementById('tax_id').value = savedSo.tax_id;
-							if (savedSo.pre_name) document.getElementById('pre_name').value = savedSo.pre_name;
+							if (savedSo.tax_id) setElementValue('tax_id', savedSo.tax_id);
 							if (savedSo.install_place) {
 								setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
 								setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');

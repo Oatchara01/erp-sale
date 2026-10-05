@@ -475,7 +475,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 
 	$date_tranfer = $_POST["date_tranfer"];
 	$tax_id = $_POST["tax_id"];
-	$pre_name = $_POST["pre_name"];
+	$pre_name = $_POST["pre_name"] ?? '';
 	$admin_box_count = sanitizeAdminNumericInput($_POST["admin_box_count"] ?? '');
 	$admin_box_count_value = $admin_box_count !== '' ? $admin_box_count : '0';
 	$admin_edit_count = sanitizeAdminNumericInput($_POST["admin_edit_count"] ?? '');
