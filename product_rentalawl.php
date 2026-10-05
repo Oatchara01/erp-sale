@@ -220,14 +220,9 @@
 
 	function rtOpenEditModal(rowIndex) {
 		rtActiveEditRowIndex = rowIndex;
-		var priceEl = document.getElementById('product_price' + rowIndex);
 		var remarkEl = document.getElementById('sale_remarkk' + rowIndex);
 		var displayNameEl = document.getElementById('display_name' + rowIndex);
 
-		var depositInput = document.getElementById('rt_modal_deposit');
-		if (depositInput) {
-			depositInput.value = priceEl ? priceEl.value : '';
-		}
 		var remarkInput = document.getElementById('rt_modal_sale_remarkk');
 		if (remarkInput) {
 			remarkInput.value = remarkEl ? remarkEl.value : '';
@@ -249,16 +244,9 @@
 
 	function rtSaveEditModal() {
 		if (!rtActiveEditRowIndex) return;
-		var priceEl = document.getElementById('product_price' + rtActiveEditRowIndex);
 		var remarkEl = document.getElementById('sale_remarkk' + rtActiveEditRowIndex);
 		var displayNameEl = document.getElementById('display_name' + rtActiveEditRowIndex);
 
-		var depositInput = document.getElementById('rt_modal_deposit');
-		if (priceEl && depositInput && depositInput.value.trim() !== '') {
-			priceEl.value = depositInput.value.trim();
-			rtUpdateRowTotal(rtActiveEditRowIndex);
-			rtCalculateSummary();
-		}
 		if (remarkEl && document.getElementById('rt_modal_sale_remarkk')) {
 			remarkEl.value = document.getElementById('rt_modal_sale_remarkk').value;
 		}
@@ -315,8 +303,7 @@
 		document.getElementById('warranty' + rowIndex).value = product.vvv;
 
 		/* ค่าเช่า/ค่าจัดส่ง มาจากช่องกรอกส่วนหัว ไม่ใช่ราคาขายจาก catalog (sol_price) —
-		   ราคาเช่าต่อเดือนเป็นคนละค่ากับราคาขายสินค้า */
-		document.getElementById('product_price' + rowIndex).value = document.getElementById('rt_header_rent').value;
+		   ราคาเช่าต่อเดือนเป็นคนละค่ากับราคาขายสินค้า ค่าเช่าลงแถวผ่าน rtDistributeRent() ใน rtCalculateSummary() */
 		document.getElementById('delivery_cost' + rowIndex).value = document.getElementById('rt_header_delivery').value;
 
 		var row = document.getElementById('rt_row' + rowIndex);
@@ -327,7 +314,6 @@
 		var freeEl = document.getElementById('free_count' + rowIndex);
 		if (freeEl && !freeEl.value) freeEl.value = '0';
 
-		rtUpdateRowTotal(rowIndex);
 		rtCalculateSummary();
 
 		setTimeout(function() {
@@ -380,7 +366,8 @@
 		return true;
 	}
 
-	/* ===== ยอดรวมต่อแถว + สรุปยอด (จำนวนรวม / เงินประกัน x2 / ยอดรวม = เงินประกัน + ค่าจัดส่ง) ===== */
+	/* ===== สรุปยอด (จำนวนรวม / เงินประกัน = ค่าเช่า/เดือน x2 / ยอดรวม = ค่าเช่า/เดือน + ค่าจัดส่ง) =====
+	   ค่าเช่า/เดือนเป็นค่าเช่าของทั้งใบ ไม่คูณจำนวนชิ้นหรือจำนวนรายการ */
 	function rtParseNumber(value) {
 		var n = parseFloat((value || '').toString().replace(/,/g, ''));
 		return isNaN(n) ? 0 : n;
@@ -393,25 +380,25 @@
 		});
 	}
 
-	function rtUpdateRowTotal(rowIndex) {
-		var qty = parseFloat((document.getElementById('sale_count' + rowIndex).value || '').toString().replace(/,/g, '')) || 0;
-		var price = parseFloat((document.getElementById('product_price' + rowIndex).value || '').toString().replace(/,/g, '')) || 0;
-		var total = qty * price;
-		document.getElementById('sum_amount' + rowIndex).value = total.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		});
+	/* ค่าเช่าทั้งใบเก็บที่แถวสินค้าแถวแรกแถวเดียว แถวอื่นเป็น 0 — ผลรวม amount ทุกแถวจึงเท่ากับค่าเช่า/เดือน
+	   (ตัวอ่านฝั่ง SO/ฉบับพิมพ์ใช้ SUM(amount): includes/rental_so_sync.php, from_rental.php) */
+	function rtDistributeRent() {
+		var rentRaw = document.getElementById('rt_header_rent').value.trim();
+		var rentAmount = rtFormatMoney(rtParseNumber(rentRaw));
+		var isFirstProductRow = true;
+		for (var i = 1; i <= RT_ROW_COUNT; i++) {
+			var idEl = document.getElementById('product_id' + i);
+			if (!idEl || idEl.value.trim() === '') continue;
+			document.getElementById('product_price' + i).value = isFirstProductRow ? rentRaw : '0';
+			document.getElementById('sum_amount' + i).value = isFirstProductRow ? rentAmount : '0.00';
+			isFirstProductRow = false;
+		}
 	}
 
-	/* คำนวณเงินประกันใหม่เป็น (ผลรวมค่าเช่าทุกแถว) x2 — ทับค่าที่ผู้ใช้แก้เองทุกครั้งที่รายการเปลี่ยน
-	   ถ้าต้องคงค่าที่บันทึกไว้ (โหลด edit mode) ให้เขียน rt_deposit_amount แล้วเรียก rtRenderTotals() ตามหลัง */
+	/* เรียกทุกครั้งที่รายการเปลี่ยน (เพิ่ม/ลบ/ลากแถว/แก้จำนวน) — ไม่แตะเงินประกัน
+	   เงินประกันคำนวณใหม่เฉพาะตอนแก้ช่องค่าเช่า/เดือน (rtOnHeaderRentInput) */
 	function rtCalculateSummary() {
-		var rentTotal = 0;
-		for (var i = 1; i <= RT_ROW_COUNT; i++) {
-			var amtEl = document.getElementById('sum_amount' + i);
-			if (amtEl) rentTotal += rtParseNumber(amtEl.value);
-		}
-		document.getElementById('rt_deposit_amount').value = (rentTotal * 2).toFixed(2);
+		rtDistributeRent();
 		rtRenderTotals();
 	}
 
@@ -428,11 +415,12 @@
 			if (idEl && idEl.value.trim() !== '') itemCount++;
 		}
 		var deposit = rtParseNumber(document.getElementById('rt_deposit_amount').value);
+		var rent = rtParseNumber(document.getElementById('rt_header_rent').value);
 		var delivery = rtParseNumber(document.getElementById('rt_header_delivery').value);
 
 		document.getElementById('rt_summary_qty').textContent = qty.toLocaleString();
 		document.getElementById('rt_summary_deposit').textContent = rtFormatMoney(deposit);
-		document.getElementById('rt_summary_amount').textContent = rtFormatMoney(deposit + delivery);
+		document.getElementById('rt_summary_amount').textContent = rtFormatMoney(rent + delivery);
 		var countEl = document.getElementById('rt_summary_item_count');
 		if (countEl) countEl.textContent = itemCount + ' รายการ';
 
@@ -441,18 +429,22 @@
 		if (emptyState) emptyState.style.display = hasVisibleRow ? 'none' : '';
 	}
 
-	/* แก้ค่าเช่า/ค่าจัดส่งส่วนหัว -> อัปเดตทุกแถวที่มีสินค้าทันที แล้วคำนวณเงินประกัน/ยอดรวมใหม่ */
+	/* แก้ค่าเช่า/ค่าจัดส่งส่วนหัว -> อัปเดตทุกแถวที่มีสินค้าทันที แล้วแสดงยอดรวมใหม่ (ไม่แตะเงินประกัน) */
 	function rtApplyHeaderToRows() {
-		var rent = document.getElementById('rt_header_rent').value;
 		var delivery = document.getElementById('rt_header_delivery').value;
 		for (var i = 1; i <= RT_ROW_COUNT; i++) {
 			var idEl = document.getElementById('product_id' + i);
 			if (!idEl || idEl.value.trim() === '') continue;
-			document.getElementById('product_price' + i).value = rent;
 			document.getElementById('delivery_cost' + i).value = delivery;
-			rtUpdateRowTotal(i);
 		}
 		rtCalculateSummary();
+	}
+
+	/* แก้ช่องค่าเช่า/เดือน -> เงินประกัน = ค่าเช่า/เดือน x2 ทับค่าที่ผู้ใช้แก้เอง (จุดเดียวที่คำนวณเงินประกันอัตโนมัติ) */
+	function rtOnHeaderRentInput() {
+		var rent = rtParseNumber(document.getElementById('rt_header_rent').value);
+		document.getElementById('rt_deposit_amount').value = (rent * 2).toFixed(2);
+		rtApplyHeaderToRows();
 	}
 
 	/* ===== แก้เงินประกันในช่องเดิม (Enter/blur = บันทึก, Esc = ยกเลิก) ===== */
@@ -528,7 +520,7 @@
 
 	<div class="so-field-group rt-header-input">
 		<label class="so-label" for="rt_header_rent">ค่าเช่า/เดือน<span class="rt-required-mark">*</span></label>
-		<input type="text" id="rt_header_rent" class="so-input" placeholder="ใส่เฉพาะตัวเลข" oninput="rtApplyHeaderToRows();">
+		<input type="text" id="rt_header_rent" class="so-input" placeholder="ใส่เฉพาะตัวเลข" oninput="rtOnHeaderRentInput();">
 	</div>
 
 	<div class="so-field-group rt-header-input">
@@ -599,7 +591,7 @@
 					</td>
 					<td>
 						<div class="cs-cell-pill">
-							<input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="rtUpdateRowTotal(<?php echo $i; ?>); rtCalculateSummary();">
+							<input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-input" style="text-align:center" oninput="rtCalculateSummary();">
 						</div>
 						<input type='hidden' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" value="">
 					</td>
@@ -701,7 +693,7 @@
 		});
 	})();
 
-	/* render อย่างเดียว ไม่คำนวณ x2 ใหม่ — jQuery ready อาจรันหลัง prefill ของ edit mode
+	/* render อย่างเดียว — jQuery ready อาจรันหลัง prefill ของ edit mode
 	   (register_suprental.php) ซึ่งเขียนเงินประกันที่บันทึกไว้ลง rt_deposit_amount แล้ว */
 	$(document).ready(function() {
 		rtRenderTotals();

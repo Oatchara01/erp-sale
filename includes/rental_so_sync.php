@@ -17,7 +17,8 @@ if (!function_exists('rental_so_query')) {
 if (!function_exists('rental_so_expected_lines')) {
 	/**
 	 * ยอดของแถวรหัสหลักใน SO ที่ควรเป็นตามใบเช่าปัจจุบัน
-	 * IV: 5112 = ค่าเช่า SUM(hos__subrental.amount), 3200 = ค่าจัดส่ง (delivery_cost แถวแรก — ห้าม SUM
+	 * IV: 5112 = ค่าเช่า SUM(hos__subrental.amount) — ฟอร์มเก็บค่าเช่าทั้งใบไว้แถวแรก แถวอื่น 0
+	 *     (rtDistributeRent ใน product_rentalawl.php), 3200 = ค่าจัดส่ง (delivery_cost แถวแรก — ห้าม SUM
 	 *     เพราะค่านี้ถูกเก็บซ้ำทุกแถวสินค้าในใบเช่า ไม่ใช่ค่าต่อแถว)
 	 * AI: 5111 = hos__rental.deposit_amount (NULL = เอกสารเก่า ใช้ SUM(amount) x 2)
 	 *

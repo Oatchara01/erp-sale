@@ -151,7 +151,7 @@
 }
 
 /* เงินประกัน: ค่าขีดเส้นใต้สีม่วง + ปุ่มแก้ไข กดแล้วสลับเป็นช่องกรอกในตำแหน่งเดิม
-   (ค่า x2 คำนวณอัตโนมัติ — rtCalculateSummary / แก้เอง — rtStartDepositEdit ใน product_rentalawl.php) */
+   (ค่า x2 คำนวณอัตโนมัติ — rtOnHeaderRentInput / แก้เอง — rtStartDepositEdit ใน product_rentalawl.php) */
 .rt-deposit-display {
 	display: inline-flex;
 	align-items: center;

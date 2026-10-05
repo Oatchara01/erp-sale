@@ -2988,19 +2988,25 @@
 					});
 				});
 
-				// ช่องค่าเช่า/ค่าจัดส่งส่วนหัวใช้ค่าเดียวกันทุกแถว (rtApplyHeaderToRows) จึงดึงจากแถวแรก
+				// ค่าเช่า/เดือนเป็นค่าเช่าของทั้งใบ (เก็บที่แถวแรก แถวอื่น 0 — rtDistributeRent) ค่าจัดส่งเก็บซ้ำทุกแถวจึงดึงจากแถวแรก
+				// ทุกแถวราคาเท่ากัน = ใบเก่าที่เก็บค่าเช่าซ้ำทุกแถว ใช้ราคาแถวแรก
+				// ราคาไม่เท่ากัน = ใบที่เก็บแถวแรกแถวเดียว หรือใบเก่าราคาต่อรายการ ใช้ผลรวม amount
 				var rtFirstSaved = rtSavedProducts[0] || {};
-				document.getElementById('rt_header_rent').value = rtFirstSaved.price || '';
+				var rtSavedAmountTotal = 0;
+				var rtSavedSamePrice = true;
+				rtSavedProducts.forEach(function(product) {
+					rtSavedAmountTotal += rtParseNumber(product.amount);
+					if (rtParseNumber(product.price) !== rtParseNumber(rtFirstSaved.price)) rtSavedSamePrice = false;
+				});
+				document.getElementById('rt_header_rent').value = rtSavedSamePrice ? (rtFirstSaved.price || '') : rtSavedAmountTotal.toFixed(2);
 				document.getElementById('rt_header_delivery').value = rtFirstSaved.delivery_cost || '';
 
-				if (typeof rtCalculateSummary === 'function') rtCalculateSummary();
-
-				// เงินประกันที่บันทึกไว้ (อาจแก้เองไม่ใช่ x2) — เอกสารเก่าเป็น NULL ใช้ x2 จาก rtCalculateSummary
+				// เงินประกันที่บันทึกไว้ (อาจแก้เองไม่ใช่ x2) — เอกสารเก่าเป็น NULL ใช้ผลรวม amount เดิม x2
+				// (ค่าเดียวกับ fallback ใน rental_so_expected_lines) ต้องอ่านก่อน rtCalculateSummary เขียนแถวใหม่
 				var rtSavedDeposit = <?php echo json_encode($savedRental['deposit_amount'] ?? null); ?>;
-				if (rtSavedDeposit !== null && typeof rtRenderTotals === 'function') {
-					document.getElementById('rt_deposit_amount').value = rtSavedDeposit;
-					rtRenderTotals();
-				}
+				document.getElementById('rt_deposit_amount').value = rtSavedDeposit !== null ? rtSavedDeposit : (rtSavedAmountTotal * 2).toFixed(2);
+
+				if (typeof rtCalculateSummary === 'function') rtCalculateSummary();
 			});
 		</script>
 	<?php } ?>
