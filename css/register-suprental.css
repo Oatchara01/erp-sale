@@ -748,3 +748,8 @@
 	transform: scale(0.98) !important;
 }
 
+/* กล่องแนบไฟล์ Book Bank: ไฟล์ที่ขาดถูกมาร์กด้วย soMarkFieldInvalid() ที่ input ข้างใน (ดู rtValidateBankImg ใน register_suprental.php) */
+.so-file-picker:has(.so-file-picker-input.so-field-invalid) {
+	border: 1px solid #DC3545;
+	background: #FEECEB;
+}

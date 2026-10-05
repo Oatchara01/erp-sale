@@ -1,0 +1,18 @@
+<?php
+// Copy to dbconnect.php and fill in the credentials for this environment.
+$conn = mysqli_connect("localhost", "DB_USER", "DB_PASSWORD", "allwell_sol_test");
+
+if (mysqli_connect_errno()) {
+  echo "Failed to connect to MySQL: " . mysqli_connect_error();
+}
+mysqli_set_charset($conn, "utf8");
+mysqli_query($conn, "SET sql_mode = ''");
+
+
+$new = mysqli_connect("localhost", "DB_USER", "DB_PASSWORD", "allwell_stock_test");
+
+if (mysqli_connect_errno())
+  {
+  echo "Failed to connect to MySQL: " . mysqli_connect_error();
+  }
+mysqli_set_charset($new,"utf8");

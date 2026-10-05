@@ -1,10 +1,11 @@
 <?php
+// Copy to configDBsp.php and fill in the credentials for this environment.
 
 function OpenCon()
 {
     $servername = "localhost"; // ถ้าใช้ Docker ให้แทนที่ด้วย 'db'
-    $username = "allwell_itadmin";
-    $password = "Pass@2020";
+    $username = "DB_USER";
+    $password = "DB_PASSWORD";
     $dbname = "allwell_sol";
 
     // สร้างการเชื่อมต่อฐานข้อมูล
@@ -14,7 +15,7 @@ function OpenCon()
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
-    
+
     // กำหนดให้ฐานข้อมูลอ่านเขียนเป็น utf8
     $conn->set_charset("utf8");
 

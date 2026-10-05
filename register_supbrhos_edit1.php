@@ -273,17 +273,117 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		// ปุ่ม Submit/Update/แถบอนุมัติ ทั้งหมดยิงเข้าไฟล์นี้ (Update/แถบอนุมัติผ่าน register_supbrhos_draft1.php
 		// ซึ่งเซ็ต is_draft='1' ไว้เสมอ) ถ้าเซ็ต send_sup/status_doc ทุกครั้ง เอกสาร Draft/ส่งกลับ จะถูกส่งให้ Sup
 		// ทันทีที่กด Update ทั้งที่ผู้ใช้แค่แก้ไขข้อมูลเฉย ๆ จึงแยกเงื่อนไข: ยกเลิกเอกสาร > ส่งอนุมัติจริง (ไม่ใช่ draft) > คงสถานะเดิม
-		$cancelDocPost = $_POST["cancel_doc"] ?? null;
-		if ($cancelDocPost === '1') {
-			$brUpdateColumns['send_sup'] = '1';
-			$brUpdateColumns['status_doc'] = 'ยกเลิก';
-		} elseif (!$isDraftRequest) {
-			$brUpdateColumns['send_sup'] = '1';
-			$brUpdateColumns['send_supname'] = $add_by;
-			$brUpdateColumns['send_supdate'] = $add_date;
-			$brUpdateColumns['send_admin'] = '0';
-			$brUpdateColumns['status_doc'] = 'Request';
-		}
+		// =========================================================
+// ACTION / SUBMIT FLOW
+// =========================================================
+
+$cancelDocPost = $_POST["cancel_doc"] ?? null;
+$brApproveActionPost = trim((string)($_POST['approve_action'] ?? ''));
+
+$type_login_lower = strtolower(trim((string)($_SESSION['type_login'] ?? '')));
+
+$brApproverRoles = array(
+    'owner',
+    'sup_sale',
+    'sup_mk1',
+    'sup_en',
+    'it'
+);
+
+$brIsApproverRole = in_array(
+    $type_login_lower,
+    $brApproverRoles,
+    true
+);
+
+
+// =========================================================
+// 1. CANCEL DOCUMENT
+// =========================================================
+
+if ($cancelDocPost === '1') {
+
+    $brUpdateColumns['send_sup'] = '1';
+    $brUpdateColumns['status_doc'] = 'ยกเลิก';
+
+}
+
+
+// =========================================================
+// 2. APPROVE / RETURN / REJECT
+// ให้ไปจัดการใน approval block ด้านล่าง
+// ห้าม block นี้เปลี่ยน status_doc ก่อน
+// =========================================================
+
+elseif ($brApproveActionPost !== '') {
+
+    // ไม่ทำอะไรตรงนี้
+    // Approval action จะถูกจัดการด้านล่าง
+}
+
+
+// =========================================================
+// 3. SUBMIT จริง
+// ไม่ใช่ Save Draft / Update
+// =========================================================
+
+elseif (!$isDraftRequest) {
+
+    // -----------------------------------------------------
+    // APPROVER เป็นคนกด Submit
+    // owner / sup_sale / sup_mk1 / sup_en / it
+    // -----------------------------------------------------
+
+    if ($brIsApproverRole) {
+
+        if ($objective === '7') {
+
+            // ส่งต่อ DM
+            $brUpdateColumns['send_dm'] = '1';
+            $brUpdateColumns['send_admin'] = '0';
+
+            $brUpdateColumns['approve_time'] = $approve_time;
+            $brUpdateColumns['approve_date'] = $approve_date;
+
+            $brUpdateColumns['status_doc'] = 'Request';
+
+            $brUpdateColumns['send_sup'] = '1';
+            $brUpdateColumns['send_supname'] = $add_by;
+            $brUpdateColumns['send_supdate'] = $add_date;
+
+        } else {
+
+            // Approve จบ ส่ง Admin
+            $brUpdateColumns['send_admin'] = '1';
+            $brUpdateColumns['send_dm'] = '0';
+
+            $brUpdateColumns['approve_time'] = $approve_time;
+            $brUpdateColumns['approve_date'] = $approve_date;
+
+            $brUpdateColumns['status_doc'] = 'Approve';
+
+            $brUpdateColumns['send_sup'] = '1';
+            $brUpdateColumns['send_supname'] = $add_by;
+            $brUpdateColumns['send_supdate'] = $add_date;
+        }
+
+    }
+
+    // -----------------------------------------------------
+    // USER ทั่วไปกด Submit
+    // ส่งเข้า Sup อย่างเดียว
+    // -----------------------------------------------------
+
+    else {
+
+        $brUpdateColumns['send_sup'] = '1';
+        $brUpdateColumns['send_supname'] = $add_by;
+        $brUpdateColumns['send_supdate'] = $add_date;
+
+        $brUpdateColumns['send_admin'] = '0';
+        $brUpdateColumns['status_doc'] = 'Request';
+    }
+}
 
 		// อัปเดตคอลัมน์ slip (null = ไม่มีการส่งค่ามา ให้คงของเดิม)
 		foreach (array('slip1' => $slip1, 'slip2' => $slip2, 'slip3' => $slip3, 'slip4' => $slip4, 'slip5' => $slip5) as $brSlipCol => $brSlipVal) {
@@ -398,7 +498,7 @@ values
 			}
 
 			$items = array();
-			$allowedDepartments = array(1, 2, 3, 4);
+			$allowedDepartments = array(1, 2, 3, 4, 5);
 			foreach ($decodedItems as $index => $item) {
 				$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
 				$message = isset($item["message"]) ? trim($item["message"]) : "";
@@ -2374,37 +2474,228 @@ values($registerDataValues)";
 			$saveFailures[] = 'tb_register_data: ' . mysqli_error($conn);
 		}
 
-		// ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ ของ Sup + ผู้บริหาร (register_supbrhos.php รวม Flow ทั้งสองขั้นไว้หน้าเดียว) — ทำงานหลังบันทึกข้อมูลฟอร์มปกติเสร็จแล้ว
-		// สถานะ "ส่งกลับ" ใช้คำไทยตรงกับที่ status_supbrhos.php (หน้ารายการ) เข้าใจอยู่แล้ว ต่างจากฝั่ง SO ที่ใช้คำอังกฤษ 'Returned'
-		$brApproveAction = $_POST['approve_action'] ?? '';
-		// 'sup' = ขั้น Sup อนุมัติ, 'dm' = ขั้นผู้บริหารอนุมัติ (โชว์เมื่อ send_dm='1' แล้ว, ดู register_supbrhos.php $brApproveStage)
-		$brApproveStage = ($_POST['approve_stage'] ?? 'sup') === 'dm' ? 'dm' : 'sup';
-		if ($brApproveAction !== '' && $qsave) {
-			$brApproveName = mysqli_real_escape_string($conn, trim(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')));
-			$brApproveCode = mysqli_real_escape_string($conn, $_SESSION['code'] ?? '');
-			$brApproveDateVal = date('Y-m-d');
-			$brApproveTimeVal = date('H:i:s');
-			$brDmDateVal = date('Y-m-d H:i:s');
+		// =========================================================
+// APPROVE / RETURN / REJECT FLOW
+// =========================================================
 
-			if ($brApproveAction === 'return') {
-				mysqli_query($conn, "UPDATE hos__br SET status_doc='ส่งกลับ', send_sup='0', send_dm='0', send_admin='0' WHERE ref_id_br='" . $ref_id_br . "'");
-			} elseif ($brApproveAction === 'reject' && $brApproveStage === 'dm') {
-				// ผู้บริหารไม่อนุมัติ (mirror ของ dmbrhos_rejected.php)
-				mysqli_query($conn, "UPDATE hos__br SET status_doc='Rejected', dm_name='" . $brApproveName . "', dm_date='" . $brDmDateVal . "' WHERE ref_id_br='" . $ref_id_br . "'");
-			} elseif ($brApproveAction === 'reject') {
-				mysqli_query($conn, "UPDATE hos__br SET status_doc='Rejected', approve='" . $brApproveName . "', approve_code='" . $brApproveCode . "', approve_date='" . $brApproveDateVal . "', approve_time='" . $brApproveTimeVal . "' WHERE ref_id_br='" . $ref_id_br . "'");
-			} elseif ($brApproveAction === 'approve' && $brApproveStage === 'dm') {
-				// ผู้บริหารอนุมัติ (mirror ของ dmbrhos_approve.php)
-				mysqli_query($conn, "UPDATE hos__br SET status_doc='Approve', dm_name='" . $brApproveName . "', dm_date='" . $brDmDateVal . "', send_admin='1' WHERE ref_id_br='" . $ref_id_br . "'");
-			} elseif ($brApproveAction === 'approve') {
-				// วัตถุประสงค์ 'สินค้าออกบูธ' (objective='7') ต้องผ่านผู้บริหารอนุมัติต่อ (mirror ของ brhos_approve.php/send_bradmin.php)
-				if ($objective === '7') {
-					mysqli_query($conn, "UPDATE hos__br SET status_doc='Request', approve='" . $brApproveName . "', approve_code='" . $brApproveCode . "', approve_date='" . $brApproveDateVal . "', approve_time='" . $brApproveTimeVal . "', send_dm='1', send_admin='0' WHERE ref_id_br='" . $ref_id_br . "'");
-				} else {
-					mysqli_query($conn, "UPDATE hos__br SET status_doc='Approve', approve='" . $brApproveName . "', approve_code='" . $brApproveCode . "', approve_date='" . $brApproveDateVal . "', approve_time='" . $brApproveTimeVal . "', send_admin='1' WHERE ref_id_br='" . $ref_id_br . "'");
-				}
-			}
+$brApproveAction = trim((string)($_POST['approve_action'] ?? ''));
+
+// 'sup' = ขั้นหัวหน้า
+// 'dm'  = ขั้นผู้บริหาร
+$brApproveStage =
+	($_POST['approve_stage'] ?? 'sup') === 'dm'
+		? 'dm'
+		: 'sup';
+
+
+// =========================================================
+// CHECK APPROVER ROLE
+// =========================================================
+
+$type_login_lower = strtolower(
+	trim((string)($_SESSION['type_login'] ?? ''))
+);
+
+$brApproverRoles = array(
+	'owner',
+	'sup_sale',
+	'sup_mk1',
+	'sup_en',
+	'it'
+);
+
+$brIsApproverRole = in_array(
+	$type_login_lower,
+	$brApproverRoles,
+	true
+);
+
+
+// =========================================================
+// กันยิง POST action โดยคนไม่มีสิทธิ์
+// =========================================================
+
+if ($brApproveAction !== '' && !$brIsApproverRole) {
+	throw new Exception('คุณไม่มีสิทธิ์อนุมัติเอกสารนี้');
+}
+
+
+// =========================================================
+// RUN ACTION
+// =========================================================
+
+if ($brApproveAction !== '' && $qsave) {
+
+	$brApproveName = mysqli_real_escape_string(
+		$conn,
+		trim(
+			($_SESSION['name'] ?? '')
+			. ' '
+			. ($_SESSION['surname'] ?? '')
+		)
+	);
+
+	$brApproveCode = mysqli_real_escape_string(
+		$conn,
+		$_SESSION['code'] ?? ''
+	);
+
+	$brApproveDateVal = date('Y-m-d');
+	$brApproveTimeVal = date('H:i:s');
+	$brDmDateVal = date('Y-m-d H:i:s');
+
+
+	// =====================================================
+	// RETURN
+	// =====================================================
+
+	if ($brApproveAction === 'return') {
+
+		$sqlAction = "
+			UPDATE hos__br
+			SET
+				status_doc = 'ส่งกลับ',
+				send_sup = '0',
+				send_dm = '0',
+				send_admin = '0'
+			WHERE ref_id_br = '" . $ref_id_br . "'
+		";
+
+		$qAction = mysqli_query($conn, $sqlAction);
+	}
+
+
+	// =====================================================
+	// REJECT : DM
+	// =====================================================
+
+	elseif (
+		$brApproveAction === 'reject'
+		&& $brApproveStage === 'dm'
+	) {
+
+		$sqlAction = "
+			UPDATE hos__br
+			SET
+				status_doc = 'Rejected',
+				dm_name = '" . $brApproveName . "',
+				dm_date = '" . $brDmDateVal . "'
+			WHERE ref_id_br = '" . $ref_id_br . "'
+		";
+
+		$qAction = mysqli_query($conn, $sqlAction);
+	}
+
+
+	// =====================================================
+	// REJECT : SUP
+	// =====================================================
+
+	elseif ($brApproveAction === 'reject') {
+
+		$sqlAction = "
+			UPDATE hos__br
+			SET
+				status_doc = 'Rejected',
+				approve = '" . $brApproveName . "',
+				approve_code = '" . $brApproveCode . "',
+				approve_date = '" . $brApproveDateVal . "',
+				approve_time = '" . $brApproveTimeVal . "'
+			WHERE ref_id_br = '" . $ref_id_br . "'
+		";
+
+		$qAction = mysqli_query($conn, $sqlAction);
+	}
+
+
+	// =====================================================
+	// APPROVE : DM
+	// =====================================================
+
+	elseif (
+		$brApproveAction === 'approve'
+		&& $brApproveStage === 'dm'
+	) {
+
+		$sqlAction = "
+			UPDATE hos__br
+			SET
+				status_doc = 'Approve',
+				dm_name = '" . $brApproveName . "',
+				dm_date = '" . $brDmDateVal . "',
+				send_admin = '1'
+			WHERE ref_id_br = '" . $ref_id_br . "'
+		";
+
+		$qAction = mysqli_query($conn, $sqlAction);
+	}
+
+
+	// =====================================================
+	// APPROVE : SUP
+	// =====================================================
+
+	elseif ($brApproveAction === 'approve') {
+
+		// -------------------------------------------------
+		// objective = 7
+		// Sup อนุมัติแล้ว -> ส่งต่อ DM
+		// -------------------------------------------------
+
+		if ($objective === '7') {
+
+			$sqlAction = "
+				UPDATE hos__br
+				SET
+					status_doc = 'Request',
+					approve = '" . $brApproveName . "',
+					approve_code = '" . $brApproveCode . "',
+					approve_date = '" . $brApproveDateVal . "',
+					approve_time = '" . $brApproveTimeVal . "',
+					send_dm = '1',
+					send_admin = '0'
+				WHERE ref_id_br = '" . $ref_id_br . "'
+			";
+
+			$qAction = mysqli_query($conn, $sqlAction);
+
 		}
+
+		// -------------------------------------------------
+		// objective != 7
+		// Sup อนุมัติแล้ว -> จบ / ส่ง Admin
+		// -------------------------------------------------
+
+		else {
+
+			$sqlAction = "
+				UPDATE hos__br
+				SET
+					status_doc = 'Approve',
+					approve = '" . $brApproveName . "',
+					approve_code = '" . $brApproveCode . "',
+					approve_date = '" . $brApproveDateVal . "',
+					approve_time = '" . $brApproveTimeVal . "',
+					send_admin = '1',
+					send_dm = '0'
+				WHERE ref_id_br = '" . $ref_id_br . "'
+			";
+
+			$qAction = mysqli_query($conn, $sqlAction);
+		}
+	}
+
+
+	// =====================================================
+	// CHECK QUERY ERROR
+	// =====================================================
+
+	if (isset($qAction) && !$qAction) {
+		$saveOk = false;
+		$saveFailures[] =
+			'Approve Action: ' . mysqli_error($conn);
+	}
+}
 
 		if ($qsave && tableExists($conn, 'tb_document_status_log')) {
 			$brLogUserId = mysqli_real_escape_string($conn, $_SESSION['UserID'] ?? '');
@@ -2448,10 +2739,10 @@ values($registerDataValues)";
 		if ($isDraftRequest === false) {
 			createBrProductChecklists($conn, $ref_id_br);
 		}
-	} catch (mysqli_sql_exception $e) {
-		$saveOk = false;
-		$saveFailures[] = $e->getMessage();
-	}
+	} catch (Throwable $e) {
+    $saveOk = false;
+    $saveFailures[] = $e->getMessage();
+}
 
 	if ($saveOk) {
 		mysqli_commit($conn);

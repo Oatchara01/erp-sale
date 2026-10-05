@@ -87,8 +87,8 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 		ptcUpdatePendingState();
 	}
 
-	/* แสดงเฉพาะแถวที่มีข้อมูลจริง (อย่างน้อย 1 แถวเสมอ เพื่อให้มีที่เติมสินค้าแรกได้ - แถวที่ 2-6
-	   มี style="display:none;" ติดตัวมาจาก PHP อยู่แล้ว) ไม่เผยแถวว่างถัดไปล่วงหน้า - จะเลือกสินค้า
+	/* แสดงเฉพาะแถวที่มีข้อมูลจริง (ถ้ายังไม่มีสินค้าเลยจะซ่อนทุกแถวแล้วโชว์กล่อง #ptc_empty_state แทน -
+	   ทุกแถวมี style="display:none;" ติดตัวมาจาก PHP อยู่แล้ว) ไม่เผยแถวว่างถัดไปล่วงหน้า - จะเลือกสินค้า
 	   เพิ่มอีกกี่ชิ้นก็แค่ค้นหา/เลือกซ้ำ ระบบจะหาแถวว่างที่ซ่อนอยู่ให้เอง (ptcFindEmptyRowIndex)
 	   แล้วเผยแถวนั้นพร้อมข้อมูลในคราวเดียว - เรียกซ้ำได้ทุกจุดที่ข้อมูลแถวเปลี่ยน (เติม/ลบ/ลากสลับ)
 	   เพื่อ sync ให้ตรงเสมอ */
@@ -98,11 +98,12 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 			var idEl = document.getElementById('product_id' + i);
 			if (idEl && idEl.value.trim() !== '') lastFilled = i;
 		}
-		var showUpTo = Math.max(1, lastFilled);
 		for (var j = 1; j <= 6; j++) {
 			var row = document.getElementById('ptc_row' + j);
-			if (row) row.style.display = (j <= showUpTo) ? '' : 'none';
+			if (row) row.style.display = (j <= lastFilled) ? '' : 'none';
 		}
+		var emptyState = document.getElementById('ptc_empty_state');
+		if (emptyState) emptyState.style.display = (lastFilled > 0) ? 'none' : '';
 	}
 
 	/* ลากสลับแถว (js/row-drag.js — ลากได้ทั้งเมาส์และนิ้ว) */
@@ -391,7 +392,7 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 			{
 			?>
 				<tr class="so-product-row" id="ptc_row<?php echo $i; ?>"
-					<?php if ($i > 1) { ?>style="display:none;" <?php } ?>>
+					style="display:none;">
 					<td>
 						<i class="fas fa-grip-vertical cs-drag-handle rd-handle"
 							title="ลากเพื่อจัดเรียง"
@@ -429,9 +430,9 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 						<input type="hidden" name="sn<?php echo $i; ?>" id="sn<?php echo $i; ?>">
 						<input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
 						<button type="button" class="cs-row-edit-btn" title="แก้ไขข้อมูลเพิ่มเติม" aria-label="แก้ไขข้อมูลเพิ่มเติมของรายการที่ <?php echo $i; ?>" onclick="ptcOpenEditModal(<?php echo $i; ?>);">
-							<i class="fas fa-pen" aria-hidden="true"></i>
+							<img src="img/icons/edit.svg" alt="" width="16" height="16">
 						</button>
-						<button type="button" class="so-product-remove-btn" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="ptcClearRow(<?php echo $i; ?>);"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>
+						<button type="button" class="so-product-remove-btn" title="ลบรายการ" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="ptcClearRow(<?php echo $i; ?>);"><img src="img/icons/trash.svg" alt="" width="16" height="18"></button>
 					</td>
 				</tr>
 			<?php
@@ -444,6 +445,8 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 		</tbody>
 	</table>
 </div>
+
+<div class="so-product-empty-state" id="ptc_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
 <!-- Modal "ข้อมูลรายการสินค้าเพิ่มเติม" มีเฉพาะ หมายเลข SN และ หมายเหตุสินค้า ตาม Figma -->
 <div id="ptc_edit_modal" class="cs-modal-overlay" style="display:none;">

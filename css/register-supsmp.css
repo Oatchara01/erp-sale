@@ -46,11 +46,12 @@
 .smp-product-table th:nth-child(6), .smp-product-table td:nth-child(6) { width: 12%; text-align: right; }
 .smp-product-table th:nth-child(7), .smp-product-table td:nth-child(7) { width: 12%; text-align: right; }
 .smp-product-table th:nth-child(8), .smp-product-table td:nth-child(8) { width: 16%; text-align: left; }
-.smp-product-table th:nth-child(9), .smp-product-table td:nth-child(9) { width: 84px; padding-left: 4px; padding-right: 12px; text-align: center; white-space: nowrap; }
+.smp-product-table th:nth-child(9), .smp-product-table td:nth-child(9) { width: 96px; padding-left: 4px; padding-right: 12px; text-align: center; white-space: nowrap; }
 .smp-cell-amount { font-weight: 500; color: var(--so-text); }
-.smp-product-table .cs-row-edit-btn, .smp-product-table .so-product-remove-btn { width: 28px; height: 28px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: #77727A; }
-.smp-product-table .cs-row-edit-btn:hover, .smp-product-table .so-product-remove-btn:hover { background: transparent; border: 0; color: var(--so-primary); }
-.smp-product-table .cs-row-edit-btn img { width: 18px; height: 18px; }
+/* ปุ่มไอคอนพื้นขาวมุมมน 34x34px เงา — สไตล์เดียวกับ .action-icon ของ product_salehos.php */
+.smp-product-table .cs-row-edit-btn, .smp-product-table .so-product-remove-btn { width: 34px; height: 34px; border: 0; border-radius: 8px; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); transition: box-shadow 0.2s ease; }
+.smp-product-table .cs-row-edit-btn:hover, .smp-product-table .so-product-remove-btn:hover { background: #FFFFFF; border: 0; box-shadow: 0 2px 10px rgba(97, 41, 137, 0.28); }
+.smp-product-table .cs-row-edit-btn img { width: 16px; height: 16px; }
 .smp-product-table .so-product-remove-btn img { width: 16px; height: 18px; }
 .breg-empty-state { padding: 28px 16px; text-align: center; font-size: 14px; color: var(--so-muted); background: #FAF9FC; border: 1px dashed #E3DCEA; border-radius: 10px; }
 
@@ -93,7 +94,6 @@
 .smp-doc-card .smp-align-end .so-field-group { margin-bottom: 0; }
 .smp-doc-card #order_id { background: #F5F6F8; color: #3B3B3B; cursor: default; }
 .smp-doc-card #crm_ref:disabled { background: #F4F3F7; color: #8A8690; cursor: not-allowed; }
-.smp-doc-card #crm_ref.is-invalid { border-color: #DC3545; }
 
 .smp-pill-toggle { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; height: 42px; padding: 0 16px; border-radius: 10px; background: #F4F3F7; color: #6E6E6E; font: 500 14px 'Prompt', sans-serif; cursor: pointer; user-select: none; transition: background-color .2s ease, color .2s ease; }
 .smp-pill-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }

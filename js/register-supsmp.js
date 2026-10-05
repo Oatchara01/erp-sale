@@ -243,6 +243,7 @@
 	var editingRow = null;
 	function openEditModal(row) {
 		editingRow = row;
+		soClearFieldInvalid(el('smp_modal_waranty')); /* รีเซ็ตกรอบแดงทุกครั้งที่เปิด */
 		el('smp_modal_waranty').value = row.querySelector('.smp-f-waranty').value;
 		el('smp_modal_br_no').value = row.querySelector('.smp-f-br_no').value;
 		el('smp_modal_remark').value = row.querySelector('.smp-f-remark').value;
@@ -257,7 +258,8 @@
 		if (!editingRow) return;
 		var waranty = el('smp_modal_waranty').value.trim();
 		if (!/^\d+$/.test(waranty)) {
-			notify('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุจำนวนปีรับประกันเป็นตัวเลข', 'warning');
+			/* กรอบแดงใน popup ไม่ปิด popup — หายเองเมื่อผู้ใช้แก้ค่า (soMarkFieldInvalid) */
+			soMarkFieldInvalid(el('smp_modal_waranty'));
 			el('smp_modal_waranty').focus();
 			return;
 		}
@@ -428,13 +430,12 @@
 		function sync() {
 			var on = toggle.checked;
 			ref.disabled = !on;
-			ref.required = on;
 			ref.setAttribute('aria-required', on ? 'true' : 'false');
 			star.hidden = !on;
-			if (!on) { ref.value = ''; ref.classList.remove('is-invalid'); }
+			star.textContent = on ? '*' : ''; /* ตัวตรวจกลางดูข้อความดอกจันใน label (ไม่สนว่าซ่อน) จึงต้องล้างข้อความเมื่อไม่ใช่ช่องบังคับ */
+			if (!on) { ref.value = ''; soClearFieldInvalid(ref); }
 		}
 		toggle.addEventListener('change', function () { sync(); if (toggle.checked && document.activeElement === toggle) ref.focus(); });
-		ref.addEventListener('input', function () { ref.classList.remove('is-invalid'); });
 		sync();
 	})();
 
@@ -528,23 +529,12 @@
 	}
 
 	/* ===================== validate / submit / draft / preview ===================== */
-	var requiredFields = [
-		['sale_code', 'กรุณาเลือกแผนก/เขตการขาย'],
-		['smp_date', 'กรุณาระบุวันที่เอกสาร'],
-		['customer_name', 'กรุณาใส่ชื่อลูกค้า'],
-		['cus_tel', 'กรุณาใส่เบอร์โทรศัพท์ลูกค้า'],
-		['address_name', 'กรุณาใส่ที่อยู่ลูกค้า'],
-		['cus_province', 'กรุณาเลือกจังหวัดลูกค้า'],
-		['cus_ampher', 'กรุณาใส่เขต/อำเภอลูกค้า'],
-		['cus_postcode', 'กรุณาใส่รหัสไปรษณีย์ลูกค้า']
-	];
-	var requiredDelivery = [
-		['start_time','กรุณาใส่เวลาส่ง'],
-		['customer_name1', 'กรุณาใส่ชื่อผู้ติดต่อ'],
-		['customer_tel', 'กรุณาใส่เบอร์โทรลูกค้า'],
-		['address_merged_ui', 'กรุณาใส่ที่อยู่ในการส่งสินค้า'], /* ช่องที่เห็น — address_1/address_name1 เป็น hidden ที่ copy ค่าไป (focus ไม่ได้) */
-		['address_send', 'กรุณาใส่สถานที่ติดตั้งเครื่อง'],
-		['province_name', 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง']
+	/* ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ (จัดส่งวันที่, ช่วงเวลา)
+	   address_merged_ui คือช่องที่เห็น — address_1/address_name1 เป็น hidden ที่ copy ค่าไป */
+	var SMP_APPROVE_REQUIRED_FIELDS = [
+		'sale_code', 'customer_name', 'cus_tel', 'address_name', 'cus_province', 'cus_ampher', 'cus_postcode',
+		'start_time', 'customer_name1', 'customer_tel', 'address_merged_ui', 'address_send', 'province_name', 'transport_company',
+		'crm_ref'
 	];
 	function fail(message, field) {
 		if (field) { revealField(field); }
@@ -554,31 +544,28 @@
 	}
 	/* skipTimeRange: อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเลือกช่วงเวลาเฉพาะปุ่มบันทึกของผู้สร้าง */
 	function validateSubmit(skipTimeRange) {
-		for (var i = 0; i < requiredFields.length; i++) {
-			if (getValue(requiredFields[i][0]) === '') return fail(requiredFields[i][1], named(requiredFields[i][0]));
-		}
-		if (!/^\d{5}$/.test(getValue('cus_postcode'))) return fail('รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก', named('cus_postcode'));
-		if (el('crm_ckk').checked && getValue('crm_ref') === '') {
-			el('crm_ref').classList.add('is-invalid');
-			return fail('กรุณาระบุเลขที่อ้างอิง (CRM) เมื่อเลือกแลกสินค้า CRM', el('crm_ref'));
+		/* ตรวจดอกจันทุกตัวด้วยตัวตรวจกลาง (js/so-required-fields.js) กรอบแดงพร้อมกัน ไม่มี popup ต่อฟิลด์
+		   อนุมัติเอกสารเก่าที่ยังไม่มีวันจัดส่ง/ช่วงเวลาต้องทำได้ จึงตรวจครบเฉพาะปุ่มบันทึกของผู้สร้าง */
+		if (!soValidateRequired(form, skipTimeRange ? { only: SMP_APPROVE_REQUIRED_FIELDS } : null)) return false;
+		/* smp_date เป็น hidden (ตั้งเป็นวันนี้เสมอ) ไม่มีดอกจัน ตัวตรวจกลางจึงมองไม่เห็น */
+		if (getValue('smp_date') === '') return fail('กรุณาระบุวันที่เอกสาร', named('smp_date'));
+		if (!/^\d{5}$/.test(getValue('cus_postcode'))) {
+			soMarkFieldInvalid(named('cus_postcode'));
+			return fail('รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก', named('cus_postcode'));
 		}
 		var rows = tbody().querySelectorAll('tr.smp-row');
 		if (rows.length === 0) return fail('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ', el('smp_product_search'));
 		for (var r = 0; r < rows.length; r++) {
 			if (!/^\d+$/.test(rows[r].querySelector('.smp-f-waranty').value)) {
 				openEditModal(rows[r]);
+				soMarkFieldInvalid(el('smp_modal_waranty'));
 				notify('ข้อมูลไม่ครบถ้วน', 'รายการที่ ' + (r + 1) + ': กรุณาระบุจำนวนปีรับประกัน', 'warning');
 				return false;
 			}
 		}
-		for (var d = 0; d < requiredDelivery.length; d++) {
-			if (getValue(requiredDelivery[d][0]) === '') return fail(requiredDelivery[d][1], named(requiredDelivery[d][0]));
-		}
-		/* บริษัทขนส่ง/สถานที่รับสินค้า: ตัวเดียวกับ register_suphos.php (js/delivery-transport.js) */
-		if (typeof validateTransportCompanyRequirement === 'function' && !validateTransportCompanyRequirement()) return false;
+		/* บริษัทขนส่ง/สถานที่รับสินค้า (ว่าง) และช่วงเวลา ถูก soValidateRequired ตรวจแล้ว เหลือกฎช่วงวันที่/เวลาที่ไม่ใช่ดอกจัน */
 		if (typeof validateDeliveryDateRange === 'function' && !validateDeliveryDateRange()) return false;
 		if (typeof validateDeliveryTimeRange === 'function' && !validateDeliveryTimeRange()) return false;
-		if (!skipTimeRange && typeof validateDeliveryTimeRangeChoice === 'function' && !validateDeliveryTimeRangeChoice()) return false;
 		var fileProblem = checkFiles();
 		if (fileProblem) return fail(fileProblem, null);
 		return true;
@@ -747,7 +734,8 @@
 	};
 	window.smpSaveDraft = function () {
 		if (busy) return;
-		if (typeof validateDeliveryTimeRangeChoice === 'function' && !validateDeliveryTimeRangeChoice()) return;
+		/* Save Draft บังคับดอกจันครบเท่า Submit (Update ของใบ Request/Returned ผ่าน validateSubmit อยู่แล้ว) */
+		if (!soValidateRequired(form)) return;
 		var fileProblem = checkFiles();
 		if (fileProblem) { notify('แนบไฟล์ไม่ได้', fileProblem, 'warning'); return; }
 		var button = el('smp_btn_draft');

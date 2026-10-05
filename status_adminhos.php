@@ -6,6 +6,191 @@ include "dbconnect_sale.php";
 <link rel="stylesheet" href="css/so-status-ui.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+
+<style>
+/* =========================================================
+   DELIVERY MODAL : รายละเอียดเอกสาร
+   แก้เฉพาะส่วน Modal เท่านั้น
+========================================================= */
+
+.delivery-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999999;
+    padding: 24px;
+
+    align-items: center;
+    justify-content: center;
+
+    font-family: 'Prompt', sans-serif !important;
+}
+
+.delivery-modal.is-open {
+    display: flex !important;
+}
+
+.delivery-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(38, 26, 46, 0.42);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+}
+
+.delivery-modal-dialog {
+    position: relative;
+    z-index: 2;
+
+    width: min(1080px, 100%);
+    max-height: calc(100vh - 48px);
+
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+
+    box-shadow:
+        0 22px 60px rgba(34, 22, 43, 0.24),
+        0 4px 16px rgba(34, 22, 43, 0.10);
+
+    animation: deliveryModalIn .18s ease-out;
+}
+
+.delivery-modal-scroll {
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+/* scrollbar */
+.delivery-modal-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.delivery-modal-scroll::-webkit-scrollbar-track {
+    background: #f5f3f7;
+}
+
+.delivery-modal-scroll::-webkit-scrollbar-thumb {
+    background: #cfc3d8;
+    border-radius: 20px;
+}
+
+.delivery-modal-scroll::-webkit-scrollbar-thumb:hover {
+    background: #b5a2c4;
+}
+
+.delivery-loading {
+    min-height: 260px;
+    padding: 70px 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+    font-family: 'Prompt', sans-serif !important;
+    font-size: 14px;
+    color: #7c7581;
+}
+
+.delivery-loading-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 13px;
+
+    border: 3px solid #eee8f2;
+    border-top-color: #612989;
+    border-radius: 50%;
+
+    animation: deliverySpin .75s linear infinite;
+}
+
+.delivery-modal-error {
+    min-height: 260px;
+    padding: 55px 30px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+    font-family: 'Prompt', sans-serif !important;
+}
+
+.delivery-modal-error-icon {
+    width: 46px;
+    height: 46px;
+    margin-bottom: 13px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: #fff0f0;
+    color: #d93025;
+
+    font-size: 20px;
+}
+
+.delivery-modal-error-title {
+    margin-bottom: 5px;
+    color: #3b3b3b;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.delivery-modal-error-text {
+    color: #8e8b94;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+@keyframes deliveryModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes deliverySpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .delivery-modal {
+        padding: 12px;
+        align-items: flex-start;
+    }
+
+    .delivery-modal-dialog {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        margin-top: 0;
+        border-radius: 12px;
+    }
+
+    .delivery-modal-scroll {
+        max-height: calc(100vh - 24px);
+    }
+}
+</style>
+
 <body>
 	<script>
 		(function() {
@@ -138,22 +323,150 @@ include "dbconnect_sale.php";
 									</select>
 								</div>
 								<div>
-									<label class="so-label">เขตการขาย (Sale)</label>
-									<select name="sale_code" id="modal_sale_code" class="so-select">
-										<option value="">Select</option>
-										<?php
-										$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-										?>
-											<option value="<?php echo htmlspecialchars($objResuut5["sale_code"]); ?>" <?php if ($sale_code == $objResuut5["sale_code"]) echo 'selected'; ?>>
-												<?php echo htmlspecialchars($objResuut5["sale_code"]); ?> - <?php echo htmlspecialchars($objResuut5["sale_name"]); ?>
-											</option>
-										<?php
-										}
-										?>
-									</select>
-								</div>
+	<label class="so-label">เขตการขาย (Sale)</label>
+
+	<?php
+
+	$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+	$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+	$type_login_lower = strtolower($type_login);
+
+	?>
+
+	<?php if ($type_login_lower == 'sale') { ?>
+
+		<!-- Sale ล็อกเขตเป็นของตัวเอง -->
+		<input
+			type="hidden"
+			name="sale_code"
+			id="modal_sale_code"
+			value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+		>
+
+		<input
+			type="text"
+			class="so-select"
+			value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			readonly
+			style="background:#f5f5f5; cursor:not-allowed;"
+		>
+
+	<?php } else { ?>
+
+		<select name="sale_code" id="modal_sale_code" class="so-select">
+			<option value="">Select</option>
+
+			<?php
+
+			$emid_safe = mysqli_real_escape_string($com, $emid);
+
+			/* Admin / IT / Owner เห็นทั้งหมด */
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$strSQL5 = "
+					SELECT *
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* Engineer */
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$strSQL5 = "
+					SELECT *
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* SOL */
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT *
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1','SOL2','SOL3','SOL4','SOL5',
+						'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			/* User อื่น อ่านจาก user_sale_permission */
+			else {
+
+				$strSQL5 = "
+	SELECT DISTINCT t.*
+	FROM tb_team_adm t
+	INNER JOIN user_sale_permission p
+		ON p.sale_code COLLATE utf8mb3_general_ci
+		 = t.sale_code COLLATE utf8mb3_general_ci
+	WHERE p.em_id = '".$emid_safe."'
+	ORDER BY t.sale_code ASC
+";
+
+			}
+
+
+			$objQuery5 = mysqli_query($com, $strSQL5);
+
+			if ($objQuery5) {
+
+				while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
+
+					$selected = '';
+
+					if ($sale_code == $objResuut5["sale_code"]) {
+						$selected = 'selected';
+					}
+
+			?>
+
+				<option
+					value="<?php echo htmlspecialchars(
+						$objResuut5["sale_code"],
+						ENT_QUOTES,
+						'UTF-8'
+					); ?>"
+					<?php echo $selected; ?>
+				>
+					<?php echo htmlspecialchars(
+						$objResuut5["sale_code"],
+						ENT_QUOTES,
+						'UTF-8'
+					); ?>
+					-
+					<?php echo htmlspecialchars(
+						$objResuut5["sale_name"],
+						ENT_QUOTES,
+						'UTF-8'
+					); ?>
+				</option>
+
+			<?php
+				}
+			}
+			?>
+
+		</select>
+
+	<?php } ?>
+
+</div>
 							</div>
 
 							<!-- Row 4: Pills Toggles -->
@@ -250,7 +563,76 @@ include "dbconnect_sale.php";
 						date_default_timezone_set("Asia/Bangkok");
 						$to_day = date('Y-m-d');
 
-						$strSQL = "SELECT * FROM hos__so WHERE 1";
+						/* =========================================================
+						   สิทธิ์การมองเห็นเอกสาร
+						   ========================================================= */
+						$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+						$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+						$emid_safe = mysqli_real_escape_string($conn, $emid);
+						$type_login_lower = strtolower($type_login);
+
+						$sddd = "";
+
+						/* IT / Admin / Owner : เห็นทั้งหมด */
+						if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
+
+							$sddd = "";
+
+						/* Sale : เห็นเฉพาะ sale_code ของตัวเอง */
+						} else if ($type_login_lower == 'sale') {
+
+							$sddd = " AND sale_code = '" . $emid_safe . "'";
+
+						/* Engineer / SUP_EN : เห็นเฉพาะเขต EN */
+						} else if ($emid == 'SUP_EN' || $type_login_lower == 'engineer') {
+
+							$sddd = " AND sale_code LIKE '%EN%'";
+
+						/* SOL : ใช้สิทธิ์กลุ่ม SOL เดิม */
+						} else if ($type_login_lower == 'sol') {
+
+							$sddd = " AND sale_code IN (
+								'SOL1','SOL2','SOL3','SOL4','SOL5',
+								'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+							)";
+
+						/* User อื่น ๆ : อ่านสิทธิ์จาก user_sale_permission */
+						} else {
+
+							$sql_permission = "
+								SELECT sale_code
+								FROM user_sale_permission
+								WHERE em_id = '" . $emid_safe . "'
+							";
+
+							$query_permission = mysqli_query($conn, $sql_permission);
+
+							$sale_permission = array();
+
+							if ($query_permission) {
+								while ($row_permission = mysqli_fetch_assoc($query_permission)) {
+									if (isset($row_permission['sale_code']) && trim($row_permission['sale_code']) != '') {
+										$sale_permission[] = "'" . mysqli_real_escape_string(
+											$conn,
+											trim($row_permission['sale_code'])
+										) . "'";
+									}
+								}
+							}
+
+							if (!empty($sale_permission)) {
+								$sddd = " AND sale_code IN (" . implode(',', $sale_permission) . ")";
+							} else {
+								/*
+								 * ไม่มีสิทธิ์ในตาราง = ไม่เห็นเอกสาร
+								 * ป้องกันกรณี User ยังไม่ได้กำหนดสิทธิ์แล้วเห็นทั้งหมด
+								 */
+								$sddd = " AND 1=0";
+							}
+						}
+
+						$strSQL = "SELECT * FROM hos__so WHERE 1" . $sddd;
 
 						if ($start_date != "") {
 							$strSQL .= ' AND date_so >= "' . mysqli_real_escape_string($conn, $start_date) . '"';
@@ -459,6 +841,24 @@ include "dbconnect_sale.php";
 											<a href="<?php echo $preview_url; ?>?ref_id=<?php echo $ref_id_url; ?>" target="_blank" class="so-dropdown-item">
 												<i class="fas fa-search" style="width:16px;"></i> Preview
 											</a>
+											
+	<a href="javascript:void(0);"
+   class="so-dropdown-item"
+   onclick='return openDeliveryModal(
+       event,
+       <?php echo json_encode(
+           $ref_id,
+           JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT
+       ); ?>
+   );'>
+
+    <img src="img/icons/icon-delivery.svg"
+         alt=""
+         style="width:16px; height:16px; object-fit:contain; margin-right:6px; vertical-align:middle;">
+
+    รายละเอียดเอกสาร
+</a>
+											
 
 											<!-- ใบกำกับภาษี ET/IE -->
 											<?php if ($objResult['et_ckk'] == '1') {
@@ -471,11 +871,15 @@ include "dbconnect_sale.php";
 											<?php } ?>
 
 											<!-- ใบส่งสินค้า -->
-											<?php if ($objResult['send_admin'] == '1') { ?>
+											<?php
+							if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
+							if ($objResult['send_admin'] == '1') { ?>
 												<a href="register_receivepro_so.php?ref_id=<?php echo $ref_id_url; ?>" onclick="return confirmNav(event, this, 'ต้องการสร้างใบส่งสินค้าใช่หรือไม่')" class="so-dropdown-item">
 													<i class="fas fa-truck" style="width:16px;"></i> ใบส่งสินค้า
 												</a>
-											<?php } ?>
+											<?php }
+							}
+											?>
 
 											<!-- สร้างใบลดหนี้ -->
 											<?php if ($objResult['send_admin'] == '1') { ?>
@@ -740,9 +1144,191 @@ include "dbconnect_sale.php";
 				t.setAttribute('aria-expanded', 'false');
 			});
 		}, true);
+		
+		
+		// =========================================================
+		// รายละเอียดเอกสาร : Delivery Modal
+		// =========================================================
+
+		function openDeliveryModal(event, refId) {
+
+			if (event) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+
+			/* ปิด dropdown action */
+			document.querySelectorAll('.so-dropdown-menu').forEach(function(menu) {
+				menu.classList.remove('show');
+				menu.style.display = '';
+			});
+
+			document.querySelectorAll('.so-dropdown-trigger').forEach(function(btn) {
+				btn.setAttribute('aria-expanded', 'false');
+			});
+
+
+			var modal = document.getElementById('deliveryModal');
+			var content = document.getElementById('deliveryModalContent');
+
+			if (!modal || !content) {
+				console.error('Delivery modal element not found');
+				return false;
+			}
+
+
+			/* แสดง Loading ก่อนยิง AJAX */
+			content.innerHTML =
+				'<div class="delivery-loading">' +
+					'<div class="delivery-loading-icon"></div>' +
+					'<div>กำลังโหลดรายละเอียดเอกสาร...</div>' +
+				'</div>';
+
+
+			/* เปิด Modal */
+			modal.classList.add('is-open');
+			modal.setAttribute('aria-hidden', 'false');
+
+			document.body.style.overflow = 'hidden';
+
+
+			/* โหลดรายละเอียด */
+			fetch(
+				'ajax_delivery_cs.php?ref_id=' + encodeURIComponent(refId),
+				{
+					method: 'GET',
+					credentials: 'same-origin',
+					cache: 'no-store',
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				}
+			)
+			.then(function(response) {
+
+				if (!response.ok) {
+					throw new Error('HTTP ' + response.status);
+				}
+
+				return response.text();
+
+			})
+			.then(function(html) {
+
+				if (!html || !html.trim()) {
+					throw new Error('ไม่พบข้อมูลที่ส่งกลับจาก ajax_delivery_cs.php');
+				}
+
+				content.innerHTML = html;
+
+				/* เลื่อน Modal กลับด้านบนทุกครั้งที่เปิดรายการใหม่ */
+				var scrollBox = modal.querySelector('.delivery-modal-scroll');
+
+				if (scrollBox) {
+					scrollBox.scrollTop = 0;
+				}
+
+			})
+			.catch(function(error) {
+
+				console.error('Delivery AJAX Error:', error);
+
+				content.innerHTML =
+					'<div class="delivery-modal-error">' +
+						'<div class="delivery-modal-error-icon">' +
+							'<i class="fas fa-exclamation"></i>' +
+						'</div>' +
+						'<div class="delivery-modal-error-title">' +
+							'ไม่สามารถโหลดรายละเอียดเอกสารได้' +
+						'</div>' +
+						'<div class="delivery-modal-error-text">' +
+							(error && error.message ? error.message : 'เกิดข้อผิดพลาดในการโหลดข้อมูล') +
+						'</div>' +
+					'</div>';
+
+			});
+
+			return false;
+		}
+
+
+		function closeDeliveryModal() {
+
+			var modal = document.getElementById('deliveryModal');
+
+			if (!modal) {
+				return;
+			}
+
+			modal.classList.remove('is-open');
+			modal.setAttribute('aria-hidden', 'true');
+
+			document.body.style.overflow = '';
+		}
+
+
+		/* ESC ปิด Modal */
+		document.addEventListener('keydown', function(event) {
+
+			if (event.key !== 'Escape') {
+				return;
+			}
+
+			var modal = document.getElementById('deliveryModal');
+
+			if (modal && modal.classList.contains('is-open')) {
+				closeDeliveryModal();
+			}
+
+		});
+		
+		
+		
+		
+		
+		
 	</script>
 
 	<!-- <div id="cr_bar"> <?php include "foot.php"; ?></div> -->
+	
+	
+<!-- =====================================================
+     DELIVERY MODAL : รายละเอียดเอกสาร
+===================================================== -->
+
+<div id="deliveryModal"
+     class="delivery-modal"
+     aria-hidden="true">
+
+    <div class="delivery-modal-backdrop"
+         onclick="closeDeliveryModal()"></div>
+
+    <div class="delivery-modal-dialog"
+         role="dialog"
+         aria-modal="true"
+         aria-label="รายละเอียดเอกสาร"
+         onclick="event.stopPropagation();">
+
+        <div class="delivery-modal-scroll">
+
+            <div id="deliveryModalContent">
+
+                <div class="delivery-loading">
+                    <div class="delivery-loading-icon"></div>
+                    <div>กำลังโหลดรายละเอียดเอกสาร...</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>	
+	
+	
 </body>
 
 </html>

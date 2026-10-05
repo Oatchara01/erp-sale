@@ -87,6 +87,7 @@ if ($savedRefId !== "") {
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, credit-term modal, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -167,7 +168,7 @@ if ($savedRefId !== "") {
 		</div>
 	<?php } ?>
 
-	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onsubmit="return lockSubmitForm(this);">
+	<form action="<?php echo ($savedJong !== null && !$isCopy) ? 'register_supbook_edit1.php' : 'register_supbook1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onsubmit="return lockSubmitForm(this);">
 		<?php if ($savedJong !== null && !$isCopy) { ?>
 			<input type="hidden" name="ref_id" value="<?php echo htmlspecialchars($savedJong['ref_id'], ENT_QUOTES, 'UTF-8'); ?>">
 		<?php } else { ?>
@@ -192,7 +193,7 @@ if ($savedRefId !== "") {
 				<div class="so-field-group">
 					<label class="so-label">ประเภท <span style="color:red;">*</span></label>
 					<div class="so-select-wrapper">
-						<select name="type_jong" id="type_jong" class="so-select" required>
+						<select name="type_jong" id="type_jong" class="so-select">
 							<option value="">**Please Select**</option>
 							<option value="1" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '1') ? 'selected' : ''; ?>>จองมีสัญญา</option>
 							<option value="2" <?php echo ($savedJong !== null && $savedJong['type_jong'] == '2') ? 'selected' : ''; ?>>จองตามการประมาณการ</option>
@@ -201,96 +202,225 @@ if ($savedRefId !== "") {
 					</div>
 				</div>
 
-				<div class="so-field-group">
-					<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-					<div class="so-select-wrapper">
-					<?php
-					$selected_sale_code = ($savedJong !== null) ? $savedJong['sale_code'] : ($_GET['sale_code'] ?? '');
+<div class="so-field-group">
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
 
-					if ($_SESSION['code'] == 'SS1') {
-					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<?php
-							$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-							$objQuery5 = mysqli_query($com, $strSQL5);
-							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-							?>
-								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
-							<?php
-							}
-							?>
-						</select>
-					<?php
-					} else if ($_SESSION['code'] == 'SS2') {
-					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<?php
-							$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-							$objQuery5 = mysqli_query($com, $strSQL5);
-							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-							?>
-								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
-							<?php
-							}
-							?>
-						</select>
-					<?php
-					} else if ($_SESSION['code'] == 'SS5') {
-					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<?php
-							$strSQL5 = "SELECT * FROM tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-							$objQuery5 = mysqli_query($com, $strSQL5);
-							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-							?>
-								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
-							<?php
-							}
-							?>
-						</select>
-					<?php
-					} else if ($_SESSION['code'] == 'SUP_EN') {
-					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<?php
-							$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-							$objQuery5 = mysqli_query($com, $strSQL5);
-							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-							?>
-								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
-							<?php
-							}
-							?>
-						</select>
-					<?php
-					} else {
-					?>
-						<select name="sale_code" id="sale_code" class="so-select" required>
-							<option value="">**Please Select**</option>
-							<?php
-							$strSQL5 = "SELECT * FROM tb_team_all ORDER BY sale_code ASC";
-							$objQuery5 = mysqli_query($com, $strSQL5);
-							while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-								$sel = ($selected_sale_code == $objResuut5["sale_code"]) ? "selected" : "";
-							?>
-								<option value="<?php echo so_saved_h($objResuut5["sale_code"]); ?>" <?php echo $sel; ?>><?php echo so_saved_h($objResuut5["sale_code"]); ?> - <?php echo so_saved_h($objResuut5["sale_name"]); ?></option>
-							<?php
-							}
-							?>
-						</select>
-					<?php
+	<div class="so-select-wrapper">
+
+		<?php
+
+		// =========================================================
+		// ค่าปัจจุบัน
+		// =========================================================
+		$selected_sale_code = ($savedJong !== null)
+			? $savedJong['sale_code']
+			: ($_GET['sale_code'] ?? '');
+
+		$emid = isset($_SESSION['code'])
+			? trim($_SESSION['code'])
+			: '';
+
+		$type_login = isset($_SESSION['type_login'])
+			? trim($_SESSION['type_login'])
+			: '';
+
+		$type_login_lower = strtolower($type_login);
+
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+
+
+		// =========================================================
+		// SALE : ล็อกเขตของตัวเอง
+		// =========================================================
+		if ($type_login_lower == 'sale') {
+
+			$sale_value = $emid;
+
+			/*
+				กรณี Edit
+				ถ้ามีข้อมูลเดิม ให้แสดงค่าที่บันทึกไว้
+				แต่ปกติ Sale ควรเป็นเขตของตัวเอง
+			*/
+			if ($selected_sale_code != '') {
+				$sale_value = $selected_sale_code;
+			}
+		?>
+
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo so_saved_h($sale_value); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo so_saved_h($sale_value); ?>"
+				readonly
+				style="
+					background:#f5f5f5;
+					cursor:not-allowed;
+				"
+			>
+
+		<?php
+
+		} else {
+
+			// =====================================================
+			// ADMIN / IT / OWNER
+			// เห็นทั้งหมด
+			// =====================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// ENGINEER
+			// =====================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// SOL
+			// =====================================================
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// USER อื่น
+			// อ่านสิทธิ์จาก user_sale_permission
+			// =====================================================
+			else {
+
+				$strSQL5 = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON
+							p.sale_code COLLATE utf8mb3_general_ci
+							=
+							t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+
+				<option value="">
+					**Please Select**
+				</option>
+
+				<?php
+
+				$objQuery5 = mysqli_query($com, $strSQL5);
+
+				if ($objQuery5) {
+
+					while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+
+						$sale_code_value = $objResuut5['sale_code'];
+						$sale_name_value = $objResuut5['sale_name'];
+
+						$sel = (
+							$selected_sale_code == $sale_code_value
+						)
+							? 'selected'
+							: '';
+				?>
+
+						<option
+							value="<?php echo so_saved_h($sale_code_value); ?>"
+							<?php echo $sel; ?>
+						>
+							<?php echo so_saved_h($sale_code_value); ?>
+							-
+							<?php echo so_saved_h($sale_name_value); ?>
+						</option>
+
+				<?php
 					}
-					?>
-					</div>
-				</div>
+
+				} else {
+
+					// สำหรับ Debug ถ้าต้องการ
+					// echo mysqli_error($com);
+
+				}
+				?>
+
+			</select>
+
+		<?php
+		}
+		?>
+
+	</div>
+</div>
 			</div>
 
 			<div class="so-subsection-title-container">
@@ -300,11 +430,11 @@ if ($savedRefId !== "") {
 			<div class="so-grid-3">
 				<div class="so-field-group">
 					<label class="so-label" for="date_jong">วันที่แจ้ง</label>
-					<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input">
+					<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input" readonly>
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
-					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>" required>
+					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>">
 				</div>
 				<?php $adminDocNo = ($savedJong !== null && !$isCopy) ? trim((string)$savedJong['iv_no']) : ''; ?>
 				<?php if ($adminDocNo !== '') { ?>
@@ -399,7 +529,7 @@ if ($savedRefId !== "") {
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="address_send">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
+							<input type="text" name="address_send" id="address_send" class="so-input" placeholder="ระบุสถานที่ส่งสินค้า..." style="padding-right: 36px;" value="<?php echo ($savedJong !== null) ? htmlspecialchars($savedJong['address_send'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 							<i class="fas fa-times so-clear-icon" onclick="clearFieldValue('address_send');" role="button" tabindex="0" aria-label="ล้างที่อยู่ลูกค้า"></i>
 						</div>
 					</div>
@@ -508,19 +638,217 @@ if ($savedRefId !== "") {
 </div>
 
 <?php
+// =========================================================
+// BUTTON / PERMISSION
+// =========================================================
+
 $soIsEditMode = ($savedJong !== null && !$isCopy);
-$soStatusDoc = $savedJong['status_doc'] ?? '';
-$soIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
-$soIsApproved = $soIsEditMode && ($soStatusDoc === 'Approve');
-// ใบจองที่ถูกยกเลิกแล้ว (cancel_ckk แบบ legacy) เหลือแค่ปุ่มกลับหน้าหลัก
-$soIsCancelled = $soIsEditMode && ((string)($savedJong['cancel_ckk'] ?? '0') === '1');
-$soCanShowApproveBar = $soIsEditMode && $soIsSupApprover && ($soStatusDoc === 'Request') && !$soIsCancelled;
-// Sale หลัง Approve: ปิดทุกปุ่ม
-$soHideAllActions = $soIsApproved && !$soIsSupApprover;
-// Submit หายเมื่อส่งรออนุมัติแล้ว (Request) หรือเอกสารอนุมัติแล้ว
-$soHideSubmit = $soIsEditMode && (($soStatusDoc === 'Request') || $soIsApproved || $soIsCancelled);
-// ปุ่ม Update หลักซ้ำกับปุ่ม Update ที่อยู่ในแถบอนุมัติแล้ว
-$soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
+
+$type_login_lower = strtolower(trim((string)($_SESSION['type_login'] ?? '')));
+
+$soStatusDoc = trim((string)($savedJong['status_doc'] ?? ''));
+$soStatusLower = strtolower($soStatusDoc);
+
+$soSendSup = (string)($savedJong['send_sup'] ?? '0');
+$soCloseJong = (string)($savedJong['close_jong'] ?? '0');
+$soCancelCkk = (string)($savedJong['cancel_ckk'] ?? '0');
+
+
+// =========================================================
+// APPROVER ROLE
+// Sup_Sale / it / owner / sup_mk1 / Sup_en
+// ใช้ strtolower แล้วจึงกำหนดค่าเป็นตัวเล็กทั้งหมด
+// =========================================================
+$soApproverRoles = array(
+    'sup_sale',
+    'it',
+    'owner',
+    'sup_mk1',
+    'sup_en'
+);
+
+$soIsSupApprover = in_array(
+    $type_login_lower,
+    $soApproverRoles,
+    true
+);
+
+
+// =========================================================
+// STATUS
+// รองรับชื่อสถานะทั้งแบบเดิมและแบบใหม่
+// =========================================================
+$soIsDraft = (
+    $soStatusLower === ''
+    || $soStatusLower === 'draft'
+);
+
+$soIsRequest = ($soStatusLower === 'request');
+
+$soIsApproved = in_array(
+    $soStatusLower,
+    array('approve', 'approved'),
+    true
+);
+
+$soIsReturned = in_array(
+    $soStatusLower,
+    array('return', 'returned'),
+    true
+);
+
+$soIsRejected = in_array(
+    $soStatusLower,
+    array('reject', 'rejected'),
+    true
+);
+
+$soIsCancelled = (
+    in_array(
+        $soStatusLower,
+        array('cancel', 'cancelled', 'ยกเลิก'),
+        true
+    )
+    || $soCancelCkk === '1'
+);
+
+$soIsClosed = ($soCloseJong === '1');
+
+
+// =========================================================
+// APPROVE / RETURN / REJECT
+//
+// เห็นได้เฉพาะ:
+// - Edit mode
+// - role = Sup_Sale / it / owner / sup_mk1 / Sup_en
+// - send_sup = 1
+// - status_doc = Request
+// - close_jong != 1
+// - ไม่ถูก Cancel
+// =========================================================
+$soCanShowApproveBar = (
+    $soIsEditMode
+    && $soIsSupApprover
+    && $soSendSup === '1'
+    && $soIsRequest
+    && !$soIsClosed
+    && !$soIsCancelled
+);
+
+
+// =========================================================
+// UPDATE
+//
+// คนทั่วไป:
+// Update ได้เฉพาะ Draft / Request / Return(ed)
+//
+// Approver:
+// Update ได้ทุกสถานะ
+// ยกเว้น Rejected / Cancel / close_jong=1
+// =========================================================
+$soCanUpdate = false;
+
+if ($soIsEditMode && !$soIsClosed) {
+
+    if ($soIsSupApprover) {
+
+        $soCanUpdate = (
+            !$soIsRejected
+            && !$soIsCancelled
+        );
+
+    } else {
+
+        $soCanUpdate = (
+            $soIsDraft
+            || $soIsRequest
+            || $soIsReturned
+        );
+    }
+}
+
+
+// =========================================================
+// SUBMIT
+//
+// สร้างใหม่:
+// ทุกสิทธิ์ Submit ได้
+//
+// คนทั่วไป:
+// Submit ได้ตอน Draft / Return
+// Request แล้วไม่ให้ Submit ซ้ำ
+//
+// Approver:
+// ถ้า send_sup = 0 ให้ Submit ได้
+// ฝั่งไฟล์บันทึกต้องจัดการให้ส่ง Stock + Approve อัตโนมัติ
+//
+// ทุกกรณี:
+// Rejected / Cancel / close_jong=1 = Submit ไม่ได้
+// =========================================================
+$soCanSubmit = false;
+
+if (
+    !$soIsClosed
+    && !$soIsRejected
+    && !$soIsCancelled
+) {
+
+    if (!$soIsEditMode) {
+
+        $soCanSubmit = true;
+
+    } elseif ($soIsSupApprover) {
+
+        // Approver Submit เองได้เมื่อยังไม่เคยส่ง Sup
+        if ($soSendSup === '0') {
+            $soCanSubmit = true;
+        }
+
+    } else {
+
+        // คนทั่วไป Submit ได้เฉพาะ Draft / Return
+        $soCanSubmit = (
+            $soIsDraft
+            || $soIsReturned
+        );
+    }
+}
+
+
+// =========================================================
+// SAVE DRAFT
+// แสดงเฉพาะตอนสร้างเอกสารใหม่
+// =========================================================
+$soCanSaveDraft = (
+    !$soIsEditMode
+    && !$soIsClosed
+);
+
+
+// =========================================================
+// FLAG สำหรับ HTML ด้านล่าง
+// =========================================================
+$soHideSubmit = !$soCanSubmit;
+
+// ถ้าเป็นหน้าใหม่ ปุ่มนี้คือ Save Draft
+// ถ้าเป็น Edit ปุ่มนี้คือ Update
+if ($soIsEditMode) {
+    // ตอน Request ของ Approver มีปุ่ม Update อยู่ใน Approve Bar อยู่แล้ว
+    // จึงซ่อน Update ด้านนอกเพื่อไม่ให้ซ้ำ
+    $soHideUpdate = (!$soCanUpdate || $soCanShowApproveBar);
+} else {
+    $soHideUpdate = !$soCanSaveDraft;
+}
+
+// ถ้าไม่มีปุ่มใดเลย ให้ซ่อน Action Bar
+$soHasAnyAction = (
+    $soCanShowApproveBar
+    || $soCanSubmit
+    || $soCanUpdate
+    || $soCanSaveDraft
+);
+
+$soHideAllActions = !$soHasAnyAction;
 ?>
 <?php if (!$soHideAllActions): ?>
 	<div class="so-sticky-actions" style="width: 100%; background-color: white; padding: 16px 24px; display: flex; gap: 16px; justify-content: flex-end; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); align-items: center; border-top: 1px solid #EBEBEB; margin-top: 24px; box-sizing: border-box;">
@@ -540,9 +868,11 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 					<button type="button" name="approve_action" value="approve" onclick="soRunApproveAction('approve', false);" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
 						<img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
 					</button>
+					<?php if ($soCanUpdate): ?>
 					<button type="button" name="save_draft" onclick="saveDraft()" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
 						<img src="img/icons/update_document.png" alt="" style="width: 20px; height: 20px;"> Update
 					</button>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 			<?php if (!$soHideSubmit): ?>
@@ -1050,8 +1380,8 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 				'<td>' + escapeProductHtml(row.product_name) + remarkBlock + '</td>' +
 				'<td class="col-qty"><input type="number" min="1" class="so-input product-qty-input" value="' + row.count + '" oninput="updateProductCount(' + idx + ',this.value)"></td>' +
 				'<td class="col-actions">' +
-				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ" aria-label="แก้ไขหมายเหตุ"><i class="fas fa-pen"></i></button>' +
-				'<button type="button" class="product-row-icon-btn" onclick="askDeleteProductRow(' + idx + ')" title="ลบ" aria-label="ลบรายการสินค้า"><i class="fas fa-trash"></i></button>' +
+				'<button type="button" class="product-row-icon-btn" onclick="openProductRemarkModal(' + idx + ')" title="แก้ไขหมายเหตุ" aria-label="แก้ไขหมายเหตุ"><img src="img/icons/edit.svg" alt="" width="16" height="16"></button>' +
+				'<button type="button" class="product-row-icon-btn product-row-icon-btn--trash" onclick="askDeleteProductRow(' + idx + ')" title="ลบ" aria-label="ลบรายการสินค้า"><img src="img/icons/trash.svg" alt="" width="16" height="18"></button>' +
 				'</td>' +
 				'</tr>';
 		}).join('');
@@ -1313,35 +1643,20 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 		<?php } ?>
 	});
 
+	// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่อาจเพิ่มทีหลัง
+	var SO_APPROVE_REQUIRED_FIELDS = ['type_jong', 'sale_code', 'date_receive', 'address_send'];
+
 	function fncSubmit(form) {
 		if (window.soSkipValidation) {
 			window.soSkipValidation = false;
 			return true;
 		}
-		var requiredFields = [{
-				id: 'type_jong',
-				label: 'ประเภท'
-			},
-			{
-				id: 'sale_code',
-				label: 'แผนก/เขตการขาย'
-			},
-			{
-				id: 'date_receive',
-				label: 'วันที่ต้องการสินค้า'
-			},
-			{
-				id: 'address_send',
-				label: 'ที่อยู่ลูกค้า'
-			}
-		];
 
-		for (var i = 0; i < requiredFields.length; i++) {
-			var field = document.getElementById(requiredFields[i].id);
-			if (field && field.hasAttribute('required') && !field.value.trim()) {
-				Swal.fire('แจ้งเตือน', 'กรุณากรอก "' + requiredFields[i].label + '" ให้ครบถ้วน', 'warning');
-				return false;
-			}
+		var soRequiredOpts = window.soPendingApproveAction ? {
+			only: SO_APPROVE_REQUIRED_FIELDS
+		} : null;
+		if (!soValidateRequired(document.forms['frmMain'], soRequiredOpts)) {
+			return false;
 		}
 
 		if (!productRows.length) {
@@ -1400,6 +1715,11 @@ $soHideUpdate = $soCanShowApproveBar || $soIsApproved || $soIsCancelled;
 	function saveDraft() {
 		var form = document.forms['frmMain'];
 		if (!form) return;
+
+		// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+		if (!soValidateRequired(form)) {
+			return;
+		}
 
 		var btn = form.querySelector('[name="save_draft"]');
 		var defaultHtml = btn ? btn.innerHTML : '';

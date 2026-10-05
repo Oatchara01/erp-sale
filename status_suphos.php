@@ -239,10 +239,10 @@ $sel = "";
 
 <?php
 	
-		$Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '';
+	$Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '';
 	$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : '';
 	$end_date = isset($_GET['end_date']) ? $_GET['end_date'] : '';
-		$sale_code = isset($_GET['sale_code']) ? $_GET['sale_code'] : '';
+	$sale_code = isset($_GET['sale_code']) ? $_GET['sale_code'] : '';
 
 
 	
@@ -272,30 +272,183 @@ $sel = "";
 
 <?php	
 	
-	date_default_timezone_set("Asia/Bangkok");
+date_default_timezone_set("Asia/Bangkok");
 
 $to_day = date('Y-m-d');
-		
-$emid = $_SESSION['code'];
-	
-if($emid=='SS1'){
-$sddd = " AND sale_code IN ('S15','S16','S21','S22','S14')";
-}else if($emid=='SS2'){
-$sddd = " AND sale_code IN ('S11','S12','S17','S24','S13')";	
-}else if($emid=='SS3'){
-$sddd = " AND sale_code IN ('S31','S32','S33','MM1','SM1','SOL1','SOL2','SOL3','SOL4','SOL5','SOL6','SOL7','SOL8','SOL99')";
-}else if($emid=='SS5'){
-$sddd = " AND sale_code IN ('S31','S32')";	
-}else if($emid=='SUP_EN'){
-$sddd = " and sale_code LIKE '%EN%'";	
-}else if($emid=='SUP_MK'){
-$sddd = " and  sale_code  IN ('MK','SOL91','SOL92','SOL93','SOL94','SOL99')";		
-}else{
-$sddd = "";			
+
+
+/* =========================================================
+   สิทธิ์การมองเห็นเอกสาร
+   ========================================================= */
+
+$emid = isset($_SESSION['code']) ? $_SESSION['code'] : '';
+$type_login = isset($_SESSION['type_login']) ? $_SESSION['type_login'] : '';
+
+$emid_safe = mysqli_real_escape_string($conn, $emid);
+
+$sddd = "";
+
+
+/* =========================================================
+   IT / ADMIN / OWNER
+   เห็นเอกสารทั้งหมด
+   ========================================================= */
+
+if (
+	$type_login == 'It' ||
+	$type_login == 'Admin' ||
+	$type_login == 'owner'
+) {
+
+	$sddd = "";
+
 }
-	
-		
-$strSQL = "SELECT *  FROM hos__so  where ic_ckk='0'  $sddd";
+
+
+/* =========================================================
+   SALE
+   เห็นเฉพาะเอกสารของตัวเอง
+   ========================================================= */
+
+else if ($type_login == 'sale') {
+
+	$sddd = " AND sale_code = '".$emid_safe."' ";
+
+}
+
+
+/* =========================================================
+   ENGINEER / SUP_EN
+   เห็นเขต EN
+   ========================================================= */
+
+else if (
+	$emid == 'SUP_EN' ||
+	$type_login == 'Engineer'
+) {
+
+	$sddd = " AND sale_code LIKE '%EN%' ";
+
+}
+
+
+/* =========================================================
+   SOL
+   ใช้สิทธิ์กลุ่ม SOL เดิม
+   ========================================================= */
+
+else if ($type_login == 'sol') {
+
+	$sddd = "
+		AND sale_code IN (
+			'SOL1',
+			'SOL2',
+			'SOL3',
+			'SOL4',
+			'SOL5',
+			'SOL6',
+			'SOL7',
+			'SOL8',
+			'SOL9',
+			'SOL0',
+			'SM1'
+		)
+	";
+
+}
+
+
+/* =========================================================
+   USER อื่น
+   อ่านสิทธิ์จาก user_sale_permission
+   ========================================================= */
+
+else {
+
+	$sql_permission = "
+		SELECT sale_code
+		FROM user_sale_permission
+		WHERE em_id = '".$emid_safe."'
+	";
+
+	$query_permission = mysqli_query($conn, $sql_permission);
+
+	$sale_permission = array();
+
+
+	if ($query_permission) {
+
+		while ($row_permission = mysqli_fetch_assoc($query_permission)) {
+
+			if (
+				isset($row_permission['sale_code']) &&
+				$row_permission['sale_code'] != ''
+			) {
+
+				$sale_permission[] = $row_permission['sale_code'];
+
+			}
+
+		}
+
+	}
+
+
+	/* =====================================================
+	   มีสิทธิ์ในตาราง
+	   ===================================================== */
+
+	if (count($sale_permission) > 0) {
+
+		$sale_permission_sql = array();
+
+		foreach ($sale_permission as $permission_sale_code) {
+
+			$permission_sale_code_safe =
+				mysqli_real_escape_string(
+					$conn,
+					$permission_sale_code
+				);
+
+			$sale_permission_sql[] =
+				"'" . $permission_sale_code_safe . "'";
+
+		}
+
+
+		$sddd = "
+			AND sale_code IN (
+				".implode(',', $sale_permission_sql)."
+			)
+		";
+
+	}
+
+	else {
+
+		/*
+		 * ไม่มีสิทธิ์ในตาราง
+		 * = ไม่ให้เห็นเอกสาร
+		 */
+
+		$sddd = " AND 1=0 ";
+
+	}
+
+}
+
+
+/* =========================================================
+   QUERY เอกสาร
+   ========================================================= */
+
+$strSQL = "
+	SELECT *
+	FROM hos__so
+	WHERE 1=1
+	$sddd
+";
+
 
 if($start_date !=""){ 
     $strSQL .= ' AND date_so >= "'.$start_date.'"'; 
@@ -317,36 +470,38 @@ if($Keyword !=""){
 	$strSQL .= ' or ref_id  LIKE "%'.$Keyword.'%"'; 
 
 }
+
 //echo $strSQL;
 
 $objQuery = mysqli_query($conn,$strSQL) or die ("Error Query [".$strSQL."]");
 $Num_Rows = mysqli_num_rows($objQuery);
 
 $Per_Page = '20';  
-		$Page = isset($_GET['Page']) ? $_GET['Page'] : '';
+$Page = isset($_GET['Page']) ? $_GET['Page'] : '';
 
-	if(!isset($_GET['Page']))
-	{
-		$Page=1;
-	}
+if(!isset($_GET['Page']))
+{
+	$Page=1;
+}
 
-	$Prev_Page = $Page-1;
-	$Next_Page = $Page+1;
+$Prev_Page = $Page-1;
+$Next_Page = $Page+1;
 
-	$Page_Start = (($Per_Page*$Page)-$Per_Page);
-	if($Num_Rows<=$Per_Page)
-	{
-		$Num_Pages =1;
-	}
-	else if(($Num_Rows % $Per_Page)==0)
-	{
-		$Num_Pages =($Num_Rows/$Per_Page) ;
-	}
-	else
-	{
-		$Num_Pages =($Num_Rows/$Per_Page)+1;
-		$Num_Pages = (int)$Num_Pages;
-	}
+$Page_Start = (($Per_Page*$Page)-$Per_Page);
+
+if($Num_Rows<=$Per_Page)
+{
+	$Num_Pages =1;
+}
+else if(($Num_Rows % $Per_Page)==0)
+{
+	$Num_Pages =($Num_Rows/$Per_Page) ;
+}
+else
+{
+	$Num_Pages =($Num_Rows/$Per_Page)+1;
+	$Num_Pages = (int)$Num_Pages;
+}
 
 $strSQL .=" order  by id DESC    LIMIT $Page_Start , $Per_Page ";
 $objQuery  = mysqli_query($conn,$strSQL);
@@ -404,6 +559,7 @@ $strSQL2 = "SELECT distinct code_bom  FROM hos__subso  WHERE ref_idd = '".$objRe
 
 $objQuery2 = mysqli_query($conn,$strSQL2) or die(mysqli_error());
 $Num_Rows2 = mysqli_num_rows($objQuery2);
+
 while($objResult2 = mysqli_fetch_array($objQuery2)){
 		
 $code_bom	= $objResult2["code_bom"];	
@@ -412,6 +568,7 @@ $strSQL3 = "SELECT * FROM  (hos__subso LEFT JOIN tb_product_bomhos ON hos__subso
 
 $objQuery3 = mysqli_query($conn,$strSQL3) or die ("Error Query [".$strSQL3."]");
 $Num_Rows3 = mysqli_num_rows($objQuery3);
+
 while($objResult3 = mysqli_fetch_array($objQuery3))
 {
 if($objResult3["code_bom"]!=""){
@@ -442,29 +599,35 @@ if($objResult3["code_bom"]!=""){
 					else{ ?>
 					<td ><?php echo $objResult["status_doc"];?></td>
 				<?php } ?>
+
 <?php  if($rs["vip_ckk"]=='1'){ ?>
 				<td  bgcolor="#00FF00">VIP</td>
 				<?php }else{ ?>
 				<td></td>
 				<?php } ?>
-				<td  >
+
+				<td>
 				<a href="register_suphos_edit.php?ref_id=<?php echo $objResult["ref_id"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
-				
-								
 				</td>
-				<td >
+
+				<td>
 
 <?php if ($objResult["type_doc"]=='3'){?>
+
 <a href="report_salehosptl2.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a>
+
 				<?php }else if ($objResult["type_doc"]=='4'){?>
+
 <a href="report_salehosnbm2.php?ref_id=<?php echo $objResult["ref_id"];?>"><img src="img/print_icon-2.png" width="23" height="23" border="0" /></a>
 
 <?php } ?>
+
 				</td>
 
 				<td>	
 	
 	<a href=javascript:if(confirm('!!!ต้องการเพิ่มเอกสารใหม่โดยCopyเอกสารเดิมใช่หรือไม่')==true){window.location='register_suphos_createnew.php?ref_id=<?php echo $objResult["ref_id"];?>&start_date=<?php echo $_GET["start_date"];  ?>&end_date=<?php echo $_GET["end_date"];?>';}><img src="img/sticker.png" width="23" height="23" border="0" /></a>
+
 </td>
 	
 	<td>
@@ -474,6 +637,7 @@ if($objResult3["code_bom"]!=""){
 </td>
 
 			</tr>
+
 	<?php		
 	$i++;
 }			
@@ -485,39 +649,44 @@ if($objResult3["code_bom"]!=""){
 	</table>
 	
 
- <div class="w3-panel">    <strong>พบทั้งหมด</strong>
+ <div class="w3-panel">    
+      <strong>พบทั้งหมด</strong>
       <?= $Num_Rows;?>
       <strong>รายการ<span class="style14"> :</span>จำนวน</strong>
       <?=$Num_Pages;?>
       <strong>หน้า<span class="style14"> :</span></strong>
+      
       <?
+
 	if($Prev_Page)
 	{
 		echo " <a href='$_SERVER[SCRIPT_NAME]?Page=$Prev_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'><< Back</span></a> ";
 	}
 
 	for($i=1; $i<=$Num_Pages; $i++){
+
 		if($i != $Page)
 		{
 			echo "[ <a href='$_SERVER[SCRIPT_NAME]?Page=$i&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'>$i</span></a> ]";
-			
-
 		}
 		else
 		{
 			echo "<b> $i </b>";
 		}
+
 	}
+
 	if($Page!=$Num_Pages)
 	{
 		echo " <a href ='$_SERVER[SCRIPT_NAME]?Page=$Next_Page&Keyword=$Keyword&start_date=$start_date&end_date=$end_date&sale_code=$sale_code'><span class='style40'>Next>></span></a> ";
 	}
 
-	
 	?>
+
       <br> <br>
 
 		
 		</div></div>
+
  <div id="cr_bar"> <?php include "foot.php"; ?></div></body>
 </html>

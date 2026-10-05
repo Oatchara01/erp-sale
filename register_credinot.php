@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <script src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 
 <body>
@@ -211,7 +212,7 @@
 
 
     <!--action="register_office1.php"-->
-    <form action='register_credinot1.php' method="post" name="frmMain" enctype="multipart/form-data">
+    <form action='register_credinot1.php' method="post" name="frmMain" enctype="multipart/form-data" novalidate onsubmit="return fncSubmit();">
         <div class="w3-container register-so-main" style="max-width: 1096px; margin: 0 auto;"><!-- main div -->
 
             <!-- Header Section -->
@@ -285,31 +286,186 @@
 
                         <!-- แผนก/เขตการขาย -->
                         <div class="so-field-group">
-                            <label class="so-label" for="sale_code">แผนก/เขตการขาย</label>
-                            <div class="so-select-wrapper">
-                                <?php
-                                $saleCodeQueries = array(
-                                    'SS1' => "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC",
-                                    'SS2' => "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC",
-                                    'SS3' => "SELECT * FROM tb_team_ss3 WHERE ckk_1='0' ORDER BY sale_code ASC",
-                                    'SS5' => "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC",
-                                    'SUP_MK' => "SELECT * FROM tb_team_adm WHERE ckk='1' ORDER BY sale_code ASC",
-                                    'SUP_EN' => "SELECT * FROM tb_team_en ORDER BY sale_code ASC"
-                                );
-                                $userSaleCode = isset($_SESSION['code']) ? $_SESSION['code'] : '';
-                                $saleCodeSql = isset($saleCodeQueries[$userSaleCode]) ? $saleCodeQueries[$userSaleCode] : "SELECT * FROM tb_team_adm WHERE ckk='0' ORDER BY sale_code ASC";
-                                $saleCodeQuery = mysqli_query($com, $saleCodeSql);
-                                ?>
-                                <select name="sale_code" id="sale_code" class="so-select">
-                                    <option value="">เลือกแผนก/เขตการขาย</option>
-                                    <?php if ($saleCodeQuery) { ?>
-                                        <?php while ($saleCodeRow = mysqli_fetch_array($saleCodeQuery, MYSQLI_ASSOC)) { ?>
-                                            <option value="<?php echo htmlspecialchars($saleCodeRow['sale_code'], ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($saleCodeRow['sale_code'] == ($rs['sale_code'] ?? '')) ? 'selected' : ''; ?>><?php echo htmlspecialchars($saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'], ENT_QUOTES, 'UTF-8'); ?></option>
-                                        <?php } ?>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
+    <label class="so-label" for="sale_code">แผนก/เขตการขาย</label>
+
+    <div class="so-select-wrapper">
+
+        <?php
+        $emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+        $type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+        $type_login_lower = strtolower($type_login);
+        $emid_safe = mysqli_real_escape_string($com, $emid);
+
+        $current_sale_code = isset($rs['sale_code'])
+            ? trim($rs['sale_code'])
+            : '';
+        ?>
+
+        <?php if ($type_login_lower == 'sale') { ?>
+
+            <!-- Sale ล็อกเขตตัวเอง -->
+            <input
+                type="hidden"
+                name="sale_code"
+                id="sale_code"
+                value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+            >
+
+            <input
+                type="text"
+                class="so-select"
+                value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+                readonly
+                style="background:#f5f5f5; cursor:not-allowed;"
+            >
+
+        <?php } else { ?>
+
+            <?php
+
+            // =========================================================
+            // Admin / IT / Owner
+            // เห็นทุกเขตที่เปิดใช้งาน
+            // =========================================================
+            if (
+                $type_login_lower == 'admin' ||
+                $type_login_lower == 'it' ||
+                $type_login_lower == 'owner'
+            ) {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // Engineer / SUP_EN
+            // =========================================================
+            else if (
+                $emid == 'SUP_EN' ||
+                $type_login_lower == 'engineer'
+            ) {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                      AND sale_code LIKE '%EN%'
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // SOL
+            // =========================================================
+            else if ($type_login_lower == 'sol') {
+
+                $saleCodeSql = "
+                    SELECT
+                        sale_code,
+                        sale_name
+                    FROM tb_team_adm
+                    WHERE ckk = '0'
+                      AND sale_code IN (
+                        'SOL1',
+                        'SOL2',
+                        'SOL3',
+                        'SOL4',
+                        'SOL5',
+                        'SOL6',
+                        'SOL7',
+                        'SOL8',
+                        'SOL9',
+                        'SOL0',
+                        'SM1'
+                      )
+                    ORDER BY sale_code ASC
+                ";
+
+            }
+
+            // =========================================================
+            // User อื่น
+            // ดูสิทธิ์จาก user_sale_permission
+            // =========================================================
+            else {
+
+                $saleCodeSql = "
+                    SELECT DISTINCT
+                        t.sale_code,
+                        t.sale_name
+                    FROM tb_team_adm t
+
+                    INNER JOIN user_sale_permission p
+                        ON p.sale_code COLLATE utf8mb3_general_ci
+                         =
+                           t.sale_code COLLATE utf8mb3_general_ci
+
+                    WHERE p.em_id = '".$emid_safe."'
+
+                    ORDER BY t.sale_code ASC
+                ";
+
+            }
+
+            $saleCodeQuery = mysqli_query($com, $saleCodeSql);
+            ?>
+
+            <select
+                name="sale_code"
+                id="sale_code"
+                class="so-select"
+            >
+
+                <option value="">เลือกแผนก/เขตการขาย</option>
+
+                <?php if ($saleCodeQuery) { ?>
+
+                    <?php while ($saleCodeRow = mysqli_fetch_assoc($saleCodeQuery)) { ?>
+
+                        <?php
+                        $selected = (
+                            $saleCodeRow['sale_code'] == $current_sale_code
+                        )
+                            ? 'selected'
+                            : '';
+                        ?>
+
+                        <option
+                            value="<?php echo htmlspecialchars(
+                                $saleCodeRow['sale_code'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ); ?>"
+                            <?php echo $selected; ?>
+                        >
+                            <?php echo htmlspecialchars(
+                                $saleCodeRow['sale_code'] . ' - ' . $saleCodeRow['sale_name'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ); ?>
+                        </option>
+
+                    <?php } ?>
+
+                <?php } ?>
+
+            </select>
+
+        <?php } ?>
+
+    </div>
+</div>
 
                         <!-- ประเภทลดหนี้ -->
                         <div class="so-field-group">
@@ -495,7 +651,7 @@
                         <div class="so-field-group">
                             <label class="so-label" for="date_receive">วันที่<span style="color:#D32F2F;">*</span></label>
                             <div class="so-input-wrapper calendar-wrapper">
-                                <input type="date" name="date_receive" id="date_receive" value="<?php echo htmlspecialchars($rs['date_receive'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input" required>
+                                <input type="date" name="date_receive" id="date_receive" value="<?php echo htmlspecialchars($rs['date_receive'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
                             </div>
                         </div>
                         <?php } ?>
@@ -523,7 +679,7 @@
                         <div class="so-field-group">
                             <label class="so-label" for="date_credit">วันที่ลดหนี้<span style="color:#D32F2F;">*</span></label>
                             <div class="so-input-wrapper calendar-wrapper">
-                                <input type="date" name="date_credit" id="date_credit" value="<?php echo htmlspecialchars(!empty($rs['date_credit']) ? $rs['date_credit'] : $today, ENT_QUOTES, 'UTF-8'); ?>" class="so-input" required>
+                                <input type="date" name="date_credit" id="date_credit" value="<?php echo htmlspecialchars(!empty($rs['date_credit']) ? $rs['date_credit'] : $today, ENT_QUOTES, 'UTF-8'); ?>" class="so-input">
                             </div>
                         </div>
 
@@ -546,7 +702,7 @@
                             <label class="so-label" for="type_return">วิธีชำระเงินคืน<span style="color:#D32F2F;">*</span></label>
                             <div class="so-select-wrapper">
                                 <?php $typeReturnVal = $rs['type_return'] ?? ''; ?>
-                                <select class="so-select" name="type_return" id="type_return" required>
+                                <select class="so-select" name="type_return" id="type_return">
                                     <option value="">เลือกวิธีชำระเงินคืน</option>
                                     <option value="1" <?php echo ($typeReturnVal === '1') ? 'selected' : ''; ?>>เงินสด</option>
                                     <option value="2" <?php echo ($typeReturnVal === '2') ? 'selected' : ''; ?>>โอนเงินเข้าบัญชี</option>
@@ -1025,11 +1181,11 @@
                         <?php if (!$creditCanShowApproveBar || $creditIsDraftDoc): ?>
                             <?php /* ใบปิดแล้วไม่มีปุ่มอนุมัติ ; ใบ Draft ส่งเข้าคิวด้วยปุ่ม Submit ด้านล่าง (send_sup ไม่เปลี่ยน status_doc) */ ?>
                         <?php elseif ($creditBucket === 0): ?>
-                            <button type="submit" name="approve_action" value="send_sup" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                            <button type="submit" name="approve_action" value="send_sup" onclick="window.creditPendingApprove = true;" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
                                 <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php else: ?>
-                            <button type="submit" name="approve_action" value="approve" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
+                            <button type="submit" name="approve_action" value="approve" onclick="window.creditPendingApprove = true;" style="background-color: #E8F9EE; color: #1E9E4F; border: 1px solid #C7EED4; border-radius: 24px; padding: 10px 28px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px;">
                                 <img src="img/icons/approval_status.png" alt="" style="width: 28px; height: 28px;"> อนุมัติ
                             </button>
                         <?php endif; ?>
@@ -2279,14 +2435,24 @@
             modal.setAttribute('aria-hidden', 'true');
         }
 
+        // ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่เคยตรวจผ่าน attribute required มาแต่เดิม
+        var CREDIT_APPROVE_REQUIRED_FIELDS = ['type_return', 'date_receive', 'date_credit'];
+
+        // ปุ่ม Submit / อนุมัติ เป็น submit button จริง จึงต้องคืน true ให้ browser ส่งฟอร์มเองเพื่อคง name/value ของปุ่ม
+        // ปุ่มอนุมัติตั้งธง creditPendingApprove ตอนคลิก (ไม่ใช้ event.submitter เพราะ Safari เก่าไม่รองรับ)
+        function fncSubmit() {
+            var requiredOpts = window.creditPendingApprove ? {
+                only: CREDIT_APPROVE_REQUIRED_FIELDS
+            } : null;
+            window.creditPendingApprove = false;
+            return soValidateRequired(document.forms['frmMain'], requiredOpts);
+        }
+
         function saveDraftCredit() {
             var form = document.forms['frmMain'];
             if (!form) return;
 
-            // Save Draft (สร้างใหม่ หรือใบที่ยังเป็น Draft) บันทึกข้อมูลไม่ครบได้เหมือน register_suphos.php
-            // ส่วน Update ของเอกสารที่ส่งเข้าคิวอนุมัติไปแล้วยังต้องกรอก field บังคับให้ครบ
-            var isDraftSave = <?php echo json_encode(!$creditIsEditMode || $creditIsDraftDoc); ?>;
-            if (!isDraftSave && typeof form.reportValidity === 'function' && !form.reportValidity()) {
+            if (!soValidateRequired(form)) {
                 return;
             }
 

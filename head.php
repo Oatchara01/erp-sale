@@ -190,7 +190,7 @@ function DateThai($strDate)
 
 
 <!-- Navbar (sit on top) -->
-<?php if ($_SESSION['type_login']=='It') {   require('menu_it.php'); } //require('new_menu_salehos.php'); } ?>
+<?php /*if ($_SESSION['type_login']=='It') {   require('menu_it.php'); } //require('new_menu_salehos.php'); } ?>
 
 <?php if ($_SESSION['type_login']=='AllWell') { require('menu_allwell.php'); } ?>
 
@@ -208,9 +208,12 @@ function DateThai($strDate)
 	
 <?php if ($_SESSION['type_login']=='Engineer') { require('menu_engineer.php'); } ?>
 	
-<?php if ($_SESSION['type_login']=='RPA') { require('menu_rpa.php'); } ?>
+<?php if ($_SESSION['type_login']=='RPA') { require('menu_rpa.php'); }*/ ?>
 
-<?php require_once('navbar.php'); ?>
+<?php
+	
+	require('menu_all.php');
+	require_once('navbar.php'); ?>
 
 <script type="text/javascript" src="js/sidebar.js?v=<?php echo time(); ?>"></script>
 

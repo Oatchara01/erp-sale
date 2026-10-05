@@ -211,24 +211,25 @@
 .spr-product-table th:nth-child(7),
 .spr-product-table td:nth-child(7) { width: 13%; text-align: right; }
 .spr-product-table th:nth-child(8),
-.spr-product-table td:nth-child(8) { width: 80px; padding-left: 4px; padding-right: 8px; text-align: center; }
+.spr-product-table td:nth-child(8) { width: 96px; padding-left: 4px; padding-right: 8px; text-align: center; }
 
+/* ปุ่มไอคอนพื้นขาวมุมมน 34x34px เงา — สไตล์เดียวกับ .action-icon ของ product_salehos.php */
 .spr-product-table .cs-row-edit-btn,
 .spr-product-table .so-product-remove-btn {
-	width: 28px;
-	height: 28px;
+	width: 34px;
+	height: 34px;
 	border: 0;
-	border-radius: 0;
-	background: transparent;
-	box-shadow: none;
-	color: #77727A;
+	border-radius: 8px;
+	background: #FFFFFF;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+	transition: box-shadow 0.2s ease;
 }
 
 .spr-product-table .cs-row-edit-btn:hover,
 .spr-product-table .so-product-remove-btn:hover {
-	background: transparent;
+	background: #FFFFFF;
 	border: 0;
-	color: var(--so-primary);
+	box-shadow: 0 2px 10px rgba(97, 41, 137, 0.28);
 }
 
 /* ===== สำหรับคลังสินค้า ===== */

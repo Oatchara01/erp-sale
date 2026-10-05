@@ -4,6 +4,9 @@
 //   'po' = ใบ PO (register_poawl.php): popup เฉพาะ รับประกัน / CAL / PM(ปี) / หมายเหตุสินค้า ไม่บังคับกรอก
 $productTableContext = (isset($productTableContext) && $productTableContext === 'po') ? 'po' : 'so';
 $productTableIsPo = ($productTableContext === 'po');
+// $productTableWarrantyBySn = true (register_suphos.php): บังคับรับประกันเฉพาะแถวที่มีเลขที่ SN และต้องเป็นตัวเลขมากกว่า 0
+//   ไม่ตั้ง = พฤติกรรมเดิมของใบสั่งขาย: บังคับกรอกรับประกันทุกแถว
+$productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBySn);
 ?>
 <html>
 
@@ -220,6 +223,25 @@ $productTableIsPo = ($productTableContext === 'po');
                         }
 
                         document.getElementById(product_id).value = product.product_ID;
+
+                        // แจ้งเตือนทันทีเมื่อสินค้านี้กำหนดให้ใช้ SN
+                        // เงื่อนไขมาจาก tb_product.sn_ckk ที่ส่งกลับจาก data_product_hos1.php
+                        if (String(product.sn_ckk || '0').trim() === '1') {
+                            var warrantyNotice = 'สินค้ารายการนี้ต้องใส่ข้อมูลปีรับประกัน';
+
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'กรุณาตรวจสอบ และใส่ข้อมูลปีรับประกันสินค้า',
+                                    text: warrantyNotice,
+                                    confirmButtonColor: '#612989',
+                                    confirmButtonText: 'ตกลง'
+                                });
+                            } else {
+                                alert(warrantyNotice);
+                            }
+                        }
+
                         // Set hidden input and label span for product_name
                         document.getElementById(product_name).value = product.sol_name;
                         var labelEl = document.getElementById(product_name.replace('product_name', 'product_name_label'));
@@ -567,15 +589,26 @@ $productTableIsPo = ($productTableContext === 'po');
             }
         }
 
+        /* ปุ่มไอคอนพื้นขาวมุมมน 34x34px (content-box: ขนาดไอคอน + padding = 34px) */
         .action-icon {
+            box-sizing: content-box;
+            padding: 9px;
+            border-radius: 8px;
+            background: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
             cursor: pointer;
-            color: #8E8B94;
-            font-size: 16px;
             margin-left: 8px;
+            vertical-align: middle;
+            transition: box-shadow 0.2s ease;
+        }
+
+        /* trash.svg สูง 18px — ลด padding แนวตั้งให้กล่องยังสูง 34px เท่า edit */
+        .action-icon[src$="trash.svg"] {
+            padding: 8px 9px;
         }
 
         .action-icon:hover {
-            color: #612989;
+            box-shadow: 0 2px 10px rgba(97, 41, 137, 0.28);
         }
 
         /* Modal Styling */
@@ -662,7 +695,6 @@ $productTableIsPo = ($productTableContext === 'po');
             outline: 2px solid rgba(97, 41, 137, 0.45);
             outline-offset: 2px;
             border-radius: 4px;
-            color: #612989;
         }
 
         .so-modal-field label {
@@ -782,6 +814,14 @@ $productTableIsPo = ($productTableContext === 'po');
             border-color: #CBA8E1;
             box-shadow: 0 0 0 3px rgba(106, 46, 150, 0.08);
             background: #F8F7FB;
+        }
+
+        /* ฟิลด์บังคับใน popup ที่ยังไม่กรอก (saveEditModal) — สีเดียวกับ .so-field-invalid ใน css/so-core.css */
+        .so-modal-field input[type="text"].so-field-invalid,
+        .so-modal-field input[type="text"].so-field-invalid:focus {
+            border-color: #DC3545;
+            box-shadow: none;
+            background: #FEECEB;
         }
 
         .so-modal-clear {
@@ -961,7 +1001,7 @@ $productTableIsPo = ($productTableContext === 'po');
                     <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
                     <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
                     <th style="width: 15%; text-align: center;">ยอดรวม</th>
-                    <th style="width: 10%; text-align: center;">PM</th>
+                    <th style="width: 10%; text-align: center;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -1028,10 +1068,10 @@ $productTableIsPo = ($productTableContext === 'po');
                             <!-- ยอดรวมสุทธิของแถวนี้: คำนวณอัตโนมัติ (จำนวน * ราคา) - (ส่วนลด * จำนวน) -->
                             <input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-transparent-input calc-total" style="text-align:right;" readonly />
                         </td>
-                        <td style="text-align: right; padding-right: 16px;">
+                        <td style="text-align: right; padding-right: 16px; white-space: nowrap;">
                             <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
-                            <i class="far fa-edit action-icon" role="button" tabindex="0" aria-label="ข้อมูลเพิ่มเติมรายการที่ <?php echo $i; ?>" onclick="openEditModal(<?php echo $i; ?>)"></i>
-                            <i class="far fa-trash-alt action-icon" role="button" tabindex="0" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="clearRow(<?php echo $i; ?>)"></i>
+                            <img src="img/icons/edit.svg" alt="" width="16" height="16" class="action-icon" role="button" tabindex="0" aria-label="ข้อมูลเพิ่มเติมรายการที่ <?php echo $i; ?>" onclick="openEditModal(<?php echo $i; ?>)">
+                            <img src="img/icons/trash.svg" alt="" width="16" height="18" class="action-icon" role="button" tabindex="0" aria-label="ลบรายการที่ <?php echo $i; ?>" onclick="clearRow(<?php echo $i; ?>)">
                         </td>
                     </tr>
                 <?php endfor; ?>
@@ -1562,8 +1602,8 @@ $productTableIsPo = ($productTableContext === 'po');
                         '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
                         '</span>';
                 }
-                // ใบ PO ไม่บังคับกรอกรับประกัน จึงไม่แสดงเครื่องหมาย *
-                var requiredMark = productTableContext === 'po' ? '' : '<span class="so-modal-required">*</span>';
+                // แสดงเครื่องหมาย * เฉพาะแถวที่บังคับกรอกรับประกัน (ดู productTableWarrantyRequired)
+                var requiredMark = productTableWarrantyRequired(document.getElementById('product_sn' + rowIndex).value) ? '<span class="so-modal-required">*</span>' : '';
                 warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')' + requiredMark + iconHtml;
             }
 
@@ -1575,6 +1615,7 @@ $productTableIsPo = ($productTableContext === 'po');
             document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
             document.getElementById('m_product_sn').value = document.getElementById('product_sn' + rowIndex).value;
 
+            document.getElementById('m_warranty').classList.remove('so-field-invalid');
             syncModalClearButtons();
             productEditModalReturnFocus = document.activeElement;
             document.getElementById('productEditModal').style.display = 'flex';
@@ -1610,6 +1651,14 @@ $productTableIsPo = ($productTableContext === 'po');
         function saveEditModal() {
             var rowIndex = document.getElementById('current_editing_row').value;
 
+            // รับประกันบังคับกรอก (ดอกจันที่ label) ตามกฎของ productTableWarrantyValid — ไม่ผ่านแล้วขึ้นกรอบแดงและไม่ปิด popup
+            var warrantyField = document.getElementById('m_warranty');
+            if (!productTableWarrantyValid(warrantyField.value, document.getElementById('m_product_sn').value)) {
+                warrantyField.classList.add('so-field-invalid');
+                warrantyField.focus();
+                return;
+            }
+
             // Save data back to hidden inputs
             document.getElementById('warranty' + rowIndex).value = document.getElementById('m_warranty').value;
             document.getElementById('cal' + rowIndex).value = document.getElementById('m_cal').value;
@@ -1634,6 +1683,10 @@ $productTableIsPo = ($productTableContext === 'po');
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('[data-clearable="true"]').forEach(function(input) {
                 input.addEventListener('input', syncModalClearButtons);
+            });
+
+            document.getElementById('m_warranty').addEventListener('input', function() {
+                if (productTableWarrantyValid(this.value, document.getElementById('m_product_sn').value)) this.classList.remove('so-field-invalid');
             });
 
             document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
@@ -1827,6 +1880,41 @@ $productTableIsPo = ($productTableContext === 'po');
         }
 
         var productTableContext = <?php echo json_encode($productTableContext); ?>;
+		var productTableWarrantyBySn = <?php echo json_encode($productTableWarrantyBySn); ?>;
+
+        // ใบ PO ไม่บังคับรับประกัน; หน้าที่เปิด productTableWarrantyBySn บังคับเฉพาะแถวที่มีเลขที่ SN; หน้าอื่นบังคับทุกแถว
+        function productTableWarrantyRequired(sn) {
+            if (productTableContext === 'po') return false;
+            if (productTableWarrantyBySn) return String(sn || '').trim() !== '';
+            return true;
+        }
+
+        // แถวที่มี SN (productTableWarrantyBySn) ต้องเป็นตัวเลขมากกว่า 0 ทศนิยมได้; กรณีบังคับแบบเดิมแค่ไม่ว่างก็ผ่าน
+        function productTableWarrantyValid(warranty, sn) {
+            if (!productTableWarrantyRequired(sn)) return true;
+            var value = String(warranty || '').trim();
+            if (productTableWarrantyBySn) return /^\d*\.?\d+$/.test(value) && parseFloat(value) > 0;
+            return value !== '';
+        }
+
+        // ตรวจรับประกันทุกแถวตอนบันทึกเอกสาร — แถวที่ไม่เคยเปิด popup ไม่ผ่าน saveEditModal จึงต้องตรวจซ้ำที่นี่
+        // ไม่ผ่าน: เปิด popup ของแถวแรกที่ไม่ผ่านพร้อมกรอบแดง คืน false
+        function productTableValidateWarrantyRows() {
+            for (var i = 1; i <= 30; i++) {
+                var row = document.getElementById('product_row_' + i);
+                if (!row || row.style.display === 'none') continue;
+                var productId = document.getElementById('product_id' + i);
+                if (!productId || productId.value.trim() === '') continue;
+                var warranty = document.getElementById('warranty' + i);
+                var sn = document.getElementById('product_sn' + i);
+                if (productTableWarrantyValid(warranty ? warranty.value : '', sn ? sn.value : '')) continue;
+
+                openEditModal(i);
+                document.getElementById('m_warranty').classList.add('so-field-invalid');
+                return false;
+            }
+            return true;
+        }
 
         function productTableHasItems() {
             for (var i = 1; i <= 30; i++) {

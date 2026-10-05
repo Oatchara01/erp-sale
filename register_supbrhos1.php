@@ -129,27 +129,45 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			$adm_ckk = '0';
 		}
 
-		$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"]);
-		$name =  $_SESSION['name'];
-		$em_id =  $_SESSION['emid'];
-		if ($sale_code == 'S11' or $sale_code == 'S12' or $sale_code == 'S13' or $sale_code == 'S14') {
-			$approve_code = 'SS2';
-			$approve  = 'นรินทิพย์';
-		} else if ($sale_code == 'S15' or $sale_code == 'S22' or $sale_code == 'S21' or $sale_code == 'S51' or $sale_code == 'S16') {
+		$sale_code = mysqli_real_escape_string($conn, $_POST["sale_code"] ?? "");
 
-			$approve_code = 'SS1';
-			$approve  = 'พรรณิภา';
-		} else if ($sale_code == 'S17' or $sale_code == 'SM1' or $sale_code == 'S23' or $sale_code == 'S24') {
+			// =========================================================
+// APPROVER / SUBMIT PERMISSION
+// =========================================================
 
-			$approve_code = 'SM1';
-			$approve  = 'ลักษณาวรรณ';
-		} else if ($sale_code == 'S32' or $sale_code == 'S31' or $sale_code == 'MM1') {
-			$approve_code = 'SS3';
-			$approve  = 'มาลินี';
-		} else if ($sale_code == 'EN') {
-			$approve_code = 'SUP_EN';
-			$approve  = 'ศิรวิทย์';
-		}
+$type_login = trim((string)($_SESSION['type_login'] ?? ''));
+$type_login_lower = strtolower($type_login);
+
+/*
+ * กลุ่มที่กด Submit แล้วถือว่าเป็นผู้อนุมัติเอง
+ *
+ * Sup_sale
+ * Owner
+ * Sup_en
+ */
+$isDirectApprover = in_array(
+    $type_login_lower,
+    array(
+        'sup_sale',
+        'owner',
+        'sup_en'
+    ),
+    true
+);
+
+if ($isDirectApprover) {
+
+    // ผู้สร้างเอกสารเป็นผู้มีสิทธิ์อนุมัติเอง
+    $approve  = $_SESSION['name'] ?? '';
+    $approve_code = $_SESSION['code'] ?? '';
+
+} else {
+
+    // ผู้ใช้อื่นสร้างเอกสาร
+    // ยังไม่มีผู้อนุมัติจนกว่าจะมีคนกด Approve
+    $approve  = '';
+    $approve_code = '';
+}
 
 		// Draft ยังไม่เข้า flow อนุมัติ/ออกเลข IV จริง จึงเว้นค่าที่ผูกกับการอนุมัติไว้ก่อน
 		// (mirror pattern $isDraftRequest ใน register_suphos1.php:629-636)
@@ -356,7 +374,7 @@ values
 			}
 
 			$items = array();
-			$allowedDepartments = array(1, 2, 3, 4);
+			$allowedDepartments = array(1, 2, 3, 4, 5);
 			foreach ($decodedItems as $index => $item) {
 				$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
 				$message = isset($item["message"]) ? trim($item["message"]) : "";

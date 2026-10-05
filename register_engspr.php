@@ -25,6 +25,7 @@ if ($sprRequestedRefId !== '' || $sprCopyFromRefId !== '') {
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-engspr.css?v=<?php echo filemtime(__DIR__ . '/css/register-engspr.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <?php
 date_default_timezone_set("Asia/Bangkok");
@@ -145,7 +146,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 	</script>
 <?php } ?>
 
-<form action="register_engspr1.php" method="post" name="frmMain" id="frmMain" onSubmit="JavaScript:return fncSubmit();">
+<form action="register_engspr1.php" method="post" name="frmMain" id="frmMain" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<!-- ธงบอก register_engspr1.php ให้ใช้เส้นทางบันทึกแบบใหม่ (dynamic rows + transaction) -->
 	<input type="hidden" name="spr_mode" value="v2">
 	<input type="hidden" name="submit" id="spr_submit_action" value="">
@@ -158,7 +159,12 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title spr-title">ใบเบิกเครื่องและอะไหล่ (SPR)</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="window.location.href='status_spr.php';" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title spr-title">ใบเบิกเครื่องและอะไหล่ (SPR)</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($sprDisplayRefId); ?></span>
@@ -237,7 +243,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 					</div>
 				</div>
 				<div class="so-field-group spr-document-address">
-					<label class="so-label" for="address">ที่อยู่</label>
+					<label class="so-label" for="address">ที่อยู่ <span class="required">*</span></label>
 					<div class="so-input-wrapper">
 						<input type="text" name="address" id="address" class="so-input" value="<?php echo so_saved_h($sprField('address')); ?>" placeholder="กรอกที่อยู่">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address').value='';" aria-label="ล้างค่า"></button>
@@ -258,14 +264,14 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 
 			<div class="so-grid-2">
 				<div class="so-field-group">
-					<label class="so-label" for="equipment">ชื่อสินค้า</label>
+					<label class="so-label" for="equipment">ชื่อสินค้า <span class="required">*</span></label>
 					<div class="so-input-wrapper">
 						<input type="text" name="equipment" id="equipment" class="so-input" value="<?php echo so_saved_h($sprField('equipment')); ?>" placeholder="กรอกชื่อสินค้า">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('equipment').value='';" aria-label="ล้างค่า"></button>
 					</div>
 				</div>
 				<div class="so-field-group">
-					<label class="so-label" for="sn_num">หมายเลข SN</label>
+					<label class="so-label" for="sn_num">หมายเลข SN <span class="required">*</span></label>
 					<div class="so-input-wrapper">
 						<input type="text" name="sn_num" id="sn_num" class="so-input" value="<?php echo so_saved_h($sprField('sn_num')); ?>" placeholder="กรอกหมายเลข SN">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('sn_num').value='';" aria-label="ล้างค่า"></button>
@@ -277,7 +283,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 			<div class="so-grid-3">
 				<div class="so-field-group">
 					<label class="so-label" for="date_receive">วันที่ของเข้า <span class="required">*</span></label>
-					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_receive'))); ?>" required>
+					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_receive'))); ?>">
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_imstall">วันที่ติดตั้ง <span class="required">*</span></label>
@@ -446,7 +452,6 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 					<button type="button" name="save_draft" class="btn-so-draft" onclick="sprSaveDraft();"><i class="far fa-save"></i> <?php echo $sprIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php } ?>
 			<?php } ?>
-			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_spr.php';">ย้อนกลับ</button>
 		</div>
 	</div>
 	<?php if ($sprIsTerminal) { ?>
@@ -456,7 +461,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 				if (!form) return;
 				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function(el) {
 					if (el.type === 'hidden') return;
-					if (el.classList.contains('btn-so-cancel-nav')) return;
+					if (el.classList.contains('so-back-btn')) return;
 					if (el.classList.contains('btn-preview-so')) return;
 					if (el.classList.contains('spr-linked-document-input')) return;
 					if (el.classList.contains('spr-linked-document-button')) return;
@@ -618,7 +623,7 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 	   (ข้อกำหนดของ handoff: approve ยังต้อง validate, return/reject/cancel ข้ามได้) */
 	function sprApproveDocument() {
 		if (sprSubmitting) return;
-		if (!sprValidateForm()) return;
+		if (!sprValidateForm({ only: SPR_APPROVE_REQUIRED_FIELDS })) return;
 
 		sprSubmitting = true;
 		document.getElementById('spr_approve_action').value = 'approve';
@@ -662,16 +667,13 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 
 	/* ต้องตรงกับ spr_validate() ฝั่ง server (includes/spr_repo.php) — Save Draft ก็ผ่าน
 	   ด่านเดียวกันนี้ทุกจุด (ข้อกำหนดข้อ 11 ของ handoff) */
-	function sprValidateForm() {
+	/* ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม (ไม่รวม date_receive
+	   เพื่อให้เอกสารเก่าที่ค้างอนุมัติเดินต่อได้) */
+	var SPR_APPROVE_REQUIRED_FIELDS = ['wo_no', 'customer', 'address', 'equipment', 'sn_num', 'date_imstall', 'date_exp'];
+
+	function sprValidateForm(requiredOpts) {
 		var form = document.forms.frmMain;
-		if (form.wo_no.value.trim() === '') return sprValidationFail('กรุณากรอกเลขที่ใบงานบริการ (W/O No.)', form.wo_no);
-		if (form.customer.value.trim() === '') return sprValidationFail('กรุณากรอกชื่อลูกค้า', form.customer);
-		if (form.address.value.trim() === '') return sprValidationFail('กรุณากรอกที่อยู่', form.address);
-		if (form.equipment.value.trim() === '') return sprValidationFail('กรุณากรอก Equipment', form.equipment);
-		if (form.engineer.value.trim() === '') return sprValidationFail('กรุณากรอกชื่อ Engineer', form.engineer);
-		if (form.sn_num.value.trim() === '') return sprValidationFail('กรุณากรอก S/N', form.sn_num);
-		if (form.date_imstall.value === '') return sprValidationFail('กรุณาระบุวันที่ติดตั้ง', form.date_imstall);
-		if (form.date_exp.value === '') return sprValidationFail('กรุณาระบุวันที่หมดประกัน', form.date_exp);
+		if (!soValidateRequired(form, requiredOpts || null)) return false;
 		if (sprTotalRowCount() === 0) return sprValidationFail('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ', document.getElementById('spr_product_search'));
 		return true;
 	}

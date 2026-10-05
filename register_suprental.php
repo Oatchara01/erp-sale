@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-suprental.css?v=<?php echo filemtime(__DIR__ . '/css/register-suprental.css'); ?>">
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
@@ -779,7 +780,7 @@
 	?>
 
 	<!--action="register_office1.php"-->
-	<form action="<?php echo $rentalIsEditMode ? 'register_suprental_edit1.php' : 'register_suprental1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+	<form action="<?php echo $rentalIsEditMode ? 'register_suprental_edit1.php' : 'register_suprental1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 
 		<script language="javascript">
 			var rtSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
@@ -818,11 +819,46 @@
 				return rtForm;
 			}
 
+			// ฟิลด์บังคับ (name/id) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
+			// (แผนก/เขตการขาย, จัดส่งวันที่, จัดส่งตั้งแต่เวลา, ช่วงเวลา) ไม่งั้นเอกสารเก่าที่ค้างอนุมัติจะเดินต่อไม่ได้
+			var RT_APPROVE_REQUIRED_FIELDS = [
+				'start_promis', 'count_m', 'rental_name', 'rental_tel', 'rental_addr_detail', 'rental_province',
+				'rental_district', 'rental_zipcode', 'customer_name', 'customer_tel', 'province_name', 'address_send',
+				'address_merged_ui', 'bank_name', 'bank_no', 'accbank_name', 'transport_company'
+			];
+
+			// แนบไฟล์ Book Bank ใช้ตัวตรวจกลางไม่ได้: เป็น file input ที่ซ่อนอยู่ในกล่อง .so-file-picker และ edit mode มีไฟล์เดิมที่ input มองไม่เห็น
+			// กรอบแดงขึ้นที่กล่อง (css/register-suprental.css) หายเองเมื่อเลือกไฟล์ (soOnFieldEdited ฟัง change)
+			function rtValidateBankImg() {
+				var bankImgInput = document.frmMain['bank_img'];
+				if (!bankImgInput) return true;
+				soClearFieldInvalid(bankImgInput);
+				var bankImgExistingInput = document.frmMain['bank_img_existing'];
+				var bankImgHasExisting = bankImgExistingInput && bankImgExistingInput.value.trim() !== '';
+				if (bankImgHasExisting || (bankImgInput.files && bankImgInput.files.length > 0)) return true;
+				soMarkFieldInvalid(bankImgInput);
+				return false;
+			}
+
+			// ตรวจดอกจันทั้งหมดรวมไฟล์ Book Bank (รันทั้งสองเพื่อให้กรอบแดงขึ้นพร้อมกัน) แล้วเปิดแท็บ/เลื่อนไปที่ไฟล์ถ้าตัวอื่นผ่านหมด
+			function rtValidateRequiredFields(requiredOpts) {
+				var mainOk = soValidateRequired(document.forms['frmMain'], requiredOpts);
+				var bankImgOk = rtValidateBankImg();
+				if (mainOk && !bankImgOk) soRevealField(document.frmMain['bank_img']);
+				return mainOk && bankImgOk;
+			}
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
 				if (rtSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				// อนุมัติเอกสารเก่าที่ยังไม่มีค่าฟิลด์บังคับรุ่นใหม่ต้องทำได้ จึงตรวจครบทุกดอกจันเฉพาะปุ่มบันทึกของผู้สร้าง
+				// ส่วนปุ่มอนุมัติตรวจเท่าชุดเดิม (ไฟล์ Book Bank ตรวจทั้งสองกรณีเหมือนเดิม)
+				var rtApproveActionField = document.getElementById('rt_approve_action');
+				var rtRequiredOpts = (rtApproveActionField && rtApproveActionField.value) ? {
+					only: RT_APPROVE_REQUIRED_FIELDS
+				} : null;
+				if (!rtValidateRequiredFields(rtRequiredOpts)) {
 					return false;
 				}
 
@@ -831,56 +867,6 @@
 				}
 
 				if (!validateDeliveryTimeRange()) {
-					return false;
-				}
-
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var rtApproveActionField = document.getElementById('rt_approve_action');
-				if (!(rtApproveActionField && rtApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				var rtRequiredFields = [
-					['start_promis', 'กรุณาระบุวันเริ่มสัญญา'],
-					['count_m', 'กรุณาระบุระยะเวลาเช่า'],
-					['rental_name', 'กรุณาใส่ชื่อผู้เช่า'],
-					['rental_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้เช่า'],
-					['rental_addr_detail', 'กรุณาใส่ที่อยู่ผู้เช่า'],
-					['rental_province', 'กรุณาเลือกจังหวัดผู้เช่า'],
-					['rental_district', 'กรุณาเลือกเขต/อำเภอผู้เช่า'],
-					['rental_zipcode', 'กรุณาใส่รหัสไปรษณีย์ผู้เช่า'],
-					['customer_name', 'กรุณาใส่ชื่อผู้ติดต่อ'],
-					['customer_tel', 'กรุณาใส่เบอร์โทรศัพท์ผู้ติดต่อ'],
-					['province_name', 'กรุณาเลือกจังหวัดที่ต้องการจัดส่ง'],
-					['address_send', 'กรุณาใส่สถานที่ติดตั้งเครื่อง'],
-					['bank_name', 'กรุณาเลือกวิธีชำระเงินคืน'],
-					['bank_no', 'กรุณาใส่เบอร์โทรศัพท์/เลขที่บัญชี'],
-					['accbank_name', 'กรุณาใส่ชื่อบัญชี']
-				];
-
-				for (var i = 0; i < rtRequiredFields.length; i++) {
-					var fieldName = rtRequiredFields[i][0];
-					var field = document.frmMain[fieldName];
-					if (field && String(field.value).trim() === '') {
-						alert(rtRequiredFields[i][1]);
-						rtFocusField(field);
-						return false;
-					}
-				}
-
-				var addressMergedInput = document.getElementById('address_merged_ui');
-				if (addressMergedInput && addressMergedInput.value.trim() === '') {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					rtFocusField(addressMergedInput);
-					return false;
-				}
-
-				var bankImgInput = document.frmMain['bank_img'];
-				var bankImgExistingInput = document.frmMain['bank_img_existing'];
-				var bankImgHasExisting = bankImgExistingInput && bankImgExistingInput.value.trim() !== '';
-				if (bankImgInput && !bankImgHasExisting && (!bankImgInput.files || bankImgInput.files.length === 0)) {
-					alert('กรุณาแนบไฟล์รูป Book Bank');
-					rtFocusField(bankImgInput);
 					return false;
 				}
 
@@ -902,10 +888,11 @@
 			// บันทึกร่าง: AJAX POST is_draft=1 ไปยัง register_suprental_draft1.php แล้ว redirect
 			// กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ — พอร์ตจาก register_supchange.php: chgSaveDraft
 			function rtSaveDraft() {
-				if (!validateDeliveryTimeRangeChoice()) return;
-
 				var form = document.forms['frmMain'];
 				if (!form) return;
+
+				// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+				if (!rtValidateRequiredFields(null)) return;
 
 				var btn = form.querySelector('[name="save_draft"]');
 				var defaultHtml = btn ? btn.innerHTML : '';
@@ -1156,12 +1143,26 @@
 
 
 				?>
+	<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
 
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
 				<div class="so-tabs-container">
 					<button type="button" class="so-tab-btn active" onclick="rtOpenDocTab('rt-doc-tab-1', this)">ข้อมูลเอกสาร</button>
-					<button type="button" class="so-tab-btn" onclick="rtOpenDocTab('rt-doc-tab-2', this)">Admin</button>
+					<?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
+    <button
+        type="button"
+        class="so-tab-btn"
+        onclick="rtOpenDocTab('rt-doc-tab-2', this)"
+    >
+        Admin
+    </button>
+<?php } ?>
 				</div>
-
+	
 				<div id="rt-doc-tab-1" class="so-tab-content active">
 
 					<!-- ===================== บริษัท / แผนก-เขตการขาย / ประเภทสินค้าเช่า ===================== -->
@@ -1178,122 +1179,168 @@
 							</div>
 
 							<div class="so-field-group">
-								<label class="so-label">แผนก/เขตการขาย</label>
-								<div class="so-select-wrapper">
-									<?php
-									if ($_SESSION['code'] == 'SS1') {
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย<span style="color: #dc3545;">*</span>
+	</label>
 
-											$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-									<?php
-									} else 	if ($_SESSION['code'] == 'SS2') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-
-									<?php
-									} else 	if ($_SESSION['code'] == 'SS3') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_ss3 where ckk_1='0' ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
-									<?php
-									} else 	if ($_SESSION['code'] == 'MK2') {
-
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
-
-											$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+	<div class="so-select-wrapper">
 
 
-									<?php
-									} else 	if ($_SESSION['code'] == 'SUP_EN') {
 
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
+		<?php if ($type_login_lower == 'sale') { ?>
 
-											$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+			<!-- Sale ล็อกเขตของตัวเอง -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			>
 
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
 
-									<?php
-									} else {
-									?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
+		<?php } else {
 
-											<?php
+			// =========================================================
+			// Admin / IT / Owner
+			// เห็นทุกเขตที่ ckk = 0
+			// =========================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
 
-											$strSQL5 = "SELECT * FROM tb_team_adm where ckk = '0' ORDER BY sale_code ASC";
-											$objQuery5 = mysqli_query($com, $strSQL5);
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-											?>
-												<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-											<?php
-											}
-											?>
-										</select>
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE ckk = '0'
+					ORDER BY sale_code ASC
+				";
 
+			}
 
-									<?php
-									}
+			// =========================================================
+			// Engineer / SUP_EN
+			// =========================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
 
-									?>
-								</div>
-							</div>
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// SOL
+			// =========================================================
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// User อื่น
+			// ดูสิทธิ์จาก user_sale_permission
+			// =========================================================
+			else {
+
+				$strSQL5 = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$objQuery5 = mysqli_query($com, $strSQL5);
+
+				if ($objQuery5) {
+
+					while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+						>
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 							<div class="so-field-group">
 								<label class="so-label">ประเภทสินค้าเช่า</label>
@@ -1800,28 +1847,39 @@
 							// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 							'' => 'เลือกบริษัทขนส่ง',
 						]],
+						['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง delivery_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 						// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__rental.time_range ดู sql/delivery_time_range.sql)
-						['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
+						// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
+						['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 							'' => 'เลือกช่วงเวลา',
 							'morning' => 'ช่วงเช้า',
 							'afternoon' => 'ช่วงบ่าย',
 							'allday' => 'ทั้งวัน',
 							'specific' => 'กำหนดเวลา',
 						]],
-						// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
-						['type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
-						// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง delivery_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
-						['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 						['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
 						// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 						['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
 						['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 						['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 					],
-					'toggle_buttons' => [
-						['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-						['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-					],
+					'toggle_buttons' => array_filter([
+    [
+        'name' => 'no_money',
+        'id' => 'no_money',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 					'cost_fields' => [
 						['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
 						['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
@@ -1909,7 +1967,7 @@
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="address_merged_ui">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" class="so-input" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" required oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
+									<input type="text" class="so-input" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_merged_ui').value=''; document.getElementById('address_1').value=''; document.getElementById('address_name').value='';" aria-label="ล้างค่า"></button>
 								</div>
 								<input type="hidden" name="address_1" id="address_1">
@@ -1998,40 +2056,40 @@
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
+									<label class="so-label" style="color: #612989;">ขนาดประตูห้อง (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดบันได</label>
+									<label class="so-label" style="color: #612989;">ขนาดบันได (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 							</div>
 
 							<div class="so-grid-3" style="margin-top: 16px;">
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
+									<label class="so-label" style="color: #612989;">ประตูลิฟต์ (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
+									<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์ (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_depth" type="text" class="so-input" placeholder="ลึก" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์</label>
-									<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์ (กก.)</label>
+									<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 							</div>
 
@@ -2059,7 +2117,7 @@
 
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" style="color: #612989;">หมายเหตุเพิ่มเติม</label>
-								<input name="addr_note" type="text" class="so-input" placeholder="รายละเอียดเพิ่มเติม" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+								<input name="addr_note" type="text" class="so-input" placeholder="ใส่หมายเหตุ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 							</div>
 						</div>
 
@@ -2121,7 +2179,7 @@
 										'ธนาคารอิสลามแห่งประเทศไทย'
 									];
 									?>
-									<select name="bank_name" id="bank_name" class="so-select" required>
+									<select name="bank_name" id="bank_name" class="so-select">
 										<option value="">เลือกวิธีชำระเงินคืน / ธนาคาร</option>
 										<?php foreach ($rentalBankNames as $bName) { ?>
 											<option value="<?php echo htmlspecialchars($bName, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($bName, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -2134,7 +2192,7 @@
 							<div class="so-field-group">
 								<label class="so-label" for="bank_no">เบอร์โทรศัพท์ / เลขที่บัญชี <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="bank_no" id="bank_no" class="so-input" placeholder="ใส่เฉพาะตัวเลข" required>
+									<input type="text" name="bank_no" id="bank_no" class="so-input" placeholder="ใส่เฉพาะตัวเลข">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('bank_no').value='';" aria-label="ล้างเลขที่บัญชี"></button>
 								</div>
 							</div>
@@ -2143,7 +2201,7 @@
 							<div class="so-field-group">
 								<label class="so-label" for="accbank_name">ชื่อบัญชี <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="accbank_name" id="accbank_name" class="so-input" placeholder="กรอกชื่อบัญชี" required>
+									<input type="text" name="accbank_name" id="accbank_name" class="so-input" placeholder="กรอกชื่อบัญชี">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('accbank_name').value='';" aria-label="ล้างชื่อบัญชี"></button>
 								</div>
 							</div>
@@ -2152,11 +2210,11 @@
 						<!-- แถวที่ 2: แนบไฟล์ Book Bank -->
 						<div class="so-grid-3" style="margin-top: 16px;">
 							<div class="so-field-group">
-								<label class="so-label" for="bank_img">แนบไฟล์รูป Book Bank <span style="color:red;">*</span></label>
+								<label class="so-label">แนบไฟล์รูป Book Bank <span style="color:red;">*</span></label>
 								<label class="so-file-picker" for="bank_img">
 									<span class="so-file-picker-text" id="bank_img_text"><?php echo ($rentalIsEditMode && !empty($savedRental['bank_img'])) ? 'ไฟล์ที่แนบไว้: ' . so_saved_h($savedRental['bank_img']) : 'Choose File'; ?></span>
 									<i class="far fa-image so-file-picker-icon"></i>
-									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" <?php echo $rentalIsEditMode ? '' : 'required'; ?> onchange="showRentalBankImgName(this)">
+									<input type="file" name="bank_img" id="bank_img" class="so-file-picker-input" accept="image/*,application/pdf" onchange="showRentalBankImgName(this)">
 								</label>
 								<?php if ($rentalIsEditMode && !empty($savedRental['bank_img'])) {
 									$rtBankImgFile = basename((string)$savedRental['bank_img']);

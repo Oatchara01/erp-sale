@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrhos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrhos.css'); ?>">
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
@@ -899,6 +900,8 @@
 	}
 
 	function brSaveDraft() {
+		// กดอนุมัติแล้วไม่ผ่าน validation ค่า approve_action จะค้างอยู่ ถ้าไม่ล้างก่อน Update จะกลายเป็นอนุมัติเอกสาร
+		brClearApproveAction();
 		brWriteObjectiveDesHidden();
 		if (typeof syncDeptComments === 'function') {
 			syncDeptComments();
@@ -907,12 +910,13 @@
 			syncReturnTimeRangeFromTime();
 		}
 
-		if (!validateDeliveryTimeRangeChoice()) {
+		var form = document.forms['frmMain'];
+		if (!form) {
 			return;
 		}
 
-		var form = document.forms['frmMain'];
-		if (!form) {
+		// ปุ่มนี้ใช้ร่วมกันทั้ง "Save Draft" และ "Update": บังคับฟิลด์ดอกจันครบเท่าปุ่ม Submit ทั้งสองกรณี
+		if (!soValidateRequired(form)) {
 			return;
 		}
 
@@ -922,6 +926,7 @@
 		formData.set('is_draft', '1');
 
 		var isUpdateMode = /Update/.test(defaultHtml);
+		var redirecting = false;
 
 		if (btn) {
 			btn.disabled = true;
@@ -937,14 +942,10 @@
 			})
 			.then(function(data) {
 				if (data && data.success) {
-					return Swal.fire({
-						title: 'Save Draft success',
-						text: 'Ref ID: ' + data.ref_id,
-						icon: 'success',
-						confirmButtonColor: '#612989'
-					}).then(function() {
-						window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
-					});
+					// popup สำเร็จแสดงหลังรีโหลดผ่าน ?saved=1 (ดูต้นไฟล์) ล็อกปุ่มค้างไว้กันกดซ้ำระหว่างรอ redirect
+					redirecting = true;
+					window.location.href = 'register_supbrhos.php?ref_id_br=' + encodeURIComponent(data.ref_id) + '&saved=1';
+					return;
 				}
 
 				var message = data && data.message ? data.message : 'Unable to save draft';
@@ -954,7 +955,7 @@
 				return Swal.fire('Error', 'Unable to save draft', 'error');
 			})
 			.finally(function() {
-				if (btn) {
+				if (btn && !redirecting) {
 					btn.disabled = false;
 					btn.innerHTML = defaultHtml;
 				}
@@ -1311,20 +1312,152 @@ $brIsApproved = in_array($brStatusDoc, ['Approve', 'อนุมัติแล�
 $brIsCancelled = in_array($brStatusDoc, ['ยกเลิก', 'Cancelled'], true);
 $brIsClosed = in_array($brStatusDoc, ['Approve', 'อนุมัติแล้ว', 'ยกเลิก', 'Cancelled', 'Rejected'], true);
 // Submit หายทันทีที่เคย submit ไปแล้ว (send_sup='1') หรือเอกสารจบแล้ว
-$brHideSubmit = $brIsEditMode && ($brSendSup === '1' || $brIsClosed);
-$brIsSupApprover = (($_SESSION['type_login'] ?? '') !== 'Sale');
-$brSendDm = $brIsEditMode ? ($savedBr['send_dm'] ?? '0') : '0';
-// แถบอนุมัติโชว์ตอนแก้ไขเอกสารที่ยังรออนุมัติ (status_doc='Request') และผู้ใช้ไม่ใช่ Sale
-// รวม Flow อนุมัติของ Sup และผู้บริหารไว้ในหน้าเดียวกัน: ถ้า send_dm='1' แสดงว่าอยู่ขั้นผู้บริหารแล้ว (stage='dm')
-$brCanShowApproveBar = $brIsEditMode && $brIsSupApprover && ($brStatusDoc === 'Request');
-$brApproveStage = ($brSendDm === '1') ? 'dm' : 'sup';
-// ซ่อนปุ่ม Update ตัวหลักเมื่อเอกสารจบแล้ว หรือแถบอนุมัติกำลังโชว์อยู่ (มีปุ่ม Update ของตัวเองอยู่แล้ว)
-$brHideUpdate = $brIsClosed || $brCanShowApproveBar;
-// เอกสารจบแล้ว Admin ยังต้องกลับมาแก้เลขที่/วันที่เอกสารได้ ผ่านปุ่ม Update แบบจำกัดสิทธิ์แทนปุ่ม Update ปกติ
-// หน้านี้ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin') จึงเช็ค role เดียวกันตรงนี้
-// เพื่อให้คนที่แก้ไขฟิลด์ในแท็บ Admin ได้ เป็นคนเดียวกับที่กดปุ่ม Update แบบจำกัดสิทธิ์นี้ได้
-$brIsAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
-$brShowAdminLimitedUpdate = $brIsClosed && !$brIsApproved && !$brIsCancelled && $brIsAdminUser && $brIsEditMode;
+
+// =========================================================
+// APPROVAL FLOW / PERMISSION
+// =========================================================
+
+$type_login_lower = strtolower(
+    trim((string)($_SESSION['type_login'] ?? ''))
+);
+
+
+// =========================================================
+// สิทธิ์ SUP
+// =========================================================
+
+$brSupApproverRoles = [
+    'owner',
+    'sup_sale',
+    'sup_mk1',
+    'sup_en',
+    'it'
+];
+
+$brIsSupApprover = in_array(
+    $type_login_lower,
+    $brSupApproverRoles,
+    true
+);
+
+
+// =========================================================
+// สิทธิ์ DM
+// =========================================================
+
+$brDmApproverRoles = [
+    'owner',
+    'it'
+];
+
+$brIsDmApprover = in_array(
+    $type_login_lower,
+    $brDmApproverRoles,
+    true
+);
+
+
+// =========================================================
+// CURRENT DOCUMENT STATE
+// =========================================================
+
+$brApprove = $brIsEditMode
+    ? trim((string)($savedBr['approve'] ?? ''))
+    : '';
+
+$brSendDm = $brIsEditMode
+    ? trim((string)($savedBr['send_dm'] ?? '0'))
+    : '0';
+
+
+// =========================================================
+// WAITING SUP
+// =========================================================
+
+$brWaitingSup =
+    $brIsEditMode
+    && $brStatusDoc === 'Request'
+    && $brSendSup === '1'
+    && $brSendDm !== '1'
+    && $brApprove === '';
+
+
+// =========================================================
+// WAITING DM
+// =========================================================
+
+$brWaitingDm =
+    $brIsEditMode
+    && $brStatusDoc === 'Request'
+    && $brSendDm === '1';
+
+
+// =========================================================
+// SHOW APPROVAL BAR
+// แยกสิทธิ์ Sup / DM ชัดเจน
+// =========================================================
+
+$brCanShowApproveBar =
+    (
+        $brWaitingSup
+        && $brIsSupApprover
+    )
+    ||
+    (
+        $brWaitingDm
+        && $brIsDmApprover
+    );
+
+
+// =========================================================
+// APPROVAL STAGE
+// =========================================================
+
+$brApproveStage =
+    $brWaitingDm
+        ? 'dm'
+        : 'sup';
+
+
+// =========================================================
+// SUBMIT
+// =========================================================
+
+$brHideSubmit =
+    $brIsEditMode
+    && (
+        $brSendSup === '1'
+        || $brIsClosed
+        || $brCanShowApproveBar
+    );
+
+
+// =========================================================
+// UPDATE
+// =========================================================
+
+$brHideUpdate =
+    $brIsClosed
+    || $brCanShowApproveBar;
+
+
+// =========================================================
+// ADMIN LIMITED UPDATE
+// =========================================================
+
+$brIsAdminUser = in_array(
+    $type_login_lower,
+    ['it', 'admin'],
+    true
+);
+
+$brShowAdminLimitedUpdate =
+    $brIsClosed
+    && !$brIsApproved
+    && !$brIsCancelled
+    && $brIsAdminUser
+    && $brIsEditMode;
+
 
 // แปลงคอลัมน์ tb_transaction กลับเป็นชื่อฟิลด์ฝั่งฟอร์ม (ผกผันกับ mapping ตอนบันทึกใน register_supbrhos1.php)
 // คอลัมน์ที่รวมหลายค่าไว้ด้วย ' x ' ต้อง split กลับเป็นช่องแยก
@@ -1605,7 +1738,7 @@ $adminInfoTab = [
 <?php
 // create mode -> INSERT handler, edit mode -> UPDATE handler (pattern เดียวกับ register_suphos.php)
 ?>
-<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 
 		<div class="so-header-container">
@@ -1710,7 +1843,8 @@ $adminInfoTab = [
 				}
 
 				var companyForDocRun = companySelect.value === '2' ? '4' : '3';
-				var docTypeForDocRun = typeBrengSelect.value === '2' ? '9' : '8';
+				// ต้องตรงกับค่า default ที่ register_supbrhos1.php / register_supbrhos_edit1.php ใส่ไว้: 2 ใบยืมช่าง = BRES, นอกนั้น (1 ลูกค้า / 3 ออกบูท) = BRNP
+				var docTypeForDocRun = typeBrengSelect.value === '2' ? '8' : '10';
 				var payload = new URLSearchParams();
 				payload.append('company', companyForDocRun);
 				payload.append('doc_type', docTypeForDocRun);
@@ -1824,11 +1958,25 @@ $adminInfoTab = [
 					});
 			}
 
+			// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
+			var BR_APPROVE_REQUIRED_FIELDS = [
+				'transport_company', 'start_time', 'customer_name', 'customer_tel', 'province_name', 'address_name', 'address_send',
+				'returns_date', 'return_time_range', 'returns_time', 'returns_name', 'returns_contact', 'returns_address'
+			];
+
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
 			{
 				if (brSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				brWriteObjectiveDesHidden();
+
+				// อนุมัติเอกสารเก่าที่ยังไม่มีค่าฟิลด์บังคับรุ่นใหม่ (ช่วงเวลา, ลูกค้า, จัดส่งวันที่ ฯลฯ) ต้องทำได้
+				// จึงตรวจครบทุกดอกจันเฉพาะปุ่มบันทึกของผู้สร้าง ส่วนปุ่มอนุมัติตรวจเท่าชุดเดิม
+				var brApproveActionField = document.getElementById('br_approve_action');
+				var brRequiredOpts = (brApproveActionField && brApproveActionField.value) ? {
+					only: BR_APPROVE_REQUIRED_FIELDS
+				} : null;
+				if (!soValidateRequired(document.forms['frmMain'], brRequiredOpts)) {
 					return false;
 				}
 
@@ -1840,82 +1988,9 @@ $adminInfoTab = [
 					return false;
 				}
 
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var brApproveActionField = document.getElementById('br_approve_action');
-				if (!(brApproveActionField && brApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				brWriteObjectiveDesHidden();
-
-				if (document.frmMain.start_time.value == "") {
-
-					alert('กรุณาใส่เวลาส่ง');
-					brFocusField(document.frmMain.start_time);
-					return false;
-				}
-
-				if (document.frmMain.customer_name.value == "") {
-					alert('กรุณาใส่ชื่อลูกค้า');
-					brFocusField(document.frmMain.customer_name);
-					return false;
-				}
-
-				if (document.frmMain.customer_tel.value == "") {
-					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					brFocusField(document.frmMain.customer_tel);
-					return false;
-				}
-				if (document.frmMain.address_name.value == "") {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					brFocusField(document.frmMain.address_name);
-					return false;
-				}
-
-				if (document.frmMain.address_send.value == "") {
-					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					brFocusField(document.frmMain.address_send);
-					return false;
-				}
-				if (document.frmMain.returns_date.value == "") {
-					alert('กรุณาใส่วันที่รับคืนสินค้า');
-					brFocusField(document.frmMain.returns_date);
-					return false;
-				}
-				if (document.frmMain.return_time_range.value == "") {
-					alert('กรุณาเลือกช่วงเวลารับคืนสินค้า');
-					brFocusField(document.frmMain.return_time_range);
-					return false;
-				}
-				if (document.frmMain.returns_time.value == "") {
-					alert('กรุณาใส่เวลารับคืนสินค้า');
-					brFocusField(document.frmMain.returns_time);
-					return false;
-				}
 				if (document.frmMain.returns_date_to.value != "" && document.frmMain.returns_date_to.value < document.frmMain.returns_date.value) {
 					alert('ถึงวันที่ต้องไม่น้อยกว่าวันที่รับคืน');
 					brFocusField(document.frmMain.returns_date_to);
-					return false;
-				}
-				if (document.frmMain.returns_name.value == "") {
-					alert('กรุณาใส่ชื่อผู้ติดต่อในการรับคืนสินค้า');
-					brFocusField(document.frmMain.returns_name);
-					return false;
-				}
-				if (document.frmMain.returns_contact.value == "") {
-					alert('กรุณาใส่เบอร์โทรศัพท์ติดต่อในการรับคืนสินค้า');
-					brFocusField(document.frmMain.returns_contact);
-					return false;
-				}
-				if (document.frmMain.returns_address.value == "") {
-					alert('กรุณาใส่รายละเอียดสถานที่รับคืนสินค้า');
-					brFocusField(document.frmMain.returns_address);
-					return false;
-				}
-
-				if (document.frmMain.province_name.value == "") {
-					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					brFocusField(document.frmMain.province_name);
 					return false;
 				}
 
@@ -1994,125 +2069,212 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="type_breng">ประเภท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
-							<select name="type_breng" id="type_breng" class="so-select" required>
-								<option value="1" selected>ใบยืมลูกค้า (BRNP)</option>
-								<option value="2">ใบยืมช่าง (BRES)</option>
+							<select name="type_breng" id="type_breng" class="so-select">
+								<option value="1" selected>ใบยืมลูกค้า/สาธิต/โชว์รูม</option>
+								<option value="3">ใบยืมออกบูท</option>
+								<option value="2">ใบยืมช่าง</option>
 							</select>
 						</div>
 					</div>
-					<div class="so-field-group">
-						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-						<div class="so-select-wrapper">
-							<?php
-							if ($_SESSION['code'] == 'SS1') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS2') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS3') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM  tb_team_ss3  ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SS5') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM  tb_team_ss3 where sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'MK2') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else if ($_SESSION['code'] == 'SUP_EN') {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							} else {
-							?>
-								<select name="sale_code" id="sale_code" class="so-select" required>
-									<option value="">**Please Select**</option>
-									<?php
-									$strSQL5 = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-									$objQuery5 = mysqli_query($com, $strSQL5);
-									while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-									?>
-										<option value="<?php echo $objResuut5["sale_code"]; ?>"><?php echo $objResuut5["sale_code"]; ?> - <?php echo $objResuut5["sale_name"]; ?></option>
-									<?php
-									}
-									?>
-								</select>
-							<?php
-							}
-							?>
-						</div>
-					</div>
+				<div class="so-field-group">
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		<?php
+		// =========================================================
+		// SESSION
+		// =========================================================
+		$emid = isset($_SESSION['code'])
+			? trim($_SESSION['code'])
+			: '';
+
+		$type_login = isset($_SESSION['type_login'])
+			? trim($_SESSION['type_login'])
+			: '';
+
+		$type_login_lower = strtolower($type_login);
+		$typeLoginLower = strtolower($type_login);
+
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+
+
+		// =========================================================
+		// SALE : ล็อกเขตของตัวเอง
+		// =========================================================
+		if ($type_login_lower == 'sale') {
+		?>
+
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars(
+					$emid,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars(
+					$emid,
+					ENT_QUOTES,
+					'UTF-8'
+				); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php
+		} else {
+
+			// =====================================================
+			// ADMIN / IT / OWNER
+			// เห็นทุกเขต
+			// =====================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// ENGINEER / SUP_EN
+			// =====================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// SOL
+			// =====================================================
+			else if ($type_login_lower == 'sol') {
+
+				$strSQL5 = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =====================================================
+			// USER อื่น
+			// อิงสิทธิ์จาก user_sale_permission
+			// =====================================================
+			else {
+
+				$strSQL5 = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$objQuery5 = mysqli_query($com, $strSQL5);
+
+				if ($objQuery5) {
+
+					while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+						>
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$objResuut5['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+
+				}
+				?>
+
+			</select>
+
+		<?php
+		}
+		?>
+
+	</div>
+</div>
 				</div>
 
 				<div class="so-section-title-container" style="margin-top: 8px;">
@@ -2124,7 +2286,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="date_br">วันที่ <span style="color:red;">*</span></label>
 						<div class="calendar-wrapper">
-							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" required onchange="brUpdateReturnDate();">
+							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" onchange="brUpdateReturnDate();">
 						</div>
 					</div>
 					<div class="so-field-group">
@@ -2166,7 +2328,7 @@ $adminInfoTab = [
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="customer">ชื่อลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+							<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 						</div>
 					</div>
@@ -2233,7 +2395,7 @@ $adminInfoTab = [
 					<div class="so-field-group" style="margin-bottom: 0;">
 						<label class="so-label" for="address">ที่อยู่ลูกค้า <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input type="text" name="address" id="address" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+							<input type="text" name="address" id="address" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 						</div>
 					</div>
@@ -2259,7 +2421,7 @@ $adminInfoTab = [
 				<div class="so-field-group">
 					<label class="so-label" for="objective">วัตถุประสงค์ในการยืม <span style="color:red;">*</span></label>
 					<div class="so-select-wrapper">
-						<select name="objective" id="objective" class="so-select" required onchange="brSyncObjectiveDes();">
+						<select name="objective" id="objective" class="so-select" onchange="brSyncObjectiveDes();">
 							<option value="">เลือกวัตถุประสงค์</option>
 							<?php
 							$strSQLObjective = "SELECT objective_id, objective_name, need_des, des_label FROM tb_objective WHERE close_ckk = '0' ORDER BY number ASC";
@@ -2410,6 +2572,14 @@ $adminInfoTab = [
 
 		<!-- การ์ดแท็บ: ข้อมูลการจัดส่ง / ค่าจัดส่ง -->
 		<?php
+		
+	$canSendCs = in_array(
+	$type_login_lower,
+	['admin', 'it', 'owner','sol'],
+	true
+);
+		
+		
 		$deliveryTab = [
 			'open_fn' => 'brOpenDelTab',
 			'grid_fields' => [
@@ -2422,28 +2592,39 @@ $adminInfoTab = [
 					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
 				]],
+				['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+				['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 				// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__br.time_range ดู sql/delivery_time_range.sql)
-				['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
+				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
+				['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 					'' => 'เลือกช่วงเวลา',
 					'morning' => 'ช่วงเช้า',
 					'afternoon' => 'ช่วงบ่าย',
 					'allday' => 'ทั้งวัน',
 					'specific' => 'กำหนดเวลา',
 				]],
-				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
-				['type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
-				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
-				['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 				['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
 				// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 				['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
 				['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 				['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 			],
-			'toggle_buttons' => [
-				['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-				['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-			],
+			'toggle_buttons' => array_filter([
+    [
+        'name' => 'ref_12',
+        'id' => 'ref_12',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin','sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 			'cost_fields' => [
 				['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง', 'value' => so_saved_h($savedBr['date_ker'] ?? '')],
 				['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1', 'value' => so_saved_h($savedBr['order_refer_code'] ?? '')],
@@ -2484,7 +2665,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="customer_name">ชื่อผู้ติดต่อ <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input name="customer_name" class="so-input" type='text' id="customer_name">
+							<input name="customer_name" class="so-input" type='text' id="customer_name" placeholder="ใส่ชื่อผู้ติดต่อ">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
@@ -2515,7 +2696,7 @@ $adminInfoTab = [
 				<div class="so-field-group" style="margin-top: 16px;">
 					<label class="so-label" for="address_name">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
-						<input class="so-input" type="text" name="address_name" id="address_name">
+						<input class="so-input" type="text" name="address_name" id="address_name" placeholder="ใส่ที่อยู่ส่งสินค้า">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value=''; clearShippingAddressParts();" aria-label="ล้างค่า"></button>
 					</div>
 					<?php
@@ -2532,14 +2713,14 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="address_send">สถานที่ติดตั้งเครื่อง <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input class="so-input" type="text" name="address_send" id="address_send">
+							<input class="so-input" type="text" name="address_send" id="address_send" placeholder="ใส่ที่ติดตั้งเครื่อง">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="location_link">Location Link</label>
 						<div class="so-input-wrapper">
-							<input name="location_link" type='text' id="location_link" class="so-input">
+							<input name="location_link" type='text' id="location_link" class="so-input" placeholder="วางลิงก์ Google Maps หรือพิกัด">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
@@ -2630,40 +2811,40 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group" style="min-width: 0;">
-						<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
+						<label class="so-label" style="color: #612989;">ขนาดประตูห้อง (ซม.)</label>
 						<div style="display: flex; gap: 16px;">
-							<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-							<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 						</div>
 					</div>
 					<div class="so-field-group" style="min-width: 0;">
-						<label class="so-label" style="color: #612989;">ขนาดบันได</label>
+						<label class="so-label" style="color: #612989;">ขนาดบันได (ซม.)</label>
 						<div style="display: flex; gap: 16px;">
-							<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-							<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="stair_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="stair_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 						</div>
 					</div>
 				</div>
 
 				<div class="so-grid-3" style="margin-top: 16px;">
 					<div class="so-field-group" style="min-width: 0;">
-						<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
+						<label class="so-label" style="color: #612989;">ประตูลิฟต์ (ซม.)</label>
 						<div style="display: flex; gap: 16px;">
-							<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-							<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="elev_door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+							<input name="elev_door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 						</div>
 					</div>
 					<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
-						<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
+						<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์ (ซม.)</label>
 						<div style="display: flex; gap: 16px;">
-							<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-							<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-							<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+							<input name="elev_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+							<input name="elev_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+							<input name="elev_depth" type="text" class="so-input" placeholder="ลึก" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
 						</div>
 					</div>
 					<div class="so-field-group" style="min-width: 0;">
-						<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์</label>
-						<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+						<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์ (กก.)</label>
+						<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 					</div>
 				</div>
 
@@ -2691,7 +2872,7 @@ $adminInfoTab = [
 
 				<div class="so-field-group" style="margin-top: 16px;">
 					<label class="so-label" style="color: #612989;">หมายเหตุเพิ่มเติม</label>
-					<input name="addr_note" type="text" class="so-input" placeholder="lorem ipsum" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+					<input name="addr_note" type="text" class="so-input" placeholder="ใส่หมายเหตุ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 				</div>
 			</div>
 

@@ -12,4 +12,4 @@
 
 	
 <?php // include('line_story.php'); ?>
-<?php include('grddd_all.php'); ?>
+<?php //include('grddd_all.php'); ?>

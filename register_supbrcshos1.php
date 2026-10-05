@@ -106,7 +106,7 @@ if (!function_exists('cs_dept_comment_items_from_post')) {
 		}
 
 		$items = array();
-		$allowedDepartments = array(1, 2, 3, 4);
+		$allowedDepartments = array(1, 2, 3, 4, 5);
 		foreach ($decodedItems as $index => $item) {
 			$departmentId = isset($item["department_id"]) ? (int)$item["department_id"] : 0;
 			$message = isset($item["message"]) ? trim($item["message"]) : "";
@@ -375,6 +375,45 @@ $slip5 = "slip5" . "_" . $ref_id . "_" . round(microtime(true)) . '.' . end($tem
 move_uploaded_file($_FILES["slip5"]["tmp_name"], "brsc/" . $slip5);
 }
 
+	
+	// =========================================================
+// APPROVER / SUBMIT PERMISSION
+// =========================================================
+
+$type_login = trim((string)($_SESSION['type_login'] ?? ''));
+$type_login_lower = strtolower($type_login);
+
+/*
+ * กลุ่มที่กด Submit แล้วถือว่าเป็นผู้อนุมัติเอง
+ *
+ * Sup_sale
+ * Owner
+ * Sup_en
+ */
+$isDirectApprover = in_array(
+    $type_login_lower,
+    array(
+        'sup_sale',
+        'owner',
+        'sup_en'
+    ),
+    true
+);
+
+if ($isDirectApprover) {
+
+    // ผู้สร้างเอกสารเป็นผู้มีสิทธิ์อนุมัติเอง
+    $approve  = $_SESSION['name'] ?? '';
+    
+
+} else {
+
+    $approve  = '';
+} 
+	
+	
+	
+	
 if($_SESSION['name']=='บรรจบพร' or $_SESSION['name']=='สุภัสสร' or $_SESSION['name']=='พิมลพร' or $_SESSION['name']=='ขนิษฐา' or $_SESSION['name']=='พิมพ์ชนก'){
 $adm_ckk = '1';
 }else{
@@ -393,9 +432,9 @@ try {
 
 
 $save="insert into hos__consig
-(company,ref_id,date_save,customer,customer_id,address,sale_comment,objective,objective_des,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,slip1,slip2,slip3,slip4,slip5,iv_no,iv_date,remark_cancel,que_ckk,send_cs,date_ker,order_refer_code,order_refer_code1,ker_bath,returns,returns_date,returns_time,return_date_bet,returns_name,returns_contact,returns_address,send_sup,send_supname,send_supdate)
+(company,ref_id,date_save,customer,customer_id,address,sale_comment,objective,objective_des,status_doc,delivery_name,delivery_type,delivery_date,delivery_time,delivery_address,delivery_contact,delivery_tel,date_send_key,sale_date,sale,sale_code,add_date,add_by,slip1,slip2,slip3,slip4,slip5,iv_no,iv_date,remark_cancel,que_ckk,send_cs,date_ker,order_refer_code,order_refer_code1,ker_bath,returns,returns_date,returns_time,return_date_bet,returns_name,returns_contact,returns_address,approve)
 values
-('".$company."','".$ref_id."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$objective."','".$objective_des."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by_session."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$iv_date."','".$remark_cancel."','".$que_ckk."','".$send_cs."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$returns."','".$returns_date."','".$returns_time."','".$return_date_bet."','".$returns_name."','".$returns_contact."','".$returns_address."','".$send_sup_val."','".$send_supname_val."','".$send_supdate_val."')";
+('".$company."','".$ref_id."','".$date_br."','".$customer."','".$customer_id."','".$address."','".$sale_comment."','".$objective."','".$objective_des."','".$status_doc."','".$delivery_name."','".$delivery_type."','".$delivery_date."','".$delivery_time."','".$delivery_address."','".$delivery_contact."','".$delivery_tel."','".$date_send_key."','".$sale_date."','".$sale."','".$sale_code."','".$add_date."','".$add_by_session."','".$slip1."','".$slip2."','".$slip3."','".$slip4."','".$slip5."','".$iv_no."','".$iv_date."','".$remark_cancel."','".$que_ckk."','".$send_cs."','".$date_ker."','".$order_refer_code."','".$order_refer_code1."','".$ker_bath."','".$returns."','".$returns_date."','".$returns_time."','".$return_date_bet."','".$returns_name."','".$returns_contact."','".$returns_address."','".$approve."')";
 
 
 $qsave=mysqli_query($conn,$save);

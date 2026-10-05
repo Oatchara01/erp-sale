@@ -104,11 +104,10 @@
 		if (navbarUserTrigger && navbarUserDropdown) {
 			navbarUserTrigger.addEventListener("click", function (e) {
 				e.stopPropagation();
-				navbarUserDropdown.classList.toggle("open");
+				var isOpen = navbarUserDropdown.classList.toggle("open");
 				var caret = navbarUserTrigger.querySelector(".navbar-caret");
 				if (caret) {
-					caret.classList.toggle("fa-angle-up");
-					caret.classList.toggle("fa-angle-down");
+					caret.classList.toggle("open", isOpen);
 				}
 			});
 			document.addEventListener("click", function (e) {
@@ -116,8 +115,7 @@
 					navbarUserDropdown.classList.remove("open");
 					var caret = navbarUserTrigger.querySelector(".navbar-caret");
 					if (caret) {
-						caret.classList.remove("fa-angle-up");
-						caret.classList.add("fa-angle-down");
+						caret.classList.remove("open");
 					}
 				}
 			});

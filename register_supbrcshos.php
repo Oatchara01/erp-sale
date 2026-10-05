@@ -2,6 +2,14 @@
 include('dbconnect_sale.php'); ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
 
+<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
@@ -980,7 +988,16 @@ if ($csPrefillSource !== null) {
 		     see plan "Add tab UI (ข้อมูลเอกสาร / Admin) using register_supbrhos.php as reference". -->
 		<div class="so-tabs-container">
 			<button type="button" class="so-tab-btn active" onclick="switchBrMainTab(this, 'tab-document-info')">ข้อมูลเอกสาร</button>
-			<button type="button" class="so-tab-btn" onclick="switchBrMainTab(this, 'tab-admin-info')">Admin</button>
+			
+			<?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
+    <button
+        type="button"
+        class="so-tab-btn"
+        onclick="switchBrMainTab(this, 'tab-admin-info')"
+    >
+        Admin
+    </button>
+<?php } ?>
 		</div>
 
 		<div id="tab-document-info" class="so-tab-content active">
@@ -1000,39 +1017,162 @@ if ($csPrefillSource !== null) {
 					</div>
 
 					<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
-						<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-						<div class="so-select-wrapper">
-							<?php
-							// mirror ของ register_supbrhos.php:2029-2137 — ทีมขายตาม $_SESSION['code']
-							if ($_SESSION['code'] == 'SS1') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-							} else if ($_SESSION['code'] == 'SS2') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-							} else if ($_SESSION['code'] == 'SS3') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
-							} else if ($_SESSION['code'] == 'SS5') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-							} else if ($_SESSION['code'] == 'MK2') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-							} else if ($_SESSION['code'] == 'SUP_EN') {
-								$csSaleTeamSql = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-							} else {
-								$csSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-							}
-							?>
-							<select name="sale_code" id="sale_code" class="so-select" required>
-								<option value="">**Please Select**</option>
-								<?php
-								$csSaleTeamQuery = mysqli_query($com, $csSaleTeamSql);
-								while ($csSaleTeamRow = mysqli_fetch_array($csSaleTeamQuery)) {
-								?>
-									<option value="<?php echo $csSaleTeamRow["sale_code"]; ?>"><?php echo $csSaleTeamRow["sale_code"]; ?> - <?php echo $csSaleTeamRow["sale_name"]; ?></option>
-								<?php
-								}
-								?>
-							</select>
-						</div>
-					</div>
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		
+
+		<?php if ($type_login_lower == 'sale') { ?>
+
+			<!-- Sale ล็อกเขตของตัวเอง -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php } else {
+
+			// =========================================================
+			// Admin / IT / Owner เห็นทั้งหมด
+			// =========================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$csSaleTeamSql = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// Engineer / SUP_EN
+			// =========================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$csSaleTeamSql = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// SOL
+			// =========================================================
+			else if ($type_login_lower == 'sol') {
+
+				$csSaleTeamSql = "
+					SELECT sale_code, sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// User อื่น ดูสิทธิ์จาก user_sale_permission
+			// =========================================================
+			else {
+
+				$csSaleTeamSql = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+					WHERE p.em_id = '".$emid_safe."'
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+		?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$csSaleTeamQuery = mysqli_query($com, $csSaleTeamSql);
+
+				if ($csSaleTeamQuery) {
+
+					while ($csSaleTeamRow = mysqli_fetch_assoc($csSaleTeamQuery)) {
+				?>
+
+						<option
+							value="<?php echo htmlspecialchars(
+								$csSaleTeamRow['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>"
+						>
+							<?php echo htmlspecialchars(
+								$csSaleTeamRow['sale_code'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+							-
+							<?php echo htmlspecialchars(
+								$csSaleTeamRow['sale_name'],
+								ENT_QUOTES,
+								'UTF-8'
+							); ?>
+						</option>
+
+				<?php
+					}
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 					<label class="so-toggle-pill so-doc-info-line-toggle">
 						<input type="checkbox" name="que_ckk" id="que_ckk" value="1">
@@ -1283,28 +1423,39 @@ if ($csPrefillSource !== null) {
 					// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 					'' => 'เลือกบริษัทขนส่ง',
 				]],
+				['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+				['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 				// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__consig.time_range ดู sql/delivery_time_range.sql)
-				['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
+				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
+				['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 					'' => 'เลือกช่วงเวลา',
 					'morning' => 'ช่วงเช้า',
 					'afternoon' => 'ช่วงบ่าย',
 					'allday' => 'ทั้งวัน',
 					'specific' => 'กำหนดเวลา',
 				]],
-				// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
-				['type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
-				// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
-				['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 				['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
 				// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 				['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
 				['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 				['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 			],
-			'toggle_buttons' => [
-				['name' => 'ref_12', 'id' => 'ref_12', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-				['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-			],
+			'toggle_buttons' => array_filter([
+    [
+        'name' => 'ref_12',
+        'id' => 'ref_12',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 			'cost_fields' => [
 				['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง', 'value' => so_saved_h($savedBr['date_ker'] ?? '')],
 				['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1', 'value' => so_saved_h($savedBr['order_refer_code'] ?? '')],

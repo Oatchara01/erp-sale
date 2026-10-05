@@ -407,7 +407,85 @@ include "dbconnect_sale.php";
 			date_default_timezone_set("Asia/Bangkok");
 			$emid = isset($_SESSION['code']) ? $_SESSION['code'] : '';
 
-			$sddd = "1";
+				/* =========================================================
+					   สิทธิ์การมองเห็นเอกสาร
+					   ========================================================= */
+
+					$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+					$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+					$emid_safe = mysqli_real_escape_string($conn, $emid);
+					$type_login_lower = strtolower($type_login);
+
+					$sddd = "1";
+
+					/* IT / Admin / Owner : เห็นเอกสารทั้งหมด */
+					if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
+
+						$sddd = "1";
+
+					/* Sale : เห็นเฉพาะ sale_code ของตัวเอง */
+					} else if ($type_login_lower == 'sale') {
+
+						$sddd = "sale_code = '" . $emid_safe . "'";
+
+					/* Engineer / SUP_EN : เห็นเฉพาะเขต EN */
+					} else if ($emid == 'SUP_EN' || $type_login_lower == 'engineer') {
+
+						$sddd = "sale_code LIKE '%EN%'";
+
+					/* SOL : ใช้สิทธิ์กลุ่ม SOL เดิม */
+					} else if ($type_login_lower == 'sol') {
+
+						$sddd = "sale_code IN (
+							'SOL1','SOL2','SOL3','SOL4','SOL5',
+							'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+						)";
+
+					/* User อื่น ๆ : อ่านสิทธิ์จาก user_sale_permission */
+					} else {
+
+						$sql_permission = "
+							SELECT sale_code
+							FROM user_sale_permission
+							WHERE em_id = '" . $emid_safe . "'
+						";
+
+						$query_permission = mysqli_query($conn, $sql_permission);
+
+						$sale_permission = array();
+
+						if ($query_permission) {
+							while ($row_permission = mysqli_fetch_assoc($query_permission)) {
+
+								if (
+									isset($row_permission['sale_code']) &&
+									trim($row_permission['sale_code']) != ''
+								) {
+
+									$sale_permission[] =
+										"'" .
+										mysqli_real_escape_string(
+											$conn,
+											trim($row_permission['sale_code'])
+										) .
+										"'";
+								}
+							}
+						}
+
+						if (!empty($sale_permission)) {
+
+							$sddd = "sale_code IN (" . implode(',', $sale_permission) . ")";
+
+						} else {
+
+							/*
+							 * ไม่มีสิทธิ์ในตาราง = ไม่ให้เห็นเอกสาร
+							 */
+							$sddd = "1=0";
+						}
+					}
 
 			$Keyword = isset($_GET['Keyword']) ? $_GET['Keyword'] : '';
 			$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : '';
@@ -486,6 +564,7 @@ include "dbconnect_sale.php";
 									<label class="so-label">สถานะการอนุมัติ</label>
 									<select name="status_doc" id="modal_status_doc" class="so-select">
 										<option value="">Select</option>
+										<option value="Draft" <?php if ($status_doc == 'Draft') echo 'selected'; ?>>Draft</option>
 										<option value="รอหัวหน้า" <?php if ($status_doc == 'รอหัวหน้า' || $status_doc == 'Request') echo 'selected'; ?>>รอหัวหน้า</option>
 										<option value="ส่งกลับ" <?php if ($status_doc == 'ส่งกลับ') echo 'selected'; ?>>ส่งกลับ</option>
 										<option value="รอผู้บริหาร" <?php if ($status_doc == 'รอผู้บริหาร') echo 'selected'; ?>>รอผู้บริหาร</option>
@@ -498,8 +577,9 @@ include "dbconnect_sale.php";
 									<label class="so-label">ประเภทใบยืม</label>
 									<select name="type_br" id="modal_type_br" class="so-select">
 										<option value="">Select</option>
-										<option value="1" <?php if ($type_br == '1') echo 'selected'; ?>>ใบยืมลูกค้า</option>
-										<option value="2" <?php if ($type_br == '2') echo 'selected'; ?>>ใบยืมพนักงาน</option>
+										<option value="1" <?php if ($type_br == '1') echo 'selected'; ?>>ใบยืมลูกค้า/สาธิต/โชว์รูม</option>
+										<option value="3" <?php if ($type_br == '3') echo 'selected'; ?>>ใบยืมออกบูท</option>
+										<option value="2" <?php if ($type_br == '2') echo 'selected'; ?>>ใบยืมช่าง</option>
 									</select>
 								</div>
 							</div>
@@ -507,39 +587,154 @@ include "dbconnect_sale.php";
 							<!-- Row 3: Sales Zone & Loan Status -->
 							<div class="so-form-row">
 								<div>
-									<label class="so-label">เขตการขาย</label>
-									<select name="sale_code" id="modal_sale_code" class="so-select">
-										<option value="">Select</option>
-										<?php
-										if ($emid == 'SS1') {
-											$strSQL5 = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-										} else if ($emid == 'SS2') {
-											$strSQL5 = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-										} else if ($emid == 'SS3') {
-											$strSQL5 = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
-										} else if ($emid == 'SS5') {
-											$strSQL5 = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-										} else if ($emid == 'MK2') {
-											$strSQL5 = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-										} else if ($emid == 'SUP_EN') {
-											$strSQL5 = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-										} else {
-											$strSQL5 = "SELECT * FROM tb_team_all ORDER BY sale_code ASC";
-										}
-										$objQuery5 = mysqli_query($com, $strSQL5);
-										if ($objQuery5) {
-											while ($objResuut5 = mysqli_fetch_array($objQuery5)) {
-												$selected = ($sale_code == $objResuut5["sale_code"]) ? 'selected' : '';
-										?>
-												<option value="<?php echo htmlspecialchars($objResuut5["sale_code"]); ?>" <?php echo $selected; ?>>
-													<?php echo htmlspecialchars($objResuut5["sale_code"]); ?> - <?php echo htmlspecialchars($objResuut5["sale_name"]); ?>
-												</option>
-										<?php
-											}
-										}
-										?>
-									</select>
-								</div>
+	<label class="so-label">เขตการขาย</label>
+
+	<?php
+	$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+	$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+	$type_login_lower = strtolower($type_login);
+
+	$emid_safe = mysqli_real_escape_string($com, $emid);
+	?>
+
+	<?php if ($type_login_lower == 'sale') { ?>
+
+		<!-- Sale ล็อกเขตตัวเอง -->
+		<input
+			type="hidden"
+			name="sale_code"
+			id="modal_sale_code"
+			value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+		>
+
+		<input
+			type="text"
+			class="so-select"
+			value="<?php echo htmlspecialchars($emid, ENT_QUOTES, 'UTF-8'); ?>"
+			readonly
+			style="background:#f5f5f5; cursor:not-allowed;"
+		>
+
+	<?php } else { ?>
+
+		<?php
+
+		// Admin / IT / Owner เห็นทั้งหมด
+		if (
+			$type_login_lower == 'admin' ||
+			$type_login_lower == 'it' ||
+			$type_login_lower == 'owner'
+		) {
+
+			$strSQL5 = "
+				SELECT sale_code, sale_name
+				FROM tb_team_adm
+				ORDER BY sale_code ASC
+			";
+
+		}
+
+		// Engineer / SUP_EN
+		else if (
+			$emid == 'SUP_EN' ||
+			$type_login_lower == 'engineer'
+		) {
+
+			$strSQL5 = "
+				SELECT sale_code, sale_name
+				FROM tb_team_adm
+				WHERE sale_code LIKE '%EN%'
+				ORDER BY sale_code ASC
+			";
+
+		}
+
+		// SOL
+		else if ($type_login_lower == 'sol') {
+
+			$strSQL5 = "
+				SELECT sale_code, sale_name
+				FROM tb_team_adm
+				WHERE sale_code IN (
+					'SOL1','SOL2','SOL3','SOL4','SOL5',
+					'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+				)
+				ORDER BY sale_code ASC
+			";
+
+		}
+
+		// User อื่น ดูสิทธิ์จาก user_sale_permission
+		else {
+
+			$strSQL5 = "
+				SELECT DISTINCT
+					t.sale_code,
+					t.sale_name
+				FROM tb_team_adm t
+
+				INNER JOIN user_sale_permission p
+					ON p.sale_code COLLATE utf8mb3_general_ci
+					 =
+					   t.sale_code COLLATE utf8mb3_general_ci
+
+				WHERE p.em_id = '".$emid_safe."'
+
+				ORDER BY t.sale_code ASC
+			";
+
+		}
+		?>
+
+		<select name="sale_code" id="modal_sale_code" class="so-select">
+			<option value="">Select</option>
+
+			<?php
+			$objQuery5 = mysqli_query($com, $strSQL5);
+
+			if ($objQuery5) {
+
+				while ($objResuut5 = mysqli_fetch_assoc($objQuery5)) {
+
+					$selected = (
+						isset($sale_code) &&
+						$sale_code == $objResuut5['sale_code']
+					)
+						? 'selected'
+						: '';
+			?>
+
+					<option
+						value="<?php echo htmlspecialchars(
+							$objResuut5['sale_code'],
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>"
+						<?php echo $selected; ?>
+					>
+						<?php echo htmlspecialchars(
+							$objResuut5['sale_code'],
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>
+						-
+						<?php echo htmlspecialchars(
+							$objResuut5['sale_name'],
+							ENT_QUOTES,
+							'UTF-8'
+						); ?>
+					</option>
+
+			<?php
+				}
+			}
+			?>
+
+		</select>
+
+	<?php } ?>
+
+</div>
 								<div>
 									<label class="so-label">สถานะใบยืม</label>
 									<select name="status_br" id="modal_status_br" class="so-select">
@@ -694,7 +889,7 @@ include "dbconnect_sale.php";
 									// Sup อนุมัติแล้ว รอผู้บริหารอนุมัติ (status_doc ยังเป็น 'Request' แต่ send_dm='1')
 									$status_class = 'pending-exec';
 									$status_text = 'รอผู้บริหาร';
-								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า' || $objResult["status_doc"] == 'Draft') {
+								} else if ($objResult["status_doc"] == 'Request' || $objResult["status_doc"] == 'รอหัวหน้า') {
 									$status_class = 'pending-mgr';
 									$status_text = 'รอหัวหน้า';
 								} else if ($objResult["status_doc"] == 'ส่งกลับ') {

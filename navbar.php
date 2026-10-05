@@ -11,7 +11,7 @@ $userSurname = isset($_SESSION['surname']) ? htmlspecialchars($_SESSION['surname
 <div id="top-navbar">
     <div class="navbar-left">
         <button type="button" id="navbar-hamburger" class="navbar-btn" title="Toggle Sidebar">
-            <i class="fa fa-bars"></i>
+            <img src="img/icons/burger.svg" alt="" width="20" height="16">
         </button>
         <a href="main_suphos.php" class="navbar-logo">
             <img src="img/allwell_logo.png" onerror="this.src='allwell.png'" alt="Logo">
@@ -21,16 +21,16 @@ $userSurname = isset($_SESSION['surname']) ? htmlspecialchars($_SESSION['surname
 
     <div class="navbar-right">
         <button type="button" class="navbar-btn navbar-notification-btn" title="Notifications">
-            <i class="far fa-bell"></i>
+            <img src="img/icons/notification.svg" alt="" width="20" height="20">
         </button>
 
         <div class="navbar-user-container">
             <button type="button" class="navbar-user-btn" id="navbar-user-trigger">
                 <div class="navbar-avatar">
-                    <i class="fa fa-user"></i>
+                    <img src="img/icons/user.svg" alt="" width="32" height="32">
                 </div>
                 <span class="navbar-username"><?php echo $userName; ?></span>
-                <i class="fa fa-angle-down navbar-caret"></i>
+                <img src="img/icons/arrow_down.svg" alt="" width="12" height="6" class="navbar-caret">
             </button>
             <div class="navbar-dropdown" id="navbar-user-dropdown">
                 <div class="navbar-dropdown-header">

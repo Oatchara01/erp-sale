@@ -4,14 +4,20 @@ define('FPDF_FONTPATH','font/');
 require('fpdf.php');
 $deposit_code=$_GET["deposit_code"];
 include "dbconnect.php";
+include "dbconnect_acc.php";
 
-$strSQL = "SELECT tb_deposit.* ,tb_payment.* FROM (tb_deposit LEFT JOIN tb_payment ON tb_deposit.payment =tb_payment.payment_ID) WHERE deposit_code = '".$deposit_code."' ";
+$strSQL = "SELECT * FROM tb_deposit  WHERE deposit_code = '".$deposit_code."' ";
 $objQuery = mysqli_query($conn,$strSQL)or die ("Error Query [".$strSQL."]");;
 $objResult = mysqli_fetch_array($objQuery);
 
-$strSQL1 = "SELECT * FROM tb_transaction WHERE deposit_id = '".$deposit_code."' ";
+$strSQL1 = "SELECT * FROM tb_transaction WHERE ref_id = '".$deposit_code."' ";
 $objQuery1 = mysqli_query($conn,$strSQL1)or die ("Error Query [".$strSQL1."]");;
 $objResult1 = mysqli_fetch_array($objQuery1);
+
+$strSQL2 = "SELECT * FROM tb_bank WHERE id = '".$objResult["payment"]."' ";
+$objQuery2 = mysqli_query($code,$strSQL2)or die ("Error Query [".$strSQL2."]");;
+$objResult2 = mysqli_fetch_array($objQuery2);
+
 //echo $strSQL;
 
 date_default_timezone_set("Asia/Bangkok");
@@ -69,7 +75,7 @@ $unit8 =$objResult["unit_price8"];
 $unit9 =$objResult["unit_price9"];
 $unit10 =$objResult["unit_price10"];
 $iv_no = $objResult["iv_no"];
-$payment_name =$objResult["payment_name"];
+$payment_name =$objResult2["pay_in"];
 $sum_unit =$objResult["sum_unit_price"];
 
 $unit_price1 = number_format( $unit1,2)."";

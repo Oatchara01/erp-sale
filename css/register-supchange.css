@@ -61,6 +61,25 @@
 #ptc_product_table th:nth-child(8),
 #ptc_product_table td:nth-child(8) { width: 90px; }
 
+/* ปุ่มไอคอนพื้นขาวมุมมน 34x34px เงา — สไตล์เดียวกับ .action-icon ของ product_salehos.php */
+#ptc_product_table .cs-row-edit-btn,
+#ptc_product_table .so-product-remove-btn {
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 8px;
+	background: #FFFFFF;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+	transition: box-shadow 0.2s ease;
+}
+
+#ptc_product_table .cs-row-edit-btn:hover,
+#ptc_product_table .so-product-remove-btn:hover {
+	background: #FFFFFF;
+	border: 0;
+	box-shadow: 0 2px 10px rgba(97, 41, 137, 0.28);
+}
+
 /* Row that has a product filled in but no แลกเข้า/แลกออก entered yet: numbers
    render muted per Figma (node 599:3876, row 3) until quantities are typed. */
 #ptc_product_table .so-product-row.is-pending .cs-cell-pill,
@@ -68,4 +87,15 @@
 #ptc_product_table .so-product-row.is-pending .cs-cell-pill .so-input::placeholder,
 #ptc_product_table .so-product-row.is-pending input[readonly] {
 	color: #9b9b9b;
+}
+
+/* กล่องแจ้งตอนยังไม่มีรายการสินค้า (สไตล์เดียวกับ .so-product-empty-state ของ register-supbrhos.css) */
+.so-product-empty-state {
+	padding: 28px 16px;
+	text-align: center;
+	font-size: 14px;
+	color: #8E8B94;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
 }

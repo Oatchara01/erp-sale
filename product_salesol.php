@@ -1,0 +1,1809 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
+    <script type="text/javascript" src="js/autocomplete.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof Swal === 'undefined') {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+            document.head.appendChild(script);
+        }
+    </script>
+    <style>
+        /* Custom SweetAlert2 Delete Popup (Figma style 648x319) */
+        .figma-delete-popup {
+            width: min(525px, 94vw) !important;
+            min-height: 319px !important;
+            padding: 40px 32px 32px !important;
+            border-radius: 24px !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            box-sizing: border-box !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .figma-delete-icon {
+            border: none !important;
+            margin: 0 auto 20px !important;
+            width: 80px !important;
+            height: 80px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .figma-delete-title {
+            font-size: 22px !important;
+            font-weight: 600 !important;
+            color: #1C1B1F !important;
+            margin: 0 0 10px 0 !important;
+            padding: 0 !important;
+        }
+
+        .figma-delete-html {
+            font-size: 15px !important;
+            color: #8E8B94 !important;
+            line-height: 1.5 !important;
+        }
+
+        .figma-delete-actions {
+            display: flex !important;
+            gap: 16px !important;
+            justify-content: center !important;
+            width: 100% !important;
+            max-width: 320px !important;
+            margin: 0 auto !important;
+        }
+
+        .figma-delete-confirm-btn {
+            flex: 1 !important;
+            height: 44px !important;
+            border-radius: 22px !important;
+            border: none !important;
+            background-color: #EF5350 !important;
+            /* Figma Red */
+            color: #ffffff !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 10px rgba(239, 83, 80, 0.2) !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+
+        .figma-delete-confirm-btn:hover {
+            background-color: #e53935 !important;
+        }
+
+        .figma-delete-confirm-btn:active {
+            transform: scale(0.98) !important;
+        }
+
+        .figma-delete-cancel-btn {
+            flex: 1 !important;
+            height: 44px !important;
+            border-radius: 22px !important;
+            border: 1px solid #EDE9F0 !important;
+            background-color: #F5F6F8 !important;
+            color: #3b3b3b !important;
+            font-family: 'Prompt', 'Inter', sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s, transform 0.1s !important;
+        }
+
+        .figma-delete-cancel-btn:hover {
+            background-color: #e8e9eb !important;
+            color: #1c1b1f !important;
+        }
+
+        .figma-delete-cancel-btn:active {
+            transform: scale(0.98) !important;
+        }
+    </style>
+</head>
+
+<script type="text/javascript">
+    function ck_frm() {
+        var ck = document.getElementById('ckk');
+        if (ck.checked == true) {
+            document.getElementById('frm_txt').style.display = "";
+        } else {
+            document.getElementById('frm_txt').style.display = "none";
+        }
+
+    }
+
+
+    function ck_frm1() {
+        var ck = document.getElementById('ckk1');
+        if (ck.checked == true) {
+            document.getElementById('frm_txt1').style.display = "";
+        } else {
+            document.getElementById('frm_txt1').style.display = "none";
+        }
+
+    }
+
+    function ck_frm2() {
+        var ck = document.getElementById('ckk2');
+        if (ck.checked == true) {
+            document.getElementById('frm_txt2').style.display = "";
+        } else {
+            document.getElementById('frm_txt2').style.display = "none";
+        }
+
+    }
+
+    function ck_frm3() {
+        var ck = document.getElementById('ckk3');
+        if (ck.checked == true) {
+            document.getElementById('frm_txt3').style.display = "";
+        } else {
+            document.getElementById('frm_txt3').style.display = "none";
+        }
+
+    }
+
+    function ck_frm4() {
+        var ck = document.getElementById('ckk4');
+        if (ck.checked == true) {
+            document.getElementById('frm_txt4').style.display = "";
+        } else {
+            document.getElementById('frm_txt4').style.display = "none";
+        }
+
+    }
+</script>
+
+
+
+<script language="JavaScript">
+    var HttPRequest = false;
+
+    function doCallAjax(product_code, product_id, product_name, unit_name, product_price, discount_unit, warranty) {
+        HttPRequest = false;
+        if (window.XMLHttpRequest) { // Mozilla, Safari,...
+            HttPRequest = new XMLHttpRequest();
+
+            if (HttPRequest.overrideMimeType) {
+                HttPRequest.overrideMimeType('text/html');
+            }
+        } else if (window.ActiveXObject) { // IE
+            try {
+                HttPRequest = new ActiveXObject("Msxml2.XMLHTTP");
+            } catch (e) {
+                try {
+                    HttPRequest = new ActiveXObject("Microsoft.XMLHTTP");
+                } catch (e) {}
+            }
+        }
+
+        if (!HttPRequest) {
+            alert('Cannot create XMLHTTP instance');
+            return false;
+        }
+        var url = 'data_product_hos1.php';
+        var pmeters = "product_code=" + encodeURIComponent(document.getElementById(product_code).value) +
+            "&type_company=" + encodeURIComponent(getSelectedTypeCompany()) +
+            "&format=json";
+        HttPRequest.open('POST', url, true);
+
+        HttPRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        HttPRequest.setRequestHeader("Content-length", pmeters.length);
+        HttPRequest.setRequestHeader("Connection", "close");
+        HttPRequest.send(pmeters);
+
+        HttPRequest.onreadystatechange = function() {
+            if (HttPRequest.readyState == 4) // Return Request
+            {
+                var myProduct = HttPRequest.responseText;
+
+                if (myProduct.trim() != "") {
+                    try {
+                        var product = JSON.parse(myProduct);
+
+                        if (product.found === false) {
+                            alert('ไม่พบรหัสสินค้า "' + document.getElementById(product_code).value + '" ในระบบ กรุณาตรวจสอบรหัสสินค้าอีกครั้ง');
+                            document.getElementById(product_code).value = '';
+                            document.getElementById(product_id).value = '';
+                            return;
+                        }
+
+                        document.getElementById(product_id).value = product.product_ID;
+                        // Set hidden input and label span for product_name
+                        document.getElementById(product_name).value = product.sol_name;
+                        var labelEl = document.getElementById(product_name.replace('product_name', 'product_name_label'));
+                        if (labelEl) labelEl.textContent = product.sol_name;
+                        document.getElementById(unit_name).value = product.unit_name;
+                        document.getElementById(product_price).value = product.sol_price;
+                        document.getElementById(discount_unit).value = product.discount;
+                        document.getElementById(warranty).value = product.war_hc;
+
+                        // Extract row index and set warranty unit
+                        var rowIdx = parseInt(product_price.replace('product_price', ''));
+                        var remarkInput = document.getElementById('remark_hc' + rowIdx);
+                        if (remarkInput) {
+                            remarkInput.value = product.remark_hc || '';
+                        }
+                        var unit = 'ปี';
+                        if (product.vvv) {
+                            var cleanVvv = product.vvv.trim();
+                            var parts = cleanVvv.split(/\s+/);
+                            if (parts.length > 1) {
+                                unit = parts[parts.length - 1];
+                            } else if (parts.length === 1 && isNaN(cleanVvv)) {
+                                unit = cleanVvv;
+                            }
+                        }
+                        var unitInput = document.getElementById('warranty_unit' + rowIdx);
+                        if (unitInput) {
+                            unitInput.value = unit;
+                        }
+                        if (!isNaN(rowIdx) && typeof updateRowTotal === 'function') {
+                            var rowDeletedEl = document.getElementById('row_deleted' + rowIdx);
+                            if (rowDeletedEl) rowDeletedEl.value = '0';
+                            // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
+                            // เพราะแถวนี้อาจถูก reuse หลังลบสินค้าเดิมแล้วเลือกสินค้าใหม่ทันที
+                            // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
+                            // Format the price and discount fields
+                            var priceEl = document.getElementById(product_price);
+                            var discEl = document.getElementById(discount_unit);
+                            if (typeof formatNumberInput === 'function') {
+                                if (priceEl) formatNumberInput(priceEl);
+                                if (discEl) formatNumberInput(discEl);
+                            }
+                            updateRowTotal(rowIdx);
+                        }
+                        if (typeof calculateSummary === 'function') {
+                            calculateSummary();
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse JSON response:", e, myProduct);
+                    }
+                }
+            }
+        }
+    }
+
+
+    function chkNumber(ele, evt)
+
+    {
+
+        var keyCode = evt && (evt.which || evt.keyCode);
+        if (!keyCode) return true;
+        var vchar = String.fromCharCode(keyCode);
+        if ((vchar < '0' || vchar > '9') && (vchar != '.')) return false;
+        ele.onKeyPress = vchar;
+    }
+</script>
+<script src="dist/jautocalc.js"></script>
+</head>
+
+<body>
+
+    <style>
+        /* New styles for the modern product list */
+        .so-product-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .so-product-title-text {
+            font-size: 20px;
+            font-weight: 500;
+            color: #3B3B3B;
+        }
+
+        .so-product-count {
+            font-size: 14px;
+            color: #8E8B94;
+        }
+
+        .so-product-summary {
+            display: flex;
+            justify-content: space-between;
+            background-color: #F4F3F7;
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .so-product-summary-col {
+            flex: 1;
+            border-right: 1px solid #D9D9D9;
+        }
+
+        .so-product-summary-col:last-child {
+            border-right: none;
+        }
+
+        .so-product-table-wrap {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .so-product-summary {
+                flex-wrap: wrap;
+                text-align: left;
+                gap: 12px 0;
+            }
+
+            .so-product-summary-col {
+                flex: 1 1 50%;
+                border-right: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .so-product-summary-col {
+                flex: 1 1 100%;
+                border-bottom: 1px solid #E5DFEC;
+                padding-bottom: 10px;
+            }
+
+            .so-product-summary-col:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
+        }
+
+        .so-summary-label {
+            font-size: 16px;
+            color: #8E8B94;
+            margin-bottom: 8px;
+        }
+
+        .so-summary-value {
+            font-size: 24px;
+            font-weight: 400;
+            color: #333333;
+        }
+
+        .so-summary-value-net {
+            font-size: 28px;
+            font-weight: 400;
+            color: #612989;
+        }
+
+        .pf-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #ffffff;
+            border: 1px solid #EBEBEB;
+            border-radius: 24px;
+            height: 44px;
+            padding: 0 16px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .pf-search-bar i {
+            color: #A098AE;
+            font-size: 16px;
+        }
+
+        .pf-search-bar input {
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+            font-family: 'Prompt', sans-serif;
+            font-size: 14px;
+            color: #2D2533;
+            width: 100%;
+        }
+
+        .so-product-row.dragging {
+            opacity: 0.4;
+        }
+
+        .so-product-row.drag-over {
+            border-top: 2px solid #612989;
+        }
+
+        .so-product-table {
+            width: 100%;
+            min-width: 850px;
+            border-collapse: collapse;
+        }
+
+        .so-product-table th {
+            color: #612989;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: left;
+            padding: 12px 8px;
+            border-top: 1px solid #612989;
+            border-bottom: 1px solid #612989;
+        }
+
+        .so-product-table td {
+            padding: 8px 4px;
+            border-bottom: 1px solid #F0F0F0;
+            vertical-align: middle;
+        }
+
+        .so-product-row {
+            background-color: #FFFFFF;
+        }
+
+        .so-product-row.checked-row {
+            background-color: #F4EFFF;
+        }
+
+        .so-pill-input {
+            background-color: #F4F3F7;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: 400;
+            color: #333333;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: 'Prompt', sans-serif;
+            outline: none;
+        }
+
+        .so-transparent-input {
+            background-color: transparent !important;
+            border: none !important;
+            font-size: 16px;
+            font-weight: 300;
+            color: #3B3B3B;
+            width: 100%;
+            outline: none;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        /* .so-transparent-input.product-code-input {
+            color: #612989;
+        } */
+
+        .so-product-name-label {
+            display: block;
+            font-size: 16px;
+            font-weight: 300;
+            color: #3B3B3B;
+            font-family: 'Prompt', sans-serif;
+            line-height: 1.4;
+            padding: 4px 0;
+            word-break: break-word;
+        }
+
+        .so-transparent-input.calc-total {
+            color: #333333;
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .so-pill-input[readonly] {
+            background-color: transparent;
+        }
+
+        .so-row-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #F4F3F7;
+            outline: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .so-row-checkbox:checked {
+            background-color: #612989;
+        }
+
+        .so-row-checkbox:checked::after {
+            content: "\f00c";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            color: white;
+            font-size: 10px;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #8E8B94;
+            margin-right: 8px;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            color: #8E8B94;
+            font-size: 16px;
+            margin-left: 8px;
+        }
+
+        .action-icon:hover {
+            color: #612989;
+        }
+
+        /* Modal Styling */
+        .so-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(34, 23, 49, 0.18);
+            z-index: 9999;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 32px 20px;
+            box-sizing: border-box;
+        }
+
+        .so-modal-content {
+            background: #FFF;
+            border-radius: 16px;
+            padding: 26px 32px 24px;
+            width: 1100px;
+            max-width: 100%;
+            box-shadow: 0 12px 40px rgba(62, 26, 91, 0.12);
+            border: 1px solid #F1EAF7;
+        }
+
+        .so-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #E8E1F0;
+        }
+
+        .so-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #3D3A42;
+            margin: 0;
+        }
+
+        .so-modal-close {
+            background: none;
+            border: none;
+            font-size: 30px;
+            line-height: 1;
+            cursor: pointer;
+            color: #6E6678;
+            padding: 0;
+        }
+
+        .so-modal-grid-6 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1.15fr 1.3fr 1.3fr;
+            gap: 16px 24px;
+            margin-bottom: 18px;
+        }
+
+        .so-modal-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 24px;
+            margin-bottom: 10px;
+        }
+
+        .so-modal-field label {
+            display: block;
+            font-size: 14px;
+            color: #6A2E96;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .so-modal-required {
+            color: #E24B7A;
+        }
+
+        /* สไตล์กล่อง Tooltip สำหรับความเห็นประกอบ/ประกันสินค้า */
+        .so-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        /* ข้อความ Tooltip (ซ่อนเป็นค่าเริ่มต้น) */
+        .so-tooltip .so-tooltiptext {
+            display: none;
+            visibility: hidden;
+            width: 220px;
+            max-width: 280px;
+            background-color: #333333;
+            color: #ffffff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 10px 12px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            /* แสดงเหนือไอคอน */
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.4;
+            pointer-events: none;
+            /* เพื่อไม่ให้ขวางทิศทางเมาส์ */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            white-space: normal;
+            /* รองรับการตัดคำยาวๆ */
+        }
+
+        /* ลูกศรชี้ลงของ Tooltip */
+        .so-tooltip .so-tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #333333 transparent transparent transparent;
+        }
+
+        /* แสดงผลเฉพาะเมื่อมีคลาส active */
+        .so-tooltip.active .so-tooltiptext {
+            display: block;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* ปรับแต่งเพื่อรองรับการแสดงผลบนหน้าจอมือถือ (Responsive) */
+        @media screen and (max-width: 768px) {
+            .so-tooltip .so-tooltiptext {
+                width: 180px;
+                max-width: 70vw;
+                /* จำกัดความกว้างไม่ให้ล้นหน้าจอมือถือ */
+                font-size: 11px;
+                padding: 8px 10px;
+                bottom: 130%;
+                /* ยกสูงขึ้นเล็กน้อยเพื่อหลบขอบ */
+            }
+        }
+
+        .so-modal-input-wrap {
+            position: relative;
+        }
+
+        .so-modal-field input[type="text"],
+        .so-modal-field textarea {
+            width: 100%;
+            height: 42px;
+            padding: 0 44px 0 16px;
+            border-radius: 12px;
+            border: 1px solid #EFEAF4;
+            background: #F4F5F8;
+            font-size: 13px;
+            color: #4A4453;
+            font-family: 'Prompt', sans-serif;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .so-modal-field textarea {
+            resize: vertical;
+            min-height: 42px;
+            padding-top: 9px;
+            padding-bottom: 9px;
+        }
+
+        .so-modal-field input[type="text"]::placeholder,
+        .so-modal-field textarea::placeholder {
+            color: #9C96A5;
+        }
+
+        .so-modal-field input[type="text"]:focus,
+        .so-modal-field textarea:focus {
+            border-color: #CBA8E1;
+            box-shadow: 0 0 0 3px rgba(106, 46, 150, 0.08);
+            background: #F8F7FB;
+        }
+
+        .so-modal-clear {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: transparent;
+            color: #726C7B;
+            font-size: 24px;
+            line-height: 18px;
+            cursor: pointer;
+            padding: 0;
+            display: none;
+        }
+
+        .so-modal-clear.is-visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .so-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+            margin-top: 44px;
+        }
+
+        .so-btn-primary {
+            background: #612989;
+            color: #FFF;
+            border: none;
+            padding: 0 34px;
+            min-width: 174px;
+            height: 42px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Prompt';
+            box-shadow: 0 6px 16px rgba(97, 41, 137, 0.22);
+        }
+
+        .so-btn-outline {
+            background: #FFF;
+            color: #4D4954;
+            border: 1px solid #DED8E6;
+            padding: 0 34px;
+            min-width: 174px;
+            height: 42px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Prompt';
+            box-shadow: 0 2px 8px rgba(51, 40, 69, 0.08);
+        }
+
+        .so-btn-primary:hover,
+        .so-btn-outline:hover {
+            opacity: 0.96;
+        }
+
+        @media (max-width: 1100px) {
+            .so-modal-content {
+                padding: 22px 20px;
+            }
+
+            .so-modal-grid-6 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .so-modal-overlay {
+                padding: 14px;
+            }
+
+            .so-modal-grid-6,
+            .so-modal-grid-2 {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .so-modal-actions {
+                flex-direction: column-reverse;
+                gap: 12px;
+                margin-top: 28px;
+            }
+
+            .so-btn-primary,
+            .so-btn-outline {
+                width: 100%;
+            }
+        }
+
+        .so-btn-add-row {
+            background: #F4F3F7;
+            color: #612989;
+            border: 1px dashed #612989;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Prompt';
+            width: 100%;
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+
+    <div class="so-product-header-row">
+        <div class="so-product-title-text">รายการสินค้า</div>
+        <!-- <div class="so-product-count"><span id="total_items_count">0</span> รายการ</div> -->
+    </div>
+    <hr style="border: 0; border: 2px solid #EDE9F0; margin-bottom: 24px;">
+
+    <div class="so-product-summary">
+        <div class="so-product-summary-col">
+            <div class="so-summary-label">จำนวนรวม(ชิ้น)</div>
+            <div class="so-summary-value" id="summary_total_qty">0</div>
+        </div>
+        <div class="so-product-summary-col">
+            <div class="so-summary-label">ยอดรวม</div>
+            <div class="so-summary-value" id="summary_total_amount">0.00</div>
+        </div>
+        <div class="so-product-summary-col">
+            <div class="so-summary-label">ส่วนลดทั้งหมด</div>
+            <div class="so-summary-value" id="summary_total_discount">0.00</div>
+        </div>
+        <div class="so-product-summary-col">
+            <div class="so-summary-label">ยอดรวมสุทธิ</div>
+            <div class="so-summary-value-net" id="summary_net_total">0.00</div>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px;">
+        <div style="flex: 1; min-width: 260px;">
+            <div class="so-summary-label" style="color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</div>
+            <div class="pf-search-bar" style="margin-bottom: 0;">
+                <i class="fas fa-search"></i>
+                <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
+            </div>
+        </div>
+        <div style="align-self: flex-end;">
+            <button type="button" class="so-btn-danger" id="btn_delete_selected" onclick="deleteSelectedRows()" style="display: none; height: 42px; padding: 0 16px; border-radius: 8px; border: none; background-color: #dc3545; color: white; cursor: pointer; align-items: center; gap: 8px; font-family: 'Kanit', sans-serif;">
+                <i class="far fa-trash-alt"></i> ลบรายการที่เลือก
+            </button>
+        </div>
+    </div>
+
+    <div class="so-product-table-wrap">
+        <table class="so-product-table" id="product_table">
+            <thead>
+                <tr>
+                    <th style="width: 70px; text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <i class="fas fa-grip-vertical" style="opacity: 0; margin: 0; pointer-events: none;"></i>
+                            <input type="checkbox" id="select_all_rows" class="so-row-checkbox" onclick="toggleSelectAllRows(this)">
+                        </div>
+                    </th>
+                    <th style="width: 15%; text-align: left;">รหัสสินค้า</th>
+                    <th style="width: 25%; text-align: left;">รายการสินค้า</th>
+                    <th style="width: 8%; text-align: center;">จำนวน</th>
+                    <th style="width: 15%; text-align: center;">ราคา/หน่วย</th>
+                    <th style="width: 12%; text-align: center;">ส่วนลด/หน่วย</th>
+                    <th style="width: 15%; text-align: center;">ยอดรวม</th>
+                    <th style="width: 10%;"></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <?php for ($i = 1; $i <= 30; $i++): ?>
+                    <?php
+                    // รองรับค่าเดิมที่ register_qou.php โหลดไว้ตอน Edit Mode
+                    $oldProductId = isset(${'product_id' . $i}) ? ${'product_id' . $i} : '';
+                    $oldSaleCount = isset(${'sale_count' . $i}) ? ${'sale_count' . $i} : '';
+                    $oldProductPrice = isset(${'product_price' . $i}) ? ${'product_price' . $i} : '';
+                    $oldDiscountUnit = isset(${'discount_unit' . $i}) ? ${'discount_unit' . $i} : '';
+
+                    $oldProductCode = '';
+                    $oldProductName = '';
+                    $oldUnitName = '';
+
+                    if ($oldProductId !== '') {
+                        $oldProductIdEsc = mysqli_real_escape_string($conn, $oldProductId);
+                        $sqlOldProduct = "SELECT product_id,access_code,sol_name, unit_name FROM tb_product WHERE product_id = '{$oldProductIdEsc}' LIMIT 1";
+                        $qryOldProduct = mysqli_query($conn, $sqlOldProduct);
+                        if ($qryOldProduct && ($oldProductRow = mysqli_fetch_assoc($qryOldProduct))) {
+                            $oldProductCode = isset($oldProductRow['access_code']) ? $oldProductRow['access_code'] : '';
+                            $oldProductName = isset($oldProductRow['sol_name']) ? $oldProductRow['sol_name'] : '';
+                            $oldUnitName = isset($oldProductRow['unit_name']) ? $oldProductRow['unit_name'] : '';
+                        }
+                    }
+
+                    $oldSumAmount = 0;
+                    if ($oldProductId !== '') {
+                        $qtyNum = (float)str_replace(',', '', $oldSaleCount);
+                        $priceNum = (float)str_replace(',', '', $oldProductPrice);
+                        $discNum = (float)str_replace(',', '', $oldDiscountUnit);
+                        $oldSumAmount = ($qtyNum * $priceNum) - ($qtyNum * $discNum);
+                    }
+
+                    $showExistingRow = ($oldProductId !== '');
+                    ?>
+                    <tr class="so-product-row" id="product_row_<?php echo $i; ?>" data-existing="<?php echo $showExistingRow ? '1' : '0'; ?>" <?php if (!$showExistingRow && $i > 3) echo 'style="display:none;"'; ?>
+                        ondragstart="handleDragStart(event, <?php echo $i; ?>)"
+                        ondragover="handleDragOver(event)"
+                        ondragenter="handleDragEnter(event)"
+                        ondragleave="handleDragLeave(event)"
+                        ondrop="handleDrop(event, <?php echo $i; ?>)"
+                        ondragend="handleDragEnd(event)">
+                        <td style="text-align: center;">
+                            <!-- ไอคอนลากสลับตำแหน่ง และ Checkbox สำหรับไฮไลท์แถว -->
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fas fa-grip-vertical drag-handle" style="margin: 0; cursor: grab;" onmousedown="document.getElementById('product_row_<?php echo $i; ?>').setAttribute('draggable', true)" onmouseup="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')" onmouseleave="document.getElementById('product_row_<?php echo $i; ?>').removeAttribute('draggable')"></i>
+                                <input type="checkbox" class="so-row-checkbox" onchange="toggleRowHighlight(this, <?php echo $i; ?>)">
+                            </div>
+
+                            <!-- ค่า Hidden เบื้องหลัง: เก็บข้อมูลรหัส, ID สินค้า และหน่วยสินค้า เพื่อส่งเข้าระบบตอนบันทึก -->
+                            <input type="hidden" name="h_product_codet<?php echo $i; ?>" id="h_product_codet<?php echo $i; ?>" value="<?php echo htmlspecialchars($oldProductCode, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="h_product_code<?php echo $i; ?>" id="h_product_code<?php echo $i; ?>">
+                            <input type="hidden" name="h_product_c<?php echo $i; ?>" id="h_product_c<?php echo $i; ?>">
+                            <input type="hidden" name="product_id<?php echo $i; ?>" id="product_id<?php echo $i; ?>" value="<?php echo htmlspecialchars($oldProductId, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="unit_name<?php echo $i; ?>" id="unit_name<?php echo $i; ?>" value="<?php echo htmlspecialchars($oldUnitName, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="subso_db_id<?php echo $i; ?>" id="subso_db_id<?php echo $i; ?>">
+                            <input type="hidden" name="row_deleted<?php echo $i; ?>" id="row_deleted<?php echo $i; ?>" value="0">
+                            <input type="hidden" name="deleted_subso_db_id<?php echo $i; ?>" id="deleted_subso_db_id<?php echo $i; ?>">
+                            <input type="hidden" name="deleted_product_code<?php echo $i; ?>" id="deleted_product_code<?php echo $i; ?>">
+
+                            <!-- ค่า Hidden ข้อมูลเพิ่มเติม: เก็บข้อมูลที่กรอกใน Modal (เช่น ประกัน, รอบ PM, หมายเหตุ) -->
+                            <input type="hidden" name="warranty<?php echo $i; ?>" id="warranty<?php echo $i; ?>">
+                            <input type="hidden" name="warranty_unit<?php echo $i; ?>" id="warranty_unit<?php echo $i; ?>" value="ปี">
+                            <input type="hidden" name="remark_hc<?php echo $i; ?>" id="remark_hc<?php echo $i; ?>">
+                            <input type="hidden" name="cal<?php echo $i; ?>" id="cal<?php echo $i; ?>">
+                            <input type="hidden" name="pm_year<?php echo $i; ?>" id="pm_year<?php echo $i; ?>">
+                            <input type="hidden" name="pm<?php echo $i; ?>" id="pm<?php echo $i; ?>">
+                            <input type="hidden" name="sale_remarkk<?php echo $i; ?>" id="sale_remarkk<?php echo $i; ?>">
+                            <!-- ค่าเริ่มต้นต้องเป็นค่าว่าง ไม่ใช่ "1" มิฉะนั้นรายการขายปกติทุกแถวจะถูก
+                        report_clearbr.php นับเป็นรายการเคลียร์ยืม/จอง (ดู WHERE clear_br='1') -->
+                            <input type="hidden" name="clear_br<?php echo $i; ?>" id="clear_br<?php echo $i; ?>" value="">
+                            <input type="hidden" name="clear_ivno<?php echo $i; ?>" id="clear_ivno<?php echo $i; ?>">
+                            <input type="hidden" name="jong_ckk<?php echo $i; ?>" id="jong_ckk<?php echo $i; ?>" value="">
+                            <input type="hidden" name="jong_no<?php echo $i; ?>" id="jong_no<?php echo $i; ?>">
+                            <input type="hidden" name="display_name<?php echo $i; ?>" id="display_name<?php echo $i; ?>">
+                            <input type="hidden" name="product_sn<?php echo $i; ?>" id="product_sn<?php echo $i; ?>">
+                        </td>
+                        <td>
+                            <!-- รหัสสินค้า: แสดงผลอย่างเดียว (readonly) ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหาด้านบน -->
+                            <input type='text' name="product_codet<?php echo $i; ?>" id="product_codet<?php echo $i; ?>" class="so-transparent-input product-code-input" placeholder="" value="<?php echo htmlspecialchars($oldProductCode, ENT_QUOTES, 'UTF-8'); ?>" readonly OnChange="JavaScript:doCallAjax('product_codet<?php echo $i; ?>','product_id<?php echo $i; ?>','product_name<?php echo $i; ?>','unit_name<?php echo $i; ?>','product_price<?php echo $i; ?>','discount_unit<?php echo $i; ?>','warranty<?php echo $i; ?>'); calculateSummary();" />
+                        </td>
+                        <td>
+                            <!-- ชื่อรายการสินค้า: แสดงเป็น label ข้อมูลถูกดึงมาใส่เมื่อเลือกสินค้าจากช่องค้นหา -->
+                            <input type="hidden" name="product_name<?php echo $i; ?>" id="product_name<?php echo $i; ?>" value="<?php echo htmlspecialchars($oldProductName, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span id="product_name_label<?php echo $i; ?>" class="so-product-name-label"><?php echo htmlspecialchars($oldProductName, ENT_QUOTES, 'UTF-8'); ?></span>
+                        </td>
+                        <td>
+                            <!-- จำนวน: ใส่จำนวนชิ้นที่ต้องการขาย เมื่อแก้ไขจะคำนวณยอดใหม่ทันที -->
+                            <input type='text' name="sale_count<?php echo $i; ?>" id="sale_count<?php echo $i; ?>" class="so-pill-input calc-qty" style="text-align:center" value="<?php echo htmlspecialchars($oldSaleCount, ENT_QUOTES, 'UTF-8'); ?>" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" />
+                        </td>
+                        <td>
+                            <!-- ราคา/หน่วย: ราคาขายต่อ 1 ชิ้น สามารถแก้ไขได้ -->
+                            <input type='text' name="product_price<?php echo $i; ?>" id="product_price<?php echo $i; ?>" class="so-pill-input calc-price" style="text-align:right" value="<?php echo htmlspecialchars($oldProductPrice, ENT_QUOTES, 'UTF-8'); ?>" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
+                        </td>
+                        <td>
+                            <!-- ส่วนลด/หน่วย: หากมีส่วนลด ให้กรอกที่ช่องนี้ (หักออกจากราคาต่อชิ้น) -->
+                            <input type='text' name="discount_unit<?php echo $i; ?>" id="discount_unit<?php echo $i; ?>" class="so-pill-input calc-discount" style="text-align:right" value="<?php echo htmlspecialchars($oldDiscountUnit, ENT_QUOTES, 'UTF-8'); ?>" oninput="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onchange="updateRowTotal(<?php echo $i; ?>); calculateSummary();" onblur="formatNumberInput(this);" />
+                        </td>
+                        <td>
+                            <!-- ยอดรวมสุทธิของแถวนี้: คำนวณอัตโนมัติ (จำนวน * ราคา) - (ส่วนลด * จำนวน) -->
+                            <input type='text' name="sum_amount<?php echo $i; ?>" id="sum_amount<?php echo $i; ?>" class="so-transparent-input calc-total" style="text-align:right;" value="<?php echo $oldProductId !== '' ? number_format($oldSumAmount, 2, '.', ',') : ''; ?>" readonly />
+                        </td>
+                        <td style="text-align: right; padding-right: 16px;">
+                            <!-- ปุ่ม Action: เปิด Modal ข้อมูลเพิ่มเติม (ไอคอนดินสอ) และ ปุ่มเคลียร์ข้อมูลแถวนี้ (ถังขยะ) -->
+                            <i class="far fa-trash-alt action-icon" onclick="clearRow(<?php echo $i; ?>)"></i>
+                        </td>
+                    </tr>
+                <?php endfor; ?>
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="so-modal-overlay" id="productEditModal">
+        <div class="so-modal-content">
+            <div class="so-modal-header">
+                <h3 class="so-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
+                <button type="button" class="so-modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+
+            <input type="hidden" id="current_editing_row">
+            <input type="hidden" id="modal_row_number">
+
+            <div class="so-modal-grid-6">
+                <div class="so-modal-field">
+                    <label id="modal_warranty_label">รับประกัน(ปี)<span class="so-modal-required">*</span></label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_warranty" placeholder="ใส่เฉพาะตัวเลข" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_warranty" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>CAL/ปี</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_cal" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_cal" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>PM(ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_pm_year" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_pm_year" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>PM (จำนวนครั้ง/ปี)</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_pm" placeholder="ใส่เฉพาะตัวเลข" onkeypress="return chkNumber(this, event)" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_pm" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>เลขที่ใบจอง</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_jong_no" data-clearable="true" readonly>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>เลขที่ใบยืม</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_clear_ivno" data-clearable="true" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-modal-grid-2">
+                <div class="so-modal-field">
+                    <label>เลขที่ SN</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_product_sn" data-clearable="true" readonly>
+                    </div>
+                </div>
+                <div class="so-modal-field">
+                    <label>หมายเหตุสินค้า</label>
+                    <div class="so-modal-input-wrap">
+                        <input type="text" id="m_sale_remarkk" placeholder="กรอกข้อมูล" data-clearable="true">
+                        <button type="button" class="so-modal-clear" data-target="m_sale_remarkk" aria-label="ล้างข้อมูล">&times;</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-modal-actions">
+                <button type="button" class="so-btn-outline" onclick="closeEditModal()">ยกเลิก</button>
+                <button type="button" class="so-btn-primary" onclick="saveEditModal()">อัพเดท</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Drag and Drop Row Reordering ---
+        let dragSourceIndex = null;
+        const rowFields = [
+            'h_product_codet', 'h_product_code', 'h_product_c', 'product_id', 'unit_name', 'subso_db_id', 'row_deleted', 'deleted_subso_db_id', 'deleted_product_code',
+            'warranty', 'cal', 'pm_year', 'pm', 'sale_remarkk', 'clear_br', 'clear_ivno', 'jong_ckk', 'jong_no', 'display_name', 'product_sn',
+            'product_codet', 'product_name', 'sale_count', 'product_price', 'discount_unit', 'sum_amount', 'remark_hc'
+        ];
+
+        function getRowData(index) {
+            let data = {};
+            rowFields.forEach(field => {
+                let el = document.getElementById(field + index);
+                if (el) data[field] = el.value;
+            });
+            // product_name label (span)
+            let nameLabel = document.getElementById('product_name_label' + index);
+            if (nameLabel) data['product_name_label'] = nameLabel.textContent;
+            let rowEl = document.getElementById('product_row_' + index);
+            data['display'] = rowEl.style.display;
+            let cb = rowEl.querySelector('.so-row-checkbox');
+            data['checked'] = cb ? cb.checked : false;
+            return data;
+        }
+
+        function setRowData(index, data) {
+            rowFields.forEach(field => {
+                let el = document.getElementById(field + index);
+                if (el && data[field] !== undefined) el.value = data[field];
+            });
+            // Sync the product_name_label span
+            let nameLabel = document.getElementById('product_name_label' + index);
+            if (nameLabel && data['product_name_label'] !== undefined) {
+                nameLabel.textContent = data['product_name_label'];
+            }
+            let rowEl = document.getElementById('product_row_' + index);
+            if (data['display'] !== undefined) {
+                rowEl.style.display = data['display'];
+            }
+            let cb = rowEl.querySelector('.so-row-checkbox');
+            if (cb) cb.checked = data['checked'] || false;
+            if (data['checked']) {
+                rowEl.classList.add('checked-row');
+            } else {
+                rowEl.classList.remove('checked-row');
+            }
+        }
+
+        // Prevent browser default drop on the document
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        }, false);
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+        }, false);
+
+        function handleDragStart(e, index) {
+            dragSourceIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (e.currentTarget.id !== 'product_row_' + dragSourceIndex) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+                shiftRows(dragSourceIndex, targetIndex);
+            }
+            dragSourceIndex = null;
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.so-product-row').forEach(row => {
+                row.classList.remove('drag-over');
+                row.removeAttribute('draggable');
+            });
+        }
+
+        function shiftRows(fromIndex, toIndex) {
+            let allData = [];
+            for (let i = 1; i <= 30; i++) {
+                allData.push(getRowData(i));
+            }
+
+            let fromData = allData.splice(fromIndex - 1, 1)[0];
+            allData.splice(toIndex - 1, 0, fromData);
+
+            for (let i = 1; i <= 30; i++) {
+                setRowData(i, allData[i - 1]);
+            }
+
+            calculateSummary();
+            if (typeof updateDeleteButtonVisibility === 'function') {
+                updateDeleteButtonVisibility();
+            }
+        }
+        // ------------------------------------
+
+        function updateDeleteButtonVisibility() {
+            var checkboxes = document.querySelectorAll('.so-row-checkbox:not(#select_all_rows)');
+            var hasChecked = false;
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    hasChecked = true;
+                    break;
+                }
+            }
+            var btn = document.getElementById('btn_delete_selected');
+            if (btn) {
+                btn.style.display = hasChecked ? 'flex' : 'none';
+            }
+        }
+
+        function deleteSelectedRows() {
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการที่เลือกทั้งหมด?')) {
+                var checkboxes = document.querySelectorAll('.so-row-checkbox:not(#select_all_rows)');
+                for (var i = 0; i < checkboxes.length; i++) {
+                    if (checkboxes[i].checked) {
+                        clearRow(i + 1, true);
+                        checkboxes[i].checked = false;
+                        var row = document.getElementById('product_row_' + (i + 1));
+                        if (row) {
+                            row.classList.remove('checked-row');
+                        }
+                    }
+                }
+                var master = document.getElementById('select_all_rows');
+                if (master) master.checked = false;
+                updateDeleteButtonVisibility();
+            }
+        }
+
+        function toggleRowHighlight(checkbox, rowIndex) {
+            var row = document.getElementById('product_row_' + rowIndex);
+            if (row) {
+                if (checkbox.checked) {
+                    row.classList.add('checked-row');
+                } else {
+                    row.classList.remove('checked-row');
+                }
+            }
+
+            // Update master checkbox state based on all row checkboxes
+            var allCheckboxes = document.querySelectorAll('.so-row-checkbox:not(#select_all_rows)');
+            var master = document.getElementById('select_all_rows');
+            if (master) {
+                var allChecked = true;
+                for (var i = 0; i < allCheckboxes.length; i++) {
+                    if (!allCheckboxes[i].checked) {
+                        allChecked = false;
+                        break;
+                    }
+                }
+                master.checked = allChecked;
+            }
+            updateDeleteButtonVisibility();
+        }
+
+        function toggleSelectAllRows(master) {
+            var checkboxes = document.querySelectorAll('.so-row-checkbox:not(#select_all_rows)');
+            for (var i = 0; i < checkboxes.length; i++) {
+                var cb = checkboxes[i];
+                cb.checked = master.checked;
+
+                var row = document.getElementById('product_row_' + (i + 1));
+                if (row) {
+                    if (master.checked) {
+                        row.classList.add('checked-row');
+                    } else {
+                        row.classList.remove('checked-row');
+                    }
+                }
+            }
+            updateDeleteButtonVisibility();
+        }
+
+        function executeClearRow(rowIndex) {
+            var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
+            var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
+
+            if (currentSubsoId !== '') {
+                document.getElementById('deleted_subso_db_id' + rowIndex).value = currentSubsoId;
+                document.getElementById('deleted_product_code' + rowIndex).value = currentProductCode;
+            }
+            // ถ้า currentSubsoId ว่างแต่มี deleted_subso_db_id ค้างอยู่แล้ว (เพิ่มสินค้าใหม่ทับแถวที่เพิ่งลบ แล้วกดลบซ้ำ)
+            // ให้คงคำสั่งลบของเดิมไว้ ไม่ล้างทิ้ง มิฉะนั้นของเดิมจะไม่ถูกลบออกจาก DB
+
+            // ตั้ง row_deleted = '1' เสมอเมื่อแถวถูกล้าง แม้ยังไม่รู้ subso_db_id (เช่น id หายไปจากฟอร์ม)
+            // เพื่อไม่ให้ฝั่ง server เข้าใจผิดว่าแถวนี้เป็นแถวว่างเปล่าที่ไม่เคยมีข้อมูล
+            document.getElementById('row_deleted' + rowIndex).value = '1';
+
+            document.getElementById('subso_db_id' + rowIndex).value = '';
+            document.getElementById('h_product_codet' + rowIndex).value = '';
+            document.getElementById('h_product_code' + rowIndex).value = '';
+            document.getElementById('h_product_c' + rowIndex).value = '';
+            document.getElementById('product_codet' + rowIndex).value = '';
+            document.getElementById('product_name' + rowIndex).value = '';
+            var nameLabel = document.getElementById('product_name_label' + rowIndex);
+            if (nameLabel) nameLabel.textContent = '';
+            document.getElementById('unit_name' + rowIndex).value = '';
+            document.getElementById('product_price' + rowIndex).value = '';
+            document.getElementById('sale_count' + rowIndex).value = '';
+            document.getElementById('sum_amount' + rowIndex).value = '';
+            document.getElementById('discount_unit' + rowIndex).value = '';
+            document.getElementById('product_id' + rowIndex).value = '';
+            document.getElementById('product_sn' + rowIndex).value = '';
+            document.getElementById('remark_hc' + rowIndex).value = '';
+
+            // ล้างข้อมูลจาก modal (ประกัน/PM/หมายเหตุ/เลขที่ยืม-จอง) กันไม่ให้ค่าของสินค้าเดิมติดไปกับสินค้าใหม่ที่จะถูกเลือกเข้าแถวนี้ต่อ
+            document.getElementById('warranty' + rowIndex).value = '';
+            document.getElementById('cal' + rowIndex).value = '';
+            document.getElementById('pm_year' + rowIndex).value = '';
+            document.getElementById('pm' + rowIndex).value = '';
+            document.getElementById('sale_remarkk' + rowIndex).value = '';
+            document.getElementById('clear_ivno' + rowIndex).value = '';
+            document.getElementById('jong_no' + rowIndex).value = '';
+            document.getElementById('display_name' + rowIndex).value = '';
+            // ลบสินค้าออกจากแถว ไม่ใช่การเคลียร์ยืม/จอง จึงต้องล้างเป็นค่าว่าง
+            // (เดิมตั้งเป็น '1' ทำให้แถวว่างถูกนับเป็นรายการเคลียร์ยืมใน report_clearbr.php)
+            document.getElementById('clear_br' + rowIndex).value = '';
+            document.getElementById('jong_ckk' + rowIndex).value = '';
+
+            var clearedRow = document.getElementById('product_row_' + rowIndex);
+            if (clearedRow) {
+                clearedRow.style.display = 'none';
+                clearedRow.setAttribute('data-existing', '0');
+            }
+
+            var cb = document.querySelector('#product_row_' + rowIndex + ' .so-row-checkbox');
+            if (cb) {
+                cb.checked = false;
+                document.getElementById('product_row_' + rowIndex).classList.remove('checked-row');
+            }
+            if (typeof updateDeleteButtonVisibility === 'function') {
+                updateDeleteButtonVisibility();
+            }
+
+            calculateSummary();
+        }
+
+        function clearRow(rowIndex, skipConfirm) {
+            var currentSubsoId = document.getElementById('subso_db_id' + rowIndex).value;
+            var currentProductCode = document.getElementById('h_product_codet' + rowIndex).value || document.getElementById('product_codet' + rowIndex).value || '';
+            var currentProductId = document.getElementById('product_id' + rowIndex).value || '';
+
+            var hasData = (currentSubsoId !== '' || currentProductCode !== '' || currentProductId !== '');
+
+            if (hasData && !skipConfirm) {
+                var productName = document.getElementById('product_name' + rowIndex).value || '';
+                if (!productName) {
+                    var nameLabel = document.getElementById('product_name_label' + rowIndex);
+                    if (nameLabel) productName = nameLabel.textContent || '';
+                }
+
+                var displayMsg = 'คุณต้องการลบรายการนี้ ใช่หรือไม่ ?';
+                if (productName) {
+                    displayMsg = 'คุณต้องการลบรายการ "' + productName + '" ใช่หรือไม่ ?';
+                }
+
+                Swal.fire({
+                    title: 'ยืนยันการลบรายการ',
+                    html: displayMsg,
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยันลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    iconHtml: `
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+                            <path d="M4 6H20V8H4V6Z" fill="#EF5350"/>
+                            <path d="M10 2H14V4H10V2Z" fill="#EF5350"/>
+                            <path d="M5 9H19V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V9Z" fill="#EF5350"/>
+                            <rect x="9" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+                            <rect x="13" y="11" width="2" height="7" rx="1" fill="#ffffff"/>
+                        </svg>
+                    `,
+                    customClass: {
+                        popup: 'figma-delete-popup',
+                        title: 'figma-delete-title',
+                        htmlContainer: 'figma-delete-html',
+                        confirmButton: 'figma-delete-confirm-btn',
+                        cancelButton: 'figma-delete-cancel-btn',
+                        actions: 'figma-delete-actions',
+                        icon: 'figma-delete-icon'
+                    },
+                    buttonsStyling: false
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        executeClearRow(rowIndex);
+                    }
+                });
+            } else {
+                executeClearRow(rowIndex);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function toggleWarrantyTooltip(event, element) {
+            event.stopPropagation();
+            var isActive = element.classList.contains('active');
+            var activeTooltips = document.querySelectorAll('.so-tooltip.active');
+            activeTooltips.forEach(function(el) {
+                el.classList.remove('active');
+            });
+            if (!isActive) {
+                element.classList.add('active');
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var activeTooltip = document.querySelector('.so-tooltip.active');
+            if (activeTooltip && !activeTooltip.contains(event.target)) {
+                activeTooltip.classList.remove('active');
+            }
+        });
+
+        function openEditModal(rowIndex) {
+            document.getElementById('current_editing_row').value = rowIndex;
+            document.getElementById('modal_row_number').value = rowIndex;
+
+            // Load data from hidden inputs
+            document.getElementById('m_warranty').value = document.getElementById('warranty' + rowIndex).value;
+
+            // Set dynamic warranty unit label
+            var unitInput = document.getElementById('warranty_unit' + rowIndex);
+            var unit = (unitInput && unitInput.value) ? unitInput.value : 'ปี';
+            var warrantyLabel = document.getElementById('modal_warranty_label');
+            if (warrantyLabel) {
+                var remarkHcVal = document.getElementById('remark_hc' + rowIndex) ? document.getElementById('remark_hc' + rowIndex).value : '';
+                var iconHtml = '';
+                if (remarkHcVal && remarkHcVal.trim() !== '') {
+                    iconHtml = ' <span class="so-tooltip" onclick="toggleWarrantyTooltip(event, this)">' +
+                        '<img src="img/icons/question.png" alt="help" style="width: 14px; height: 14px; cursor: pointer; vertical-align: middle; margin-left: 4px;">' +
+                        '<span class="so-tooltiptext">' + escapeHtml(remarkHcVal) + '</span>' +
+                        '</span>';
+                }
+                warrantyLabel.innerHTML = 'รับประกัน(' + unit + ')<span class="so-modal-required">*</span>' + iconHtml;
+            }
+
+            document.getElementById('m_cal').value = document.getElementById('cal' + rowIndex).value;
+            document.getElementById('m_pm_year').value = document.getElementById('pm_year' + rowIndex).value;
+            document.getElementById('m_pm').value = document.getElementById('pm' + rowIndex).value;
+            document.getElementById('m_sale_remarkk').value = document.getElementById('sale_remarkk' + rowIndex).value;
+            document.getElementById('m_jong_no').value = document.getElementById('jong_no' + rowIndex).value;
+            document.getElementById('m_clear_ivno').value = document.getElementById('clear_ivno' + rowIndex).value;
+            document.getElementById('m_product_sn').value = document.getElementById('product_sn' + rowIndex).value;
+
+            syncModalClearButtons();
+            document.getElementById('productEditModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('productEditModal').style.display = 'none';
+        }
+
+        function saveEditModal() {
+            var rowIndex = document.getElementById('current_editing_row').value;
+
+            // Save data back to hidden inputs
+            document.getElementById('warranty' + rowIndex).value = document.getElementById('m_warranty').value;
+            document.getElementById('cal' + rowIndex).value = document.getElementById('m_cal').value;
+            document.getElementById('pm_year' + rowIndex).value = document.getElementById('m_pm_year').value;
+            document.getElementById('pm' + rowIndex).value = document.getElementById('m_pm').value;
+            document.getElementById('sale_remarkk' + rowIndex).value = document.getElementById('m_sale_remarkk').value;
+            document.getElementById('jong_no' + rowIndex).value = document.getElementById('m_jong_no').value;
+            document.getElementById('clear_ivno' + rowIndex).value = document.getElementById('m_clear_ivno').value;
+            document.getElementById('product_sn' + rowIndex).value = document.getElementById('m_product_sn').value;
+
+            closeEditModal();
+        }
+
+        function syncModalClearButtons() {
+            document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
+                var target = document.getElementById(btn.getAttribute('data-target'));
+                if (!target) return;
+                btn.classList.toggle('is-visible', target.value !== '');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-clearable="true"]').forEach(function(input) {
+                input.addEventListener('input', syncModalClearButtons);
+            });
+
+            document.querySelectorAll('.so-modal-clear').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var target = document.getElementById(btn.getAttribute('data-target'));
+                    if (!target) return;
+                    target.value = '';
+                    target.focus();
+                    syncModalClearButtons();
+                });
+            });
+        });
+
+        function formatNumberInput(el) {
+            let raw = parseFloat(el.value.replace(/,/g, '')) || 0;
+            if (raw !== 0) {
+                el.value = raw.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+
+        function updateRowTotal(rowIndex) {
+            let qtyStr = document.getElementById('sale_count' + rowIndex).value;
+            let priceStr = document.getElementById('product_price' + rowIndex).value;
+            let discStr = document.getElementById('discount_unit' + rowIndex).value;
+
+            let qty = parseFloat(qtyStr.replace(/,/g, '')) || 0;
+            let price = parseFloat(priceStr.replace(/,/g, '')) || 0;
+            let disc = parseFloat(discStr.replace(/,/g, '')) || 0;
+
+            let rowTotal = (qty * price) - (disc * qty);
+
+            let sumEl = document.getElementById('sum_amount' + rowIndex);
+            if (sumEl) {
+                sumEl.value = rowTotal.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+
+        function calculateSummary() {
+            setTimeout(function() {
+                let totalQty = 0;
+                let totalAmount = 0;
+                let totalDiscount = 0;
+                let itemsCount = 0;
+
+                for (let i = 1; i <= 30; i++) {
+                    let row = document.getElementById('product_row_' + i);
+                    if (row.style.display !== 'none') {
+                        let code = document.getElementById('product_codet' + i).value;
+                        if (code && code.trim() !== '') itemsCount++;
+                    }
+
+                    let qtyStr = document.getElementById('sale_count' + i).value;
+                    let priceStr = document.getElementById('product_price' + i).value;
+                    let discStr = document.getElementById('discount_unit' + i).value;
+
+                    let qty = parseFloat(qtyStr.replace(/,/g, '')) || 0;
+                    let price = parseFloat(priceStr.replace(/,/g, '')) || 0;
+                    let disc = parseFloat(discStr.replace(/,/g, '')) || 0;
+
+                    totalQty += qty;
+                    totalAmount += (qty * price);
+                    totalDiscount += (disc * qty);
+                }
+
+                let netTotal = totalAmount - totalDiscount;
+
+
+                document.getElementById('summary_total_qty').innerText = totalQty.toLocaleString(undefined, {
+                    minimumFractionDigits: 0
+                });
+                document.getElementById('summary_total_amount').innerText = totalAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                document.getElementById('summary_total_discount').innerText = totalDiscount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                document.getElementById('summary_net_total').innerText = netTotal.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }, 200); // Slight delay to let jAutoCalc run first
+        }
+
+        // Global Product Search: show suggestions first, add only after the user selects one.
+        new Autocomplete("global_product_search", function() {
+            this.setValue = function(id) {
+                if (!id) {
+                    return;
+                }
+
+                // หาแถวว่างจริง ๆ เท่านั้น
+                // ห้ามอิงเฉพาะ product_codet เพราะตอน Edit ข้อมูลเดิมบางรายการอาจมี
+                // product_id/ชื่อ/จำนวนอยู่แล้ว แต่รหัสที่แสดงยังว่าง ทำให้สินค้าใหม่ไปทับแถวเดิม
+                let emptyRowIndex = -1;
+                for (let i = 1; i <= 30; i++) {
+                    let row = document.getElementById('product_row_' + i);
+                    let codeInput = document.getElementById('product_codet' + i);
+                    let hiddenCodeInput = document.getElementById('h_product_codet' + i);
+                    let productIdInput = document.getElementById('product_id' + i);
+                    let productNameInput = document.getElementById('product_name' + i);
+                    let qtyInput = document.getElementById('sale_count' + i);
+                    let priceInput = document.getElementById('product_price' + i);
+
+                    let hasExistingData = !!(
+                        (row && row.getAttribute('data-existing') === '1') ||
+                        (codeInput && codeInput.value.trim() !== '') ||
+                        (hiddenCodeInput && hiddenCodeInput.value.trim() !== '') ||
+                        (productIdInput && productIdInput.value.trim() !== '') ||
+                        (productNameInput && productNameInput.value.trim() !== '') ||
+                        (qtyInput && qtyInput.value.trim() !== '') ||
+                        (priceInput && priceInput.value.trim() !== '')
+                    );
+
+                    if (!hasExistingData) {
+                        emptyRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (emptyRowIndex !== -1) {
+                    let codeInput = document.getElementById('product_codet' + emptyRowIndex);
+                    let hiddenCodeInput = document.getElementById('h_product_codet' + emptyRowIndex);
+                    let rowDeletedInput = document.getElementById('row_deleted' + emptyRowIndex);
+                    let subsoDbIdInput = document.getElementById('subso_db_id' + emptyRowIndex);
+
+                    codeInput.value = id;
+                    if (hiddenCodeInput) hiddenCodeInput.value = id;
+                    if (rowDeletedInput) rowDeletedInput.value = '0';
+                    if (subsoDbIdInput) subsoDbIdInput.value = '';
+                    // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
+                    // เพราะแถวนี้อาจเป็นแถวที่เพิ่งลบสินค้าเดิมไป แล้วเลือกสินค้าใหม่ทันที
+                    // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
+
+                    // กันค่า clear_br/clear_ivno/jong_ckk/jong_no ของสินค้าเดิม (จากการเคลียร์ยืม/จอง)
+                    // ติดค้างมากับแถวที่เพิ่งเลือกสินค้าใหม่เข้ามาทับ
+                    var clearBrInput = document.getElementById('clear_br' + emptyRowIndex);
+                    var clearIvnoInput = document.getElementById('clear_ivno' + emptyRowIndex);
+                    var jongCkkInput = document.getElementById('jong_ckk' + emptyRowIndex);
+                    var jongNoInput = document.getElementById('jong_no' + emptyRowIndex);
+                    if (clearBrInput) clearBrInput.value = '';
+                    if (clearIvnoInput) clearIvnoInput.value = '';
+                    if (jongCkkInput) jongCkkInput.value = '';
+                    if (jongNoInput) jongNoInput.value = '';
+
+                    // Trigger the ajax call to populate the row
+                    doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);
+
+                    // Ensure the row is visible and mark it as occupied
+                    var targetRow = document.getElementById('product_row_' + emptyRowIndex);
+                    if (targetRow) {
+                        targetRow.style.display = '';
+                        targetRow.setAttribute('data-existing', '1');
+                    }
+
+                    // Focus on the quantity field
+                    setTimeout(function() {
+                        let qtyInput = document.getElementById('sale_count' + emptyRowIndex);
+                        if (qtyInput) {
+                            qtyInput.value = "1"; // Default quantity
+                            // Trigger change for jAutoCalc
+                            qtyInput.dispatchEvent(new Event('change'));
+                            qtyInput.focus();
+                            qtyInput.select();
+                        }
+                        calculateSummary();
+                    }, 300);
+                } else {
+                    alert("ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 30 รายการแล้ว)");
+                }
+
+                // Clear the global search box
+                document.getElementById('global_product_search').value = '';
+            };
+
+            if (this.value.length < 1 && this.isNotClick) return;
+            return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + getSelectedTypeCompany();
+        }, {
+            select_first: 0
+        });
+
+        // ปุ่ม autocomplete เดิม (js/autocomplete.js) ฟังแค่ event keydown/keypress เท่านั้น
+        // การวางข้อความ (คลิกขวา > วาง หรือบางเบราว์เซอร์กับ Ctrl+V) ไม่ทำให้เกิด keypress
+        // จึงไม่มีการค้นหาเกิดขึ้นเลย ต้องดักจับ event "paste" แล้วสั่งค้นหาซ้ำเอง
+        (function() {
+            var searchInput = document.getElementById('global_product_search');
+            var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
+            searchInput.addEventListener('paste', function() {
+                setTimeout(function() {
+                    acInstance.isModified = 1;
+                    acInstance.isNotClick = 1;
+                    acInstance.isON = 1; // request() ยิง AJAX ก็ต่อเมื่อ isON=1 เท่านั้น (ปกติถูกตั้งค่าตอน keydown)
+                    acInstance.request();
+                }, 0);
+            });
+        })();
+
+        // อ่านบริษัทจากหัวเอกสารเป็นหลัก
+        // หน้าใบเสนอราคา: company_select => 1=AWL, 2=NBM
+        // หน้าเดิมบางหน้า: type_doc_select => 3=AWL, 4=NBM
+        // ถ้าไม่พบ dropdown บริษัท ให้ default เป็น AWL
+        function getSelectedTypeCompany() {
+            var companySel = document.getElementById('company_select');
+            if (companySel) {
+                return String(companySel.value) === '2' ? 'NBM' : 'AWL';
+            }
+
+            var typeDocSel = document.getElementById('type_doc_select');
+            if (typeDocSel) {
+                return String(typeDocSel.value) === '4' ? 'NBM' : 'AWL';
+            }
+
+            return 'AWL';
+        }
+
+        // เปลี่ยนบริษัท -> ล้างรายการสินค้าที่เลือกไว้ทั้งหมด (เตือนก่อน) กันสินค้า AWL/NBM ปนกันในใบเดียว
+        function handleCompanyChange(sel) {
+            var hasItems = false;
+            for (var i = 1; i <= 30; i++) {
+                var c = document.getElementById('product_codet' + i);
+                if (c && c.value.trim() !== '') {
+                    hasItems = true;
+                    break;
+                }
+            }
+            if (hasItems) {
+                if (!confirm('การเปลี่ยนบริษัทจะล้างรายการสินค้าที่เลือกไว้ทั้งหมด ต้องการดำเนินการต่อหรือไม่?')) {
+                    sel.value = sel.getAttribute('data-prev'); // ยกเลิก -> คืนค่าบริษัทเดิม
+                    return;
+                }
+                for (var j = 1; j <= 30; j++) {
+                    if (typeof executeClearRow === 'function') executeClearRow(j);
+                }
+            }
+            // sync hidden input[name=type_doc] (พฤติกรรมเดิมของ onchange ที่ถูกแทนที่)
+            var r = document.querySelector('input[name=type_doc]');
+            if (r) r.value = sel.value;
+            sel.setAttribute('data-prev', sel.value);
+        }
+
+        // เก็บค่าบริษัทก่อนหน้าไว้ และให้หัวบริษัทเป็นตัวควบคุมรายการสินค้า
+        document.addEventListener('DOMContentLoaded', function() {
+            var companySel = document.getElementById('company_select');
+            var typeDocSel = document.getElementById('type_doc_select');
+            var companyControl = companySel || typeDocSel;
+
+            if (companyControl) {
+                companyControl.setAttribute('data-prev', companyControl.value);
+                companyControl.addEventListener('focus', function() {
+                    this.setAttribute('data-prev', this.value);
+                });
+                companyControl.addEventListener('change', function() {
+                    handleCompanyChange(this);
+                });
+            }
+        });
+
+        // Run initial calc
+        window.addEventListener('load', function() {
+            calculateSummary();
+        });
+
+        // Listen to product inputs change to check credit limit
+        document.addEventListener('DOMContentLoaded', function() {
+            var productTable = document.getElementById('product_table');
+            if (productTable) {
+                productTable.addEventListener('change', function(event) {
+                    var target = event.target;
+                    if (target && (target.classList.contains('calc-qty') || target.classList.contains('calc-price') || target.classList.contains('calc-discount'))) {
+                        if (typeof window.checkCreditLimitOnChange === 'function') {
+                            setTimeout(window.checkCreditLimitOnChange, 250);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+
+    <?php for ($i = 1; $i <= 30; $i++): ?>
+        <script type="text/javascript">
+            function make_autocom_<?php echo $i; ?>(autoObj, showObj) {
+                var mkAutoObj = autoObj;
+                var mkSerValObj = showObj;
+                new Autocomplete(mkAutoObj, function() {
+                    this.setValue = function(id) {
+                        document.getElementById(mkSerValObj).value = id;
+                    }
+                    if (this.isModified)
+                        this.setValue("");
+                    if (this.value.length < 1 && this.isNotClick)
+                        return;
+                    return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + getSelectedTypeCompany();
+                });
+            }
+            // Autocomplete for product_codet removed since it's now display-only
+            if (document.getElementById("product_c<?php echo $i; ?>")) {
+                make_autocom_<?php echo $i; ?>("product_c<?php echo $i; ?>", "h_product_c<?php echo $i; ?>");
+            }
+        </script>
+    <?php endfor; ?>
+
+</body>
+
+</html>

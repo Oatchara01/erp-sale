@@ -32,12 +32,179 @@ $status_filter = isset($poStatusFilters[$getParam('status_filter')]) ? $getParam
 $poHasStatusColumn = po_has_status_column($conn);
 $scriptName = htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, 'UTF-8');
 
-// เขตการขาย (sale_code → sale_name) ใช้ทั้ง dropdown และคอลัมน์ในตาราง
+// =========================================================
+// เขตการขายทั้งหมด
+// ใช้สำหรับแสดงชื่อในคอลัมน์ตาราง
+// =========================================================
 $saleNames = array();
-$saleQuery = mysqli_query($com, "SELECT sale_code, sale_name FROM tb_team_adm ORDER BY sale_code ASC");
+
+$saleQuery = mysqli_query(
+	$com,
+	"
+	SELECT
+		sale_code,
+		sale_name
+	FROM tb_team_adm
+	ORDER BY sale_code ASC
+	"
+);
+
 while ($saleQuery && ($saleRow = mysqli_fetch_assoc($saleQuery))) {
-	$saleNames[(string)$saleRow['sale_code']] = (string)$saleRow['sale_name'];
+
+	$saleNames[(string)$saleRow['sale_code']] =
+		(string)$saleRow['sale_name'];
+
 }
+
+
+// =========================================================
+// สิทธิ์การมองเห็น Dropdown เขตการขาย
+// =========================================================
+$emid = isset($_SESSION['code'])
+	? trim($_SESSION['code'])
+	: '';
+
+$type_login = isset($_SESSION['type_login'])
+	? trim($_SESSION['type_login'])
+	: '';
+
+$type_login_lower = strtolower($type_login);
+
+$emid_safe = mysqli_real_escape_string($com, $emid);
+
+
+// =========================================================
+// Sale ล็อกเขตของตัวเอง
+// =========================================================
+if ($type_login_lower == 'sale') {
+
+	$saleDropdownOptions = array(
+		array(
+			'sale_code' => $emid,
+			'sale_name' => isset($saleNames[$emid])
+				? $saleNames[$emid]
+				: $emid
+		)
+	);
+
+}
+
+
+// =========================================================
+// User อื่น
+// =========================================================
+else {
+
+	// Admin / IT / Owner เห็นทั้งหมด
+	if (
+		$type_login_lower == 'admin' ||
+		$type_login_lower == 'it' ||
+		$type_login_lower == 'owner'
+	) {
+
+		$saleDropdownSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// Engineer / SUP_EN
+	else if (
+		$emid == 'SUP_EN' ||
+		$type_login_lower == 'engineer'
+	) {
+
+		$saleDropdownSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			WHERE sale_code LIKE '%EN%'
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// SOL
+	else if ($type_login_lower == 'sol') {
+
+		$saleDropdownSql = "
+			SELECT
+				sale_code,
+				sale_name
+			FROM tb_team_adm
+			WHERE sale_code IN (
+				'SOL1',
+				'SOL2',
+				'SOL3',
+				'SOL4',
+				'SOL5',
+				'SOL6',
+				'SOL7',
+				'SOL8',
+				'SOL9',
+				'SOL0',
+				'SM1'
+			)
+			ORDER BY sale_code ASC
+		";
+
+	}
+
+
+	// User อื่น ดูจาก user_sale_permission
+	else {
+
+		$saleDropdownSql = "
+			SELECT DISTINCT
+				t.sale_code,
+				t.sale_name
+			FROM tb_team_adm t
+
+			INNER JOIN user_sale_permission p
+				ON p.sale_code COLLATE utf8mb3_general_ci
+				 =
+				   t.sale_code COLLATE utf8mb3_general_ci
+
+			WHERE p.em_id = '".$emid_safe."'
+
+			ORDER BY t.sale_code ASC
+		";
+
+	}
+
+
+	// =====================================================
+	// ดึง Dropdown Options
+	// =====================================================
+	$saleDropdownOptions = array();
+
+	$saleDropdownQuery = mysqli_query(
+		$com,
+		$saleDropdownSql
+	);
+
+	if ($saleDropdownQuery) {
+
+		while (
+			$saleDropdownRow =
+			mysqli_fetch_assoc($saleDropdownQuery)
+		) {
+
+			$saleDropdownOptions[] = $saleDropdownRow;
+
+		}
+
+	}
+
+}
+
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -80,9 +247,12 @@ while ($saleQuery && ($saleRow = mysqli_fetch_assoc($saleQuery))) {
 								<input name="Keyword" class="so-input" type="text" id="Keyword" placeholder="Search" value="<?php echo htmlspecialchars($Keyword); ?>">
 							</div>
 
+               <?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
 							<a href="register_poawl.php" class="btn-so-outline" style="text-decoration:none; flex-shrink: 0;">
 								<img src="img/icons/add_message.png" alt="" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"> สร้างใบ PO
 							</a>
+                  <?php } ?>
+
 						</div>
 					</div>
 
@@ -126,16 +296,87 @@ while ($saleQuery && ($saleRow = mysqli_fetch_assoc($saleQuery))) {
 									</select>
 								</div>
 								<div>
-									<label class="so-label">เขตการขาย</label>
-									<select name="sale_code" id="modal_sale_code" class="so-select">
-										<option value="">Select</option>
-										<?php foreach ($saleNames as $saleCodeOpt => $saleNameOpt) { ?>
-											<option value="<?php echo htmlspecialchars($saleCodeOpt); ?>" <?php echo $sale_code === (string)$saleCodeOpt ? 'selected' : ''; ?>>
-												<?php echo htmlspecialchars($saleCodeOpt); ?> - <?php echo htmlspecialchars($saleNameOpt); ?>
-											</option>
-										<?php } ?>
-									</select>
-								</div>
+	<label class="so-label">เขตการขาย</label>
+
+	<?php if ($type_login_lower == 'sale') { ?>
+
+		<!-- Sale ล็อกเขตตัวเอง -->
+		<input
+			type="hidden"
+			name="sale_code"
+			id="modal_sale_code"
+			value="<?php echo htmlspecialchars(
+				$emid,
+				ENT_QUOTES,
+				'UTF-8'
+			); ?>"
+		>
+
+		<input
+			type="text"
+			class="so-select"
+			value="<?php echo htmlspecialchars(
+				$emid . ' - ' . (
+					isset($saleNames[$emid])
+						? $saleNames[$emid]
+						: $emid
+				),
+				ENT_QUOTES,
+				'UTF-8'
+			); ?>"
+			readonly
+			style="background:#f5f5f5; cursor:not-allowed;"
+		>
+
+	<?php } else { ?>
+
+		<select
+			name="sale_code"
+			id="modal_sale_code"
+			class="so-select"
+		>
+
+			<option value="">Select</option>
+
+			<?php foreach ($saleDropdownOptions as $saleOpt) { ?>
+
+				<?php
+				$saleCodeOpt =
+					(string)$saleOpt['sale_code'];
+
+				$saleNameOpt =
+					(string)$saleOpt['sale_name'];
+
+				$selected = (
+					isset($sale_code) &&
+					(string)$sale_code === $saleCodeOpt
+				)
+					? 'selected'
+					: '';
+				?>
+
+				<option
+					value="<?php echo htmlspecialchars(
+						$saleCodeOpt,
+						ENT_QUOTES,
+						'UTF-8'
+					); ?>"
+					<?php echo $selected; ?>
+				>
+					<?php echo htmlspecialchars(
+						$saleCodeOpt . ' - ' . $saleNameOpt,
+						ENT_QUOTES,
+						'UTF-8'
+					); ?>
+				</option>
+
+			<?php } ?>
+
+		</select>
+
+	<?php } ?>
+
+</div>
 							</div>
 
 							<div class="so-modal-footer">
@@ -199,8 +440,91 @@ while ($saleQuery && ($saleRow = mysqli_fetch_assoc($saleQuery))) {
 
 						<?php
 						date_default_timezone_set("Asia/Bangkok");
+						
+						
+							/* =========================================================
+					   สิทธิ์การมองเห็นเอกสาร
+					   ========================================================= */
 
-						$strSQL = "SELECT * FROM hos__po WHERE 1";
+					$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+					$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
+
+					$emid_safe = mysqli_real_escape_string($conn, $emid);
+					$type_login_lower = strtolower($type_login);
+
+					$sddd = "1";
+
+					/* IT / Admin / Owner : เห็นเอกสารทั้งหมด */
+					if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
+
+						$sddd = "1";
+
+					/* Sale : เห็นเฉพาะ sale_code ของตัวเอง */
+					} else if ($type_login_lower == 'sale') {
+
+						$sddd = "sale_code = '" . $emid_safe . "'";
+
+					/* Engineer / SUP_EN : เห็นเฉพาะเขต EN */
+					} else if ($emid == 'SUP_EN' || $type_login_lower == 'engineer') {
+
+						$sddd = "sale_code LIKE '%EN%'";
+
+					/* SOL : ใช้สิทธิ์กลุ่ม SOL เดิม */
+					} else if ($type_login_lower == 'sol') {
+
+						$sddd = "sale_code IN (
+							'SOL1','SOL2','SOL3','SOL4','SOL5',
+							'SOL6','SOL7','SOL8','SOL9','SOL0','SM1'
+						)";
+
+					/* User อื่น ๆ : อ่านสิทธิ์จาก user_sale_permission */
+					} else {
+
+						$sql_permission = "
+							SELECT sale_code
+							FROM user_sale_permission
+							WHERE em_id = '" . $emid_safe . "'
+						";
+
+						$query_permission = mysqli_query($conn, $sql_permission);
+
+						$sale_permission = array();
+
+						if ($query_permission) {
+							while ($row_permission = mysqli_fetch_assoc($query_permission)) {
+
+								if (
+									isset($row_permission['sale_code']) &&
+									trim($row_permission['sale_code']) != ''
+								) {
+
+									$sale_permission[] =
+										"'" .
+										mysqli_real_escape_string(
+											$conn,
+											trim($row_permission['sale_code'])
+										) .
+										"'";
+								}
+							}
+						}
+
+						if (!empty($sale_permission)) {
+
+							$sddd = "sale_code IN (" . implode(',', $sale_permission) . ")";
+
+						} else {
+
+							/*
+							 * ไม่มีสิทธิ์ในตาราง = ไม่ให้เห็นเอกสาร
+							 */
+							$sddd = "1=0";
+						}
+					}
+						
+						
+
+						$strSQL = "SELECT * FROM hos__po WHERE $sddd ";
 
 						if ($start_date != "") {
 							$strSQL .= ' AND date_po >= "' . mysqli_real_escape_string($conn, $start_date) . '"';

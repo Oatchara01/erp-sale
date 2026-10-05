@@ -137,6 +137,7 @@
 		if (customerId === '') return;
 		byId('bill_id').value = customerId;
 		byId('h_bill_id').value = customerId;
+		soClearFieldInvalid(byId('btn_open_customer'));
 		loadCustomerDetail(customerId, true);
 		var trigger = byId('btn_open_customer');
 		if (trigger) trigger.focus();
@@ -245,19 +246,32 @@
 		return rows;
 	}
 
-	function validateForSubmit() {
+	/* ดอกจันทุกตัวตรวจด้วย soValidateRequired() (js/so-required-fields.js) ได้กรอบแดงพร้อมกัน ไม่มี alert
+	   ยกเว้นลูกค้า: ดอกจันอยู่บนปุ่ม #btn_open_customer (ไม่ใช่ .so-label) และค่าจริงคือ hidden bill_id ตัวตรวจกลางมองไม่เห็น
+	   จึงมาร์กกรอบแดงที่ปุ่มเอง — ล้างเมื่อเลือกลูกค้าจาก popup (customerPopupOnConfirm) */
+	function validateRequiredFields() {
 		var form = document.forms.frmMain;
-		var checks = [
-			[form.type_doc.value === '', 'กรุณาเลือกบริษัท', form.type_doc],
-			[form.sale_code.value.trim() === '', 'กรุณาเลือกแผนก/เขตการขาย', form.sale_code],
-			[form.date_po.value.trim() === '', 'กรุณาระบุวันที่', form.date_po],
-			[form.po_no.value.trim() === '', 'กรุณากรอกเลขที่ PO', form.po_no],
-			[form.bill_id.value.trim() === '', 'กรุณาเลือกลูกค้า', byId('btn_open_customer')],
-			[form.bill_name.value.trim() === '', 'กรุณากรอกชื่อออกบิล', form.bill_name]
-		];
-		for (var c = 0; c < checks.length; c++) {
-			if (checks[c][0]) return { message: checks[c][1], field: checks[c][2] };
+		var fieldsOk = soValidateRequired(form);
+		var customerButton = byId('btn_open_customer');
+		var customerMissing = form.bill_id.value.trim() === '';
+
+		if (customerButton) {
+			if (customerMissing) {
+				soMarkFieldInvalid(customerButton);
+				// ฟิลด์อื่นแดงอยู่ด้วย → ตัวตรวจกลางเลื่อนไปฟิลด์แรกให้แล้ว เลื่อนเองเฉพาะตอนมีแค่ลูกค้าที่ขาด
+				if (fieldsOk) {
+					customerButton.scrollIntoView({ block: 'center' });
+					customerButton.focus({ preventScroll: true });
+				}
+			} else {
+				soClearFieldInvalid(customerButton);
+			}
 		}
+		return fieldsOk && !customerMissing;
+	}
+
+	function validateForSubmit() {
+		if (!validateRequiredFields()) return { silent: true };
 
 		var rows = collectFilledRows();
 		if (rows.length === 0) {
@@ -354,12 +368,14 @@
 		if (busy || !actionLabels[action]) return;
 
 		if (action === 'draft') {
+			if (!validateRequiredFields()) return;
 			send(action, button);
 			return;
 		}
 
 		var problem = validateForSubmit();
 		if (problem) {
+			if (problem.silent) return;
 			notify('ข้อมูลไม่ครบถ้วน', problem.message, 'warning').then(function() { focusField(problem.field); });
 			return;
 		}

@@ -12,6 +12,7 @@ include('dbconnect_sale.php');
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 <script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>
@@ -237,16 +238,6 @@ include('dbconnect_sale.php');
 		for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
 		document.getElementById(tabId).style.display = 'block';
 		element.classList.add('active');
-	}
-
-	function chgFocusField(field) {
-		if (!field) return;
-		var parentAddrTab = field.closest('.so-addr-tab-content');
-		if (parentAddrTab && parentAddrTab.id) {
-			var tabBtn = document.querySelector(".so-tab-btn[onclick*='" + parentAddrTab.id + "']");
-			if (tabBtn) brOpenAddrTab(parentAddrTab.id, tabBtn);
-		}
-		field.focus();
 	}
 </script>
 
@@ -550,7 +541,7 @@ $chgLatestDocumentReasonTitle = $chgLatestDocumentReasonTitleMap[$chgLatestDocum
 $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDocumentReasonStatus);
 ?>
 
-<form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" onSubmit="JavaScript:return fncSubmit();">
+<form action="<?php echo $chgIsEditMode ? 'register_supchange_edit1.php' : 'register_supchange1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container" style="max-width:1320px;margin:0 auto;">
 
 		<div class="so-header-container">
@@ -582,10 +573,18 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 		<script language="javascript">
 			var chgSubmitting = false; // กันเรียก fncSubmit ซ้ำระหว่างกำลังบันทึก (double-click / กดซ้ำตอนเน็ตช้า)
 
+			// ฟิลด์บังคับ (name/id) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม (ไม่รวม customer, start_date, time_range, delivery_type)
+			var CHG_APPROVE_REQUIRED_FIELDS = ['sale_code', 'start_time', 'customer_name', 'customer_tel', 'province_name', 'address_merged_ui', 'address_send', 'transport_company'];
+
 			function fncSubmit() {
 				if (chgSubmitting) return false;
 
-				if (!validateTransportCompanyRequirement()) {
+				// อนุมัติตรวจเฉพาะชุดฟิลด์ที่เคยตรวจมาแต่เดิม เพื่อให้เอกสารเก่าที่ยังไม่มีลูกค้า/วันจัดส่ง/ช่วงเวลาอนุมัติต่อได้
+				var chgApproveActionField = document.getElementById('chg_approve_action');
+				var chgIsApproving = !!(chgApproveActionField && chgApproveActionField.value);
+				if (!soValidateRequired(document.forms['frmMain'], chgIsApproving ? {
+						only: CHG_APPROVE_REQUIRED_FIELDS
+					} : null)) {
 					return false;
 				}
 
@@ -594,59 +593,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				}
 
 				if (!validateDeliveryTimeRange()) {
-					return false;
-				}
-
-				// อนุมัติเอกสารเก่าที่ยังไม่มีช่วงเวลาต้องทำได้ จึงบังคับเฉพาะปุ่มบันทึกของผู้สร้าง
-				var chgApproveActionField = document.getElementById('chg_approve_action');
-				if (!(chgApproveActionField && chgApproveActionField.value) && !validateDeliveryTimeRangeChoice()) {
-					return false;
-				}
-
-				if (document.frmMain.start_time.value == "") {
-					alert('กรุณาใส่เวลาส่ง');
-					chgFocusField(document.frmMain.start_time);
-					return false;
-				}
-
-				if (document.frmMain.customer_name.value == "") {
-					alert('กรุณาใส่ชื่อลูกค้า');
-					chgFocusField(document.frmMain.customer_name);
-					return false;
-				}
-
-				if (document.frmMain.customer_tel.value == "") {
-					alert('กรุณาใส่เบอร์โทรลูกค้า');
-					chgFocusField(document.frmMain.customer_tel);
-					return false;
-				}
-				if (document.frmMain.address_1.value == "") {
-					alert('กรุณาใส่สถานที่ส่งสินค้า');
-					chgFocusField(document.frmMain.address_1);
-					return false;
-				}
-
-				if (document.frmMain.address_name.value == "") {
-					alert('กรุณาใส่ที่อยู่ในการส่งสินค้า');
-					chgFocusField(document.frmMain.address_name);
-					return false;
-				}
-
-				if (document.frmMain.address_send.value == "") {
-					alert('กรุณาใส่สถานที่ติดตั้งเครื่อง');
-					chgFocusField(document.frmMain.address_send);
-					return false;
-				}
-
-				if (document.frmMain.province_name.value == "") {
-					alert('กรุณาเลือกจังหวัดที่ต้องการจัดส่ง');
-					chgFocusField(document.frmMain.province_name);
-					return false;
-				}
-
-				if (document.frmMain.sale_code.value == "") {
-					alert('กรุณาเลือกแผนก/เขตการขาย');
-					chgFocusField(document.frmMain.sale_code);
 					return false;
 				}
 
@@ -769,7 +715,13 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 
 		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : so_saved_h($so . $nextId); ?>">
 		<input name="add_by" value="<?php echo so_saved_h(($_SESSION['name'] ?? '') . ' ' . ($_SESSION['surname'] ?? '')); ?>" type='hidden'>
+<?php
+		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
+		$type_login = isset($_SESSION['type_login']) ? trim($_SESSION['type_login']) : '';
 
+		$type_login_lower = strtolower($type_login);
+		$emid_safe = mysqli_real_escape_string($com, $emid);
+		?>
 		<div class="chg-layout">
 
 			<div class="chg-content-col">
@@ -778,7 +730,9 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				<div id="step-doc">
 					<div class="so-tabs-container">
 						<button type="button" class="so-tab-btn active" onclick="switchBrMainTab(this, 'tab-document-info')">ข้อมูลเอกสาร</button>
+						<?php if (in_array($type_login_lower, ['admin', 'it'], true)) { ?>
 						<button type="button" class="so-tab-btn" onclick="switchBrMainTab(this, 'tab-admin-info')">Admin</button>
+						<?php } ?>
 					</div>
 
 					<div id="tab-document-info" class="so-tab-content active">
@@ -787,7 +741,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
 									<label class="so-label">บริษัท</label>
 									<div class="so-select-wrapper">
-										<select class="so-select" name="company" id="company_select" required>
+										<select class="so-select" name="company" id="company_select">
 											<option value="1" selected>AWL</option>
 											<option value="2">NBM</option>
 										</select>
@@ -795,41 +749,162 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								</div>
 
 								<div class="so-field-group" style="margin-bottom:0; flex:1; max-width:328px;">
-									<label class="so-label" for="sale_code">แผนก/เขตการขาย <span style="color:red;">*</span></label>
-									<div class="so-select-wrapper">
-										<?php
-										// mirror ของ register_supbrcshos.php:984-999 — ทีมขายตาม $_SESSION['code']
-										if ($_SESSION['code'] == 'SS1') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss1 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS2') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss2 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS3') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SS5') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_ss3 WHERE sale_code IN ('S31','S32') ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'MK2') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_sm1 ORDER BY sale_code ASC";
-										} else if ($_SESSION['code'] == 'SUP_EN') {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_en ORDER BY sale_code ASC";
-										} else {
-											$chgSaleTeamSql = "SELECT * FROM tb_team_adm ORDER BY sale_code ASC";
-										}
-										?>
-										<select name="sale_code" id="sale_code" class="so-select" required>
-											<option value="">**Please Select**</option>
-											<?php
-											$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
-											if ($chgSaleTeamQuery) {
-												while ($chgSaleTeamRow = mysqli_fetch_array($chgSaleTeamQuery)) {
-											?>
-												<option value="<?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?>"><?php echo so_saved_h($chgSaleTeamRow["sale_code"]); ?> - <?php echo so_saved_h($chgSaleTeamRow["sale_name"]); ?></option>
-											<?php
-												}
-											}
-											?>
-										</select>
-									</div>
-								</div>
+	<label class="so-label" for="sale_code">
+		แผนก/เขตการขาย <span style="color:red;">*</span>
+	</label>
+
+	<div class="so-select-wrapper">
+
+		
+
+		<?php if ($type_login_lower == 'sale') { ?>
+
+			<!-- Sale ล็อกเขตตัวเอง -->
+			<input
+				type="hidden"
+				name="sale_code"
+				id="sale_code"
+				value="<?php echo so_saved_h($emid); ?>"
+			>
+
+			<input
+				type="text"
+				class="so-select"
+				value="<?php echo so_saved_h($emid); ?>"
+				readonly
+				style="background:#f5f5f5; cursor:not-allowed;"
+			>
+
+		<?php } else { ?>
+
+			<?php
+
+			// =========================================================
+			// Admin / IT / Owner เห็นทั้งหมด
+			// =========================================================
+			if (
+				$type_login_lower == 'admin' ||
+				$type_login_lower == 'it' ||
+				$type_login_lower == 'owner'
+			) {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// Engineer / SUP_EN
+			// =========================================================
+			else if (
+				$emid == 'SUP_EN' ||
+				$type_login_lower == 'engineer'
+			) {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code LIKE '%EN%'
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// SOL
+			// =========================================================
+			else if ($type_login_lower == 'sol') {
+
+				$chgSaleTeamSql = "
+					SELECT
+						sale_code,
+						sale_name
+					FROM tb_team_adm
+					WHERE sale_code IN (
+						'SOL1',
+						'SOL2',
+						'SOL3',
+						'SOL4',
+						'SOL5',
+						'SOL6',
+						'SOL7',
+						'SOL8',
+						'SOL9',
+						'SOL0',
+						'SM1'
+					)
+					ORDER BY sale_code ASC
+				";
+
+			}
+
+			// =========================================================
+			// User อื่น
+			// ดูสิทธิ์จาก user_sale_permission
+			// =========================================================
+			else {
+
+				$chgSaleTeamSql = "
+					SELECT DISTINCT
+						t.sale_code,
+						t.sale_name
+					FROM tb_team_adm t
+
+					INNER JOIN user_sale_permission p
+						ON p.sale_code COLLATE utf8mb3_general_ci
+						 =
+						   t.sale_code COLLATE utf8mb3_general_ci
+
+					WHERE p.em_id = '".$emid_safe."'
+
+					ORDER BY t.sale_code ASC
+				";
+
+			}
+			?>
+
+			<select
+				name="sale_code"
+				id="sale_code"
+				class="so-select"
+				required
+			>
+				<option value="">**Please Select**</option>
+
+				<?php
+				$chgSaleTeamQuery = mysqli_query($com, $chgSaleTeamSql);
+
+				if ($chgSaleTeamQuery) {
+
+					while ($chgSaleTeamRow = mysqli_fetch_assoc($chgSaleTeamQuery)) {
+				?>
+
+						<option
+							value="<?php echo so_saved_h($chgSaleTeamRow['sale_code']); ?>"
+						>
+							<?php echo so_saved_h($chgSaleTeamRow['sale_code']); ?>
+							-
+							<?php echo so_saved_h($chgSaleTeamRow['sale_name']); ?>
+						</option>
+
+				<?php
+					}
+				}
+				?>
+
+			</select>
+
+		<?php } ?>
+
+	</div>
+</div>
 
 								<!-- "งานด่วน" — hos__change.que_ckk เป็นคอลัมน์ใหม่ (sql/supchange_optional_columns.sql)
 								     register_supchange1.php เขียนผ่าน cs_update_column_if_exists จึงไม่พังถ้ายังไม่ได้รัน ALTER -->
@@ -1036,7 +1111,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							<div class="so-field-group" style="margin-bottom: 0;">
 								<label class="so-label" for="customer">ชื่อลูกค้า/รพ. <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น" required>
+									<input type="text" name="customer" id="customer" class="so-input" readonly placeholder="จะแสดงผลอัตโนมัติเมื่อเลือกเสร็จสิ้น">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="clearCustomerSelection();" aria-label="ล้างข้อมูลลูกค้าที่เลือก"></button>
 								</div>
 								<input type="hidden" name="customer_id" id="customer_id">
@@ -1175,28 +1250,39 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								// ตัวเลือกจริงสร้างด้วย JS ตามวิธีการจัดส่ง (ดู updateTransportCompanyRequirement ใน js/delivery-transport.js)
 								'' => 'เลือกบริษัทขนส่ง',
 							]],
+							['type' => 'date', 'span' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
+							// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
+							['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 							// ช่วงเวลาเป็นฟิลด์อิสระ ไม่ผูกกับเวลาจัดส่ง (เก็บลง hos__change.time_range ดู sql/delivery_time_range.sql)
-							['type' => 'select', 'span' => 2, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
+							// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้ววันที่เลื่อนมาชิดซ้าย
+							['type' => 'select', 'span' => 2, 'col' => 1, 'name' => 'time_range', 'label' => 'เลือกช่วงเวลา', 'required' => true, 'options' => [
 								'' => 'เลือกช่วงเวลา',
 								'morning' => 'ช่วงเช้า',
 								'afternoon' => 'ช่วงบ่าย',
 								'allday' => 'ทั้งวัน',
 								'specific' => 'กำหนดเวลา',
 							]],
-							// col 1: ขึ้นแถวใหม่เสมอ แม้บริษัทขนส่งถูกซ่อนแล้วช่วงเวลาเลื่อนมาชิดซ้าย
-							['type' => 'date', 'span' => 1, 'col' => 1, 'name' => 'start_date', 'label' => 'จัดส่งวันที่', 'required' => true],
-							// ถึงวันที่ใช้ชื่อฟิลด์ between_date เดิม (เก็บลง date_send_key เป็น YYYY-MM-DD) ดู js/delivery-transport.js
-							['type' => 'date', 'span' => 1, 'name' => 'between_date', 'label' => 'ถึงวันที่'],
 							['type' => 'time', 'span' => 1, 'name' => 'start_time', 'label' => 'จัดส่งตั้งแต่เวลา', 'required' => true],
 							// ถึงเวลาใช้กฎเดียวกับถึงวันที่ ดู js/delivery-transport.js
 							['type' => 'time', 'span' => 1, 'name' => 'end_time', 'label' => 'ถึงเวลา'],
 							['type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true],
 							['type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'],
 						],
-						'toggle_buttons' => [
-							['name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'],
-							['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS'],
-						],
+						'toggle_buttons' => array_filter([
+    [
+        'name' => 'no_money',
+        'id' => 'no_money',
+        'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
+    ],
+
+    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+        ? [
+            'name' => 'send_cs',
+            'id' => 'send_cs',
+            'label' => 'ส่งข้อมูลลงระบบ CS'
+        ]
+        : null,
+]),
 						'cost_fields' => [
 							['type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'],
 							['type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'],
@@ -1268,7 +1354,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="address_merged_ui">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 								<div class="so-input-wrapper">
-									<input type="text" class="so-input" name="address_merged_ui" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" required oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
+									<input type="text" class="so-input" name="address_merged_ui" id="address_merged_ui" placeholder="ที่อยู่ส่งสินค้า" oninput="document.getElementById('address_1').value=this.value; document.getElementById('address_name').value=this.value;">
 									<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_merged_ui').value=''; document.getElementById('address_1').value=''; document.getElementById('address_name').value='';" aria-label="ล้างค่า"></button>
 								</div>
 								<input type="hidden" name="address_1" id="address_1">
@@ -1370,40 +1456,40 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดประตูห้อง</label>
+									<label class="so-label" style="color: #612989;">ขนาดประตูห้อง (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดบันได</label>
+									<label class="so-label" style="color: #612989;">ขนาดบันได (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="stair_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="stair_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="stair_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 							</div>
 
 							<div class="so-grid-3" style="margin-top: 16px;">
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ประตูลิฟต์</label>
+									<label class="so-label" style="color: #612989;">ประตูลิฟต์ (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_door_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
-										<input name="elev_door_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
+										<input name="elev_door_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; flex: 1; min-width: 0;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="grid-column: span 1; min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์</label>
+									<label class="so-label" style="color: #612989;">ขนาดห้องลิฟต์ (ซม.)</label>
 									<div style="display: flex; gap: 16px;">
-										<input name="elev_width" type="text" class="so-input" placeholder="ความกว้าง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_height" type="text" class="so-input" placeholder="ความสูง (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
-										<input name="elev_depth" type="text" class="so-input" placeholder="ความลึก (ซม.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_width" type="text" class="so-input" placeholder="กว้าง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_height" type="text" class="so-input" placeholder="สูง" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
+										<input name="elev_depth" type="text" class="so-input" placeholder="ลึก" style="background-color: #F4F3F7; border:none; border-radius: 8px; min-width: 0; flex: 1;" />
 									</div>
 								</div>
 								<div class="so-field-group" style="min-width: 0;">
-									<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์</label>
-									<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก (กก.)" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+									<label class="so-label" style="color: #612989;">ขนาดบรรทุกของลิฟต์ (กก.)</label>
+									<input name="elev_capacity" type="text" class="so-input" placeholder="น้ำหนัก" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 								</div>
 							</div>
 
@@ -1431,7 +1517,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" style="color: #612989;">หมายเหตุเพิ่มเติม</label>
-								<input name="addr_note" type="text" class="so-input" placeholder="รายละเอียดเพิ่มเติม" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
+								<input name="addr_note" type="text" class="so-input" placeholder="ใส่หมายเหตุ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%;" />
 							</div>
 						</div>
 
@@ -1993,10 +2079,10 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 	// พอร์ตจาก brcsSaveDraft() (register_supbrcshos.php:206-283) — AJAX POST is_draft=1 ไปยัง
 	// register_supchange_draft1.php แล้ว redirect กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ
 	function chgSaveDraft() {
-		if (!validateDeliveryTimeRangeChoice()) return;
-
 		var form = document.forms['frmMain'];
 		if (!form) return;
+
+		if (!soValidateRequired(form)) return;
 
 		var btn = form.querySelector('[name="save_draft"]');
 		var defaultHtml = btn ? btn.innerHTML : '';
