@@ -1,0 +1,881 @@
+/* Page-specific styles for register_receivepro.php (ใบส่งสินค้า)
+   ต่อยอดจาก css/so-core.css + css/register-suphos.css — ไฟล์นี้มีเฉพาะส่วนที่หน้านี้ต่างจริง ๆ
+   ทุก selector ผูกกับ .rp-* เพื่อไม่ให้หน้าอื่นเปลี่ยนตาม */
+
+/* ===== โครงหน้า ===== */
+.rp-content {
+	max-width: 1128px;
+	margin: 0 auto;
+	padding: 0 16px;
+	box-sizing: border-box;
+}
+
+.rp-card {
+	min-width: 0;
+	margin-bottom: 24px;
+}
+
+.so-title.rp-title {
+	font-size: 24px;
+}
+
+.rp-content .so-latest-reason-banner {
+	margin: 0 auto 24px;
+}
+
+.rp-status-pill {
+	display: inline-flex;
+	align-items: center;
+	height: 22px;
+	padding: 0 10px;
+	border-radius: 11px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.rp-status-pill.is-cancelled {
+	background: #FEECEB;
+	color: #C62828;
+}
+
+.rp-section-head {
+	margin-bottom: 20px;
+}
+
+.rp-section-head .so-divider {
+	border: 0;
+	border-top: 2px solid var(--so-divider);
+	margin: 8px 0 0;
+}
+
+.rp-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+/* css/style.css ให้ input ทุกตัว margin-top: 5px — ช่องกรอกจะเยื้องต่ำกว่า dropdown ในแถวเดียวกัน */
+.rp-page .so-input,
+.rp-modal .so-input {
+	margin-top: 0;
+}
+
+/* × ของฟอนต์ Prompt เล็กและหนา — ใช้ glyph ของ Arial ให้ได้กากบาทบางตามดีไซน์ */
+.rp-page .so-input-clear,
+.rp-modal .so-input-clear {
+	font-family: Arial, sans-serif;
+	font-size: 24px;
+	font-weight: 400;
+	line-height: 1;
+}
+
+/* ===== การ์ดข้อมูลเอกสาร ===== */
+.rp-card .so-grid-3 {
+	gap: 0 24px;
+}
+
+/* row-gap เฉพาะแถวปุ่ม — จอแคบปุ่มเรียงลงมาเป็นคอลัมน์เดียวต้องไม่ติดกัน */
+.rp-card .rp-doc-actions {
+	margin-top: 8px;
+	row-gap: 12px;
+}
+
+.rp-doc-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 42px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: var(--so-input-bg);
+	color: var(--so-text);
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.rp-doc-action-btn:hover:not(:disabled) {
+	background: #FFFFFF;
+	border-color: var(--so-primary);
+	color: var(--so-primary);
+}
+
+.rp-doc-action-btn:focus-visible {
+	outline: 2px solid rgba(var(--so-primary-rgb), 0.45);
+	outline-offset: 2px;
+}
+
+.rp-doc-action-btn:disabled {
+	color: var(--so-muted);
+	cursor: not-allowed;
+}
+
+/* ===== การ์ดข้อมูลลูกค้า ===== */
+.rp-field-third {
+	max-width: calc((100% - 48px) / 3);
+}
+
+.rp-field-last {
+	margin-bottom: 0;
+}
+
+/* ===== อ่านอย่างเดียว (ใบยกเลิก) — fieldset disabled ปิด control, ที่เหลือซ่อนด้วย CSS ===== */
+.rp-readonly-fieldset {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
+}
+
+.rp-page .so-input:disabled,
+.rp-page .so-select:disabled {
+	color: var(--so-text);
+	-webkit-text-fill-color: var(--so-text);
+	opacity: 1;
+	cursor: not-allowed;
+}
+
+/* ช่องวันที่ที่ล็อก (Submit/ยกเลิกแล้ว) — ไอคอนปฏิทินจางลงให้รู้ว่าแก้ไม่ได้ */
+.rp-page .calendar-wrapper.is-locked::after {
+	opacity: 0.35;
+}
+
+.rp-page .calendar-wrapper.is-locked input[type="date"]::-webkit-calendar-picker-indicator {
+	cursor: not-allowed;
+}
+
+.rp-page.is-readonly .so-input-clear,
+.rp-page.is-readonly .rp-row-actions,
+.rp-page.is-readonly .rp-drag-handle,
+.rp-page.is-readonly .rp-check {
+	visibility: hidden;
+}
+
+/* ===== การ์ดรายการสินค้า ===== */
+.rp-items-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.rp-items-count {
+	color: var(--so-muted);
+	font-size: 18px;
+	white-space: nowrap;
+}
+
+.rp-summary-bar {
+	display: flex;
+	margin-bottom: 24px;
+	padding: 12px 0;
+	border-radius: 10px;
+	background: var(--so-input-bg);
+}
+
+.rp-summary-col {
+	flex: 1 1 0;
+	min-width: 0;
+	padding: 4px 16px;
+	text-align: center;
+}
+
+.rp-summary-label {
+	margin-bottom: 8px;
+	color: var(--so-muted);
+	font-size: 14px;
+}
+
+.rp-summary-value {
+	color: var(--so-text);
+	font-size: 24px;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+	font-variant-numeric: tabular-nums;
+}
+
+.rp-items-toolbar {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-bottom: 20px;
+}
+
+.rp-items-toolbar:empty {
+	display: none;
+}
+
+.rp-search-group {
+	flex: 1 1 320px;
+	max-width: 680px;
+	margin-bottom: 0;
+}
+
+.rp-search-box {
+	position: relative;
+}
+
+.rp-search-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--so-text);
+	font-size: 16px;
+	pointer-events: none;
+}
+
+.so-input.rp-search-input {
+	padding-left: 42px;
+}
+
+/* z-index สูงกว่าแถบปุ่มล่าง (.so-sticky-actions = 5) เพื่อให้ผลค้นหาทับแถบได้ */
+.rp-search-results {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 20;
+	max-height: 320px;
+	margin: 0;
+	padding: 6px 0;
+	overflow-y: auto;
+	list-style: none;
+	background: #FFFFFF;
+	border: 1px solid var(--so-border);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.rp-search-results[hidden] {
+	display: none;
+}
+
+.rp-search-option {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 16px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.rp-search-option:hover,
+.rp-search-option.is-active {
+	background: #F4EFF8;
+}
+
+.rp-search-option-code {
+	color: var(--so-primary);
+	font-weight: 500;
+}
+
+.rp-search-option-name {
+	color: var(--so-text);
+}
+
+.rp-search-option-sub {
+	color: var(--so-muted);
+	font-size: 12px;
+}
+
+.rp-search-note {
+	padding: 8px 16px;
+	color: var(--so-muted);
+	font-size: 13px;
+}
+
+.rp-bulk-delete-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 42px;
+	padding: 0 16px;
+	border: 1px solid #F3C4C4;
+	border-radius: 10px;
+	background: #FFFFFF;
+	color: #C62828;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.rp-bulk-delete-btn[hidden] {
+	display: none;
+}
+
+.rp-bulk-delete-btn:hover {
+	background: #FEECEB;
+}
+
+.rp-bulk-delete-btn img {
+	width: 16px;
+	height: 16px;
+}
+
+/* ตารางกว้างเท่าเนื้อหาในการ์ด (เส้นหัวตารางไม่ล้ำ padding ของ .so-card)
+   min-width เป็นแค่พื้นกันคอลัมน์บีบเกิน — การ์ดกว้างกว่านี้เสมอตั้งแต่ 769px ขึ้นไป ส่วนจอแคบกว่านั้นเปลี่ยนเป็นการ์ดต่อแถว (ดู Responsive ท้ายไฟล์) */
+.rp-table-wrap {
+	overflow-x: auto;
+}
+
+.rp-items-table {
+	width: 100%;
+	min-width: 560px;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+
+.rp-items-table th {
+	padding: 14px 12px;
+	border-top: 1px solid var(--so-primary);
+	border-bottom: 1px solid var(--so-primary);
+	color: var(--so-primary);
+	font-weight: 500;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.rp-items-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--so-border);
+	vertical-align: middle;
+	color: var(--so-text);
+}
+
+.rp-items-table .rp-col-drag {
+	width: 40px;
+	padding-left: 16px;
+	padding-right: 0;
+}
+
+.rp-items-table .rp-col-check {
+	width: 44px;
+}
+
+.rp-items-table .rp-col-code {
+	width: 22%;
+	overflow-wrap: anywhere;
+}
+
+.rp-items-table .rp-col-qty {
+	width: 130px;
+	text-align: center;
+}
+
+.rp-items-table .rp-col-actions {
+	width: 120px;
+	text-align: center;
+}
+
+.rp-items-table tr.is-selected td {
+	background: #F0E6F8;
+}
+
+.rp-items-table tr.is-dragging td {
+	opacity: 0.45;
+}
+
+.rp-items-table tr.is-drop-before td {
+	box-shadow: inset 0 2px 0 var(--so-primary);
+}
+
+.rp-items-table tr.is-drop-after td {
+	box-shadow: inset 0 -2px 0 var(--so-primary);
+}
+
+.rp-item-name {
+	overflow-wrap: anywhere;
+}
+
+.rp-drag-handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--so-text);
+	font-size: 14px;
+	cursor: grab;
+	touch-action: none;
+}
+
+.rp-drag-handle:hover {
+	background: rgba(var(--so-primary-rgb), 0.08);
+	color: var(--so-primary);
+}
+
+.rp-drag-handle:focus-visible,
+.rp-row-btn:focus-visible {
+	outline: 2px solid rgba(var(--so-primary-rgb), 0.45);
+	outline-offset: 2px;
+}
+
+/* checkbox วงกลมตามดีไซน์ — input จริงยังอยู่ (โปร่งใส) เพื่อคีย์บอร์ดและ screen reader */
+.rp-check {
+	position: relative;
+	display: inline-flex;
+	width: 24px;
+	height: 24px;
+	cursor: pointer;
+}
+
+.rp-check input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.rp-check-mark {
+	width: 24px;
+	height: 24px;
+	border: 1.5px solid var(--so-primary);
+	border-radius: 50%;
+	background: #FFFFFF;
+	box-sizing: border-box;
+	transition: background-color 0.15s ease;
+}
+
+.rp-check input:checked + .rp-check-mark {
+	background: var(--so-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center / 16px no-repeat;
+}
+
+.rp-check input:focus-visible + .rp-check-mark {
+	box-shadow: 0 0 0 3px rgba(var(--so-primary-rgb), 0.25);
+}
+
+.so-input.rp-num-input {
+	height: 40px;
+	padding: 0 10px;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.rp-row-actions {
+	display: inline-flex;
+	gap: 16px;
+}
+
+.rp-row-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border: 1px solid var(--so-border);
+	border-radius: 8px;
+	background: #FFFFFF;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+	cursor: pointer;
+}
+
+.rp-row-btn:hover {
+	background: #F7F5F9;
+}
+
+.rp-row-btn img {
+	width: 20px;
+	height: 20px;
+}
+
+/* กล่องแจ้งตอนยังไม่มีรายการสินค้า (สไตล์เดียวกับ .so-product-empty-state ของ register-supbrhos.css) */
+.rp-items-empty {
+	margin-top: 16px;
+	padding: 28px 16px;
+	color: #8E8B94;
+	font-size: 14px;
+	text-align: center;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
+}
+
+.rp-items-empty[hidden] {
+	display: none;
+}
+
+/* ===== แถบปุ่มล่าง + เมนูพิมพ์ ===== */
+.rp-sticky-actions .so-sticky-actions-inner {
+	max-width: 1128px;
+	padding-right: 16px;
+	align-items: center;
+}
+
+.rp-print-wrap {
+	position: relative;
+}
+
+.rp-print-trigger img {
+	width: 22px;
+	height: 22px;
+}
+
+.so-overflow-menu.rp-print-menu {
+	left: auto;
+	right: 0;
+	bottom: calc(100% + 8px);
+	min-width: 240px;
+	padding: 6px 0;
+}
+
+.rp-print-menu:not([hidden]) {
+	display: block;
+}
+
+.rp-print-item {
+	display: block;
+	padding: 10px 16px;
+	color: #4A4A4A;
+	font-size: 14px;
+	text-decoration: none;
+}
+
+.rp-print-item:hover,
+.rp-print-item:focus-visible {
+	background-color: #F7F5F9;
+	color: var(--so-primary);
+	outline: none;
+}
+
+/* ===== Popup ข้อมูลรายการสินค้าเพิ่มเติม ===== */
+.rp-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(0, 0, 0, 0.45);
+	box-sizing: border-box;
+}
+
+.rp-modal[hidden] {
+	display: none;
+}
+
+.rp-modal-box {
+	position: relative;
+	width: 100%;
+	max-width: 1000px;
+	max-height: calc(100vh - 32px);
+	overflow-y: auto;
+	padding: 28px 32px 24px;
+	border-radius: 16px;
+	background: #FFFFFF;
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+	box-sizing: border-box;
+	font-family: 'Prompt', sans-serif;
+}
+
+.rp-modal-close {
+	position: absolute;
+	top: 10px;
+	right: 14px;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: #6F6475;
+	font-size: 28px;
+	font-weight: 300;
+	line-height: 30px;
+	cursor: pointer;
+}
+
+.rp-modal-close:hover {
+	background: rgba(0, 0, 0, 0.05);
+	color: #2D2533;
+}
+
+.rp-modal-title {
+	margin: 0 32px 12px 8px;
+	color: var(--so-text);
+	font-size: 20px;
+	font-weight: 500;
+}
+
+.rp-modal-box .so-divider {
+	border: 0;
+	border-top: 2px solid var(--so-divider);
+	margin: 0 0 16px;
+}
+
+.rp-modal-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0 24px;
+}
+
+.rp-modal-grid .so-label {
+	margin-left: 8px;
+}
+
+.rp-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 16px;
+	margin-top: 32px;
+}
+
+.rp-modal-actions button {
+	min-width: 160px;
+	justify-content: center;
+}
+
+.btn-so-draft.rp-modal-cancel {
+	color: var(--so-text);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+	.rp-field-third {
+		max-width: none;
+	}
+
+	.rp-modal-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.rp-modal-box {
+		padding: 24px 16px 16px;
+	}
+
+	.rp-modal-actions {
+		flex-direction: column-reverse;
+	}
+
+	.rp-modal-actions button {
+		width: 100%;
+	}
+
+	/* iPhone Safari ซูมหน้าเข้าเองทุกครั้งที่แตะช่องที่ตัวอักษรเล็กกว่า 16px */
+	.rp-page .so-input,
+	.rp-page .so-select,
+	.rp-modal .so-input {
+		font-size: 16px;
+	}
+
+	/* จุดกดสำหรับนิ้ว: อย่างน้อย 40px */
+	.rp-page .so-back-btn,
+	.rp-modal-close,
+	.rp-row-btn {
+		width: 40px;
+		height: 40px;
+	}
+
+	.rp-content .so-latest-reason-close {
+		top: 2px;
+		right: 2px;
+		width: 40px;
+		height: 40px;
+	}
+
+	.rp-page .so-input-clear,
+	.rp-modal .so-input-clear {
+		right: 2px;
+		width: 40px;
+		height: 40px;
+	}
+
+	.rp-page .so-input-wrapper:not(.calendar-wrapper) .so-input,
+	.rp-modal .so-input-wrapper .so-input {
+		padding-right: 44px;
+	}
+
+	/* วงกลมติ๊กยังเท่าเดิม (24px) — ขยายเฉพาะพื้นที่รับนิ้วของ input ที่โปร่งใส */
+	.rp-check input {
+		inset: -8px;
+		width: calc(100% + 16px);
+		height: calc(100% + 16px);
+	}
+
+	.rp-drag-handle {
+		width: 40px;
+		height: 40px;
+	}
+
+	/* ตารางสินค้า → การ์ดต่อแถว: จอแคบไม่ต้องเลื่อนขวาไปหาช่องจำนวนกับปุ่มแก้ไข/ลบ
+	   แถวยังเป็น <tr> ตัวเดิม ลากเรียงและเลือกลบได้เหมือนเดิม */
+	.rp-items-table,
+	.rp-items-table thead,
+	.rp-items-table tbody {
+		display: block;
+		min-width: 0;
+	}
+
+	.rp-items-table thead tr {
+		display: flex;
+		align-items: center;
+		padding: 0 8px;
+		border-top: 1px solid var(--so-primary);
+		border-bottom: 1px solid var(--so-primary);
+	}
+
+	.rp-items-table th {
+		display: none;
+		border: 0;
+	}
+
+	/* หัวตารางเหลือแค่ช่อง เลือกทั้งหมด — ชื่อคอลัมน์อื่นไม่มีความหมายเมื่อแถวเป็นการ์ด */
+	.rp-items-table th.rp-col-check {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		width: auto;
+		padding: 12px 0 12px 48px;
+	}
+
+	.rp-items-table th.rp-col-check::after {
+		content: 'เลือกทั้งหมด';
+	}
+
+	.rp-items-table tbody tr {
+		display: grid;
+		grid-template-columns: 40px 40px minmax(0, 1fr) auto;
+		grid-template-areas:
+			'drag check code actions'
+			'name name name name'
+			'qty qty qty qty';
+		align-items: center;
+		gap: 8px;
+		padding: 12px 8px;
+		border-bottom: 1px solid var(--so-border);
+	}
+
+	.rp-items-table td.rp-col-drag,
+	.rp-items-table td.rp-col-check,
+	.rp-items-table td.rp-col-code,
+	.rp-items-table td.rp-col-name,
+	.rp-items-table td.rp-col-qty,
+	.rp-items-table td.rp-col-actions {
+		width: auto;
+		padding: 0;
+		border: 0;
+	}
+
+	.rp-items-table td.rp-col-drag {
+		grid-area: drag;
+	}
+
+	.rp-items-table td.rp-col-check {
+		grid-area: check;
+		display: flex;
+		justify-content: center;
+	}
+
+	.rp-items-table td.rp-col-code {
+		grid-area: code;
+		color: var(--so-primary);
+		font-weight: 500;
+	}
+
+	.rp-items-table td.rp-col-actions {
+		grid-area: actions;
+	}
+
+	.rp-items-table td.rp-col-name {
+		grid-area: name;
+	}
+
+	.rp-items-table td.rp-col-qty {
+		grid-area: qty;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.rp-items-table td.rp-col-qty::before {
+		content: 'จำนวน';
+		flex: 0 0 auto;
+		color: var(--so-muted);
+	}
+
+	.rp-items-table td.rp-col-qty .rp-num-input {
+		flex: 1 1 auto;
+		min-width: 0;
+		max-width: 180px;
+	}
+
+	.rp-row-actions {
+		gap: 8px;
+	}
+
+	/* สีแถวที่เลือก/เส้นบอกตำแหน่งวาง ย้ายจาก <td> มาอยู่ที่ <tr> ให้เต็มการ์ด */
+	.rp-items-table tr.is-selected td,
+	.rp-items-table tr.is-drop-before td,
+	.rp-items-table tr.is-drop-after td {
+		background: transparent;
+		box-shadow: none;
+	}
+
+	.rp-items-table tr.is-selected {
+		background: #F0E6F8;
+	}
+
+	.rp-items-table tr.is-dragging {
+		opacity: 0.45;
+	}
+
+	.rp-items-table tr.is-drop-before {
+		box-shadow: inset 0 2px 0 var(--so-primary);
+	}
+
+	.rp-items-table tr.is-drop-after {
+		box-shadow: inset 0 -2px 0 var(--so-primary);
+	}
+
+	/* ใบยกเลิก: ไม่มีจุดจับ/ช่องติ๊ก/ปุ่มแถว — ไม่ต้องเว้นที่ให้ */
+	.rp-page.is-readonly .rp-items-table thead,
+	.rp-page.is-readonly .rp-items-table td.rp-col-drag,
+	.rp-page.is-readonly .rp-items-table td.rp-col-check,
+	.rp-page.is-readonly .rp-items-table td.rp-col-actions {
+		display: none;
+	}
+
+	.rp-page.is-readonly .rp-items-table tbody {
+		border-top: 1px solid var(--so-primary);
+	}
+
+	.rp-page.is-readonly .rp-items-table tbody tr {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas:
+			'code'
+			'name'
+			'qty';
+	}
+}
+
+@media (max-width: 576px) {
+	.rp-card .so-grid-3 {
+		gap: 0;
+	}
+
+	.rp-summary-value {
+		font-size: 18px;
+	}
+
+	.rp-print-wrap,
+	.rp-print-trigger {
+		width: 100%;
+	}
+}

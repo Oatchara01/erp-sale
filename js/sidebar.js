@@ -32,6 +32,9 @@
 		}
 
 		var COLLAPSE_KEY = "sidebar_collapsed";
+		// Must match the drawer breakpoint in css/sidebar.css (@media max-width: 1024px):
+		// below it the sidebar is off-canvas, so the hamburger has to open the drawer, not collapse it.
+		var DRAWER_MAX_WIDTH = 1024;
 		var OPEN_GROUPS_KEY = "sidebar_open_groups";
 
 		// ---- navbar hamburger toggle (collapses on desktop, opens drawer on mobile) ----
@@ -44,7 +47,7 @@
 		if (navbarHamburger) {
 			navbarHamburger.addEventListener("click", function (e) {
 				e.stopPropagation();
-				if (window.innerWidth <= 768) {
+				if (window.innerWidth <= DRAWER_MAX_WIDTH) {
 					sidebar.classList.toggle("sidebar-mobile-open");
 				} else {
 					var isCollapsed = sidebar.classList.toggle("sidebar-collapsed");
@@ -55,7 +58,7 @@
 		}
 
 		document.addEventListener("click", function (e) {
-			if (window.innerWidth > 768) return;
+			if (window.innerWidth > DRAWER_MAX_WIDTH) return;
 			if (!sidebar.classList.contains("sidebar-mobile-open")) return;
 			if (sidebar.contains(e.target) || (navbarHamburger && navbarHamburger.contains(e.target))) return;
 			sidebar.classList.remove("sidebar-mobile-open");

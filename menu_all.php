@@ -459,6 +459,28 @@ $token = encryptData(
                 </a>
 
 
+                <?php
+                if (
+                    in_array(
+                        $_SESSION['type_login'],
+                        [
+                            'It',
+                            'owner',
+                            'Admin'
+                        ]
+                    )
+                ) {
+                ?>
+
+                    <a href="register_receivepro.php">
+                        ใบส่งสินค้า
+                    </a>
+
+                <?php
+                }
+                ?>
+
+
                 <a href="status_adminpo.php">
                     ใบสั่งซื้อ (PO)
                 </a>

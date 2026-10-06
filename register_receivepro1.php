@@ -1,164 +1,78 @@
-<?php include ("head.php"); ?>
-
 <?php
-include("dbconnect.php");
-include ("error_page.php"); 
+
+/**
+ * ตัวบันทึกใบส่งสินค้า / ใบรับสินค้า — ทุกเส้นทางผ่าน includes/receivepro_repo.php ตอบกลับ JSON เสมอ
+ *
+ *   rp_action = draft | submit | update → จาก register_receivepro.php (fetch)
+ *   rp_action = send_receive            → ส่งข้อมูลไปรับจ่าย (อ่านแค่ rp_no)
+ *   rp_action = cancel                  → ยกเลิกเอกสาร (rp_no + reason) ลง tb_document_status_log
+ */
+
+require_once __DIR__ . '/includes/receivepro_repo.php';
 
 date_default_timezone_set("Asia/Bangkok");
-if ($_POST["submit"] = "submit") {
+session_start();
+header('Content-Type: application/json; charset=utf-8');
 
-$type_doc = $_POST["type_doc"];
-$bill_name = $_POST["bill_name"];
-$bill_address = $_POST["bill_address"];
-$type_company = $_POST["type_company"];
-$iv_date = $_POST["iv_date"];
-$iv_noref = $_POST["iv_noref"];
-$ref_iddoc = $_POST["ref_iddoc"];
-$address = $_POST["address"];
-$sale_code = $_POST["sale_code"];
-$customer = $_POST["customer"];
-$type_customer = $_POST["type_customer"];
-$delivery_date = $_POST["delivery_date"];
-$reforder_id = $_POST["reforder_id"];	
-	
-$add_date = date('Y-m-d H:i:s');
-$name =	$_SESSION['name'];
-$surname =	$_SESSION['surname'];
-$add_by = "$name $surname";
+$respond = function ($payload, $statusCode = 200) {
+	http_response_code($statusCode);
+	echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+	exit();
+};
 
-
-
-
-$yearMonth = substr(date("Y")+543, -2).date("m");
-$sql = "SELECT MAX(rp_no) AS MAXID FROM hos__proreceive";
-$qry = mysqli_query($conn,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -3);
-$maxId3 = substr($rs['MAXID'],-7);
-$maxId1 = substr($maxId3,0,-3);
-		
-$so = "RP";
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("0000".$maxId1, -3);
-$nextId = $yearMonth.$maxId2;
+if (!isset($_SESSION['UserID']) || $_SESSION['UserID'] === '') {
+	$respond(array('success' => false, 'message' => 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'), 401);
 }
-else 
-{
-$maxId1 = "001"; 
-$nextId = $yearMonth.$maxId1;
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+	$respond(array('success' => false, 'message' => 'รูปแบบคำขอไม่ถูกต้อง'), 405);
 }
 
-$so = "RP";
-$rp_no ="$so$nextId";
+$rpAction = rp_post_value($_POST, 'rp_action');
+if (!in_array($rpAction, array('draft', 'submit', 'update', 'send_receive', 'cancel'), true)) {
+	$respond(array('success' => false, 'message' => 'ไม่รู้จักคำสั่งบันทึก'), 400);
+}
 
+include __DIR__ . '/dbconnect.php';
 
+$pageUrl = function ($rpNo, $flag) {
+	return 'register_receivepro.php?rp_no=' . rawurlencode($rpNo) . '&' . $flag . '=1';
+};
 
-$save="insert into hos__proreceive
-(rp_no,type_company,iv_date,iv_noref,customer,address,bill_name,bill_address,ref_iddoc,add_date,add_by,type_doc,sale_code,type_customer,delivery_date,reforder_id,show_name)
-values
-('".$rp_no."','".$type_company."','".$iv_date."','".$iv_noref."','".$customer."','".$address."','".$bill_name."','".$bill_address."','".$ref_iddoc."','".$add_date."','".$add_by."','".$type_doc."','".$sale_code."','".$type_customer."','".$delivery_date."','".$reforder_id."','1')";
-
-
-$qsave=mysqli_query($conn,$save);
-
-
-$sale_count1 = $_POST["sale_count1"];
-$sale_remarkk1 = $_POST["sale_remarkk1"];
-$product_id1 = $_POST["product_id1"];
-$amount1  = $_POST["sum_amount1"];
-$proname1 =$_POST["proname1"];
-$ckk_name1 =$_POST["ckk_name1"];
-
-$sale_count2 = $_POST["sale_count2"];
-$sale_remarkk2 = $_POST["sale_remarkk2"];
-$product_id2 = $_POST["product_id2"];
-$amount2  = $_POST["sum_amount2"];
-$proname2 =$_POST["proname2"];
-$ckk_name2 =$_POST["ckk_name2"];
-
-$sale_count3 = $_POST["sale_count3"];
-$sale_remarkk3 = $_POST["sale_remarkk3"];
-$product_id3 = $_POST["product_id3"];
-$amount3  = $_POST["sum_amount3"];
-$proname3 =$_POST["proname3"];
-$ckk_name3 =$_POST["ckk_name3"];
-
-$sale_count4 = $_POST["sale_count4"];
-$sale_remarkk4 = $_POST["sale_remarkk4"];
-$product_id4 = $_POST["product_id4"];
-$amount4  = $_POST["sum_amount4"];
-$proname4 =$_POST["proname4"];
-$ckk_name4 =$_POST["ckk_name4"];
-
-$sale_count5 = $_POST["sale_count5"];
-$sale_remarkk5 = $_POST["sale_remarkk5"];
-$product_id5 = $_POST["product_id5"];
-$amount5  = $_POST["sum_amount5"];
-$proname5 =$_POST["proname5"];
-$ckk_name5 =$_POST["ckk_name5"];
-
-
-
-if($product_id1 !=""){
-
-$strSQL = "insert into hos__subproreceive
-(ref_rpno,count,sale_remark,product_code,product_id,amount,proname,ckk_name)
-values ('".$rp_no."','".$sale_count1."','".$sale_remarkk1."','".$product_id1."','".$product_id1."','".$amount1."','".$proname1."','".$ckk_name1."')";
-
-$objQuery = mysqli_query($conn,$strSQL);
+try {
+	/* ส่งรับจ่าย / ยกเลิก — ไม่ใช้ข้อมูลฟอร์ม จึงไม่ผ่าน validation ของการบันทึก */
+	if ($rpAction === 'send_receive' || $rpAction === 'cancel') {
+		$rpNo = rp_post_value($_POST, 'rp_no');
+		if ($rpNo === '') {
+			throw new RpValidationException('ไม่พบเลขที่เอกสาร');
+		}
+		if ($rpAction === 'send_receive') {
+			include __DIR__ . '/dbconnect_acc.php';
+			rp_send_receive($conn, $code, $rpNo, $_SESSION);
+			$respond(array('success' => true, 'rp_no' => $rpNo, 'message' => 'ส่งข้อมูลไปรับจ่ายเรียบร้อยแล้ว', 'redirect' => $pageUrl($rpNo, 'sent')));
+		}
+		$reason = isset($_POST['reason']) && !is_array($_POST['reason']) ? (string)$_POST['reason'] : '';
+		rp_cancel_document($conn, $rpNo, $reason, $_SESSION);
+		$respond(array('success' => true, 'rp_no' => $rpNo, 'message' => 'ยกเลิกเอกสารเรียบร้อยแล้ว', 'redirect' => $pageUrl($rpNo, 'cancelled')));
 	}
 
-
-
-if($product_id2 !=""){
-
-$strSQL = "insert into hos__subproreceive
-(ref_rpno,count,sale_remark,product_code,product_id,amount,proname,ckk_name)
-values ('".$rp_no."','".$sale_count2."','".$sale_remarkk2."','".$product_id2."','".$product_id2."','".$amount2."','".$proname2."','".$ckk_name2."')";
-
-$objQuery = mysqli_query($conn,$strSQL);
-	}
-
-
-if($product_id3 !=""){
-
-$strSQL = "insert into hos__subproreceive
-(ref_rpno,count,sale_remark,product_code,product_id,amount,proname,ckk_name)
-values ('".$rp_no."','".$sale_count3."','".$sale_remarkk3."','".$product_id3."','".$product_id3."','".$amount3."','".$proname3."','".$ckk_name3."')";
-
-$objQuery = mysqli_query($conn,$strSQL);
-	}
-
-
-if($product_id4 !=""){
-
-$strSQL = "insert into hos__subproreceive
-(ref_rpno,count,sale_remark,product_code,product_id,amount,proname,ckk_name)
-values ('".$rp_no."','".$sale_count4."','".$sale_remarkk4."','".$product_id4."','".$product_id4."','".$amount4."','".$proname4."','".$ckk_name4."')";
-
-$objQuery = mysqli_query($conn,$strSQL);
-	}
-
-
-if($product_id5 !=""){
-
-$strSQL = "insert into hos__subproreceive
-(ref_rpno,count,sale_remark,product_code,product_id,amount,proname,ckk_name)
-values ('".$rp_no."','".$sale_count5."','".$sale_remarkk5."','".$product_id5."','".$product_id5."','".$amount5."','".$proname5."','".$ckk_name5."')";
-
-$objQuery = mysqli_query($conn,$strSQL);
-	}
-
-
-	
- if($qsave){
-   echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_receivepro_soedit.php?rp_no=$rp_no';";
-echo "</script>";
-  } else {
-   echo "Cannot";
-  }
-	}
+	$result = rp_persist($conn, $rpAction, $_POST, $_SESSION);
+	$messages = array(
+		'draft'  => array('บันทึกร่างเรียบร้อยแล้ว', 'saved'),
+		'submit' => array('Submit เอกสารเรียบร้อยแล้ว', 'submitted'),
+		'update' => array('อัปเดตเอกสารเรียบร้อยแล้ว', 'updated'),
+	);
+	$respond(array(
+		'success'    => true,
+		'rp_no'      => $result['rp_no'],
+		'created'    => $result['created'],
+		'status_doc' => $result['status_doc'],
+		'message'    => $messages[$rpAction][0],
+		'redirect'   => $pageUrl($result['rp_no'], $messages[$rpAction][1]),
+	));
+} catch (RpValidationException $e) {
+	$respond(array('success' => false, 'message' => $e->getMessage()), 422);
+} catch (Throwable $e) {
+	// error ระดับฐานข้อมูล/ระบบ — ลง log ไม่ส่งโครงสร้างตารางกลับหน้าเว็บ
+	error_log('[register_receivepro1 ' . $rpAction . '] ' . $e->getMessage());
+	$respond(array('success' => false, 'message' => 'ไม่สามารถบันทึกได้ กรุณาลองใหม่อีกครั้ง หากยังไม่ได้กรุณาแจ้งผู้ดูแลระบบ'), 500);
+}

@@ -97,7 +97,7 @@ $objQuery = mysqli_query($conn,$strSQL);
 	
  if($qsave){
    echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_receivepro_soedit.php?rp_no=$rp_no';";
+echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='register_receivepro.php?rp_no=$rp_no';";
 echo "</script>";
   } else {
    echo "Cannot";

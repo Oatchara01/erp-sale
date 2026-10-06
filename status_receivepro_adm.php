@@ -1,5 +1,6 @@
 <?php include('head.php'); ?>
 <?php include('dbconnect_sale.php'); ?>
+<?php require_once __DIR__ . '/includes/receivepro_repo.php'; ?>
 <body>
 <form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME'];?>">
 <div class="w3-white" >
@@ -195,21 +196,14 @@ while($objResult = mysqli_fetch_array($objQuery))
 				
 				<td><div align="left"><?php echo $objResult["sale_code"];?></div></td>
 				<?php
-if($objResult["cancel_ckk"]=='1'){
-	?>
-<td bgcolor="#FF0000"><?php echo "ยกเลิก";?></td>
-
-<?php
-}else{	
+// Draft / ยกเลิก จาก rp_status_info() (includes/receivepro_repo.php) — เอกสารจริงปกติไม่มีป้าย
+$rpStatusInfo = rp_status_info($objResult);
 ?>
-<td><?php echo "";?></td>
-<?php
-}
-?>
+<td<?php echo $rpStatusInfo['color'] !== '' ? ' bgcolor="' . $rpStatusInfo['color'] . '"' : ''; ?>><?php echo $rpStatusInfo['label'];?></td>
 				
 				<td>
 					
-				<a href="register_receivepro_soedit.php?rp_no=<?php echo $objResult["rp_no"];?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
+				<a href="register_receivepro.php?rp_no=<?php echo urlencode($objResult["rp_no"]);?>"><img src="img/edit-icon.png" width="23" height="23" border="0" /></a>
 						
 				</td>
 				

@@ -17,8 +17,8 @@
       <div id="box2_center">
 		 
 	      <p align="center"><br \><br \><br \>
-		  <a href=javascript:if(confirm('!!!ต้องการสร้างใบรับสินค้าบริษัทออลเวลล์ไลฟ์ใช่หรือไม่')==true){window.location='register_receivepro.php';}><img src="img/allwell_logo.png"width="250" height="70"></a>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-		 <a href=javascript:if(confirm('!!!ต้องการสร้างใบสินค้าบริษัทโนเบิลเมดใช่หรือไม่')==true){window.location='register_receivepronb.php';}><img src="img/nbm_select.png" width="250" height="120"></a>&nbsp&nbsp&nbsp</br></br></br></br>
+		  <a href=javascript:if(confirm('!!!ต้องการสร้างใบรับสินค้าบริษัทออลเวลล์ไลฟ์ใช่หรือไม่')==true){window.location='register_receivepro.php?company=1';}><img src="img/allwell_logo.png"width="250" height="70"></a>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+		 <a href=javascript:if(confirm('!!!ต้องการสร้างใบสินค้าบริษัทโนเบิลเมดใช่หรือไม่')==true){window.location='register_receivepro.php?company=2';}><img src="img/nbm_select.png" width="250" height="120"></a>&nbsp&nbsp&nbsp</br></br></br></br>
 
 		 		  
 		  </p>

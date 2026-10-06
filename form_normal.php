@@ -12,7 +12,7 @@ $qry1 = mysqli_query($conn,$sql1) or die(mysqli_error());
 $rs1 = mysqli_fetch_assoc($qry1);
 
 
-$strSQL1 = "SELECT * FROM  (hos__subproreceive LEFT JOIN tb_product ON hos__subproreceive.product_ID=tb_product.product_id) WHERE ref_rpno = '".$_GET["rp_no"]."' ";
+$strSQL1 = "SELECT * FROM  (hos__subproreceive LEFT JOIN tb_product ON hos__subproreceive.product_ID=tb_product.product_id) WHERE ref_rpno = '".$_GET["rp_no"]."' ORDER BY hos__subproreceive.sort_no ASC, hos__subproreceive.id ASC";
 $objQuery1 = mysqli_query($conn,$strSQL1) or die ("Error Query [".$strSQL1."]");
 $Num_Rows1 = mysqli_num_rows($objQuery1);
 
