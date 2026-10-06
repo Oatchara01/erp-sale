@@ -1212,6 +1212,7 @@ include("head.php"); ?>
 	// ref_id ของหน้านี้ยังหมายถึงเลข SO เสมอ — ค้น hos__so ก่อนตามเดิม fallback นี้ทำงานเฉพาะเมื่อไม่พบ SO
 	// แต่พบใบ PO แล้วสลับเป็นโหมดสร้าง SO ใหม่ที่ prefill จาก PO (ไม่ตั้ง $savedSo จึงไม่ทับ SO ใด ๆ)
 	$poPrefill = null;
+	$poSlipPrefill = array('slips' => array(), 'skipped' => array());
 	$fromPoRefId = "";
 	$fromPoBlockMessage = "";
 	if ($savedRefId !== "" && $savedSo === null) {
@@ -1246,6 +1247,8 @@ include("head.php"); ?>
 					'po_no' => (string)$poSource['po_no'],
 				);
 				$savedProductsForForm = po_items_for_form(po_load_items($conn, $fromPoRefId));
+				// ไฟล์แนบของ PO → ช่องแนบไฟล์เพิ่มเติม (slip2..5) ลบออกจากฟอร์มได้ก่อนบันทึก
+				$poSlipPrefill = po_attachments_for_sale_order($poSource);
 			}
 		}
 	}
@@ -1655,7 +1658,15 @@ include("head.php"); ?>
 	<?php } ?>
 	<?php if ($fromPoRefId !== "") { ?>
 		<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" role="status" style="max-width:1096px;margin:16px auto 0;box-sizing:border-box;font-family:'Prompt',sans-serif;">
-			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้าและรายการสินค้าจากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก</p>
+			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้า<?php echo count($poSlipPrefill['slips']) > 0 ? ' รายการสินค้า และไฟล์แนบ' : 'และรายการสินค้า'; ?>จากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก</p>
+			<?php if (count($poSlipPrefill['skipped']) > 0) { ?>
+				<!-- slip1 กันไว้เป็นหลักฐานการโอนเงิน เหลือช่องแนบไฟล์เพิ่มเติม 4 ช่อง -->
+				<p>ใบสั่งขายแนบไฟล์เพิ่มเติมได้ 4 ไฟล์ จึงไม่ได้ดึงไฟล์นี้ของใบ PO มา:
+					<?php foreach ($poSlipPrefill['skipped'] as $poSkippedFile) { ?>
+						<a href="upload/<?php echo so_saved_h(rawurlencode($poSkippedFile)); ?>" target="_blank" rel="noopener"><?php echo so_saved_h($poSkippedFile); ?></a>
+					<?php } ?>
+				</p>
+			<?php } ?>
 		</div>
 	<?php } ?>
 
@@ -4763,10 +4774,11 @@ $canShowETReport = ($ivPrefix === 'ET');
 		<input type="hidden" name="date_tranfer" value="">
 		<input type="hidden" name="redirect_to" value="register_suphos.php">
 		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip1']) : ''; ?>">
-		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip2']) : ''; ?>">
-		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip3']) : ''; ?>">
-		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip4']) : ''; ?>">
-		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip5']) : ''; ?>">
+		<!-- slip2..5: ใบใหม่ที่ออกจาก PO เติมไฟล์แนบของ PO ($poSlipPrefill) — register_suphos1.php รับเฉพาะชื่อที่ตรงกับ PO ใบนั้น -->
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip2'] : ($poSlipPrefill['slips'][2] ?? '')); ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip3'] : ($poSlipPrefill['slips'][3] ?? '')); ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip4'] : ($poSlipPrefill['slips'][4] ?? '')); ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip5'] : ($poSlipPrefill['slips'][5] ?? '')); ?>">
 	</form>
 
 	<!-- Modal รายชื่อลูกค้า: ใช้ค้นหา/เลือก customer เพื่อนำข้อมูลไปเติมในฟอร์มหลัก -->

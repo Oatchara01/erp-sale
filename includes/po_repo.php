@@ -1133,6 +1133,33 @@ if (!function_exists('po_load_for_sale_order')) {
 	}
 }
 
+if (!function_exists('po_attachments_for_sale_order')) {
+	/**
+	 * ไฟล์แนบของ PO ที่พกไปใบสั่งขาย — อ้างชื่อไฟล์เดิมใน upload/ (ไม่คัดลอกไฟล์)
+	 * ฟอร์ม SO กัน slip1 ไว้เป็นหลักฐานการโอนเงิน จึงเรียงลงช่องแนบไฟล์เพิ่มเติม slip2..5 ; ไฟล์ที่เกิน 4 ไม่ถูกพกไป
+	 * ใช้ทั้งตอนเปิดฟอร์ม (prefill) และตอนบันทึก (ตรวจค่าที่ส่งกลับมา) เพื่อให้ช่องตรงกันเสมอ
+	 * @return array{slips:array<int,string>,skipped:array<int,string>}
+	 */
+	function po_attachments_for_sale_order(array $po)
+	{
+		$slips = array();
+		$skipped = array();
+		$nextSlot = 2;
+		for ($slot = 1; $slot <= PO_MAX_ATTACHMENTS; $slot++) {
+			$file = (string)($po['img_po' . $slot] ?? '');
+			if (trim($file) === '') {
+				continue;
+			}
+			if ($nextSlot <= 5) {
+				$slips[$nextSlot++] = $file;
+			} else {
+				$skipped[] = $file;
+			}
+		}
+		return array('slips' => $slips, 'skipped' => $skipped);
+	}
+}
+
 if (!function_exists('po_find_ref_by_po_no')) {
 	/** ใช้แทน "SELECT ref_id FROM hos__po WHERE po_no = ..." เดิมของฝั่ง SO — ไม่นับ Draft */
 	function po_find_ref_by_po_no($conn, $poNo)

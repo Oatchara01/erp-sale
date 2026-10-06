@@ -2,17 +2,6 @@
 require_once __DIR__ . '/includes/so_saved_helpers.php';
 require_once __DIR__ . '/includes/po_repo.php';
 
-/* ===================================================================
- * ใบ PO (hos__po) — สร้างใหม่ / เปิดร่างเดิมกลับมาแก้
- *   - ไม่มี ref_id        → ใบใหม่ (เลขบนหัวเป็นเลขคาดการณ์ จองจริงตอน Save Draft / Submit ครั้งแรก)
- *   - ref_id ของใบ Draft  → แก้ร่างเดิม เลขไม่เปลี่ยน
- *   - ref_id ที่ส่งแล้ว    → แก้ต่อได้ด้วยปุ่ม Update (คงสถานะเดิม) ถ้ายังไม่ยกเลิก/ยังไม่ออกใบสั่งขาย
- *   - ใบที่ออกใบสั่งขายแล้ว → อ่านอย่างเดียว + ลิงก์ไปใบ SO
- *   - ใบ Returned (Sale ส่งกลับ) → Admin แก้ + Update คง Returned / Submit ส่ง Sale ใหม่
- *   - ใบยกเลิก            → อ่านอย่างเดียว (banner เหตุผล + แท็บประวัติ)
- *   - ฝั่ง Sale/Engineer   → อ่านอย่างเดียว ส่งกลับได้ (เมนู ⋮) / ไปออกใบสั่งขาย
- * บันทึกทุกปุ่มผ่าน register_posave1.php (po_action) → includes/po_repo.php
- * =================================================================== */
 $poRequestedRefId = isset($_GET['ref_id']) && !is_array($_GET['ref_id']) ? trim((string)$_GET['ref_id']) : '';
 // คัดลอกใบเดิม (?copy_from=) — ใช้เฉพาะตอนสร้างใบใหม่ (ไม่มี ref_id)
 $poCopyFromRefId = ($poRequestedRefId === '' && isset($_GET['copy_from']) && !is_array($_GET['copy_from'])) ? trim((string)$_GET['copy_from']) : '';
@@ -277,7 +266,10 @@ foreach ($poSuccessTitles as $poParam => $poTitle) {
 
 				<div class="so-field-group">
 					<label class="so-label" for="date_po">วันที่ <span class="po-required">*</span></label>
-					<input type="date" name="date_po" id="date_po" class="so-input" value="<?php echo so_saved_h($poDate); ?>">
+					<!-- ไอคอนปฏิทิน + คลิกทั้งช่องเปิดปฏิทิน: .calendar-wrapper จาก register-suphos.css (ชุดเดียวกับ "จัดส่งวันที่" ของใบสั่งขาย) -->
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_po" id="date_po" class="so-input" value="<?php echo so_saved_h($poDate); ?>">
+					</div>
 				</div>
 			</div>
 

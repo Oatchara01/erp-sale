@@ -686,6 +686,19 @@ if ($isDirectApprover) {
 		move_uploaded_file($_FILES["slip5"]["tmp_name"], "upload/" . $slip5);
 	}
 
+	// ออกจากใบ PO: ช่องแนบไฟล์เพิ่มเติมที่ไม่ได้อัปโหลดใหม่ ใช้ไฟล์แนบเดิมของ PO ที่ผู้ใช้ยังไม่ลบออกจากฟอร์ม (อ้างไฟล์เดิม ไม่คัดลอก)
+	// รับเฉพาะชื่อที่ตรงกับไฟล์ของ PO ใบที่ผูกอยู่ ณ ตอนบันทึก — ค่า hidden จากหน้าเว็บเชื่อไม่ได้
+	if ($linkedPo !== null) {
+		$poSlipFiles = po_attachments_for_sale_order($linkedPo);
+		foreach ($poSlipFiles['slips'] as $poSlot => $poFile) {
+			$slipVar = 'slip' . $poSlot;
+			$postedSlip = (isset($_POST[$slipVar]) && !is_array($_POST[$slipVar])) ? (string)$_POST[$slipVar] : '';
+			if ($$slipVar === '' && $postedSlip === $poFile) {
+				$$slipVar = mysqli_real_escape_string($conn, $poFile);
+			}
+		}
+	}
+
 	if (!$isDraftRequest && $ic_ckk == '1') {
 		$iv_no = "IC";
 	} else if (!$isDraftRequest) {
