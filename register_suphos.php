@@ -2710,7 +2710,7 @@ include("head.php"); ?>
 
 							<!-- เลขประจำตัวผู้เสียภาษี -->
 							<div class="so-field-group">
-								<label class="so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
+								<label class="so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี</label>
 								<div class="so-input-wrapper">
 									<span id="tax_id_text" class="so-display-text is-empty">-</span>
 									<input type="hidden" name="tax_id" id="tax_id" data-so-display="tax_id_text">
