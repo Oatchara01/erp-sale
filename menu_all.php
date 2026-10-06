@@ -472,7 +472,7 @@ $token = encryptData(
                 ) {
                 ?>
 
-                    <a href="register_receivepro.php">
+                    <a href="status_receivepro_adm.php">
                         ใบส่งสินค้า
                     </a>
 

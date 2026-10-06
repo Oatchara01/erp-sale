@@ -4,6 +4,8 @@ require_once __DIR__ . '/includes/receivepro_repo.php';
 
 $rpRequestedNo = isset($_GET['rp_no']) && !is_array($_GET['rp_no']) ? trim((string)$_GET['rp_no']) : '';
 $rpRequestedCompany = isset($_GET['company']) && !is_array($_GET['company']) ? trim((string)$_GET['company']) : '';
+// คัดลอกใบเดิม (?copy_from=) — ใช้เฉพาะตอนสร้างใบใหม่ (ไม่มี rp_no)
+$rpCopyFromNo = ($rpRequestedNo === '' && isset($_GET['copy_from']) && !is_array($_GET['copy_from'])) ? trim((string)$_GET['copy_from']) : '';
 ?>
 <?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
@@ -41,6 +43,22 @@ if ($rpRequestedNo !== '') {
 	$rpSavedItems = rp_items_for_form(rp_load_items($conn, $rpDocument['rp_no']));
 }
 
+/* คัดลอกใบเดิม: prefill หัวเอกสาร + รายการสินค้าเป็นใบใหม่ ($rpDocument ยังเป็น null → เลขใหม่ / วันนี้ / สถานะใบใหม่)
+ * ไม่คัดลอกเลขที่เอกสาร (iv_noref), วันที่ และ flag สถานะ */
+$rpCopySource = null;
+if ($rpCopyFromNo !== '') {
+	$rpCopySource = rp_load_document($conn, $rpCopyFromNo);
+	if ($rpCopySource === null) {
+		$rpStopPage('ไม่พบเอกสารเลขที่ ' . $rpCopyFromNo . ' สำหรับคัดลอก');
+	}
+	$rpSavedItems = rp_items_for_form(rp_load_items($conn, $rpCopySource['rp_no']));
+	// id ของแถวต้นฉบับต้องไม่ติดไปกับใบใหม่
+	foreach ($rpSavedItems as $rpItemIndex => $rpSavedItem) {
+		$rpSavedItems[$rpItemIndex]['id'] = '';
+	}
+}
+$rpCopySkipKeys = array('rp_no', 'iv_noref', 'iv_date', 'delivery_date', 'status_doc', 'cancel_ckk', 'remark_cancel', 'send_receive');
+
 $rpMode = rp_mode($rpDocument);
 $rpIsExisting = ($rpDocument !== null);
 $rpReadOnly = ($rpMode === 'cancelled');
@@ -49,11 +67,18 @@ $rpHeaderLocked = ($rpMode === 'submitted' || $rpMode === 'cancelled');
 $rpIsSentReceive = $rpIsExisting && rp_is_sent_receive($rpDocument);
 $rpDisplayNo = $rpIsExisting ? (string)$rpDocument['rp_no'] : rp_peek_next_rp_no($conn);
 
-$rpValue = function ($key, $default = '') use ($rpDocument) {
-	return ($rpDocument !== null && isset($rpDocument[$key])) ? (string)$rpDocument[$key] : $default;
+$rpValue = function ($key, $default = '') use ($rpDocument, $rpCopySource, $rpCopySkipKeys) {
+	if ($rpDocument !== null) {
+		return isset($rpDocument[$key]) ? (string)$rpDocument[$key] : $default;
+	}
+	if ($rpCopySource !== null && isset($rpCopySource[$key]) && !in_array($key, $rpCopySkipKeys, true)) {
+		return (string)$rpCopySource[$key];
+	}
+	return $default;
 };
 
-$rpTypeCompany = $rpIsExisting ? $rpValue('type_company', '1') : $rpRequestedCompany;
+// ใบที่คัดลอกมาใช้บริษัทของต้นฉบับ — รายการสินค้าที่ติดมาผูกกับบริษัทนั้น
+$rpTypeCompany = ($rpIsExisting || $rpCopySource !== null) ? $rpValue('type_company', '1') : $rpRequestedCompany;
 if (!array_key_exists($rpTypeCompany, rp_company_options())) {
 	$rpTypeCompany = '1';
 }
