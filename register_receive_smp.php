@@ -167,26 +167,26 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 <tr>
 
 <td >
-<input type='hidden' name = "id[]" value="<?php echo $objResult1["id"];?>" id = "id[]"    size='16' readonly/>
+<input type='hidden' name = "id[]" value="<?php echo $objResult1["subsmp_id"];?>" id = "id[]"    size='16' readonly/>
 <input type='text' name = "product_id[]" value="<?php echo $objResult1["product_id"];?>" id = "product_id[]"    size='16' class="w3-input"  />
- <input type='hidden' name = "product_code[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sol_code"];?>" id = "product_code[]<?php echo $objResult1["id"];?>"  class="w3-input"    size='16' readonly/>  
+ <input type='hidden' name = "product_code[]<?php echo $objResult1["subsmp_id"];?>" value="<?php echo $objResult1["sol_code"];?>" id = "product_code[]<?php echo $objResult1["subsmp_id"];?>"  class="w3-input"    size='16' readonly/>  
 
 
 </td>
 
 
-<td><input type='text' name = "product_name[]<?php echo $objResult1["id"];?>"  value="<?php echo $objResult1["sol_name"];?>" id = "product_name[]<?php echo $objResult1["id"];?>"  class="w3-input" readonly></td>	
+<td><input type='text' name = "product_name[]<?php echo $objResult1["subsmp_id"];?>"  value="<?php echo $objResult1["sol_name"];?>" id = "product_name[]<?php echo $objResult1["subsmp_id"];?>"  class="w3-input" readonly></td>	
 	
 	
 
-<td><input type='text' name = "unit_name[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["unit_name"];?>" id = "unit_name[]<?php echo $objResult1["id"];?>"  class="w3-input"    size='9' readonly/></td>
+<td><input type='text' name = "unit_name[]<?php echo $objResult1["subsmp_id"];?>" value="<?php echo $objResult1["unit_name"];?>" id = "unit_name[]<?php echo $objResult1["subsmp_id"];?>"  class="w3-input"    size='9' readonly/></td>
 
-<td><input type='text' name = "sale_count[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sale_count"];?>" id = "sale_count[]<?php echo $objResult1["id"];?>"  class="w3-input" style="color:black;text-align:center"   size='7' /></td>
+<td><input type='text' name = "sale_count[]<?php echo $objResult1["subsmp_id"];?>" value="<?php echo $objResult1["sale_count"];?>" id = "sale_count[]<?php echo $objResult1["subsmp_id"];?>"  class="w3-input" style="color:black;text-align:center"   size='7' /></td>
 
 
-<td><input type='text' name = "sn[]<?php echo $objResult1["id"];?>"  id = "sn[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sn_number"];?>" class="w3-input"    size='13' /></td>
+<td><input type='text' name = "sn[]<?php echo $objResult1["subsmp_id"];?>"  id = "sn[]<?php echo $objResult1["subsmp_id"];?>" value="<?php echo $objResult1["sn_number"] ?? '';?>" class="w3-input"    size='13' /></td>
 
-<td><input type='text' name = "sale_remarkk[]<?php echo $objResult1["id"];?>"  id = "sale_remarkk[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input"    size='13' /></td>
+<td><input type='text' name = "sale_remarkk[]<?php echo $objResult1["subsmp_id"];?>"  id = "sale_remarkk[]<?php echo $objResult1["subsmp_id"];?>" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input"    size='13' /></td>
 
 
 
