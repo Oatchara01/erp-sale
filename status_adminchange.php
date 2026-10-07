@@ -5,6 +5,8 @@ include "dbconnect_sale.php";
 
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 
 <body>
 	<script>
@@ -530,6 +532,15 @@ if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
 												</a>
 												<a href="report_changhos1.php?ref_id=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item" target="_blank">
 													<i class="fas fa-print" style="width:16px;"></i> Print ต่อเนื่อง
+												</a>
+											<?php } ?>
+											<?php if ((string)$objResult["status_doc"] === 'Approve') { ?>
+												<!-- คืนสินค้า / ประวัติการคืน — ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) คืนฝั่งแลกเข้า -->
+												<a href="register_receive.php?source_type=change&source_ref=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item">
+													<i class="fas fa-undo-alt" style="width:16px;"></i> คืนสินค้า
+												</a>
+												<a href="#" onclick="rcOpenReceiveHistory(event, 'change', <?php echo htmlspecialchars(json_encode((string)$objResult["ref_id"]), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)$objResult["iv_no"] !== '' ? (string)$objResult["iv_no"] : (string)$objResult["ref_id"], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
+													<i class="fas fa-history" style="width:16px;"></i> ประวัติการคืน
 												</a>
 											<?php } ?>
 										</div>

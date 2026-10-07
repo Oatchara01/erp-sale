@@ -4,6 +4,8 @@ include "dbconnect.php";
 include "dbconnect_sale.php";
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 <link rel="stylesheet" href="sweetalert2/dist/sweetalert2.min.css">
 <script src="sweetalert2/dist/sweetalert2.min.js"></script>
 
@@ -961,6 +963,16 @@ include "dbconnect_sale.php";
 												<a href="#" onclick="openClearBrModal(event, <?php echo htmlspecialchars(json_encode($objResult['ref_id_br']), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
 													<i class="fas fa-list-alt" style="width:16px;"></i> รายละเอียดเคลียร์ยืม
 												</a>
+
+												<?php if ((string)$objResult['status_doc'] === 'Approve') { ?>
+													<!-- คืนสินค้า / ประวัติการคืน — ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) -->
+													<a href="register_receive.php?source_type=br&source_ref=<?php echo $ref_id_url; ?>" class="so-dropdown-item">
+														<i class="fas fa-undo-alt" style="width:16px;"></i> คืนสินค้า
+													</a>
+													<a href="#" onclick="rcOpenReceiveHistory(event, 'br', <?php echo htmlspecialchars(json_encode($ref_id_br), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)$objResult['iv_no'] !== '' ? (string)$objResult['iv_no'] : $ref_id_br, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
+														<i class="fas fa-history" style="width:16px;"></i> ประวัติการคืน
+													</a>
+												<?php } ?>
 
 												<!-- Print ใบยืมต่อเนื่อง -->
 												<a href="report_brnphos_awl.php?ref_id_br=<?php echo $ref_id_url; ?>" target="_blank" class="so-dropdown-item">

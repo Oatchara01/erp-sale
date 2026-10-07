@@ -8,6 +8,8 @@ include "dbconnect_sale.php";
 
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 
 <body>
 	<script>
@@ -598,6 +600,15 @@ include "dbconnect_sale.php";
 											<?php if ($statusSup !== 'Draft') { ?>
 												<a href="<?php echo htmlspecialchars($preview_url); ?>" target="_blank" rel="noopener noreferrer" class="so-dropdown-item" onclick="event.stopPropagation();">
 													<i class="fas fa-search" style="width:16px;"></i> Preview
+												</a>
+											<?php } ?>
+											<?php if ($statusSup === 'Approve') { ?>
+												<!-- คืนสินค้า / ประวัติการคืน — ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) -->
+												<a href="register_receive.php?source_type=smp&source_ref=<?php echo urlencode($refId); ?>" class="so-dropdown-item">
+													<i class="fas fa-undo-alt" style="width:16px;"></i> คืนสินค้า
+												</a>
+												<a href="#" onclick="rcOpenReceiveHistory(event, 'smp', <?php echo htmlspecialchars(json_encode((string)$refId), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)$objResult["smp_no"] !== '' ? (string)$objResult["smp_no"] : (string)$refId, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
+													<i class="fas fa-history" style="width:16px;"></i> ประวัติการคืน
 												</a>
 											<?php } ?>
 										</div>

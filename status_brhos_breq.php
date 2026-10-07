@@ -6,6 +6,8 @@ require_once __DIR__ . '/includes/breq_repo.php';
 
 ?>
 <link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 
 <body>
 	<script>
@@ -314,6 +316,10 @@ require_once __DIR__ . '/includes/breq_repo.php';
 												<i class="fas fa-search" style="width:16px;"></i> Preview
 											</a>
 											<?php if ((string)$objResult["status_doc"] === 'Approve') { ?>
+												<!-- ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) — ประวัติการคืนด้านล่างแสดงใบคืนต่อท้ายสรุปยอดยืม/คืน -->
+												<a href="register_receive.php?source_type=breq&source_ref=<?php echo urlencode($refId); ?>" class="so-dropdown-item">
+													<i class="fas fa-undo-alt" style="width:16px;"></i> คืนสินค้า
+												</a>
 												<a href="#" class="so-dropdown-item" data-return-history="<?php echo $returnHistory_js; ?>" onclick="openReturnHistory(event, this);">
 													<i class="fas fa-history" style="width:16px;"></i> ประวัติการคืน
 												</a>
@@ -422,6 +428,9 @@ require_once __DIR__ . '/includes/breq_repo.php';
 						<tbody id="returnHistoryRows"></tbody>
 					</table>
 				</div>
+				<!-- ใบคืนสินค้าของเอกสารนี้ (ใบเดิมและใบใหม่) โหลดจาก ajax_receive_history.php -->
+				<h6 style="margin:24px 0 8px; font-weight:600; color:#3B3B3B; font-size:16px;">ใบคืนสินค้า</h6>
+				<div id="returnHistoryReceipts"></div>
 			</div>
 		</div>
 	</div>
@@ -567,6 +576,7 @@ require_once __DIR__ . '/includes/breq_repo.php';
 			});
 
 			document.getElementById('returnHistoryModal').style.display = 'block';
+			rcLoadReceiveHistory(document.getElementById('returnHistoryReceipts'), 'breq', data.ref_id);
 		}
 
 		function closeReturnHistory() {
