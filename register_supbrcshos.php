@@ -795,7 +795,12 @@ if ($csPrefillSource !== null) {
 
 	<div class="so-header-container">
 		<div class="so-header-left">
-			<h1 class="so-title">ใบยืมฝากขาย</h1>
+			<div class="so-title-row">
+				<button type="button" class="so-back-btn" onclick="goMainSupBrcs();" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+					<img src="img/icons/chevron_left.svg" alt="">
+				</button>
+				<h1 class="so-title">ใบยืมฝากขาย</h1>
+			</div>
 			<div class="so-ref-info">
 				<span class="so-ref-label">เลขที่อ้างอิง</span>
 				<span class="so-ref-value"><?php echo ($savedBr !== null) ? so_saved_h($savedBr['ref_id']) : $so . $nextId; ?></span>
@@ -2271,7 +2276,10 @@ $csTierReady = $csIsCmApprover
 $csCanShowApproveBar = $csIsEditMode && !$csIsSaleUser && ($csStatusDoc === 'Request') && $csTierReady;
 // ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่ เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองแล้ว
 $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
+// เอกสารปิดแล้วไม่เหลือปุ่มในแถบ — ไม่ render แถบเปล่า (ย้อนกลับใช้ไอคอนที่หัวหน้าแทน)
+$csHasStickyActions = $csCanShowApproveBar || !$csHideSubmit || !$csHideUpdate;
 ?>
+<?php if ($csHasStickyActions): ?>
 <div class="so-sticky-actions">
 	<div class="so-sticky-actions-inner">
 		<?php if ($csCanShowApproveBar): ?>
@@ -2302,9 +2310,9 @@ $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 		<?php if (!$csHideUpdate): ?>
 			<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> <?php echo $csIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 		<?php endif; ?>
-		<button type="button" name="cancel_edit" class="btn-so-cancel-nav" onclick="goMainSupBrcs();">ยกเลิก</button>
 	</div>
 </div>
+<?php endif; ?>
 <script>
 	function toggleApproveOverflowMenu() {
 		var menu = document.getElementById('approveOverflowMenu');
