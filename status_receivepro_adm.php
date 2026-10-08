@@ -42,7 +42,7 @@ while ($saleDropdownQuery && ($saleDropdownRow = mysqli_fetch_assoc($saleDropdow
 	$saleDropdownOptions[] = $saleDropdownRow;
 }
 ?>
-<link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/so-status-ui.css?v=<?php echo filemtime(__DIR__ . '/css/so-status-ui.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <body>
@@ -110,11 +110,15 @@ while ($saleDropdownQuery && ($saleDropdownRow = mysqli_fetch_assoc($saleDropdow
 							<div class="so-form-row">
 								<div>
 									<label class="so-label">ตั้งแต่วันที่</label>
-									<input type="date" name="start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									</div>
 								</div>
 								<div>
 									<label class="so-label">ถึงวันที่</label>
-									<input type="date" name="end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									</div>
 								</div>
 							</div>
 

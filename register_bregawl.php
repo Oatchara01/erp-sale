@@ -505,7 +505,9 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				</label>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="pro_comedate">วันที่รับเข้า</label>
-					<input type="date" name="pro_comedate" id="pro_comedate" class="so-input" value="<?php echo so_saved_h($bregProComeDate); ?>" onchange="bregSyncEngineerSection();">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="pro_comedate" id="pro_comedate" class="so-input" value="<?php echo so_saved_h($bregProComeDate); ?>" onchange="bregSyncEngineerSection();">
+					</div>
 				</div>
 				<div class="breg-eng-spacer" aria-hidden="true"></div>
 
@@ -515,7 +517,9 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				</label>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="date_brdoc">วันที่ประกอบ</label>
-					<input type="date" name="date_brdoc" id="date_brdoc" class="so-input" value="<?php echo so_saved_h($bregDateBrdoc); ?>" onchange="bregSyncEngineerSection();">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_brdoc" id="date_brdoc" class="so-input" value="<?php echo so_saved_h($bregDateBrdoc); ?>" onchange="bregSyncEngineerSection();">
+					</div>
 				</div>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="name_eng">ช่าง</label>

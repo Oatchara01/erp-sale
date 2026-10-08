@@ -1196,7 +1196,7 @@ if ($csPrefillSource !== null) {
 				[
 					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
-					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
 					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no1'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
 				],
 			],

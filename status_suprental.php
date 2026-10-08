@@ -3,7 +3,7 @@ include('head.php');
 include('dbconnect.php');
 include('dbconnect_sale.php');
 ?>
-<link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/so-status-ui.css?v=<?php echo filemtime(__DIR__ . '/css/so-status-ui.css'); ?>">
 <link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
 <script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -228,11 +228,15 @@ include('dbconnect_sale.php');
 							<div class="so-form-row">
 								<div>
 									<label class="so-label" for="modal_start_date">ตั้งแต่วันที่</label>
-									<input type="date" name="modal_start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="modal_start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									</div>
 								</div>
 								<div>
 									<label class="so-label" for="modal_end_date">ถึงวันที่</label>
-									<input type="date" name="modal_end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="modal_end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									</div>
 								</div>
 							</div>
 

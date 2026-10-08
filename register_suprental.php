@@ -1373,7 +1373,9 @@
 						<div class="so-grid-3">
 							<div class="so-field-group">
 								<label class="so-label" for="start_promis">วันเริ่มสัญญา<span style="color: #dc3545;">*</span></label>
-								<input type="date" name="start_promis" id="start_promis" class="so-input">
+								<div class="so-input-wrapper calendar-wrapper">
+									<input type="date" name="start_promis" id="start_promis" class="so-input">
+								</div>
 							</div>
 							<div class="so-field-group">
 								<label class="so-label" for="count_m">ระยะเวลาเช่า (เดือน)<span style="color: #dc3545;">*</span></label>
@@ -1423,7 +1425,7 @@
 								['type' => 'text', 'name' => 'rt_admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => ($savedRental !== null) ? ($savedRental['iv_no'] ?? '') : ''],
 								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_rt_run_doc_no', 'onclick' => 'rtRunDocumentNo();', 'variant' => 'purple'],
 							]],
-							['type' => 'date_th', 'name' => 'rt_admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['iv_date'] ?? '') : ''],
+							['type' => 'date_th', 'name' => 'rt_admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['iv_date'] ?? '') : '', 'calendar' => true],
 							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'rtRunJobNo();', 'icon_id' => 'btn_rt_run_job_no', 'value' => ($savedRental !== null) ? ($savedRental['job_no'] ?? '') : ''],
 						],
 						[

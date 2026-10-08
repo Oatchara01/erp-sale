@@ -216,7 +216,7 @@ $breqCompatHiddenFields = array(
 			'rows'   => array(array(
 				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => (string)($breqHeader['iv_no'] ?? '')),
 				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
-				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt'),
+				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt', 'calendar' => true),
 			)),
 		);
 		include __DIR__ . '/partials/admin_info_tab.php';
