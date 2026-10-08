@@ -365,3 +365,19 @@
 	cursor: default;
 }
 
+
+/* ===== ข้อความใต้หัวเอกสาร (หมายเหตุจาก Stock — เฉพาะใบที่บันทึกแล้ว) ===== */
+.rc-head-note {
+	margin: 0 0 12px;
+	padding: 10px 16px;
+	border: 1px solid #EAE3F7;
+	border-radius: 12px;
+	background: #FAF7FD;
+	color: #3B3B3B;
+	font-size: 14px;
+}
+
+.rc-head-note-label {
+	font-weight: 600;
+	color: #612989;
+}

@@ -1,5 +1,5 @@
 /* หน้า register_receive.php (ใบคืนสินค้า) — ต้องโหลดหลัง js/so-required-fields.js และ SweetAlert2
- * ค่าตั้งต้นมาจาก window.rcPageConfig (mode, receiveRef, readOnly)
+ * ค่าตั้งต้นมาจาก window.rcPageConfig (mode, receiveRef, readOnly, noPrice)
  * บันทึกทุกปุ่มผ่าน register_receive1.php (rc_action = draft | submit | cancel)
  * ตัวบันทึกฝั่งเซิร์ฟเวอร์คำนวณยอดค้างและตรวจใหม่ทั้งหมด — ที่นี่ตรวจเพื่อให้ผู้ใช้เห็นก่อนเท่านั้น
  */
@@ -126,7 +126,7 @@
 
 			var amount = qty * price;
 			var totalCell = row.querySelector('.rc-line-total');
-			if (totalCell) totalCell.textContent = formatNumber(amount, 2);
+			if (totalCell) totalCell.textContent = config.noPrice ? '-' : formatNumber(amount, 2);
 			row.classList.toggle('is-selected', picked);
 			pickedRows++;
 			totalQty += qty;
@@ -134,7 +134,8 @@
 		});
 
 		byId('rc_total_qty').textContent = formatNumber(totalQty, 0);
-		byId('rc_total_amount').textContent = formatNumber(totalAmount, 2);
+		// ใบคืนจากฟอร์มเดิมไม่มีราคา (ไม่รู้เอกสารต้นทาง) — แสดงขีดแทน 0.00
+		byId('rc_total_amount').textContent = config.noPrice ? '-' : formatNumber(totalAmount, 2);
 		byId('rc_items_count').textContent = pickedRows + ' รายการ';
 
 		var checkAll = byId('rc_check_all');

@@ -34,15 +34,14 @@ if (!rc_has_source_columns($conn)) {
 
 /* ---------- โหลดใบคืน (แก้ไข/ดู) หรือเอกสารต้นทาง (ใบใหม่) ---------- */
 $rcReceipt = null;
+$rcIsLegacy = false;
 if ($rcRequestedRef !== '') {
 	$rcReceipt = rc_load_receipt($conn, $rcRequestedRef);
 	if ($rcReceipt === null) {
 		$rcStopPage('ไม่พบใบคืนเลขที่ ' . $rcRequestedRef);
 	}
-	if (!rc_is_unified($rcReceipt)) {
-		// ใบคืนจากฟอร์มเดิมไม่มีต้นทางผูกไว้ — เปิดด้วยหน้าแก้ไขเดิม
-		$rcStopPage('ใบคืนเลขที่ ' . $rcRequestedRef . ' สร้างจากฟอร์มเดิม', 'rister_clearbrpn_stedit.php?ref_id=' . rawurlencode($rcRequestedRef), 'เปิดด้วยหน้าแก้ไขเดิม');
-	}
+	// ใบคืนจากฟอร์มเดิมไม่มีต้นทางผูกไว้ — เปิดดูได้อย่างเดียวจากข้อมูลของใบคืนเอง
+	$rcIsLegacy = !rc_is_unified($rcReceipt);
 	$rcSourceType = (string)$rcReceipt['source_type'];
 	$rcSourceRef = (string)$rcReceipt['source_ref'];
 } else {
@@ -50,37 +49,48 @@ if ($rcRequestedRef !== '') {
 	$rcSourceRef = $rcRequestedSource;
 }
 
-$rcSource = rc_load_source($conn, $rcSourceType, $rcSourceRef);
-$rcPages = rc_source_pages($rcSourceType);
-if ($rcSource === null || $rcPages === null) {
-	$rcStopPage('ไม่พบเอกสารต้นทาง');
-}
-$rcBackUrl = $rcPages['list'];
-if (!$rcSource['approved']) {
-	$rcStopPage('เอกสารต้นทางยังไม่อนุมัติ จึงคืนสินค้าไม่ได้', $rcBackUrl, 'กลับหน้ารายการ');
-}
-if ($rcSource['needs_doc_no']) {
-	$rcStopPage($rcSource['label'] . ' เลขที่ ' . $rcSource['ref'] . ' ยังไม่มีเลขที่เอกสาร จึงคืนสินค้าไม่ได้', $rcBackUrl, 'กลับหน้ารายการ');
+if ($rcIsLegacy) {
+	$rcSource = rc_legacy_source($rcReceipt);
+} else {
+	$rcSource = rc_load_source($conn, $rcSourceType, $rcSourceRef);
+	$rcPages = rc_source_pages($rcSourceType);
+	if ($rcSource === null || $rcPages === null) {
+		$rcStopPage('ไม่พบเอกสารต้นทาง');
+	}
+	$rcBackUrl = $rcPages['list'];
+	if (!$rcSource['approved']) {
+		$rcStopPage('เอกสารต้นทางยังไม่อนุมัติ จึงคืนสินค้าไม่ได้', $rcBackUrl, 'กลับหน้ารายการ');
+	}
+	if ($rcSource['needs_doc_no']) {
+		$rcStopPage($rcSource['label'] . ' เลขที่ ' . $rcSource['ref'] . ' ยังไม่มีเลขที่เอกสาร จึงคืนสินค้าไม่ได้', $rcBackUrl, 'กลับหน้ารายการ');
+	}
 }
 
 $rcIsExisting = ($rcReceipt !== null);
 $rcIsSubmitted = $rcIsExisting && rc_is_submitted($rcReceipt);
-$rcMode = !$rcIsExisting ? 'new' : ($rcIsSubmitted ? 'submitted' : 'draft');
+$rcMode = !$rcIsExisting ? 'new' : ($rcIsLegacy ? 'legacy' : ($rcIsSubmitted ? 'submitted' : 'draft'));
 $rcReceiveRef = $rcIsExisting ? (string)$rcReceipt['ref_id'] : '';
 $rcDisplayRef = $rcIsExisting ? $rcReceiveRef : rc_peek_next_ref_id($conn);
 
-/* ---------- ยอดค้าง → รายการที่แสดง (ไม่นับใบที่กำลังเปิดเป็นยอดคืน) ---------- */
-$rcState = rc_compute($conn, $rcSource, $rcReceiveRef);
-$rcSelection = array();
-if ($rcIsExisting) {
-	$rcSelection = rc_selection_for_receipt($rcState['lines'], rc_load_receipt_lines($conn, $rcReceiveRef));
-}
-$rcLines = $rcState['lines'];
-if ($rcIsSubmitted) {
-	// ใบที่ส่งให้ Stock แล้วแสดงเฉพาะที่คืนจริง
-	$rcLines = array_values(array_filter($rcLines, function ($line) use ($rcSelection) {
-		return isset($rcSelection[$line['key']]);
-	}));
+if ($rcIsLegacy) {
+	/* ---------- ใบคืนจากฟอร์มเดิม: รายการตามที่บันทึก ไม่มียอดค้าง/ราคา ---------- */
+	$rcLegacy = rc_legacy_lines($conn, $rcReceiveRef);
+	$rcLines = $rcLegacy['lines'];
+	$rcSelection = $rcLegacy['selection'];
+} else {
+	/* ---------- ยอดค้าง → รายการที่แสดง (ไม่นับใบที่กำลังเปิดเป็นยอดคืน) ---------- */
+	$rcState = rc_compute($conn, $rcSource, $rcReceiveRef);
+	$rcSelection = array();
+	if ($rcIsExisting) {
+		$rcSelection = rc_selection_for_receipt($rcState['lines'], rc_load_receipt_lines($conn, $rcReceiveRef));
+	}
+	$rcLines = $rcState['lines'];
+	if ($rcIsSubmitted) {
+		// ใบที่ส่งให้ Stock แล้วแสดงเฉพาะที่คืนจริง
+		$rcLines = array_values(array_filter($rcLines, function ($line) use ($rcSelection) {
+			return isset($rcSelection[$line['key']]);
+		}));
+	}
 }
 if ($rcMode === 'new' && count($rcLines) === 0) {
 	$rcStopPage('เอกสารนี้คืนสินค้าครบแล้ว ไม่มีรายการค้างให้คืน', $rcBackUrl, 'กลับหน้ารายการ');
@@ -109,7 +119,7 @@ if (count($rcSelection) > 0) {
 	$rcGroups = $rcOrderedGroups;
 }
 /* วันหมดอายุของแถวย่อย S/N จากฐาน Stock (อ่านอย่างเดียว) — ไม่พบ/ใช้ฐานไม่ได้ = ว่าง */
-$rcExpiry = rc_expiry_for_lines(isset($new) ? $new : null, $rcLines);
+$rcExpiry = $rcIsLegacy ? array() : rc_expiry_for_lines(isset($new) ? $new : null, $rcLines);
 
 /* ---------- ค่าในฟอร์ม ---------- */
 $rcValue = function ($key, $default = '') use ($rcReceipt) {
@@ -128,8 +138,11 @@ $rcSelectedSaleCode = $rcIsExisting ? $rcValue('sale_code') : $rcSource['sale_co
 /* บริษัทของใบคืน: เริ่มจากบริษัทของเอกสารต้นทาง (ใบเดิมใช้ค่าที่บันทึก) ผู้ใช้เลือก AWL / NBM เองได้ */
 $rcTypeCompany = $rcIsExisting && array_key_exists($rcValue('type_company'), rc_company_options()) ? $rcValue('type_company') : $rcSource['type_company'];
 $rcCompanyOptions = rc_company_options();
-$rcCustomerCard = rc_customer_card($conn, $rcSource);
-$rcReadOnly = $rcIsSubmitted;
+$rcCustomerCard = $rcIsLegacy ? null : rc_customer_card($conn, $rcSource);
+$rcReadOnly = $rcIsSubmitted || $rcIsLegacy;
+
+/* หมายเหตุรวมของ Stock — เฉพาะใบที่บันทึกแล้ว */
+$rcStockDes = trim($rcValue('stock_des'));
 
 $rcSaleCodeOptions = array();
 $rcSaleCodeQuery = mysqli_query($com, "SELECT sale_code, sale_name FROM tb_team_adm ORDER BY sale_code ASC");
@@ -191,6 +204,10 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 			</div>
 		</div>
 
+		<?php if ($rcStockDes !== '') { ?>
+			<div class="rc-head-note"><span class="rc-head-note-label">หมายเหตุจาก Stock:</span> <?php echo nl2br(so_saved_h($rcStockDes)); ?></div>
+		<?php } ?>
+
 		<?php if ($rcReadOnly) { ?>
 			<!-- ส่งให้ Stock แล้ว: อ่านอย่างเดียว fieldset disabled ปิดทุก input/select/button ในการ์ด -->
 			<fieldset class="rp-readonly-fieldset" disabled>
@@ -207,6 +224,10 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 					<label class="so-label" for="type_company">บริษัท<span class="required">*</span></label>
 					<div class="so-select-wrapper">
 						<select name="type_company" id="type_company" class="so-select">
+							<?php if ($rcTypeCompany === '') { ?>
+								<!-- ใบคืนจากฟอร์มเดิมที่ไม่ได้บันทึกบริษัท -->
+								<option value="" selected>-</option>
+							<?php } ?>
 							<?php foreach ($rcCompanyOptions as $rcCompanyValue => $rcCompanyLabel) { ?>
 								<option value="<?php echo so_saved_h($rcCompanyValue); ?>" <?php echo (string)$rcCompanyValue === $rcTypeCompany ? 'selected' : ''; ?>><?php echo so_saved_h($rcCompanyLabel); ?></option>
 							<?php } ?>
@@ -246,11 +267,13 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 
 			<div class="so-customer-top-grid">
 				<div class="so-customer-top-left">
-					<div class="rc-doc-pill-wrap">
-						<a class="rc-doc-pill" href="<?php echo so_saved_h(rc_source_view_url($rcSource['type'], $rcSource['ref'])); ?>" target="_blank" rel="noopener">
-							<i class="far fa-file-alt" aria-hidden="true"></i> ข้อมูลเอกสาร
-						</a>
-					</div>
+					<?php if (!$rcIsLegacy) { ?>
+						<div class="rc-doc-pill-wrap">
+							<a class="rc-doc-pill" href="<?php echo so_saved_h(rc_source_view_url($rcSource['type'], $rcSource['ref'])); ?>" target="_blank" rel="noopener">
+								<i class="far fa-file-alt" aria-hidden="true"></i> ข้อมูลเอกสาร
+							</a>
+						</div>
+					<?php } ?>
 
 					<div class="so-field-group">
 						<label class="so-label" for="doc_ref_view"><?php echo so_saved_h($rcSource['label']); ?> (เอกสารอ้างอิง)</label>
@@ -406,7 +429,7 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 				</div>
 				<div class="rp-summary-col">
 					<div class="rp-summary-label">ยอดรวมสุทธิ</div>
-					<div class="rp-summary-value" id="rc_total_amount">0.00</div>
+					<div class="rp-summary-value" id="rc_total_amount"><?php echo $rcIsLegacy ? '-' : '0.00'; ?></div>
 				</div>
 			</div>
 
@@ -456,7 +479,7 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 								$rcQty = isset($rcSelection[$rcKey]) ? $rcSelection[$rcKey]['qty'] : $rcLine['qty_max'];
 								$rcRemark = isset($rcSelection[$rcKey]) ? $rcSelection[$rcKey]['remark'] : $rcLine['remark'];
 							?>
-								<tr class="rc-row" data-search="<?php echo so_saved_h($rcSearchText); ?>" data-price="<?php echo so_saved_h(number_format($rcInfo['price'], 2, '.', '')); ?>">
+								<tr class="rc-row<?php echo !empty($rcInfo['serials']) ? ' is-open' : ''; ?>" data-search="<?php echo so_saved_h($rcSearchText); ?>" data-price="<?php echo so_saved_h(number_format($rcInfo['price'], 2, '.', '')); ?>">
 									<td class="rp-col-drag">
 										<button type="button" class="rp-drag-handle" title="ลากเพื่อเรียงลำดับ" aria-label="เรียงลำดับ <?php echo $rcCodeLabel; ?> — ลาก หรือกดลูกศรขึ้น/ลง"><i class="fas fa-grip-vertical" aria-hidden="true"></i></button>
 									</td>
@@ -466,7 +489,12 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 											<span class="rp-check-mark" aria-hidden="true"></span>
 										</label>
 									</td>
-									<td class="rc-col-caret"></td>
+									<td class="rc-col-caret">
+										<?php if (!empty($rcInfo['serials'])) { ?>
+											<!-- ใบคืนจากฟอร์มเดิม: แถวรายละเอียด S/N เปิดไว้ตั้งแต่แรก เพราะปุ่มใน fieldset ที่ disabled กดไม่ได้ -->
+											<button type="button" class="rc-caret" aria-expanded="true" aria-label="แสดงหมายเลข S/N"><i class="fas fa-caret-down" aria-hidden="true"></i></button>
+										<?php } ?>
+									</td>
 									<td class="rp-col-code"><?php echo $rcCodeLabel; ?></td>
 									<td class="rp-col-name">
 										<div class="rp-item-name"><?php echo so_saved_h($rcInfo['sol_name']); ?></div>
@@ -477,12 +505,33 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 										</div>
 										<input type="hidden" name="remark[<?php echo so_saved_h($rcKey); ?>]" value="<?php echo so_saved_h($rcRemark); ?>">
 									</td>
-									<td class="rc-col-price rc-unit-price"><?php echo number_format($rcInfo['price'], 2); ?></td>
-									<td class="rc-col-price rc-line-total">0.00</td>
+									<td class="rc-col-price rc-unit-price"><?php echo $rcIsLegacy ? '-' : number_format($rcInfo['price'], 2); ?></td>
+									<td class="rc-col-price rc-line-total"><?php echo $rcIsLegacy ? '-' : '0.00'; ?></td>
 									<td class="rp-col-actions">
 										<span class="rp-row-actions"><button type="button" class="rp-row-btn" data-rc-row-action="delete" title="ลบรายการ" aria-label="ลบ <?php echo $rcCodeLabel; ?>"><img src="img/icons/trash.svg" alt=""></button></span>
 									</td>
 								</tr>
+								<?php if (!empty($rcInfo['serials'])) { ?>
+									<tr class="rc-detail-row">
+										<td colspan="9">
+											<table class="rc-sn-table">
+												<thead>
+													<tr><th class="rp-col-check"></th><th>หมายเลข SN</th><th>Lot No.</th><th>Exp. Date</th></tr>
+												</thead>
+												<tbody>
+													<?php foreach ($rcInfo['serials'] as $rcLegacySerial) { ?>
+														<tr>
+															<td class="rp-col-check"></td>
+															<td><?php echo so_saved_h($rcLegacySerial); ?></td>
+															<td>-</td>
+															<td>-</td>
+														</tr>
+													<?php } ?>
+												</tbody>
+											</table>
+										</td>
+									</tr>
+								<?php } ?>
 							<?php } else {
 								$rcPickedCount = 0;
 								foreach ($rcGroupLines as $rcSnLine) {
@@ -586,7 +635,7 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 
 	<div class="so-sticky-actions rp-sticky-actions">
 		<div class="so-sticky-actions-inner">
-			<?php if ($rcMode !== 'submitted') { ?>
+			<?php if (!$rcReadOnly) { ?>
 				<button type="button" class="btn-so-submit rc-action-btn" data-rc-action="submit" onclick="rcSave('submit', this);"><i class="far fa-paper-plane" aria-hidden="true"></i> Submit</button>
 				<button type="button" class="btn-so-draft rc-action-btn" data-rc-action="draft" onclick="rcSave('draft', this);"><i class="far fa-save" aria-hidden="true"></i> <?php echo $rcMode === 'draft' ? 'Update' : 'Save Draft'; ?></button>
 			<?php } ?>
@@ -606,7 +655,8 @@ foreach ($rcSuccessTitles as $rcParam => $rcTitle) {
 	window.rcPageConfig = {
 		mode: <?php echo json_encode($rcMode); ?>,
 		receiveRef: <?php echo json_encode($rcReceiveRef, JSON_UNESCAPED_UNICODE); ?>,
-		readOnly: <?php echo $rcReadOnly ? 'true' : 'false'; ?>
+		readOnly: <?php echo $rcReadOnly ? 'true' : 'false'; ?>,
+		noPrice: <?php echo $rcIsLegacy ? 'true' : 'false'; ?>
 	};
 </script>
 <script src="js/register-receive.js?v=<?php echo filemtime(__DIR__ . '/js/register-receive.js'); ?>"></script>

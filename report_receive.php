@@ -80,7 +80,7 @@ function DateThai($strDate)	{
 		return "$strDay $strMonthThai $strYear";
 }
 $ref_id = $_GET["ref_id"];
-$stock = $_GET["stock"];
+$stock = $_GET["stock"] ?? '';
 
 include"dbconnect.php";
 /*$strSQL1 = "Update  hos__receive set report_ckk = '1',stock_print = '".$stock."' WHERE ref_id = '".$ref_id."' ";

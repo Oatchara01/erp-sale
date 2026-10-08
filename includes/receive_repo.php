@@ -582,6 +582,83 @@ if (!function_exists('rc_load_receipt_lines')) {
 	}
 }
 
+if (!function_exists('rc_legacy_source')) {
+	/**
+	 * ใบคืนจากฟอร์มเดิม (source_type ว่าง) ไม่มีเอกสารต้นทางผูกไว้ — หัวเอกสารรูปเดียวกับ rc_load_source() จากข้อมูลของใบคืนเอง
+	 * ใช้เปิดดูอย่างเดียวใน register_receive.php; type_company ว่างเมื่อค่าที่บันทึกไม่ใช่ AWL/NBM
+	 */
+	function rc_legacy_source(array $receipt)
+	{
+		$col = function ($name) use ($receipt) {
+			return trim((string)($receipt[$name] ?? ''));
+		};
+		$company = $col('type_company');
+		return array(
+			'type'          => '',
+			'ref'           => '',
+			'label'         => 'เลขที่เอกสาร',
+			'doc_no'        => $col('iv_no'),
+			'approved'      => true,
+			'needs_doc_no'  => false,
+			'type_company'  => array_key_exists($company, rc_company_options()) ? $company : '',
+			'customer_id'   => '',
+			'customer_name' => $col('customer_name'),
+			'customer_tel'  => $col('customer_tel'),
+			'address'       => $col('customer_address'),
+			'sale_code'     => $col('sale_code'),
+			'sale_name'     => $col('sale_name'),
+			'order_id'      => $col('order_id'),
+			'close'         => '',
+			'head'          => $receipt,
+		);
+	}
+}
+
+if (!function_exists('rc_legacy_lines')) {
+	/**
+	 * รายการของใบคืนจากฟอร์มเดิม รูปเดียวกับ lines ของ rc_compute() + selection ของ rc_selection_for_receipt()
+	 * ไม่มีเอกสารต้นทางจึงไม่มีราคา/ยอดค้าง: หนึ่งแถวของ hos__subreceive = หนึ่งรายการ จำนวนตามที่บันทึก
+	 * S/N เป็นข้อความอิสระที่จำนวนบรรทัดอาจไม่เท่าจำนวนที่คืน จึงส่งเป็น serials ไว้แสดงใต้แถว ไม่แตกเป็นรายเครื่อง
+	 * @return array{lines:array<int,array<string,mixed>>,selection:array<string,array{qty:float,remark:string}>}
+	 */
+	function rc_legacy_lines($conn, $ref)
+	{
+		$rows = rc_fetch_all(
+			$conn,
+			"SELECT s.id, s.product_id, s.`count` AS qty, s.sn, s.stock_remark, p.access_code, p.sol_name, p.access_name, p.unit_name
+			 FROM hos__subreceive s
+			 LEFT JOIN tb_product p ON p.product_ID = s.product_id
+			 WHERE s.ref_idd = ?
+			 ORDER BY s.id ASC",
+			's',
+			array((string)$ref)
+		);
+		$lines = array();
+		$selection = array();
+		foreach ($rows as $row) {
+			$key = (string)(int)$row['id'];
+			$name = trim((string)($row['sol_name'] ?? ''));
+			$lines[] = array(
+				'item_id'     => (int)$row['id'],
+				'product_id'  => (string)(int)$row['product_id'],
+				'access_code' => (string)($row['access_code'] ?? ''),
+				'sol_name'    => $name !== '' ? $name : (string)($row['access_name'] ?? ''),
+				'unit_name'   => (string)($row['unit_name'] ?? ''),
+				'lot'         => '',
+				'remark'      => '',
+				'price'       => 0.0,
+				'key'         => $key,
+				'sn'          => '',
+				'has_sn'      => false,
+				'qty_max'     => (float)$row['qty'],
+				'serials'     => rc_parse_serials($row['sn']),
+			);
+			$selection[$key] = array('qty' => (float)$row['qty'], 'remark' => (string)$row['stock_remark']);
+		}
+		return array('lines' => $lines, 'selection' => $selection);
+	}
+}
+
 if (!function_exists('rc_is_submitted')) {
 	function rc_is_submitted(array $receipt)
 	{
@@ -605,6 +682,71 @@ if (!function_exists('rc_status_info')) {
 			return array('key' => 'submitted', 'label' => 'ส่งให้ Stock แล้ว', 'color' => '#2E7D32');
 		}
 		return array('key' => 'draft', 'label' => 'Draft', 'color' => '#FFA500');
+	}
+}
+
+if (!function_exists('rc_list_status_badges')) {
+	/**
+	 * สถานะใบคืนของหน้ารายการ (status_receive_suppro.php): key => [ป้าย, class ของ badge-status ใน css/so-status-ui.css]
+	 * hos__receive ยังไม่มี workflow อนุมัติ — rc_list_status() จึงคืนได้แค่ draft / wait_product / wait_stock / complete / incomplete
+	 * key ที่เหลือลงทะเบียนป้ายและสีไว้รอ workflow
+	 * @return array<string,array{0:string,1:string}>
+	 */
+	function rc_list_status_badges()
+	{
+		return array(
+			'draft'        => array('Draft', 'draft'),
+			'wait_head'    => array('รอหัวหน้า', 'pending-mgr'),
+			'wait_product' => array('รอสินค้า', 'wait-product'),
+			'wait_tech'    => array('รอช่าง', 'wait-tech'),
+			'wait_exec'    => array('รอผู้บริหาร', 'pending-exec'),
+			'wait_stock'   => array('รอสต็อก', 'wait-stock'),
+			'wait_admin'   => array('รอแอดมิน', 'wait-admin'),
+			'wait_refund'  => array('รอคืนเงิน', 'wait-refund'),
+			'complete'     => array('สมบูรณ์', 'approve'),
+			'incomplete'   => array('ไม่สมบูรณ์', 'incomplete'),
+			'rejected'     => array('ไม่อนุมัติ', 'rejected'),
+			'cancelled'    => array('ยกเลิก', 'cancel'),
+		);
+	}
+}
+
+if (!function_exists('rc_list_status')) {
+	/**
+	 * key ของ rc_list_status_badges() จาก flag ของ Stock — ผลตรวจของ Stock ชนะ Draft เสมอ
+	 * (ใบเก่าจำนวนมาก send_stock = 0 ทั้งที่ Stock ลงผลแล้ว) — เงื่อนไขต้องตรงกับ rc_list_status_where()
+	 */
+	function rc_list_status(array $receipt)
+	{
+		$stockComplete = (int)($receipt['stock_complete'] ?? 0);
+		if ($stockComplete === 1) {
+			return 'complete';
+		}
+		if ($stockComplete === 2) {
+			return 'incomplete';
+		}
+		if ($stockComplete === 3) {
+			return 'wait_product';
+		}
+		if ((int)($receipt['report_ckk'] ?? 0) !== 0) {
+			return 'wait_stock';
+		}
+		return (int)($receipt['send_stock'] ?? 0) !== 0 ? 'wait_product' : 'draft';
+	}
+}
+
+if (!function_exists('rc_list_status_where')) {
+	/** เงื่อนไข SQL บน hos__receive ของสถานะที่กรองได้ — คืน '' เมื่อ key นั้นยังไม่มีแถวใดได้ */
+	function rc_list_status_where($key)
+	{
+		static $where = array(
+			'complete'     => 'stock_complete = 1',
+			'incomplete'   => 'stock_complete = 2',
+			'wait_product' => '(stock_complete = 3 OR (stock_complete NOT IN (1, 2, 3) AND report_ckk = 0 AND send_stock <> 0))',
+			'wait_stock'   => '(stock_complete NOT IN (1, 2, 3) AND report_ckk <> 0)',
+			'draft'        => '(stock_complete NOT IN (1, 2, 3) AND report_ckk = 0 AND send_stock = 0)',
+		);
+		return isset($where[$key]) ? $where[$key] : '';
 	}
 }
 

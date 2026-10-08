@@ -124,6 +124,40 @@ body.has-sidebar.sidebar-collapsed {
 	transition: all 0.3s ease;
 }
 
+/* ช่องวันที่ของตัวกรอง: ไอคอนปฏิทิน + คลิกทั้งช่องเปิดปฏิทิน — ชุดเดียวกับ .calendar-wrapper ใน css/register-suphos.css
+   (หน้ารายการโหลดไฟล์นั้นไม่ได้) มีผลเฉพาะช่องที่ครอบ wrapper นี้ */
+.calendar-wrapper {
+	position: relative;
+}
+
+.calendar-wrapper::after {
+	content: "";
+	background-image: url("../img/icons/calendar.png");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: 18px;
+	height: 18px;
+}
+
+.calendar-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: auto;
+	height: auto;
+	color: transparent;
+	background: transparent;
+	cursor: pointer;
+}
+
 .so-label {
 	color: #612989;
 	font-size: 13px;
@@ -352,6 +386,34 @@ body.has-sidebar.sidebar-collapsed {
 	background-color: #FFE1C5;
 	color: #FF7B0F;
 }
+
+/* สถานะใบคืนสินค้า (status_receive_suppro.php) — key อยู่ใน rc_list_status_badges() */
+.badge-status.wait-product {
+	background-color: #CCEBFF;
+	color: #0A5CFF;
+}
+
+/* รอสินค้า */
+.badge-status.wait-tech,
+.badge-status.wait-admin {
+	background-color: #FFF3BF;
+	color: #F59F00;
+}
+
+/* รอช่าง / รอแอดมิน */
+.badge-status.wait-stock,
+.badge-status.wait-refund {
+	background-color: #FFE1C5;
+	color: #FF7B0F;
+}
+
+/* รอสต็อก / รอคืนเงิน */
+.badge-status.incomplete {
+	background-color: #FFF2E8;
+	color: #D4380D;
+}
+
+/* ไม่สมบูรณ์ */
 
 /* Expanded Row Details */
 .so-row.is-expanded,
