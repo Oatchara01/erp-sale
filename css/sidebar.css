@@ -672,10 +672,10 @@ body.has-sidebar.sidebar-collapsed {
 	transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.navbar-dropdown a i {
-	width: 16px;
-	text-align: center;
-	color: #666666;
+.navbar-dropdown a img {
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
 }
 
 .navbar-dropdown a:hover {
@@ -683,15 +683,7 @@ body.has-sidebar.sidebar-collapsed {
 	color: var(--sidebar-accent);
 }
 
-.navbar-dropdown a:hover i {
-	color: var(--sidebar-accent);
-}
-
 .navbar-dropdown a.logout-link {
-	color: #d93025;
-}
-
-.navbar-dropdown a.logout-link i {
 	color: #d93025;
 }
 

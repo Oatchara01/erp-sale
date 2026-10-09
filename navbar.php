@@ -38,10 +38,10 @@ $userSurname = isset($_SESSION['surname']) ? htmlspecialchars($_SESSION['surname
                     <span class="navbar-dropdown-role"><?php echo htmlspecialchars($_SESSION['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
                 <hr class="navbar-dropdown-divider">
-                <a href="change_pass.php"><i class="fa fa-key"></i> เปลี่ยนรหัสผ่าน</a>
-                <a href="https://allwellcenter.com/itsupport/" target="_blank"><i class="fa fa-question-circle"></i> แจ้งปัญหาการใช้งาน</a>
+                <a href="change_pass.php"><img src="img/icons/iconoir_password-cursor.svg" alt="" width="20" height="20"> เปลี่ยนรหัสผ่าน</a>
+                <a href="https://allwellcenter.com/itsupport/" target="_blank"><img src="img/icons/hugeicons_bubble-chat-question.svg" alt="" width="20" height="20"> แจ้งปัญหาการใช้งาน</a>
                 <hr class="navbar-dropdown-divider">
-                <a href="logout.php" class="logout-link"><i class="fa fa-sign-out-alt"></i> ออกจากระบบ</a>
+                <a href="logout.php" class="logout-link"><img src="img/icons/lucide_log-out.svg" alt="" width="20" height="20"> ออกจากระบบ</a>
             </div>
         </div>
     </div>
