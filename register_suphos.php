@@ -1450,22 +1450,34 @@ include("head.php"); ?>
 
 	?>
 
-	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") {
+		// ผลการส่งใบงานเข้าระบบ CS (so_cs_send_sales_order) แสดงรวมใน popup บันทึก: สำเร็จ = บอกเลขที่ลงงาน, ไม่สำเร็จ = เตือน
+		$csSyncShown = isset($_GET["cs_sync"]);
+		$csSyncOk = (($_GET["cs_sync"] ?? '') === "1");
+		$csSyncMsgJs = json_encode((string)($_GET["cs_sync_msg"] ?? ''), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+	?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				var cleanUrl = new URL(window.location.href);
 				cleanUrl.searchParams.delete('saved');
+				cleanUrl.searchParams.delete('cs_sync');
+				cleanUrl.searchParams.delete('cs_sync_msg');
 				window.history.replaceState({}, document.title, cleanUrl);
 
+				var csSyncShown = <?php echo $csSyncShown ? 'true' : 'false'; ?>;
+				var csSyncOk = <?php echo $csSyncOk ? 'true' : 'false'; ?>;
+				var csSyncMessage = <?php echo $csSyncMsgJs; ?>;
+				var savedText = csSyncShown && csSyncMessage ? csSyncMessage : 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว';
+
 				if (typeof Swal === 'undefined') {
-					alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+					alert('บันทึกข้อมูลเรียบร้อยแล้ว' + (csSyncShown && csSyncMessage ? '\n' + csSyncMessage : ''));
 					return;
 				}
 
 				Swal.fire({
 					title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-					text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
-					icon: 'success',
+					text: savedText,
+					icon: (csSyncShown && !csSyncOk) ? 'warning' : 'success',
 					confirmButtonColor: '#612989',
 					confirmButtonText: 'ตกลง'
 				});
@@ -1896,7 +1908,9 @@ include("head.php"); ?>
 						if (data && data.success) {
 							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
 							redirecting = true;
-							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							// cs_sync / cs_sync_msg = ผลการส่งใบงานเข้าระบบ CS (มีเฉพาะเมื่อติ๊ก toggle ส่งข้อมูลลงระบบ CS)
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' +
+								(data.cs_sync ? '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '') : '');
 							return;
 						}
 
@@ -1946,7 +1960,9 @@ include("head.php"); ?>
 						if (data && data.success) {
 							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
 							redirecting = true;
-							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							// cs_sync / cs_sync_msg = ผลการส่งใบงานเข้าระบบ CS (มีเฉพาะเมื่อติ๊ก toggle ส่งข้อมูลลงระบบ CS)
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' +
+								(data.cs_sync ? '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '') : '');
 							return;
 						}
 
@@ -2662,7 +2678,7 @@ include("head.php"); ?>
 								],
 							],
 							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
+							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS', 'disabled' => true],
 						],
 						[
 							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => ($savedSo !== null) ? 'openCreditNotePopup();' : "alert('กรุณาบันทึกใบสั่งขายก่อน จึงจะสามารถสร้างใบลดหนี้ได้');", 'icon_id' => 'btn_open_credit_note'],
@@ -2959,12 +2975,15 @@ include("head.php"); ?>
 				<!-- ข้อมูลการจัดส่ง -->
 				<?php
 				
-				$canSendCs = in_array(
-	$typeLoginLower,
-	['admin', 'it', 'owner','sol'],
-	true
-);
-				
+				// ส่งใบงานเข้าระบบ CS: ทำจริงตอนบันทึกโดย so_cs_send_sales_order() (includes/so_cs_send.php)
+				$canSendCs = in_array($typeLoginLower, ['admin', 'it', 'owner'], true);
+				$soCsStatusDoc = (string)($savedSo['status_doc'] ?? '');
+				$soCsIsSent = ((string)($savedSo['send_cs'] ?? '') === '2');
+				// ส่งแล้วย้อนไม่ได้, เอกสารที่ยกเลิก/ไม่อนุมัติไม่ส่ง, เอกสารที่อนุมัติแล้วบันทึกได้เฉพาะ Admin (ปุ่ม Update แบบจำกัด)
+				$soCsLocked = $soCsIsSent
+					|| in_array($soCsStatusDoc, ['ยกเลิก', 'Rejected', 'Cancelled'], true)
+					|| ($soCsStatusDoc === 'Approve' && $typeLoginLower !== 'admin');
+
 				$deliveryTab = [
 					'open_fn' => 'openDelTab',
 					'grid_fields' => [
@@ -3010,11 +3029,8 @@ include("head.php"); ?>
 				'name' => 'send_cs',
 				'id' => 'send_cs',
 				'label' => 'ส่งข้อมูลลงระบบ CS',
-				'checked' => in_array(
-					(string)($savedSo['send_cs'] ?? ''),
-					['1', '2'],
-					true
-				)
+				'checked' => $soCsIsSent,
+				'locked' => $soCsLocked,
 			],
 		]
 		: []
@@ -6533,77 +6549,6 @@ $canShowETReport = ($ivPrefix === 'ET');
 				.then(function() {
 					if (runButton) {
 						runButton.disabled = false;
-					}
-				});
-		}
-
-		// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
-		// เลขคำนวณฝั่ง server ทั้งหมด (ปี พ.ศ. + เดือน + running 4 หลัก) หน้านี้แค่ส่ง ref_id กับวันที่ไป
-		function runJobNo() {
-			var jobNoInput = document.querySelector('input[name="admin_work_no"]');
-			var refIdInput = document.querySelector('input[name="ref_id"]');
-			// วันที่จัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
-			var deliveryDateInput = document.querySelector('input[name="start_date"]');
-			var runIcon = document.getElementById('btn_run_job_no');
-
-			if (!jobNoInput) {
-				return;
-			}
-
-			// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
-			if (runIcon && runIcon.dataset.loading === '1') {
-				return;
-			}
-
-			if (jobNoInput.value.trim() !== '') {
-				// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
-				if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
-					return;
-				}
-			}
-
-			var payload = new URLSearchParams();
-			payload.append('ref_id', refIdInput ? refIdInput.value : '');
-			payload.append('job_date', deliveryDateInput ? deliveryDateInput.value : '');
-
-			if (runIcon) {
-				runIcon.dataset.loading = '1';
-				runIcon.style.pointerEvents = 'none';
-				runIcon.style.opacity = '0.4';
-			}
-
-			fetch('ajax_run_job_no.php', {
-					method: 'POST',
-					credentials: 'same-origin',
-					cache: 'no-store',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-					},
-					body: payload.toString()
-				})
-				.then(function(response) {
-					return response.json().then(function(data) {
-						return {
-							ok: response.ok,
-							data: data
-						};
-					});
-				})
-				.then(function(result) {
-					if (!result.ok || !result.data || !result.data.success) {
-						alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
-						return;
-					}
-					jobNoInput.value = result.data.job_no;
-				})
-				.catch(function() {
-					alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
-				})
-				.then(function() {
-					if (runIcon) {
-						runIcon.dataset.loading = '0';
-						runIcon.style.pointerEvents = '';
-						runIcon.style.opacity = '';
 					}
 				});
 		}

@@ -11,6 +11,7 @@ if (!$isDraftRequest) {
 
 include("dbconnect.php");
 include("error_page.php");
+require_once __DIR__ . '/includes/so_cs_send.php';
 
 date_default_timezone_set("Asia/Bangkok");
 
@@ -998,8 +999,7 @@ $ivTimeValue = $isDraftRequest ? '' : $iv_time;
 			}
 		}
 
-		updateHosSoColumnIfExists($conn, $ref_id, 'send_cs', (($_POST['send_cs'] ?? '') === '1') ? '1' : '0');
-
+		// send_cs ไม่ถูกเขียนตรงนี้แล้ว: so_cs_send_sales_order() ท้ายไฟล์เป็นคนตั้งเป็น 2 หลังส่งใบงานเข้าระบบ CS สำเร็จ
 
 		$save56 = "insert into tb_other_bill
 (ref_id,head_1,ref_1,ref_2,ref_3,ref_4,ref_5,ref_6,ref_7,ref_8,ref_9,ref_10,ref_11,ref_des,ref_12,ref_13)
@@ -4539,12 +4539,19 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 	if ($saveOk) {
 		mysqli_commit($conn);
 
+		// ส่งใบงานเข้าระบบ CS หลัง commit (คนละ connection จึงอยู่ใน transaction เดียวกันไม่ได้)
+		// ส่งไม่สำเร็จไม่ทำให้ SO ที่บันทึกแล้วเสีย แค่แจ้งเตือนใน popup — Draft ถูกข้ามในฟังก์ชันเอง
+		$soCsResult = null;
+		if (so_cs_send_requested($_POST)) {
+			$soCsResult = so_cs_send_sales_order($conn, $ref_id, $_SESSION);
+		}
+
 		if ($isDraftRequest) {
-			echo json_encode(array(
+			echo json_encode(array_merge(array(
 				'success' => true,
 				'ref_id' => $ref_id,
 				'message' => 'Draft saved'
-			));
+			), so_cs_json_fields($soCsResult)));
 			exit();
 		}
 
@@ -4553,7 +4560,7 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		header('Location: register_suphos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+		header('Location: register_suphos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . so_cs_redirect_query($soCsResult));
 		exit();
 	} else {
 		mysqli_rollback($conn);
