@@ -581,9 +581,9 @@ $Page_Num_Rows =
              TABLE
         ====================================================== -->
 
-        <div class="so-table-wrapper">
+        <div class="so-table-wrapper so-table-wrapper--fit">
 
-            <table class="so-table">
+            <table class="so-table so-table-fit">
 
                 <thead>
 

@@ -201,8 +201,8 @@ while ($saleDropdownQuery && ($saleDropdownRow = mysqli_fetch_assoc($saleDropdow
 				}
 			</script>
 
-			<div class="so-table-wrapper">
-				<table class="so-table" id="soTable">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit" id="soTable">
 					<thead>
 						<tr>
 							<th width="3%"></th>

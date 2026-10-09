@@ -176,9 +176,9 @@ require_once __DIR__ . '/includes/breq_repo.php';
 				</div>
 			</form>
 
-			<div class="so-table-wrapper">
+			<div class="so-table-wrapper so-table-wrapper--fit">
 				<!-- table-layout: fixed + colgroup — ความกว้างคอลัมน์คงที่ ไม่ขยับตามชื่อสินค้ายาว ๆ ตอนกางแถว -->
-				<table class="so-table" style="table-layout:fixed; width:100%;">
+				<table class="so-table so-table-fit" style="table-layout:fixed; width:100%;">
 					<colgroup>
 						<col style="width:5%;">
 						<col style="width:13%;">

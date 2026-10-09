@@ -544,8 +544,8 @@ include "dbconnect_sale.php";
 				}
 			</script>
 
-			<div class="so-table-wrapper">
-				<table class="so-table" id="soTable">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit so-table-fit--fixed" id="soTable">
 					<thead>
 						<tr>
 							<th width="3%"></th>

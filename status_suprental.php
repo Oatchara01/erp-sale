@@ -513,8 +513,8 @@ include('dbconnect_sale.php');
 			$Page_Num_Rows = $objQuery ? mysqli_num_rows($objQuery) : 0;
 			?>
 
-			<div class="so-table-wrapper">
-				<table class="so-table">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit">
 					<thead>
 						<tr>
 							<th width="3%"></th>

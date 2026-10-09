@@ -298,8 +298,8 @@ include "dbconnect_sale.php";
 
 			?>
 
-			<div class="so-table-wrapper">
-				<table class="so-table smp-status-table">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit smp-status-table">
 					<colgroup>
 						<col style="width:3%;">
 						<col style="width:12%;">

@@ -120,8 +120,8 @@ include "dbconnect_sale.php";
 
 			?>
 
-			<div class="so-table-wrapper">
-				<table class="so-table">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit">
 					<thead>
 						<tr>
 							<th width="3%"></th>

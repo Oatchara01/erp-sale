@@ -1250,3 +1250,105 @@ body.has-sidebar.sidebar-collapsed {
 .figma-close-so-cancel-btn:active {
 	transform: scale(0.98) !important;
 }
+
+/* ===== Status SO table: fit tablet widths without horizontal scroll =====
+   Keyed to the wrapper's own width (container query) instead of the viewport,
+   because the pinned sidebar above 1024px takes 280px from the content area.
+   Opt in with .so-table-wrapper--fit on the wrapper and .so-table-fit on the
+   table. The browser sizes columns itself (auto layout) and long values wrap.
+   Add .so-table-fit--fixed for the hand-tuned fixed-width variant
+   (status_adminhos.php). Below 600px the table keeps its scrollable layout. */
+.so-table-wrapper--fit {
+	container-type: inline-size;
+}
+
+@container (min-width: 600px) and (max-width: 1119px) {
+	.so-table-fit {
+		min-width: 0;
+		width: 100%;
+		font-size: 12.5px;
+	}
+
+	.so-table-fit th {
+		font-size: 12.5px;
+		padding: 12px 4px;
+		/* !important: some pages set white-space:nowrap inline on the th */
+		white-space: normal !important;
+		line-height: 1.3;
+		overflow-wrap: break-word;
+	}
+
+	.so-table-fit td {
+		padding: 10px 4px;
+		overflow-wrap: break-word;
+	}
+
+	.so-table-fit th:first-child,
+	.so-table-fit td:first-child {
+		padding-left: 8px;
+	}
+
+	.so-table-fit th:last-child,
+	.so-table-fit td:last-child {
+		padding-right: 4px;
+	}
+
+	.so-table-fit .badge-status {
+		padding: 3px 6px;
+		font-size: 11.5px;
+		white-space: normal;
+		text-align: center;
+	}
+
+	.so-table-fit .so-dropdown-trigger {
+		min-width: 30px;
+		min-height: 40px;
+	}
+
+	.so-table-fit .sub-table {
+		min-width: 0;
+	}
+
+	.so-table-fit .sub-table th,
+	.so-table-fit .sub-table td {
+		font-size: 12px;
+		padding: 8px 6px !important;
+	}
+
+	/* Fixed-width variant: column widths are set per page */
+	.so-table-fit.so-table-fit--fixed {
+		table-layout: fixed;
+	}
+
+	.so-table-fit--fixed th,
+	.so-table-fit--fixed td {
+		overflow-wrap: anywhere;
+	}
+
+	.so-table-fit--fixed th:first-child,
+	.so-table-fit--fixed td:first-child {
+		padding-right: 0;
+	}
+
+	.so-table-fit--fixed th:last-child,
+	.so-table-fit--fixed td:last-child {
+		padding-left: 0;
+	}
+
+	.so-table-fit--fixed th:nth-child(1) { width: 28px; }
+	.so-table-fit--fixed th:nth-child(2) { width: 20px; }
+	.so-table-fit--fixed th:nth-child(3) { width: 14%; }
+	.so-table-fit--fixed th:nth-child(4) { width: 13%; }
+	.so-table-fit--fixed th:nth-child(5) { width: 9%; }
+	.so-table-fit--fixed th:nth-child(7) { width: 9%; }
+	.so-table-fit--fixed th:nth-child(8) { width: 7%; }
+	.so-table-fit--fixed th:nth-child(9) { width: 11%; }
+	.so-table-fit--fixed th:nth-child(10) { width: 11%; }
+	.so-table-fit--fixed th:nth-child(11) { width: 36px; }
+
+	/* amounts never wrap mid-number */
+	.so-table-fit--fixed td:nth-child(9) {
+		white-space: nowrap;
+		overflow-wrap: normal;
+	}
+}

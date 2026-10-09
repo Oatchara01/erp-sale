@@ -425,8 +425,8 @@ else {
 				}
 			</script>
 
-			<div class="so-table-wrapper">
-				<table class="so-table" id="poTable">
+			<div class="so-table-wrapper so-table-wrapper--fit">
+				<table class="so-table so-table-fit" id="poTable">
 					<thead>
 						<tr>
 							<th width="3%"></th>
