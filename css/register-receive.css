@@ -1,0 +1,383 @@
+/* Page-specific styles for register_receive.php (ใบคืนสินค้า)
+   ใช้โครงหน้า/ตาราง/ช่องติ๊กร่วมกับ css/register-receivepro.css (.rp-*) — ไฟล์นี้มีเฉพาะส่วนที่หน้านี้ต่างจริง ๆ
+   ทุก selector ผูกกับ .rc-* เพื่อไม่ให้หน้าอื่นเปลี่ยนตาม */
+
+/* ===== การ์ดข้อมูลเอกสารอ้างอิง ===== */
+.rc-doc-pill-wrap {
+	margin-bottom: 16px;
+}
+
+.rc-doc-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	height: 42px;
+	padding: 0 20px;
+	border: 1px solid #EAE3F7;
+	border-radius: 21px;
+	color: #612989;
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+	box-sizing: border-box;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.rc-doc-pill:hover {
+	background-color: #F6EFFD;
+	border-color: #612989;
+	color: #612989;
+}
+
+.rc-doc-pill:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.35);
+	outline-offset: 2px;
+}
+
+.rc-gap-top {
+	margin-top: 16px;
+}
+
+/* ===== การ์ดข้อมูลการคืนสินค้า ===== */
+.rc-span-2 {
+	grid-column: span 2;
+}
+
+/* ช่วงเวลา + เวลาในการจัดส่ง แบ่งครึ่งเท่ากันภายในหนึ่งคอลัมน์ของกริด */
+.rc-split {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	min-width: 0;
+}
+
+.rc-split .so-field-group {
+	min-width: 0;
+}
+
+.so-field-group[hidden] {
+	display: none;
+}
+
+/* ===== ตารางรายการสินค้า ===== */
+.rc-items-table {
+	min-width: 880px;
+}
+
+/* ลำดับคอลัมน์: ลาก | ติ๊ก | ลูกศร S/N | รหัส | รายการ | จำนวน | ราคา/หน่วย | ยอดรวม | ถังขยะ */
+.rc-items-table .rp-col-drag {
+	width: 36px;
+	padding-left: 8px;
+}
+
+.rc-items-table .rc-col-caret {
+	width: 40px;
+	padding: 0;
+	text-align: center;
+}
+
+.rc-items-table .rp-col-actions {
+	width: 72px;
+	text-align: center;
+}
+
+/* การ์ดสรุป: เส้นคั่นระหว่างสองช่อง ยอดรวมสุทธิตัวใหญ่สีม่วง */
+.rc-page .rp-summary-col + .rp-summary-col {
+	border-left: 1px solid var(--so-border);
+}
+
+.rc-page #rc_total_amount {
+	color: var(--so-primary);
+	font-size: 32px;
+	font-weight: 500;
+}
+
+/* ใบที่ส่งให้ Stock แล้วอ่านอย่างเดียว — ช่องติ๊กแสดงอยู่ (ค่า .rp-page.is-readonly .rp-check ซ่อน) ที่ลาก/ถังขยะยังซ่อน */
+.rc-page.is-readonly .rp-check {
+	visibility: visible;
+}
+
+.rc-items-table .rc-col-price {
+	width: 130px;
+	text-align: right;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.rc-items-table .rp-col-name {
+	min-width: 200px;
+}
+
+/* แถวที่ติ๊กไม่ไฮไลต์ (ต่างจากหน้าใบส่งสินค้า) — ไฮไลต์ม่วงอ่อนเฉพาะกลุ่ม S/N ที่ขยายอยู่ตามรูป */
+.rc-items-table tr.rc-row.is-selected td {
+	background: transparent;
+}
+
+.rc-items-table tr.rc-row.is-open td {
+	background: #F1E1FF;
+}
+
+.rc-items-table tr.rc-row[hidden],
+.rc-items-table tr.rc-detail-row[hidden] {
+	display: none;
+}
+
+/* ช่องจำนวนเป็นพิลล์สีเทา — ตอนไม่ติ๊ก (disabled) ตัวเลขจางลง */
+.rc-qty-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 72px;
+	height: 44px;
+	padding: 0 8px;
+	border-radius: 12px;
+	background: #F4F3F7;
+	box-sizing: border-box;
+}
+
+.rc-qty-pill .so-input.rc-qty {
+	width: 56px;
+	height: 40px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.rc-qty-pill .so-input.rc-qty:disabled {
+	color: #A09CA6;
+	-webkit-text-fill-color: #A09CA6;
+	cursor: not-allowed;
+}
+
+.rc-qty-pill.is-static {
+	color: #A09CA6;
+	font-variant-numeric: tabular-nums;
+}
+
+.rc-caret {
+	width: 24px;
+	height: 24px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #612989;
+	font-size: 14px;
+	line-height: 1;
+	cursor: pointer;
+	vertical-align: middle;
+	transition: transform 0.15s ease;
+}
+
+.rc-caret[aria-expanded="true"] {
+	transform: rotate(180deg);
+}
+
+.rc-caret:focus-visible {
+	outline: 2px solid rgba(97, 41, 137, 0.35);
+	outline-offset: 2px;
+}
+
+.rc-detail-row > td {
+	padding: 4px 16px 16px 76px;
+	background: #F1E1FF;
+	border-bottom: 1px solid var(--so-border);
+}
+
+.rc-sn-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.rc-sn-table th {
+	padding: 6px 10px;
+	border-bottom: 1px solid rgba(97, 41, 137, 0.15);
+	color: #612989;
+	font-weight: 500;
+	text-align: left;
+	white-space: nowrap;
+	background: transparent;
+}
+
+.rc-sn-table td {
+	padding: 6px 10px;
+	color: #2D2533;
+	border: 0;
+	background: transparent;
+}
+
+.rc-sn-table .rp-col-check {
+	width: 44px;
+}
+
+/* ===== แถบปุ่มล่าง ===== */
+.rc-print-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	text-decoration: none;
+}
+
+.rc-print-link img {
+	width: 22px;
+	height: 22px;
+}
+
+.rc-cancel-btn {
+	color: #C62828;
+	border-color: #C62828;
+}
+
+.rc-cancel-btn:hover:not(:disabled) {
+	background: #FEECEB;
+}
+
+/* ===== ประวัติการคืน (modal ในหน้ารายการเอกสาร — partials/receive_history_modal.php) ===== */
+.rc-history-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(0, 0, 0, 0.45);
+	box-sizing: border-box;
+}
+
+.rc-history-overlay[hidden] {
+	display: none;
+}
+
+.rc-history-box {
+	width: 100%;
+	max-width: 760px;
+	max-height: 86vh;
+	overflow: auto;
+	padding: 24px;
+	border-radius: 16px;
+	background: #FFFFFF;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+	box-sizing: border-box;
+}
+
+.rc-history-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.rc-history-title {
+	margin: 0;
+	color: #3B3B3B;
+	font-size: 20px;
+	font-weight: 600;
+}
+
+.rc-history-title span {
+	margin-left: 8px;
+	color: #612989;
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.rc-history-close {
+	border: 0;
+	background: transparent;
+	color: #7A767D;
+	font-size: 28px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.rc-history-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+
+.rc-history-table th {
+	padding: 10px 12px;
+	border-bottom: 1px solid #612989;
+	color: #612989;
+	font-weight: 500;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.rc-history-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid #EBEBEB;
+	vertical-align: middle;
+}
+
+.rc-history-pill {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 11px;
+	color: #FFFFFF;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.rc-history-legacy {
+	margin-left: 6px;
+	color: #7A767D;
+	font-size: 12px;
+}
+
+.rc-history-empty,
+.rc-history-error {
+	padding: 24px 16px;
+	color: #8E8B94;
+	text-align: center;
+}
+
+@media (max-width: 768px) {
+	.rc-span-2 {
+		grid-column: auto;
+	}
+
+	.rc-split {
+		grid-template-columns: 1fr;
+	}
+}
+
+
+/* แท็บแนบไฟล์มีแท็บเดียว จึงเป็นทั้ง :first-child และ :last-child — กฎ :last-child ของ register-suphos.css ทับ :first-child
+   ทำให้มุมซ้ายบนเหลี่ยม ให้มนทั้งสองมุมบนเฉพาะหน้านี้ */
+.rc-page .so-tab-btn:only-child {
+	border-radius: 12px 12px 0 0;
+}
+
+/* การ์ดข้อมูลเอกสารมีแท็บ "ข้อมูลเอกสาร" ติดขอบบนซ้าย (รูปแบบเดียวกับการ์ดแท็บของ partials/doc_tabs_card.php) */
+.rc-card-tabs {
+	margin-bottom: -1px;
+}
+
+.rc-card-tabs .so-tab-btn {
+	cursor: default;
+}
+
+
+/* ===== ข้อความใต้หัวเอกสาร (หมายเหตุจาก Stock — เฉพาะใบที่บันทึกแล้ว) ===== */
+.rc-head-note {
+	margin: 0 0 12px;
+	padding: 10px 16px;
+	border: 1px solid #EAE3F7;
+	border-radius: 12px;
+	background: #FAF7FD;
+	color: #3B3B3B;
+	font-size: 14px;
+}
+
+.rc-head-note-label {
+	font-weight: 600;
+	color: #612989;
+}

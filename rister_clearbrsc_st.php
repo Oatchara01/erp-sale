@@ -97,7 +97,7 @@ function fncSubmit()   //ห้ามชื่อสินค้า ยี่ห
 
 		<span class="w3-light-grey w3-right"> เลขที่อ้างอิง : <?php echo $fetch1['ref_id']+1; ?></span>
 		<input type="hidden" name="ref_id" class="w3-input" value="<?php echo $fetch1['ref_id']+1; ?>">
-	<input type="hidden" name="ref_id_br" id='ref_id_br' class="w3-input" value="<?php echo $objResult['ref_id_br']; ?>">
+	<input type="hidden" name="ref_id_br" id='ref_id_br' class="w3-input" value="<?php echo $objResult['ref_id_br'] ?? ''; ?>">
 	</div>
 
 </p>
@@ -112,11 +112,12 @@ $today = $year . '-' . $month . '-' . $day;
 
 
 ?>
-<?php if ($objResult['receive_ckk']=='1'){
+<?php $receive_ckk = $objResult['receive_ckk'] ?? '';
+if ($receive_ckk=='1'){
 		?>
 <input type="radio" checked='checked' name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
 <input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
-<?php }else if($objResult['receive_ckk']=='2'){ ?>
+<?php }else if($receive_ckk=='2'){ ?>
 
 <input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
 <input type="radio" name="receive_ckk" checked='checked' value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
@@ -127,8 +128,8 @@ $today = $year . '-' . $month . '-' . $day;
 <input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
 
 			<?php } ?>
-  : &nbsp;<input type="text" name="receive_name" class="button4" style="width:15%;" > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ช่วงวันที่ :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="receive_between" value = '<?php echo $objResult['receive_between'];?>' class="button4" style="width:15%;" 	>
-		&nbsp;&nbsp;&nbsp;ช่วงเวลา :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="time_between" value = '<?php echo $objResult['time_between'];?>' class="button4" style="width:15%;" 	>
+  : &nbsp;<input type="text" name="receive_name" class="button4" style="width:15%;" > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ช่วงวันที่ :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="receive_between" value = '<?php echo $objResult['receive_between'] ?? '';?>' class="button4" style="width:15%;" 	>
+		&nbsp;&nbsp;&nbsp;ช่วงเวลา :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="time_between" value = '<?php echo $objResult['time_between'] ?? '';?>' class="button4" style="width:15%;" 	>
 </p>
 		วันที่ : 
 <input type="date" name = "date_receive" id="date_receive" value="<?php echo $today; ?>" class = "button4"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

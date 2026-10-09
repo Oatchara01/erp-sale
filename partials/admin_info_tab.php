@@ -199,6 +199,15 @@ if (!defined('ADMIN_INFO_TAB_STYLE_PRINTED')) {
 			border-color: #E0E0E0;
 		}
 
+		/* ช่องวันที่ที่เปิด 'calendar' แล้วถูก disabled — ไอคอนปฏิทินจางลงให้รู้ว่าแก้ไม่ได้ */
+		.admin-ui-input-wrapper.calendar-wrapper:has(.admin-ui-input:disabled)::after {
+			opacity: 0.35;
+		}
+
+		.admin-ui-input-wrapper.calendar-wrapper .admin-ui-input:disabled::-webkit-calendar-picker-indicator {
+			cursor: not-allowed;
+		}
+
 		.admin-ui-btn:disabled,
 		.admin-ui-btn[disabled] {
 			opacity: 0.5;
@@ -224,6 +233,9 @@ if (!function_exists('renderAdminUiInputItem')) {
 			$fieldIcon = '';
 		}
 
+		// 'calendar' => true: ไอคอน img/icons/calendar.png แทนไอคอนของเบราว์เซอร์ — หน้าที่เปิดใช้ต้องโหลด CSS ที่มี .calendar-wrapper (เช่น css/register-suphos.css)
+		$fieldCalendarClass = ($htmlInputType === 'date' && !empty($field['calendar'])) ? ' calendar-wrapper' : '';
+
 		$fieldDisabled = !empty($field['disabled']);
 		$fieldClearable = ($field['clearable'] ?? false) && !$fieldDisabled;
 		$fieldIconOnclick = $fieldDisabled ? '' : ($field['icon_onclick'] ?? '');
@@ -232,7 +244,7 @@ if (!function_exists('renderAdminUiInputItem')) {
 		$hasIconClass = $fieldIcon !== '' ? ' has-icon' : '';
 		$disabledAttr = $fieldDisabled ? ' disabled' : '';
 ?>
-		<div class="admin-ui-input-wrapper">
+		<div class="admin-ui-input-wrapper<?php echo $fieldCalendarClass; ?>">
 			<input type="<?php echo $htmlInputType; ?>" name="<?php echo so_saved_h($field['name'] ?? ''); ?>"<?php echo $fieldIdAttr; ?> class="admin-ui-input<?php echo $hasIconClass; ?>" value="<?php echo so_saved_h($fieldValue); ?>" <?php echo isset($field['placeholder']) ? ' placeholder="' . so_saved_h($field['placeholder']) . '"' : ''; ?><?php echo ($htmlInputType === 'date' && !$fieldDisabled) ? ' onclick="if(typeof this.showPicker === \'function\') this.showPicker();"' : ''; ?><?php echo $disabledAttr; ?>>
 			<?php if ($fieldIcon !== '') {
 				$isImgIcon = (strpos($fieldIcon, '/') !== false || strpos($fieldIcon, '.') !== false);

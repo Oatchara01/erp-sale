@@ -85,6 +85,16 @@
 	margin-left: 2px;
 }
 
+/* ช่องวันที่ถูก disabled เมื่อเปิดใบ Approve/ยกเลิก (ล็อกทุกช่อง) —
+   ไอคอนปฏิทินจางลงให้รู้ว่าแก้ไม่ได้ (.calendar-wrapper มาจาก register-suphos.css) */
+.calendar-wrapper:has(input[type="date"]:disabled)::after {
+	opacity: 0.35;
+}
+
+.calendar-wrapper input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+	cursor: not-allowed;
+}
+
 /* ===== หมายเหตุ ===== */
 .spr-note-card,
 .spr-warehouse-card {

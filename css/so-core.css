@@ -341,6 +341,32 @@ body {
 	display: inline-block;
 }
 
+/* ฟิลด์ฟอร์มที่แสดงเป็น text อย่างเดียว (ค่าจริงอยู่ใน hidden input ที่ data-so-display ชี้มา)
+ * สูงขั้นต่ำเท่า .so-input (42px) ให้บรรทัดตัวอักษรตรงกับกล่องข้างเคียง ข้อความยาวตัดขึ้นบรรทัดใหม่ */
+.so-display-text {
+	display: block;
+	box-sizing: border-box;
+	min-height: 42px;
+	padding: 8px 0;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	font-size: 14px;
+	font-family: 'Prompt', sans-serif;
+	line-height: 24px;
+	color: var(--so-text);
+	overflow-wrap: anywhere;
+}
+
+.so-display-text.is-empty {
+	color: var(--so-muted);
+}
+
+.so-display-text.so-field-invalid {
+	padding: 8px 16px;
+	border-color: #DC3545;
+	background-color: #FEECEB;
+}
+
 .cidc-status-icon {
 	width: 24px;
 	height: 20px;

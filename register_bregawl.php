@@ -299,7 +299,12 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 
 		<div class="so-header-container">
 			<div class="so-header-left">
-				<h1 class="so-title breg-title">ใบขอเบิกอะไหล่จากสินค้าขาย (BREG)</h1>
+				<div class="so-title-row">
+					<button type="button" class="so-back-btn" onclick="window.location.href='status_engbreg.php';" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+						<img src="img/icons/chevron_left.svg" alt="">
+					</button>
+					<h1 class="so-title breg-title">ใบขอเบิกอะไหล่จากสินค้าขาย (BREG)</h1>
+				</div>
 				<div class="so-ref-info">
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo so_saved_h($bregDisplayRefId); ?></span>
@@ -505,7 +510,9 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				</label>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="pro_comedate">วันที่รับเข้า</label>
-					<input type="date" name="pro_comedate" id="pro_comedate" class="so-input" value="<?php echo so_saved_h($bregProComeDate); ?>" onchange="bregSyncEngineerSection();">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="pro_comedate" id="pro_comedate" class="so-input" value="<?php echo so_saved_h($bregProComeDate); ?>" onchange="bregSyncEngineerSection();">
+					</div>
 				</div>
 				<div class="breg-eng-spacer" aria-hidden="true"></div>
 
@@ -515,7 +522,9 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				</label>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="date_brdoc">วันที่ประกอบ</label>
-					<input type="date" name="date_brdoc" id="date_brdoc" class="so-input" value="<?php echo so_saved_h($bregDateBrdoc); ?>" onchange="bregSyncEngineerSection();">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_brdoc" id="date_brdoc" class="so-input" value="<?php echo so_saved_h($bregDateBrdoc); ?>" onchange="bregSyncEngineerSection();">
+					</div>
 				</div>
 				<div class="so-field-group breg-eng-field">
 					<label class="so-label" for="name_eng">ช่าง</label>
@@ -564,6 +573,8 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 		?>
 	</div>
 
+	<?php // เอกสารปิดแล้วไม่เหลือปุ่มในแถบ — ไม่ render แถบเปล่า (ย้อนกลับใช้ไอคอนที่หัวหน้าแทน) ?>
+	<?php if (!$bregIsTerminal) { ?>
 	<div class="so-sticky-actions">
 		<div class="so-sticky-actions-inner">
 			<?php if ($bregCanShowSupBar || $bregCanShowDmBar) { ?>
@@ -594,9 +605,9 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 					<button type="button" name="save_draft" class="btn-so-draft" onclick="bregSaveDraft();"><i class="far fa-save"></i> <?php echo $bregIsDraftMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php } ?>
 			<?php } ?>
-			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href='status_engbreg.php';">ย้อนกลับ</button>
 		</div>
 	</div>
+	<?php } ?>
 	<?php if ($bregIsTerminal) { ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
@@ -604,7 +615,7 @@ $bregDateBrdoc = $bregPrefill ? so_saved_iso_date_input($bregPrefill['date_brdoc
 				if (!form) return;
 				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function(el) {
 					if (el.type === 'hidden') return;
-					if (el.classList.contains('btn-so-cancel-nav')) return;
+					if (el.classList.contains('so-back-btn')) return;
 					if (el.classList.contains('btn-preview-so')) return;
 					el.disabled = true;
 				});

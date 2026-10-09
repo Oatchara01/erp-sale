@@ -8,6 +8,7 @@ mysqli_query($conn, "SET SESSION sql_mode = REPLACE(REPLACE(@@SESSION.sql_mode, 
 require_once __DIR__ . "/includes/invoice_receipt_sync.php";
 require_once __DIR__ . "/includes/hos_so_submission_status.php";
 require_once __DIR__ . "/includes/jong_repo.php";
+require_once __DIR__ . "/includes/so_cs_send.php";
 
 if (!function_exists('tableExists')) {
 	function tableExists($conn, $tableName)
@@ -602,7 +603,8 @@ bill_name ='" . $bill_name . "',bill_tel ='" . $bill_tel . "',bill_address  ='" 
 		}
 	}
 
-	updateHosSoColumnIfExists($conn, $ref_id, 'send_cs', (($_POST['send_cs'] ?? '') === '1') ? '1' : '0');
+	// send_cs ไม่ถูกเขียนตรงนี้แล้ว: so_cs_send_sales_order() ท้ายไฟล์เป็นคนตั้งเป็น 2 หลังส่งใบงานเข้าระบบ CS สำเร็จ
+	// (ของเดิมเขียน 1/0 ทับทุกครั้งที่บันทึก ทำให้ค่า 2 ของใบที่ส่งแล้วหาย)
 
 	// Upsert tb_other_bill: ถ้ายังไม่มีเรคคอร์ดให้ INSERT, ถ้ามีแล้วให้ UPDATE
 	$checkOtherBill = mysqli_query($conn, "SELECT id FROM tb_other_bill WHERE ref_id = '" . $ref_id . "' LIMIT 1");
@@ -4173,17 +4175,32 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 		$soReceiptSyncResult = syncHosSoToInvoiceReceipt($conn, $code, $ref_id, $soReceiptActor);
 	}
 
+	// toggle "ส่งข้อมูลลงระบบ CS" — ทำหลังขั้นอนุมัติเพื่อให้เห็นสถานะสุดท้ายของเอกสาร (ไม่อนุมัติ/ยกเลิก = ไม่ส่ง)
+	// SO ต้อง save สำเร็จเสมอแม้ส่งไม่ผ่าน ผลลัพธ์ไปแสดงใน popup หลัง redirect
+	$soCsResult = null;
+	if ($qsave) {
+		if ($cancelDocPost === '1') {
+			$soCsCancelReason = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+			if ($soCsCancelReason === '') {
+				$soCsCancelReason = trim((string)($_POST['so_approve_reason'] ?? ''));
+			}
+			$soCsResult = so_cs_mark_cancelled($conn, $ref_id, 'ยกเลิก', $soCsCancelReason);
+		} elseif (so_cs_send_requested($_POST)) {
+			$soCsResult = so_cs_send_sales_order($conn, $ref_id, $_SESSION);
+		}
+	}
+
 	if ($qsave) {
 		if (($_POST['is_draft'] ?? '') === '1') {
 			header('Content-Type: application/json; charset=utf-8');
-			echo json_encode(array('success' => true, 'ref_id' => $ref_id));
+			echo json_encode(array_merge(array('success' => true, 'ref_id' => $ref_id), so_cs_json_fields($soCsResult)));
 			exit();
 		}
 
 		echo "<script language=\"JavaScript\">";
 		$redirect_url = $redirect_to . "?ref_id=" . urlencode($ref_id);
 		if (strpos($redirect_to, "register_suphos.php") !== false) {
-			$redirect_url .= "&saved=1";
+			$redirect_url .= "&saved=1" . so_cs_redirect_query($soCsResult);
 		}
 		if ($soReceiptSyncResult !== null) {
 			$redirect_url .= "&receipt_sync=" . ($soReceiptSyncResult['success'] ? '1' : '0')

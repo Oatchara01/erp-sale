@@ -367,6 +367,7 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
             background: #FAF9FC;
             border: 1px dashed #E3DCEA;
             border-radius: 10px;
+            margin-top: 1rem;
         }
 
         @media (max-width: 768px) {

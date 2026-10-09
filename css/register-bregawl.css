@@ -327,6 +327,16 @@
 	margin-bottom: 0;
 }
 
+/* ช่องวันที่ถูก disabled จนกว่าจะติ๊ก checkbox คู่กัน (bregSyncEngineerSection) —
+   ไอคอนปฏิทินจางลงให้รู้ว่ายังกรอกไม่ได้ (.calendar-wrapper มาจาก register-suphos.css) */
+.calendar-wrapper:has(input[type="date"]:disabled)::after {
+	opacity: 0.35;
+}
+
+.calendar-wrapper input[type="date"]:disabled::-webkit-calendar-picker-indicator {
+	cursor: not-allowed;
+}
+
 /* checkbox จริงยังอยู่ใน DOM (type="checkbox") แต่ซ่อนเฉพาะทางสายตา —
    ทั้งกล่อง label เป็นพื้นที่กด ข้อความอยู่กึ่งกลาง */
 .breg-eng-check {

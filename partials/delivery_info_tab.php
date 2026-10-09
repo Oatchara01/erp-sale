@@ -21,6 +21,7 @@
  *     ],
  *     'toggle_buttons' => [
  *         ['name' => 'send_cs', 'id' => 'send_cs', 'label' => 'ส่งข้อมูลลงระบบ CS', 'checked' => false],
+ *         // 'locked' (ไม่บังคับ) = แสดงสถานะอย่างเดียว กดเปลี่ยนไม่ได้
  *     ],
  *     'cost_fields' => [
  *         ['name' => 'shipping_date', 'label' => '...', 'type' => 'date'],
@@ -132,9 +133,11 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 					$tId = so_saved_h($toggle['id'] ?? $tName);
 					$tLabel = so_saved_h($toggle['label'] ?? '');
 					$tChecked = !empty($toggle['checked']);
+					// 'locked' => true: แสดงสถานะอย่างเดียว กดเปลี่ยนไม่ได้ และไม่ถูกส่งไปกับฟอร์ม (checkbox disabled)
+					$tLocked = !empty($toggle['locked']);
 					?>
-					<label class="so-toggle-btn">
-						<input type="checkbox" id="<?php echo $tId; ?>" name="<?php echo $tName; ?>" value="1" style="display:none;"<?php echo $tChecked ? ' checked' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
+					<label class="so-toggle-btn"<?php echo $tLocked ? ' style="cursor: not-allowed; opacity: 0.6;"' : ''; ?>>
+						<input type="checkbox" id="<?php echo $tId; ?>" name="<?php echo $tName; ?>" value="1" style="display:none;"<?php echo $tChecked ? ' checked' : ''; ?><?php echo $tLocked ? ' disabled' : ''; ?> onchange="this.parentElement.style.backgroundColor = this.checked ? '#612989' : '#F4F3F7'; this.nextElementSibling.style.color = this.checked ? '#FFFFFF' : '#6e6e6eff';">
 						<span style="color: #6e6e6eff; font-size: 14px; font-weight: 500; font-family: 'Prompt', sans-serif;"><?php echo $tLabel; ?></span>
 					</label>
 				<?php } ?>
@@ -171,4 +174,4 @@ $deliveryCostFields = $deliveryTab['cost_fields'] ?? [];
 	</div>
 </div>
 <?php
-unset($deliveryOpenFn, $deliveryInfoId, $deliveryCostId, $deliveryGridFields, $deliveryToggleButtons, $deliveryCostFields, $field, $fType, $fSpan, $fName, $fLabel, $fRequired, $fClearable, $fGridColumn, $fEndName, $fOptions, $optValue, $optLabel, $fValue, $toggle, $tName, $tId, $tLabel, $tChecked);
+unset($deliveryOpenFn, $deliveryInfoId, $deliveryCostId, $deliveryGridFields, $deliveryToggleButtons, $deliveryCostFields, $field, $fType, $fSpan, $fName, $fLabel, $fRequired, $fClearable, $fGridColumn, $fEndName, $fOptions, $optValue, $optLabel, $fValue, $toggle, $tName, $tId, $tLabel, $tChecked, $tLocked);

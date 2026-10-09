@@ -528,6 +528,55 @@ body.has-sidebar.sidebar-collapsed {
 	transition: transform 0.2s ease;
 }
 
+/* The navbar is position: fixed, so anything pushed past the right edge is unreachable.
+   Keep buttons at full size, keep labels on one line, and trim spacing on phones instead. */
+#top-navbar .navbar-btn,
+#top-navbar .navbar-logo img,
+.navbar-avatar,
+.navbar-caret {
+	flex-shrink: 0;
+}
+
+#top-navbar .navbar-title,
+.navbar-username {
+	white-space: nowrap;
+}
+
+@media screen and (max-width: 576px) {
+	#top-navbar {
+		padding: 0 12px;
+	}
+
+	#top-navbar .navbar-left,
+	#top-navbar .navbar-right {
+		gap: 8px;
+	}
+
+	#top-navbar .navbar-logo img {
+		height: 40px;
+	}
+
+	#top-navbar .navbar-title {
+		font-size: 16px;
+	}
+
+	.navbar-user-btn {
+		gap: 6px;
+		padding: 6px;
+	}
+
+	/* Full name stays in the dropdown header */
+	.navbar-username {
+		display: none;
+	}
+}
+
+@media screen and (max-width: 340px) {
+	#top-navbar .navbar-title {
+		display: none;
+	}
+}
+
 .navbar-caret.open {
 	transform: rotate(180deg);
 }

@@ -112,11 +112,12 @@ $today = $year . '-' . $month . '-' . $day;
 
 
 ?>
-<?php if ($objResult['receive_ckk']=='1'){
+<?php $receive_ckk = $objResult['receive_ckk'] ?? '';
+if ($receive_ckk=='1'){
 		?>
 <input type="radio" checked='checked' name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
 <input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
-<?php }else if($objResult['receive_ckk']=='2'){ ?>
+<?php }else if($receive_ckk=='2'){ ?>
 
 <input type="radio"  name="receive_ckk" value = "1" required>&nbsp; คืนสินค้าด้วยตัวเอง
 <input type="radio" name="receive_ckk" checked='checked' value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
@@ -127,8 +128,8 @@ $today = $year . '-' . $month . '-' . $day;
 <input type="radio" name="receive_ckk"  value="2" required>&nbsp;ฝากบุคคลอื่นคืน คุณ &nbsp;
 
 			<?php } ?>
-  : &nbsp;<input type="text" name="receive_name" class="button4" style="width:15%;" > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ช่วงวันที่ :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="receive_between" value = '<?php echo $objResult['receive_between'];?>' class="button4" style="width:15%;" 	>
-		&nbsp;&nbsp;&nbsp;ช่วงเวลา :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="time_between" value = '<?php echo $objResult['time_between'];?>' class="button4" style="width:15%;" 	>
+  : &nbsp;<input type="text" name="receive_name" class="button4" style="width:15%;" > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ช่วงวันที่ :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="receive_between" value = '<?php echo $objResult['receive_between'] ?? '';?>' class="button4" style="width:15%;" 	>
+		&nbsp;&nbsp;&nbsp;ช่วงเวลา :&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" name="time_between" value = '<?php echo $objResult['time_between'] ?? '';?>' class="button4" style="width:15%;" 	>
 </p>
 		วันที่ : 
 <input type="date" name = "date_receive" id="date_receive"  class = "button4"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

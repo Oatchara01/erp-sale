@@ -26,6 +26,8 @@ include("head.php"); ?>
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <!-- Page-specific styling for register_suphos.php -->
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
+<!-- ต้องโหลดก่อน setElementValue ด้านล่าง ซึ่งเรียก soSyncDisplayText -->
+<script src="js/so-display-text.js?v=<?php echo filemtime(__DIR__ . '/js/so-display-text.js'); ?>"></script>
 <script>
 	var HttPRequest = false;
 	var clearLoanPopupTimer = null;
@@ -63,6 +65,8 @@ include("head.php"); ?>
 			if (id === 'display_credit_thb') {
 				syncCreditTermTriggerState();
 			}
+			// tax_id/bill_name/bill_address แสดงเป็น text (js/so-display-text.js)
+			soSyncDisplayText(element);
 		}
 	}
 
@@ -350,28 +354,7 @@ include("head.php"); ?>
 		syncShippingFieldsToLegacy();
 	}
 
-	// ตั้งค่า select คำนำหน้าชื่อ ถ้าค่าที่ได้มาไม่มีใน option ให้เพิ่ม option ใหม่ก่อน
-	function setPreNameValue(selectId, value) {
-		var preNameVal = String(value || '').trim();
-		var preNameSelect = document.getElementById(selectId);
-		if (!preNameSelect) return;
-		var exists = false;
-		for (var i = 0; i < preNameSelect.options.length; i++) {
-			if (preNameSelect.options[i].value === preNameVal) {
-				exists = true;
-				break;
-			}
-		}
-		if (!exists && preNameVal !== "") {
-			var opt = document.createElement('option');
-			opt.value = preNameVal;
-			opt.innerHTML = preNameVal;
-			preNameSelect.appendChild(opt);
-		}
-		preNameSelect.value = preNameVal;
-	}
-
-	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, pre_name, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
+	function doCallAjax1(bill_id, bill_name, bill_address, bill_tel, tax_id, mode_name, email, customer_typename, payment, credit_thb, mode, onComplete) {
 		if (typeof mode === 'function') {
 			onComplete = mode;
 			mode = undefined;
@@ -464,8 +447,6 @@ include("head.php"); ?>
 						setElementValue(bill_address, customerData.bill_address_full);
 						setElementValue(bill_tel, customerData.bill_tel);
 						setElementValue(tax_id, customerData.tax_id);
-
-						setPreNameValue(pre_name, customerData.preface_name);
 					}
 
 					if (isCustomerMode) {
@@ -1085,7 +1066,6 @@ include("head.php"); ?>
 
 			$rentalPrefill = array(
 				'bill_id' => $rentalSourceRow["rental_id"] ?? '',
-				'pre_name' => $rentalSourceCustomer["preface_name"] ?? '',
 				'bill_name' => $rentalSourceCustomer["bill_name"] ?? '',
 				'bill_address' => implode(' ', $rentalBillAddressParts),
 				'bill_tel' => $rentalSourceCustomer["bill_tel"] ?? '',
@@ -1232,6 +1212,7 @@ include("head.php"); ?>
 	// ref_id ของหน้านี้ยังหมายถึงเลข SO เสมอ — ค้น hos__so ก่อนตามเดิม fallback นี้ทำงานเฉพาะเมื่อไม่พบ SO
 	// แต่พบใบ PO แล้วสลับเป็นโหมดสร้าง SO ใหม่ที่ prefill จาก PO (ไม่ตั้ง $savedSo จึงไม่ทับ SO ใด ๆ)
 	$poPrefill = null;
+	$poSlipPrefill = array('slips' => array(), 'skipped' => array());
 	$fromPoRefId = "";
 	$fromPoBlockMessage = "";
 	if ($savedRefId !== "" && $savedSo === null) {
@@ -1266,6 +1247,8 @@ include("head.php"); ?>
 					'po_no' => (string)$poSource['po_no'],
 				);
 				$savedProductsForForm = po_items_for_form(po_load_items($conn, $fromPoRefId));
+				// ไฟล์แนบของ PO → ช่องแนบไฟล์เพิ่มเติม (slip2..5) ลบออกจากฟอร์มได้ก่อนบันทึก
+				$poSlipPrefill = po_attachments_for_sale_order($poSource);
 			}
 		}
 	}
@@ -1467,22 +1450,34 @@ include("head.php"); ?>
 
 	?>
 
-	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+	<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") {
+		// ผลการส่งใบงานเข้าระบบ CS (so_cs_send_sales_order) แสดงรวมใน popup บันทึก: สำเร็จ = บอกเลขที่ลงงาน, ไม่สำเร็จ = เตือน
+		$csSyncShown = isset($_GET["cs_sync"]);
+		$csSyncOk = (($_GET["cs_sync"] ?? '') === "1");
+		$csSyncMsgJs = json_encode((string)($_GET["cs_sync_msg"] ?? ''), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+	?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				var cleanUrl = new URL(window.location.href);
 				cleanUrl.searchParams.delete('saved');
+				cleanUrl.searchParams.delete('cs_sync');
+				cleanUrl.searchParams.delete('cs_sync_msg');
 				window.history.replaceState({}, document.title, cleanUrl);
 
+				var csSyncShown = <?php echo $csSyncShown ? 'true' : 'false'; ?>;
+				var csSyncOk = <?php echo $csSyncOk ? 'true' : 'false'; ?>;
+				var csSyncMessage = <?php echo $csSyncMsgJs; ?>;
+				var savedText = csSyncShown && csSyncMessage ? csSyncMessage : 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว';
+
 				if (typeof Swal === 'undefined') {
-					alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+					alert('บันทึกข้อมูลเรียบร้อยแล้ว' + (csSyncShown && csSyncMessage ? '\n' + csSyncMessage : ''));
 					return;
 				}
 
 				Swal.fire({
 					title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-					text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
-					icon: 'success',
+					text: savedText,
+					icon: (csSyncShown && !csSyncOk) ? 'warning' : 'success',
 					confirmButtonColor: '#612989',
 					confirmButtonText: 'ตกลง'
 				});
@@ -1675,7 +1670,15 @@ include("head.php"); ?>
 	<?php } ?>
 	<?php if ($fromPoRefId !== "") { ?>
 		<div class="w3-panel w3-pale-yellow w3-leftbar w3-border-orange" role="status" style="max-width:1096px;margin:16px auto 0;box-sizing:border-box;font-family:'Prompt',sans-serif;">
-			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้าและรายการสินค้าจากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก</p>
+			<p>ออกใบสั่งขายจากใบ PO เลขที่ <b><?php echo so_saved_h($fromPoRefId); ?></b> — เติมข้อมูลลูกค้า<?php echo count($poSlipPrefill['slips']) > 0 ? ' รายการสินค้า และไฟล์แนบ' : 'และรายการสินค้า'; ?>จากใบ PO ให้แล้ว กรุณาตรวจสอบก่อนบันทึก</p>
+			<?php if (count($poSlipPrefill['skipped']) > 0) { ?>
+				<!-- slip1 กันไว้เป็นหลักฐานการโอนเงิน เหลือช่องแนบไฟล์เพิ่มเติม 4 ช่อง -->
+				<p>ใบสั่งขายแนบไฟล์เพิ่มเติมได้ 4 ไฟล์ จึงไม่ได้ดึงไฟล์นี้ของใบ PO มา:
+					<?php foreach ($poSlipPrefill['skipped'] as $poSkippedFile) { ?>
+						<a href="upload/<?php echo so_saved_h(rawurlencode($poSkippedFile)); ?>" target="_blank" rel="noopener"><?php echo so_saved_h($poSkippedFile); ?></a>
+					<?php } ?>
+				</p>
+			<?php } ?>
 		</div>
 	<?php } ?>
 
@@ -1905,7 +1908,9 @@ include("head.php"); ?>
 						if (data && data.success) {
 							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
 							redirecting = true;
-							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							// cs_sync / cs_sync_msg = ผลการส่งใบงานเข้าระบบ CS (มีเฉพาะเมื่อติ๊ก toggle ส่งข้อมูลลงระบบ CS)
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' +
+								(data.cs_sync ? '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '') : '');
 							return;
 						}
 
@@ -1955,7 +1960,9 @@ include("head.php"); ?>
 						if (data && data.success) {
 							// ข้อความ "บันทึกข้อมูลเรียบร้อยแล้ว" แสดงที่ปลายทางผ่าน query param saved=1
 							redirecting = true;
-							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							// cs_sync / cs_sync_msg = ผลการส่งใบงานเข้าระบบ CS (มีเฉพาะเมื่อติ๊ก toggle ส่งข้อมูลลงระบบ CS)
+							window.location.href = 'register_suphos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' +
+								(data.cs_sync ? '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '') : '');
 							return;
 						}
 
@@ -2671,7 +2678,7 @@ include("head.php"); ?>
 								],
 							],
 							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
-							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNo();', 'icon_id' => 'btn_run_job_no'],
+							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS', 'disabled' => true],
 						],
 						[
 							['type' => 'text', 'name' => 'admin_sr_no', 'label' => 'เลขที่ SR ลดหนี้', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['sr_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => ($savedSo !== null) ? 'openCreditNotePopup();' : "alert('กรุณาบันทึกใบสั่งขายก่อน จึงจะสามารถสร้างใบลดหนี้ได้');", 'icon_id' => 'btn_open_credit_note'],
@@ -2730,10 +2737,10 @@ include("head.php"); ?>
 
 							<!-- เลขประจำตัวผู้เสียภาษี -->
 							<div class="so-field-group">
-								<label class="so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
+								<label class="so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี</label>
 								<div class="so-input-wrapper">
-									<input type="text" name="tax_id" id="tax_id" class="so-input" placeholder="เลขประจำตัวผู้เสียภาษี..." style="padding-right: 32px;">
-									<i class="fas fa-times" style="position: absolute; right: 12px; cursor: pointer; color: #8E8B94;" onclick="document.getElementById('tax_id').value=''"></i>
+									<span id="tax_id_text" class="so-display-text is-empty">-</span>
+									<input type="hidden" name="tax_id" id="tax_id" data-so-display="tax_id_text">
 								</div>
 							</div>
 						</div>
@@ -2802,26 +2809,12 @@ include("head.php"); ?>
 					</div>
 
 					<div class="so-grid-3">
-						<!-- คำนำหน้าชื่อ -->
-						<div class="so-field-group">
-							<label class="so-label" for="pre_name">คำนำหน้าชื่อ<span class="required">*</span></label>
-							<div class="so-select-wrapper">
-								<select name="pre_name" id="pre_name" class="so-select">
-									<option value="">Select</option>
-									<option value="นาย">นาย</option>
-									<option value="นาง">นาง</option>
-									<option value="นางสาว">นางสาว</option>
-									<option value="บริษัท">บริษัท</option>
-									<option value="หจก.">หจก.</option>
-								</select>
-							</div>
-						</div>
-
 						<!-- ชื่อออกบิล -->
 						<div class="so-field-group">
 							<label class="so-label" for="bill_name">ชื่อออกบิล<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_name" id="bill_name" class="so-input" placeholder="ชื่อที่ต้องการออกบิล..." readonly>
+								<span id="bill_name_text" class="so-display-text is-empty">-</span>
+								<input type="hidden" name="bill_name" id="bill_name" data-so-display="bill_name_text">
 							</div>
 						</div>
 
@@ -2829,7 +2822,7 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label" for="bill_tel">เบอร์โทรศัพท์<span class="required">*</span></label>
 							<div class="so-input-wrapper">
-								<input type='text' name="bill_tel" id="bill_tel" class="so-input" placeholder="เบอร์โทรศัพท์..." readonly>
+								<input type='text' name="bill_tel" id="bill_tel" class="so-input" placeholder="เบอร์โทรศัพท์...">
 							</div>
 						</div>
 					</div>
@@ -2838,7 +2831,8 @@ include("head.php"); ?>
 					<div class="so-field-group" style="margin-bottom: 24px;">
 						<label class="so-label" for="bill_address">ที่อยู่ออกบิล<span class="required">*</span></label>
 						<div class="so-input-wrapper" style="width: 100%; max-width: 1032px;">
-							<input type="text" name="bill_address" id="bill_address" class="so-input" style="width: 100%; max-width: 1032px;" placeholder="ที่อยู่ที่ใช้ในการออกบิล..." readonly>
+							<span id="bill_address_text" class="so-display-text is-empty">-</span>
+							<input type="hidden" name="bill_address" id="bill_address" data-so-display="bill_address_text">
 						</div>
 					</div>
 
@@ -2981,12 +2975,15 @@ include("head.php"); ?>
 				<!-- ข้อมูลการจัดส่ง -->
 				<?php
 				
-				$canSendCs = in_array(
-	$typeLoginLower,
-	['admin', 'it', 'owner','sol'],
-	true
-);
-				
+				// ส่งใบงานเข้าระบบ CS: ทำจริงตอนบันทึกโดย so_cs_send_sales_order() (includes/so_cs_send.php)
+				$canSendCs = in_array($typeLoginLower, ['admin', 'it', 'owner'], true);
+				$soCsStatusDoc = (string)($savedSo['status_doc'] ?? '');
+				$soCsIsSent = ((string)($savedSo['send_cs'] ?? '') === '2');
+				// ส่งแล้วย้อนไม่ได้, เอกสารที่ยกเลิก/ไม่อนุมัติไม่ส่ง, เอกสารที่อนุมัติแล้วบันทึกได้เฉพาะ Admin (ปุ่ม Update แบบจำกัด)
+				$soCsLocked = $soCsIsSent
+					|| in_array($soCsStatusDoc, ['ยกเลิก', 'Rejected', 'Cancelled'], true)
+					|| ($soCsStatusDoc === 'Approve' && $typeLoginLower !== 'admin');
+
 				$deliveryTab = [
 					'open_fn' => 'openDelTab',
 					'grid_fields' => [
@@ -3032,11 +3029,8 @@ include("head.php"); ?>
 				'name' => 'send_cs',
 				'id' => 'send_cs',
 				'label' => 'ส่งข้อมูลลงระบบ CS',
-				'checked' => in_array(
-					(string)($savedSo['send_cs'] ?? ''),
-					['1', '2'],
-					true
-				)
+				'checked' => $soCsIsSent,
+				'locked' => $soCsLocked,
 			],
 		]
 		: []
@@ -4796,10 +4790,11 @@ $canShowETReport = ($ivPrefix === 'ET');
 		<input type="hidden" name="date_tranfer" value="">
 		<input type="hidden" name="redirect_to" value="register_suphos.php">
 		<input type="hidden" name="slip1" id="hidden_slip_val1" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip1']) : ''; ?>">
-		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip2']) : ''; ?>">
-		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip3']) : ''; ?>">
-		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip4']) : ''; ?>">
-		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo ($savedSo !== null) ? so_saved_h($savedSo['slip5']) : ''; ?>">
+		<!-- slip2..5: ใบใหม่ที่ออกจาก PO เติมไฟล์แนบของ PO ($poSlipPrefill) — register_suphos1.php รับเฉพาะชื่อที่ตรงกับ PO ใบนั้น -->
+		<input type="hidden" name="slip2" id="hidden_slip_val2" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip2'] : ($poSlipPrefill['slips'][2] ?? '')); ?>">
+		<input type="hidden" name="slip3" id="hidden_slip_val3" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip3'] : ($poSlipPrefill['slips'][3] ?? '')); ?>">
+		<input type="hidden" name="slip4" id="hidden_slip_val4" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip4'] : ($poSlipPrefill['slips'][4] ?? '')); ?>">
+		<input type="hidden" name="slip5" id="hidden_slip_val5" value="<?php echo so_saved_h(($savedSo !== null) ? $savedSo['slip5'] : ($poSlipPrefill['slips'][5] ?? '')); ?>">
 	</form>
 
 	<!-- Modal รายชื่อลูกค้า: ใช้ค้นหา/เลือก customer เพื่อนำข้อมูลไปเติมในฟอร์มหลัก -->
@@ -5981,7 +5976,6 @@ $canShowETReport = ($ivPrefix === 'ET');
 			}
 
 			// เติมจากแถวออกบิลที่เลือกโดยตรง (ไม่ดึง bill_* จาก tb_customer)
-			setPreNameValue('pre_name', fullBillPopupSelected.preface_name);
 			setElementValue('bill_name', fullBillPopupSelected.bill_name || '');
 			setElementValue('bill_address', fullBillPopupSelected.bill_address_fill || '');
 			setElementValue('bill_tel', fullBillPopupSelected.bill_tel || '');
@@ -6038,7 +6032,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 				displayBillId.textContent = selectedCustId;
 			}
 
-			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success, missingFields) {
 				if (!success) {
 					var missingMessage = (missingFields && missingFields.length) ? missingFields.join(', ') : 'ข้อมูลลูกค้าไม่ครบถ้วน';
 					alert('ไม่สามารถดึงข้อมูลลูกค้าได้ครบ: ' + missingMessage);
@@ -6555,77 +6549,6 @@ $canShowETReport = ($ivPrefix === 'ET');
 				.then(function() {
 					if (runButton) {
 						runButton.disabled = false;
-					}
-				});
-		}
-
-		// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
-		// เลขคำนวณฝั่ง server ทั้งหมด (ปี พ.ศ. + เดือน + running 4 หลัก) หน้านี้แค่ส่ง ref_id กับวันที่ไป
-		function runJobNo() {
-			var jobNoInput = document.querySelector('input[name="admin_work_no"]');
-			var refIdInput = document.querySelector('input[name="ref_id"]');
-			// วันที่จัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
-			var deliveryDateInput = document.querySelector('input[name="start_date"]');
-			var runIcon = document.getElementById('btn_run_job_no');
-
-			if (!jobNoInput) {
-				return;
-			}
-
-			// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
-			if (runIcon && runIcon.dataset.loading === '1') {
-				return;
-			}
-
-			if (jobNoInput.value.trim() !== '') {
-				// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
-				if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
-					return;
-				}
-			}
-
-			var payload = new URLSearchParams();
-			payload.append('ref_id', refIdInput ? refIdInput.value : '');
-			payload.append('job_date', deliveryDateInput ? deliveryDateInput.value : '');
-
-			if (runIcon) {
-				runIcon.dataset.loading = '1';
-				runIcon.style.pointerEvents = 'none';
-				runIcon.style.opacity = '0.4';
-			}
-
-			fetch('ajax_run_job_no.php', {
-					method: 'POST',
-					credentials: 'same-origin',
-					cache: 'no-store',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-					},
-					body: payload.toString()
-				})
-				.then(function(response) {
-					return response.json().then(function(data) {
-						return {
-							ok: response.ok,
-							data: data
-						};
-					});
-				})
-				.then(function(result) {
-					if (!result.ok || !result.data || !result.data.success) {
-						alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
-						return;
-					}
-					jobNoInput.value = result.data.job_no;
-				})
-				.catch(function() {
-					alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
-				})
-				.then(function() {
-					if (runIcon) {
-						runIcon.dataset.loading = '0';
-						runIcon.style.pointerEvents = '';
-						runIcon.style.opacity = '';
 					}
 				});
 		}
@@ -7327,7 +7250,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 			if (hiddenBillId) hiddenBillId.value = customerId;
 			if (displayBillId) displayBillId.textContent = customerId;
 
-			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, onComplete);
+			doCallAjax1('bill_id', 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, onComplete);
 		}
 
 		function populateClearLoanRow(rowIndex, entry) {
@@ -8213,7 +8136,6 @@ if (productSnCkk === '1') {
 					'date_so': savedSo.date_so,
 					'suggest': savedSo.suggest,
 					'bill_id': savedSo.bill_id,
-					'pre_name': savedSo.pre_name,
 					'bill_name': savedSo.bill_name,
 					'bill_address': savedSo.bill_address,
 					'bill_tel': savedSo.bill_tel,
@@ -8291,6 +8213,7 @@ if (productSnCkk === '1') {
 						inputs.forEach(function(input) {
 							if (input.type !== 'radio' && input.type !== 'checkbox') {
 								input.value = val;
+								soSyncDisplayText(input);
 							}
 						});
 					}
@@ -8328,14 +8251,13 @@ if (productSnCkk === '1') {
 					setElementValue('display_bill_tel', savedSo.bill_tel || '');
 					setElementValue('display_mode_name', savedSo.mode_cus || '');
 
-					doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'pre_name', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
+					doCallAjax1(savedBillId, 'bill_name', 'bill_address', 'bill_tel', 'tax_id', 'mode_name', 'email', 'customer_typename', 'payment', 'credit_thb', undefined, function(success) {
 						if (success) {
 							// Restore specific saved order overrides
-							if (savedSo.bill_name) document.getElementById('bill_name').value = savedSo.bill_name;
-							if (savedSo.bill_address) document.getElementById('bill_address').value = savedSo.bill_address;
+							if (savedSo.bill_name) setElementValue('bill_name', savedSo.bill_name);
+							if (savedSo.bill_address) setElementValue('bill_address', savedSo.bill_address);
 							if (savedSo.bill_tel) document.getElementById('bill_tel').value = savedSo.bill_tel;
-							if (savedSo.tax_id) document.getElementById('tax_id').value = savedSo.tax_id;
-							if (savedSo.pre_name) document.getElementById('pre_name').value = savedSo.pre_name;
+							if (savedSo.tax_id) setElementValue('tax_id', savedSo.tax_id);
 							if (savedSo.install_place) {
 								setFieldValueBySelector('input[name="install_location"]', savedSo.install_place);
 								setLegacyFieldValue('address_send', savedSo.install_place, 'address_send');

@@ -925,7 +925,7 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							[
 								['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'chgRunDocumentNo();', 'variant' => 'purple'],
-								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
 								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'chgRunJobNo();', 'icon_id' => 'btn_run_job_no'],
 							],
 						],

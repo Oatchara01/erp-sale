@@ -430,11 +430,15 @@ if ($savedRefId !== "") {
 			<div class="so-grid-3">
 				<div class="so-field-group">
 					<label class="so-label" for="date_jong">วันที่แจ้ง</label>
-					<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input" readonly>
+					<div class="so-input-wrapper calendar-wrapper is-locked">
+						<input type="date" name="date_jong" id="date_jong" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_jong'] : $today; ?>" class="so-input" readonly>
+					</div>
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_receive">วันที่ต้องการสินค้า <span style="color:red;">*</span></label>
-					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo ($savedJong !== null && !$isCopy) ? $savedJong['date_receive'] : ''; ?>">
+					</div>
 				</div>
 				<?php $adminDocNo = ($savedJong !== null && !$isCopy) ? trim((string)$savedJong['iv_no']) : ''; ?>
 				<?php if ($adminDocNo !== '') { ?>

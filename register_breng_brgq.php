@@ -124,7 +124,12 @@ $breqCompatHiddenFields = array(
 
 	<div class="so-header-container">
 		<div class="so-header-left">
-			<h1 class="so-title">ใบยืมตรวจเช็คสินค้า (BREQ)</h1>
+			<div class="so-title-row">
+				<button type="button" class="so-back-btn" onclick="window.location.href=<?php echo so_saved_h(json_encode($breqBackUrl)); ?>;" title="ย้อนกลับ" aria-label="ย้อนกลับ">
+					<img src="img/icons/chevron_left.svg" alt="">
+				</button>
+				<h1 class="so-title">ใบยืมตรวจเช็คสินค้า (BREQ)</h1>
+			</div>
 			<div class="so-ref-info">
 				<span class="so-ref-label">เลขที่อ้างอิง</span>
 				<span class="so-ref-value"><?php echo so_saved_h($breqDisplayRefId); ?></span>
@@ -216,7 +221,7 @@ $breqCompatHiddenFields = array(
 			'rows'   => array(array(
 				array('type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'placeholder' => 'No.', 'value' => (string)($breqHeader['iv_no'] ?? '')),
 				array('type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'),
-				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt'),
+				array('type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => $breqIvDate, 'icon' => 'far fa-calendar-alt', 'calendar' => true),
 			)),
 		);
 		include __DIR__ . '/partials/admin_info_tab.php';
@@ -276,6 +281,8 @@ $breqCompatHiddenFields = array(
 
 	</div>
 
+	<?php // ผู้ที่ดูได้อย่างเดียวไม่มีปุ่มในแถบ — ไม่ render แถบเปล่า (ย้อนกลับใช้ไอคอนที่หัวหน้าแทน) ?>
+	<?php if ($breqCanAct || $breqCanSubmit || $breqCanEdit || $breqAdminEdit) { ?>
 	<div class="so-sticky-actions breq-sticky-actions">
 		<div class="so-sticky-actions-inner">
 			<?php if ($breqCanAct) { ?>
@@ -299,9 +306,9 @@ $breqCompatHiddenFields = array(
 			<?php if ($breqAdminEdit) { ?>
 				<button type="button" id="btn_breq_admin_save" class="btn-so-draft" onclick="breqAdminSave();"><i class="far fa-save"></i> บันทึกเลขที่เอกสาร</button>
 			<?php } ?>
-			<button type="button" class="btn-so-cancel-nav" onclick="window.location.href=<?php echo so_saved_h(json_encode($breqBackUrl)); ?>;">ย้อนกลับ</button>
 		</div>
 	</div>
+	<?php } ?>
 </form>
 
 <!-- ===================== Modal: ค้นหาเอกสาร PO (js/breq-po-modal.js) ===================== -->

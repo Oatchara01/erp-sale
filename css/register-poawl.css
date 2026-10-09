@@ -85,6 +85,15 @@
 	opacity: 1;
 }
 
+/* ช่องวันที่ตอนอ่านอย่างเดียว: ไอคอนปฏิทินจาง + ไม่ชวนให้กด (แบบเดียวกับ .is-locked ของ register-receivepro.css) */
+.po-page.is-readonly .calendar-wrapper::after {
+	opacity: 0.35;
+}
+
+.po-page.is-readonly .calendar-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+	cursor: not-allowed;
+}
+
 /* ===== แท็บประวัติการส่งกลับ ===== .so-card ตั้ง display เอง จึงต้องบังคับ [hidden] */
 .po-tab-panel[hidden] {
 	display: none !important;

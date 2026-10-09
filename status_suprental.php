@@ -3,7 +3,9 @@ include('head.php');
 include('dbconnect.php');
 include('dbconnect_sale.php');
 ?>
-<link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/so-status-ui.css?v=<?php echo filemtime(__DIR__ . '/css/so-status-ui.css'); ?>">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 	.so-dropdown-trigger {
@@ -226,11 +228,15 @@ include('dbconnect_sale.php');
 							<div class="so-form-row">
 								<div>
 									<label class="so-label" for="modal_start_date">ตั้งแต่วันที่</label>
-									<input type="date" name="modal_start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="modal_start_date" id="modal_start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($start_date); ?>">
+									</div>
 								</div>
 								<div>
 									<label class="so-label" for="modal_end_date">ถึงวันที่</label>
-									<input type="date" name="modal_end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="modal_end_date" id="modal_end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars($end_date); ?>">
+									</div>
 								</div>
 							</div>
 
@@ -677,6 +683,23 @@ include('dbconnect_sale.php');
 												</svg>
 												<span>ปิดการเช่า</span>
 											</a>
+											<?php if ($objResult["status_doc"] == 'Approve' || $objResult["status_doc"] == 'อนุมัติแล้ว') { ?>
+												<!-- คืนสินค้า / ประวัติการคืน — ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) แยกจากการปิดการเช่า -->
+												<a href="register_receive.php?source_type=rental&source_ref=<?php echo urlencode($objResult["ref_id"]); ?>" class="so-dropdown-item">
+													<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<polyline points="3 7 3 13 9 13"></polyline>
+														<path d="M3 13a9 9 0 1 0 3-7.7L3 8"></path>
+													</svg>
+													<span>คืนสินค้า</span>
+												</a>
+												<a href="#" onclick="rcOpenReceiveHistory(event, 'rental', <?php echo $ref_id_js; ?>, <?php echo htmlspecialchars(json_encode((string)$objResult["iv_no"] !== '' ? (string)$objResult["iv_no"] : (string)$objResult["ref_id"], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
+													<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+														<circle cx="12" cy="12" r="9.5"></circle>
+														<polyline points="12 7 12 12 15.5 14"></polyline>
+													</svg>
+													<span>ประวัติการคืน</span>
+												</a>
+											<?php } ?>
 											<!-- 6. การติดตาม -->
 											<a href="javascript:void(0);" onclick="openTrackingModal(<?php echo $ref_id_js; ?>, <?php echo $rental_name_js; ?>, <?php echo $promis_no_js; ?>, <?php echo $promis_date_th_js; ?>, <?php echo $end_promis_th_js; ?>)" class="so-dropdown-item">
 												<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

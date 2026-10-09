@@ -7,7 +7,9 @@ include "dbconnect.php";
 include "dbconnect_sale.php";
 
 ?>
-<link rel="stylesheet" href="css/so-status-ui.css">
+<link rel="stylesheet" href="css/so-status-ui.css?v=<?php echo filemtime(__DIR__ . '/css/so-status-ui.css'); ?>">
+<link rel="stylesheet" href="css/register-receive.css?v=<?php echo filemtime(__DIR__ . '/css/register-receive.css'); ?>">
+<script src="js/receive-history.js?v=<?php echo filemtime(__DIR__ . '/js/receive-history.js'); ?>"></script>
 
 <body>
 	<script>
@@ -60,11 +62,15 @@ include "dbconnect_sale.php";
 							<div class="so-form-row">
 								<div>
 									<label class="so-label" for="start_date">ตั้งแต่วันที่</label>
-									<input type="date" name="start_date" id="start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['start_date']) ? $_GET['start_date'] : ''); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="start_date" id="start_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['start_date']) ? $_GET['start_date'] : ''); ?>">
+									</div>
 								</div>
 								<div>
 									<label class="so-label" for="end_date">ถึงวันที่</label>
-									<input type="date" name="end_date" id="end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['end_date']) ? $_GET['end_date'] : ''); ?>">
+									<div class="so-input-wrapper calendar-wrapper">
+										<input type="date" name="end_date" id="end_date" class="so-select so-modal-input" value="<?php echo htmlspecialchars(isset($_GET['end_date']) ? $_GET['end_date'] : ''); ?>">
+									</div>
 								</div>
 							</div>
 
@@ -308,6 +314,15 @@ include "dbconnect_sale.php";
 											<a href="<?php echo $preview_url; ?>" target="_blank" rel="noopener noreferrer" class="so-dropdown-item" onclick="event.stopPropagation();">
 												<i class="fas fa-search" style="width:16px;"></i> Preview
 											</a>
+											<?php if ((string)$objResult["status_doc"] === 'Approve') { ?>
+												<!-- คืนสินค้า / ประวัติการคืน — ฟอร์มใบคืนแบบรวม register_receive.php (เฉพาะเอกสารที่อนุมัติแล้ว) คืนอะไหล่ที่เบิกจากคลัง -->
+												<a href="register_receive.php?source_type=spr&source_ref=<?php echo urlencode($refId); ?>" class="so-dropdown-item">
+													<i class="fas fa-undo-alt" style="width:16px;"></i> คืนสินค้า
+												</a>
+												<a href="#" onclick="rcOpenReceiveHistory(event, 'spr', <?php echo htmlspecialchars(json_encode($refId), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)$objResult["spr_no"] !== '' ? (string)$objResult["spr_no"] : $refId, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>); return false;" class="so-dropdown-item">
+													<i class="fas fa-history" style="width:16px;"></i> ประวัติการคืน
+												</a>
+											<?php } ?>
 										</div>
 									</div>
 								</td>

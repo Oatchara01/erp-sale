@@ -283,15 +283,21 @@ $sprHasWarehouseNote = spr_column_exists($conn, 'hos__spr', 'warehouse_note');
 			<div class="so-grid-3">
 				<div class="so-field-group">
 					<label class="so-label" for="date_receive">วันที่ของเข้า <span class="required">*</span></label>
-					<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_receive'))); ?>">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_receive" id="date_receive" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_receive'))); ?>">
+					</div>
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_imstall">วันที่ติดตั้ง <span class="required">*</span></label>
-					<input type="date" name="date_imstall" id="date_imstall" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_imstall'))); ?>">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_imstall" id="date_imstall" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_imstall'))); ?>">
+					</div>
 				</div>
 				<div class="so-field-group">
 					<label class="so-label" for="date_exp">วันที่หมดประกัน <span class="required">*</span></label>
-					<input type="date" name="date_exp" id="date_exp" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_exp'))); ?>">
+					<div class="so-input-wrapper calendar-wrapper">
+						<input type="date" name="date_exp" id="date_exp" class="so-input" value="<?php echo so_saved_h(so_saved_iso_date_input($sprField('date_exp'))); ?>">
+					</div>
 				</div>
 			</div>
 

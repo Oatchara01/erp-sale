@@ -243,7 +243,7 @@ if($objResult["stock_complete"]=='1'){ ?>
 
 <input type="radio" name="stock_complete" id="stock_complete" value = '3' class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
 
-	<?php }else  if($objResult["wait_product"]=='3'){ ?>
+	<?php }else  if($objResult["stock_complete"]=='3'){ ?>
 <input type="radio" name="stock_complete" id="stock_complete" value = '1' class="button4"  >&nbsp;&nbsp; สมบูรณ์&nbsp;&nbsp;
 <input type="radio" name="stock_complete" id="stock_complete" value = '2' class="button4"  >&nbsp;&nbsp; ไม่สมบูรณ์&nbsp;&nbsp;
 <input type="radio" name="stock_complete" id="stock_complete" value = '3' checked='checked' class="button4"  >&nbsp;&nbsp; รอสินค้า&nbsp;&nbsp;
@@ -364,7 +364,7 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 
 
 <td style="width:10%;">
-<input type='text' name = "sale_remarkk[]<?php echo $objResult1["id"];?>"  id = "sale_remarkk[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["sale_remark"];?>" class="w3-input" />
+<input type='text' name = "sale_remarkk[]<?php echo $objResult1["id"];?>"  id = "sale_remarkk[]<?php echo $objResult1["id"];?>" value="<?php echo $objResult1["stock_remark"];?>" class="w3-input" />
 </td>
 </tr>
 

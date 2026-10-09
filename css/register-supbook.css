@@ -56,6 +56,48 @@
 	cursor: not-allowed;
 }
 
+/* ช่องวันที่: ไอคอนปฏิทิน + คลิกทั้งช่องเปิดปฏิทิน — ชุดเดียวกับ .calendar-wrapper ใน css/register-suphos.css (หน้านี้ไม่ได้โหลดไฟล์นั้น) */
+.calendar-wrapper {
+	position: relative;
+}
+
+.calendar-wrapper::after {
+	content: "";
+	background-image: url("../img/icons/calendar.png");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	position: absolute;
+	right: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: 18px;
+	height: 18px;
+}
+
+.calendar-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: auto;
+	height: auto;
+	color: transparent;
+	background: transparent;
+	cursor: pointer;
+}
+
+/* ช่องวันที่ที่แก้ไม่ได้ (วันที่แจ้ง) — ไอคอนปฏิทินจางลงให้รู้ว่าแก้ไม่ได้ (แบบเดียวกับ .is-locked ของ register-receivepro.css) */
+.calendar-wrapper.is-locked::after {
+	opacity: 0.35;
+}
+
+.calendar-wrapper.is-locked input[type="date"]::-webkit-calendar-picker-indicator {
+	cursor: not-allowed;
+}
+
 .so-radio-group {
 	display: flex;
 	flex-wrap: wrap;

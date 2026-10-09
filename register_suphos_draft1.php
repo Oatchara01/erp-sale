@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
 	session_start();
 }
 include("dbconnect.php");
+require_once __DIR__ . '/includes/so_cs_send.php';
 
 header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set("Asia/Bangkok");
@@ -69,10 +70,17 @@ try {
 					mysqli_query($conn, "UPDATE hos__so SET " . $safeColumn . " = '" . $safeValue . "' WHERE ref_id = '" . $safeRefId . "'");
 				}
 
-				echo json_encode(array(
+				// เอกสารที่อนุมัติแล้วส่งเข้าระบบ CS ได้จากปุ่มนี้ (จังหวะเดียวกับหน้า Admin เดิม) ใบงานสร้างจากข้อมูลที่บันทึกไว้
+				// ในฐาน ไม่ใช่จากฟอร์ม — เอกสารที่ยกเลิก/ไม่อนุมัติถูกข้ามใน so_cs_send_sales_order() เอง
+				$limitedCsResult = null;
+				if (so_cs_send_requested($_POST)) {
+					$limitedCsResult = so_cs_send_sales_order($conn, $refId, $_SESSION);
+				}
+
+				echo json_encode(array_merge(array(
 					'success' => true,
 					'ref_id' => $refId
-				));
+				), so_cs_json_fields($limitedCsResult)));
 				exit();
 			}
 
