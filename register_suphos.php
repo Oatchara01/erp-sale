@@ -3678,6 +3678,7 @@ include("head.php"); ?>
 					);
 				}
 
+				// เอกสารเพิ่มเติม
 				$docTabsCard = [
 					'open_fn' => 'open3Tab',
 					'doc_extra' => [

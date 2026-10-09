@@ -1060,7 +1060,7 @@
   transition: all 0.2s ease;
   text-align: center;
   user-select: none;
-  height: 42px;
+  min-height: 42px;
   box-sizing: border-box;
 }
 
@@ -1103,6 +1103,12 @@
   .so-doc-grid > .so-doc-other-wrapper {
     grid-column: span 3 !important;
   }
+
+  /* pill ตัวสุดท้ายเริ่มแถวใหม่พอดี (ลำดับ 3n+1) ช่อง "อื่นๆ" ใส่ข้างๆ ได้ 2 คอลัมน์
+     ไม่ปล่อยให้ pill อยู่แถวเดียวโดดๆ ทางซ้าย */
+  .so-doc-grid > .so-doc-pill:nth-child(3n + 1) + .so-doc-other-wrapper {
+    grid-column: span 2 !important;
+  }
 }
 
 @media (max-width: 576px) {
@@ -1114,7 +1120,8 @@
     grid-column: span 1 !important;
   }
 
-  .so-doc-grid > .so-doc-other-wrapper {
+  .so-doc-grid > .so-doc-other-wrapper,
+  .so-doc-grid > .so-doc-pill:nth-child(3n + 1) + .so-doc-other-wrapper {
     grid-column: span 1 !important;
   }
 }
@@ -1695,14 +1702,18 @@ form[name="frmMain"] {
     flex: 0 0 16px;
   }
 
+  /* แท็บเดิม flex: 1 1 0 + nowrap บังคับให้ทุกแท็บอยู่แถวเดียว จอ ~360px แท็บสุดท้าย
+     (การส่งกลับเอกสาร) ถูกดันออกนอกจอแล้วโดน overflow-x: hidden ของ body ซ่อน กดไม่ได้
+     basis auto = กว้างตามข้อความ จึงขึ้นแถวใหม่เฉพาะตอนที่ไม่พอจริง */
   .so-tabs-container {
     padding-left: 0;
     gap: 8px;
     margin-top: 4px;
+    flex-wrap: wrap;
   }
 
   .so-tab-btn {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-height: 44px;
     padding: 10px 12px;
     text-align: center;
@@ -1869,7 +1880,9 @@ form[name="frmMain"] {
   background-color: #f4f3f7;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 12px;
+  /* เดิม padding: 12px ถูก height: 42px ด้านบนกดไว้ — พอเปลี่ยนเป็น min-height pill สูง ~48px
+     ลด padding แนวตั้งให้บรรทัดเดียวยังสูง 42px เท่าเดิม ส่วน 2 บรรทัดจะขยายเอง */
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
