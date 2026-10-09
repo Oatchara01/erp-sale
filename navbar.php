@@ -10,7 +10,7 @@ $userSurname = isset($_SESSION['surname']) ? htmlspecialchars($_SESSION['surname
 <!-- Top Navbar -->
 <div id="top-navbar">
     <div class="navbar-left">
-        <button type="button" id="navbar-hamburger" class="navbar-btn" title="Toggle Sidebar">
+        <button type="button" id="navbar-hamburger" class="navbar-btn" title="Toggle Sidebar" aria-label="เปิด/ปิดเมนู" aria-controls="sidebar" aria-expanded="true">
             <img src="img/icons/burger.svg" alt="" width="20" height="16">
         </button>
         <a href="main_suphos.php" class="navbar-logo">

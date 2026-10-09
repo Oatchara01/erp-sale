@@ -61,17 +61,24 @@ $token = encryptData(
 
 <div id="sidebar">
 
-
-    <!-- ==================================================
-         MOBILE TOGGLE
-    =================================================== -->
-
-    <button
-        type="button"
-        class="sidebar-mobile-toggle"
-    >
-        &#9776;
-    </button>
+    <script>
+    /* Apply the saved collapsed state while the page is still being parsed, before first paint.
+       Doing it later in js/sidebar.js made the sidebar draw at 280px and then animate down to 72px
+       on every page load. Keep the key and the 1024px breakpoint in sync with js/sidebar.js. */
+    (function () {
+        try {
+            var sb = document.getElementById('sidebar');
+            document.body.classList.add('has-sidebar');
+            if (
+                !window.matchMedia('(max-width: 1024px)').matches
+                && localStorage.getItem('sidebar_collapsed') === '1'
+            ) {
+                sb.classList.add('sidebar-collapsed');
+                document.body.classList.add('sidebar-collapsed');
+            }
+        } catch (e) {}
+    })();
+    </script>
 
 
 
@@ -113,7 +120,7 @@ $token = encryptData(
          NAVIGATION
     =================================================== -->
 
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="เมนูหลัก">
 
 
         <!-- ==================================================
@@ -1154,8 +1161,6 @@ $token = encryptData(
 		
 		
 		
-    </nav>
-
 <?php
                         if (
                             in_array(
@@ -1320,6 +1325,8 @@ $token = encryptData(
     </div>
 
 <?php } ?>
+
+    </nav>
 
     <!-- ==================================================
          USER FOOTER
@@ -1598,6 +1605,100 @@ document.addEventListener(
 
         });
 
+    }
+);
+
+
+
+/* =========================================================
+   ARIA + เลื่อนเมนูไปหน้าปัจจุบัน
+========================================================= */
+
+/*
+ aria-expanded ตามสถานะ .sidebar-open (ไม่นับว่าเปิดเมื่อแถบถูกพับ เพราะเมนูย่อยถูกซ่อน)
+ ผูกกับการเปลี่ยน class จึงครอบคลุมทั้ง onclick, ไฮไลต์หน้าปัจจุบัน และ js/sidebar.js
+*/
+function syncSidebarAria()
+{
+    var sb = document.getElementById('sidebar');
+
+    if (!sb) {
+        return;
+    }
+
+    var collapsed = sb.classList.contains('sidebar-collapsed');
+
+    sb.querySelectorAll(
+        '.sidebar-group > button.sidebar-group-btn, .sidebar-subgroup > .sidebar-subgroup-btn'
+    ).forEach(function(btn)
+    {
+        var open = btn.parentElement.classList.contains('sidebar-open');
+
+        btn.setAttribute(
+            'aria-expanded',
+            (open && !collapsed) ? 'true' : 'false'
+        );
+    });
+}
+
+
+/*
+ เลื่อนพื้นที่เมนูให้เห็นลิงก์ของหน้าปัจจุบัน (เฉพาะเมื่อยังไม่เห็นทั้งแถว)
+ เรียกจาก js/sidebar.js ตอนเปิด drawer ด้วย
+*/
+window.sidebarScrollToActive = function()
+{
+    var sb = document.getElementById('sidebar');
+
+    if (!sb) {
+        return;
+    }
+
+    var nav = sb.querySelector('.sidebar-nav');
+    var active = sb.querySelector('a.sidebar-active');
+
+    if (!nav || !active || active.getClientRects().length === 0) {
+        return;
+    }
+
+    var navBox = nav.getBoundingClientRect();
+    var box = active.getBoundingClientRect();
+
+    if (box.top >= navBox.top && box.bottom <= navBox.bottom) {
+        return;
+    }
+
+    nav.scrollTop += (box.top - navBox.top)
+        - (nav.clientHeight / 2)
+        + (box.height / 2);
+};
+
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function()
+    {
+        var sb = document.getElementById('sidebar');
+
+        if (!sb) {
+            return;
+        }
+
+        syncSidebarAria();
+
+        if (window.MutationObserver) {
+            new MutationObserver(syncSidebarAria).observe(
+                sb,
+                {
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['class']
+                }
+            );
+        }
+
+        /* รอให้ไฮไลต์หน้าปัจจุบันเสร็จก่อน แล้วค่อยเลื่อน */
+        setTimeout(window.sidebarScrollToActive, 0);
     }
 );
 

@@ -25,11 +25,12 @@ body.has-sidebar.sidebar-collapsed {
 	left: 0;
 	width: var(--sidebar-width);
 	height: calc(100vh - 64px); /* takes remaining height */
+	height: calc(100dvh - 64px); /* phones: excludes the browser address bar; older browsers keep the line above */
 	background-color: #ffffff;
 	box-shadow: 0px 4px 12px 0px rgba(0,0,0,0.08);
 	display: flex;
 	flex-direction: column;
-	/* z-index: 1000; */
+	z-index: 1000; /* above page sticky bars (z 5-20); below modals (9999+) */
 	transition: width 0.2s ease;
 	overflow: hidden;
 }
@@ -391,6 +392,11 @@ body.has-sidebar.sidebar-collapsed {
 	cursor: pointer;
 }
 
+/* backdrop only exists in drawer mode (shown inside the media query below) */
+.sidebar-backdrop {
+	display: none;
+}
+
 @media screen and (max-width: 1024px) {
 	body.has-sidebar,
 	body.has-sidebar.sidebar-collapsed {
@@ -401,13 +407,45 @@ body.has-sidebar.sidebar-collapsed {
 	#sidebar {
 		top: 64px;
 		height: calc(100vh - 64px);
+		height: calc(100dvh - 64px);
 		width: var(--sidebar-width);
 		transform: translateX(-100%);
-		transition: transform 0.2s ease;
+		/* A closed drawer must leave the tab order and the accessibility tree: visibility flips
+		   after the slide-out finishes (0.2s) and immediately when opening. */
+		visibility: hidden;
+		transition: transform 0.2s ease, visibility 0s linear 0.2s;
 	}
 
 	#sidebar.sidebar-mobile-open {
 		transform: translateX(0);
+		visibility: visible;
+		transition-delay: 0s;
+	}
+
+	/* dim layer behind the open drawer; starts below the navbar so the hamburger stays clickable */
+	.sidebar-backdrop {
+		display: block;
+		position: fixed;
+		top: 64px;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(36, 26, 43, 0.45);
+		z-index: 999; /* between page content and #sidebar (1000) */
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+	}
+
+	body.sidebar-drawer-open .sidebar-backdrop {
+		opacity: 1;
+		visibility: visible;
+		transition-delay: 0s;
+	}
+
+	/* page behind the drawer must not scroll */
+	body.sidebar-drawer-open {
+		overflow: hidden;
 	}
 
 	#sidebar .sidebar-mobile-toggle {
@@ -429,7 +467,7 @@ body.has-sidebar.sidebar-collapsed {
 	justify-content: space-between;
 	align-items: center;
 	padding: 0 24px;
-	/* z-index: 1010; */
+	z-index: 1010; /* navbar dropdown must also sit above page sticky bars */
 	box-sizing: border-box;
 	font-family: 'Prompt', sans-serif;
 }
@@ -866,11 +904,32 @@ body.has-sidebar.sidebar-collapsed {
     border-radius: 2px !important;
 }
 
-/* collapsed mode always hides nested menus */
-#sidebar.sidebar-collapsed .sidebar-submenu {
+/* collapsed mode always hides nested menus.
+   The extra .sidebar-open selectors are needed: the open-state rule above is !important too,
+   and without them it wins and squeezes the open group's submenu into the 72px rail. */
+#sidebar.sidebar-collapsed .sidebar-submenu,
+#sidebar.sidebar-collapsed .sidebar-group.sidebar-open > .sidebar-submenu,
+#sidebar.sidebar-collapsed .sidebar-subgroup.sidebar-open > .sidebar-submenu {
     display: none !important;
 }
 
+/* collapsed rail shows icons only: the caret rule above is !important, so hide it the same way
+   (otherwise group icons sit left of a leftover caret while the Home icon is centered) */
+#sidebar.sidebar-collapsed .sidebar-caret {
+    display: none !important;
+}
+
+
+/* ===== TOUCH TARGETS =====
+   Menu rows were 34-36px tall; 44px is the minimum comfortable tap size. The rules above are
+   !important with long selectors, so the repeated #sidebar#sidebar raises specificity above all of them. */
+@media screen and (max-width: 1024px), (pointer: coarse) {
+	#sidebar#sidebar .sidebar-submenu a,
+	#sidebar#sidebar .sidebar-subgroup-btn,
+	#sidebar#sidebar .sidebar-group-btn {
+		min-height: 44px !important;
+	}
+}
 
 /* ===== GLOBAL FONT: PROMPT ===== */
 #sidebar,
@@ -878,4 +937,12 @@ body.has-sidebar.sidebar-collapsed {
 #top-navbar,
 #top-navbar * {
     font-family: 'Prompt', sans-serif !important;
+}
+
+/* Font Awesome icons must keep their icon font; the Prompt override above is !important
+   and would otherwise render them as empty boxes (navbar dropdown, sidebar icons) */
+#sidebar i.fa,
+#top-navbar i.fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
 }

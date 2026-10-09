@@ -14,92 +14,123 @@
 		var body = document.body;
 		body.classList.add("has-sidebar");
 
-		// Move top-level "Setting" group to the bottom of the sidebar navigation list
-		var nav = sidebar.querySelector(".sidebar-nav");
-		if (nav) {
-			var settingGroup = null;
-			var children = nav.children;
-			for (var i = 0; i < children.length; i++) {
-				var label = children[i].querySelector(".sidebar-label");
-				if (label && label.textContent.trim() === "Setting") {
-					settingGroup = children[i];
-					break;
-				}
-			}
-			if (settingGroup) {
-				nav.appendChild(settingGroup);
-			}
-		}
-
 		var COLLAPSE_KEY = "sidebar_collapsed";
 		// Must match the drawer breakpoint in css/sidebar.css (@media max-width: 1024px):
 		// below it the sidebar is off-canvas, so the hamburger has to open the drawer, not collapse it.
 		var DRAWER_MAX_WIDTH = 1024;
-		var OPEN_GROUPS_KEY = "sidebar_open_groups";
 
 		// ---- navbar hamburger toggle (collapses on desktop, opens drawer on mobile) ----
 		var navbarHamburger = document.getElementById("navbar-hamburger");
-		var collapsed = localStorage.getItem(COLLAPSE_KEY) === "1";
-		if (collapsed) {
-			sidebar.classList.add("sidebar-collapsed");
-			body.classList.add("sidebar-collapsed");
+
+		// The collapsed (72px icon rail) state only exists on desktop. In drawer mode the saved
+		// preference must not apply, otherwise the drawer opens as an unusable 72px strip.
+		var drawerQuery = window.matchMedia("(max-width: " + DRAWER_MAX_WIDTH + "px)");
+
+		// Dim layer behind the open drawer (styled in css/sidebar.css, only visible in drawer mode)
+		var backdrop = document.createElement("div");
+		backdrop.className = "sidebar-backdrop";
+		body.appendChild(backdrop);
+
+		function syncHamburger() {
+			if (!navbarHamburger) return;
+			var expanded = drawerQuery.matches
+				? sidebar.classList.contains("sidebar-mobile-open")
+				: !sidebar.classList.contains("sidebar-collapsed");
+			navbarHamburger.setAttribute("aria-expanded", expanded ? "true" : "false");
 		}
+		function setCollapsed(on) {
+			sidebar.classList.toggle("sidebar-collapsed", on);
+			body.classList.toggle("sidebar-collapsed", on);
+			syncHamburger();
+		}
+		function setDrawer(open) {
+			sidebar.classList.toggle("sidebar-mobile-open", open);
+			body.classList.toggle("sidebar-drawer-open", open);
+			syncHamburger();
+			// scroll the menu so the current page's link is visible (defined in menu_all.php)
+			if (open && window.sidebarScrollToActive) window.sidebarScrollToActive();
+		}
+		function applyMode() {
+			setCollapsed(!drawerQuery.matches && localStorage.getItem(COLLAPSE_KEY) === "1");
+			// crossing the breakpoint (resize, tablet rotation) must not leave a drawer open
+			setDrawer(false);
+		}
+		applyMode();
+		if (drawerQuery.addEventListener) {
+			drawerQuery.addEventListener("change", applyMode);
+		} else if (drawerQuery.addListener) {
+			drawerQuery.addListener(applyMode);
+		}
+
+		// Icon rail: a group cannot show its submenu in 72px, so clicking a group expands
+		// the sidebar and opens that group instead of toggling it invisibly.
+		sidebar.addEventListener("click", function (e) {
+			if (!sidebar.classList.contains("sidebar-collapsed")) return;
+			var btn = e.target.closest(".sidebar-group-btn");
+			if (!btn || !sidebar.contains(btn) || !btn.querySelector(".sidebar-caret")) return;
+			e.preventDefault();
+			e.stopPropagation();
+			setCollapsed(false);
+			localStorage.setItem(COLLAPSE_KEY, "0");
+			if (btn.parentElement) btn.parentElement.classList.add("sidebar-open");
+		}, true);
+
+		// Desktop: clicking a menu link collapses the sidebar. Pages are full reloads, so the state is
+		// saved the same way as the hamburger (COLLAPSE_KEY) and the next page loads already collapsed.
+		// Links that do not replace this page (new tab, Ctrl/Cmd/Shift click, download, other origin,
+		// "#" or javascript:) keep the sidebar as it is. Group buttons are <button>s, not links.
+		sidebar.addEventListener("click", function (e) {
+			if (e.defaultPrevented || drawerQuery.matches) return;
+			var link = e.target.closest("a[href]");
+			if (!link || !sidebar.contains(link)) return;
+			if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+			if (link.hasAttribute("download")) return;
+			if (link.target && link.target !== "_self") return;
+			var href = link.getAttribute("href");
+			if (!href || href.charAt(0) === "#" || /^javascript:/i.test(href)) return;
+			if (link.origin !== window.location.origin) return;
+			setCollapsed(true);
+			localStorage.setItem(COLLAPSE_KEY, "1");
+		});
+
+		// The rail shows icons only, so give each top-level button its name as a tooltip.
+		sidebar.querySelectorAll(".sidebar-group-btn").forEach(function (btn) {
+			var label = btn.querySelector(".sidebar-label");
+			if (label && !btn.getAttribute("title")) {
+				btn.setAttribute("title", label.textContent.replace(/\s+/g, " ").trim());
+			}
+		});
+
 		if (navbarHamburger) {
 			navbarHamburger.addEventListener("click", function (e) {
 				e.stopPropagation();
-				if (window.innerWidth <= DRAWER_MAX_WIDTH) {
-					sidebar.classList.toggle("sidebar-mobile-open");
+				if (drawerQuery.matches) {
+					setDrawer(!sidebar.classList.contains("sidebar-mobile-open"));
 				} else {
-					var isCollapsed = sidebar.classList.toggle("sidebar-collapsed");
-					body.classList.toggle("sidebar-collapsed", isCollapsed);
+					var isCollapsed = !sidebar.classList.contains("sidebar-collapsed");
+					setCollapsed(isCollapsed);
 					localStorage.setItem(COLLAPSE_KEY, isCollapsed ? "1" : "0");
 				}
 			});
 		}
 
 		document.addEventListener("click", function (e) {
-			if (window.innerWidth > DRAWER_MAX_WIDTH) return;
+			if (!drawerQuery.matches) return;
 			if (!sidebar.classList.contains("sidebar-mobile-open")) return;
 			if (sidebar.contains(e.target) || (navbarHamburger && navbarHamburger.contains(e.target))) return;
-			sidebar.classList.remove("sidebar-mobile-open");
+			setDrawer(false);
 		});
 
-		// ---- accordion groups (top-level + nested subgroups) ----
-		var openGroups = [];
-		try {
-			openGroups = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) || "[]");
-		} catch (e) {
-			openGroups = [];
-		}
+		// Esc closes the drawer and returns focus to the hamburger
+		document.addEventListener("keydown", function (e) {
+			if (e.key !== "Escape" || !drawerQuery.matches) return;
+			if (!sidebar.classList.contains("sidebar-mobile-open")) return;
+			setDrawer(false);
+			if (navbarHamburger) navbarHamburger.focus();
+		});
 
-		function persistOpenGroups() {
-			var ids = [];
-			sidebar.querySelectorAll(".sidebar-group.open, .sidebar-subgroup.open").forEach(function (el) {
-				if (el.dataset.groupId) ids.push(el.dataset.groupId);
-			});
-			localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(ids));
-		}
-
-		function bindGroup(selectorBtn, itemSelector) {
-			sidebar.querySelectorAll(itemSelector).forEach(function (group, idx) {
-				if (!group.dataset.groupId) {
-					group.dataset.groupId = itemSelector + "-" + idx;
-				}
-				var btn = group.querySelector(":scope > " + selectorBtn);
-				if (!btn) return;
-				if (openGroups.indexOf(group.dataset.groupId) !== -1) {
-					group.classList.add("open");
-				}
-				btn.addEventListener("click", function (e) {
-					e.preventDefault();
-					group.classList.toggle("open");
-					persistOpenGroups();
-				});
-			});
-		}
-
-		bindGroup(".sidebar-group-btn", ".sidebar-group");
-		bindGroup(".sidebar-subgroup-btn", ".sidebar-subgroup");
+		// Group open/close state (.sidebar-open) and the current-page highlight (.sidebar-active)
+		// are handled in menu_all.php. This file only owns collapse, drawer and the user dropdown.
 
 		// ---- user menu dropdown (top navbar) ----
 		var navbarUserTrigger = document.getElementById("navbar-user-trigger");
@@ -119,27 +150,6 @@
 					var caret = navbarUserTrigger.querySelector(".navbar-caret");
 					if (caret) {
 						caret.classList.remove("open");
-					}
-				}
-			});
-		}
-
-		// ---- active link + auto-expand ancestors ----
-		var currentPath = location.pathname.split("/").pop();
-		if (currentPath) {
-			var links = sidebar.querySelectorAll("a[href]");
-			links.forEach(function (a) {
-				var href = a.getAttribute("href");
-				if (!href) return;
-				var hrefFile = href.split("?")[0].split("/").pop();
-				if (hrefFile && hrefFile === currentPath) {
-					a.classList.add("active");
-					var parentGroup = a.closest(".sidebar-group, .sidebar-subgroup");
-					while (parentGroup) {
-						parentGroup.classList.add("open");
-						parentGroup = parentGroup.parentElement
-							? parentGroup.parentElement.closest(".sidebar-group, .sidebar-subgroup")
-							: null;
 					}
 				}
 			});
