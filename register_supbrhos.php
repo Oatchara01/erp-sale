@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-supbrhos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrhos.css'); ?>">
+<link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
+<script defer data-so-web-selects src="js/so-web-select.js?v=<?php echo filemtime(__DIR__ . '/js/so-web-select.js'); ?>"></script>
 <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
 <link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
@@ -1740,7 +1742,7 @@ $adminInfoTab = [
 <?php
 // create mode -> INSERT handler, edit mode -> UPDATE handler (pattern เดียวกับ register_suphos.php)
 ?>
-<form action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
+<form data-so-web-selects action="<?php echo $brIsEditMode ? 'register_supbrhos_edit1.php' : 'register_supbrhos1.php'; ?>" method="post" name="frmMain" enctype="multipart/form-data" novalidate onSubmit="JavaScript:return fncSubmit();">
 	<div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 
 		<div class="so-header-container">

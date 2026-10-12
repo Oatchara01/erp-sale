@@ -9,6 +9,8 @@ $poCopyFromRefId = ($poRequestedRefId === '' && isset($_GET['copy_from']) && !is
 <?php include("head.php"); ?>
 
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
+<link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
+<script defer data-so-web-selects src="js/so-web-select.js?v=<?php echo filemtime(__DIR__ . '/js/so-web-select.js'); ?>"></script>
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
 <link rel="stylesheet" href="css/register-poawl.css?v=<?php echo filemtime(__DIR__ . '/css/register-poawl.css'); ?>">
 <link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">

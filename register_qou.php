@@ -2012,6 +2012,8 @@ if ($editMode && isset($qouData['status_doc'])) {
             : time();
     ?>"
 >
+<link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
+<script defer data-so-web-selects src="js/so-web-select.js?v=<?php echo filemtime(__DIR__ . '/js/so-web-select.js'); ?>"></script>
 
 
 <style>

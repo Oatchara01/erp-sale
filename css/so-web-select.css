@@ -1,0 +1,86 @@
+/* Keep the original select for form values; render its picker with the web font. */
+.so-web-select-native {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.so-web-select-button {
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	appearance: none;
+	-webkit-appearance: none;
+	-webkit-tap-highlight-color: transparent;
+	user-select: none;
+	display: flex;
+	align-items: center;
+	text-align: left;
+	cursor: pointer;
+	font-family: 'Prompt', sans-serif !important;
+}
+
+.so-web-select-button span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.so-web-select-button:focus-visible {
+	outline: 2px solid #612989;
+	outline-offset: 2px;
+}
+
+.so-web-select-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.8;
+}
+
+.so-web-select-button[hidden] {
+	display: none;
+}
+
+.so-web-select-list {
+	position: fixed;
+	z-index: 10050;
+	margin: 0;
+	padding: 6px;
+	box-sizing: border-box;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	border: 1px solid #E5D8EF;
+	border-radius: 10px;
+	background: #FFFFFF;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+	font-family: 'Prompt', sans-serif !important;
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 1.5;
+}
+
+.so-web-select-list [role="option"] {
+	display: flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 8px 12px;
+	box-sizing: border-box;
+	border-radius: 6px;
+	color: #3B3B3B;
+	font-family: 'Prompt', sans-serif !important;
+	overflow-wrap: anywhere;
+	cursor: pointer;
+}
+
+.so-web-select-list [aria-selected="true"] {
+	color: #612989;
+	font-weight: 500;
+}
+
+.so-web-select-list .is-active {
+	background: #F4E8FF;
+}
+
+.so-web-select-list [aria-disabled="true"] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

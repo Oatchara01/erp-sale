@@ -5,6 +5,8 @@
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
+<link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
+<script defer data-so-web-selects src="js/so-web-select.js?v=<?php echo filemtime(__DIR__ . '/js/so-web-select.js'); ?>"></script>
 <!-- Page-specific styling for register_credinot.php -->
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
 <!-- SweetAlert2 -->
