@@ -2478,11 +2478,11 @@ $adminInfoTab = [
 			</div>
 
 			<?php
-			if ($_SESSION["department"] == 'วิศวกรรม') {
-				include('detail_breng_so.php');
-			} else {
+			// if ($_SESSION["department"] == 'วิศวกรรม') {
+			// 	include('detail_breng_so.php');
+			// } else {
 				include('detail_brhos_so.php');
-			}
+			// }
 			?>
 
 			<?php if (count($savedProducts) > 0) { ?>

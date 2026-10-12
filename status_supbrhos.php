@@ -498,7 +498,7 @@ include "dbconnect_sale.php";
 			$status_br = isset($_GET['status_br']) ? $_GET['status_br'] : '';
 			$no_iv = isset($_GET['no_iv']) ? $_GET['no_iv'] : '';
 			$scriptName = htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, 'UTF-8');
-			$add_url = ($emid == 'SUP_EN') ? 'register_supbreng.php' : 'register_supbrhos.php';
+			$add_url = 'register_supbrhos.php';
 			?>
 
 			<form name="frmSearch" method="GET" action="<?php echo $scriptName; ?>" id="mainSearchForm">
@@ -877,10 +877,9 @@ include "dbconnect_sale.php";
 								$row_id_js = htmlspecialchars(json_encode($row_id), ENT_QUOTES, 'UTF-8');
 								$dropdown_id_js = htmlspecialchars(json_encode($dropdown_id), ENT_QUOTES, 'UTF-8');
 
-								// Edit link routing according to role
-								$edit_target = ($emid == 'SUP_EN') ? 'register_supbreng_edit.php' : 'register_supbrhos.php';
-								$create_target = ($emid == 'SUP_EN') ? 'register_supbreng_createnew.php' : 'register_supbrhos.php';
-								$create_ref_param = ($emid == 'SUP_EN') ? 'ref_id_br' : 'copy_from_ref_id_br';
+								$edit_target = 'register_supbrhos.php';
+								$create_target = 'register_supbrhos.php';
+								$create_ref_param = 'copy_from_ref_id_br';
 
 								// Map status_doc to class and display text
 								$status_class = 'draft';
