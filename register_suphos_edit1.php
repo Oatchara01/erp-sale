@@ -4185,6 +4185,9 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 				$soCsCancelReason = trim((string)($_POST['so_approve_reason'] ?? ''));
 			}
 			$soCsResult = so_cs_mark_cancelled($conn, $ref_id, 'ยกเลิก', $soCsCancelReason);
+		} elseif ($soApproveAction === 'reject') {
+			// ส่ง CS ไปตอนรออนุมัติแล้วถูกไม่อนุมัติ: ใบงานต้องบอกฝ่าย CS ว่าไม่ต้องทำ (เหมือน SMP)
+			$soCsResult = so_cs_mark_cancelled($conn, $ref_id, 'ไม่อนุมัติ', trim((string)($_POST['so_approve_reason'] ?? '')));
 		} elseif (so_cs_send_requested($_POST)) {
 			$soCsResult = so_cs_send_sales_order($conn, $ref_id, $_SESSION);
 		}

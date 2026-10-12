@@ -28,6 +28,15 @@ require_once __DIR__ . '/includes/smp_repo.php';
 
 try {
 	$result = smp_persist_from_post($conn, 'update', $_SESSION);
+
+	// toggle "ส่งข้อมูลลงระบบ CS" — หลังบันทึกสำเร็จ เหมือน Update ของ SO; ส่งไม่ผ่านไม่ทำให้เอกสารที่บันทึกแล้วเสีย
+	$csResult = cs_job_send_requested($_POST) ? smp_cs_send($conn, $result['ref_id'], $_SESSION) : null;
+	if ($csResult !== null) {
+		// ผลการส่งแสดงใน popup บันทึกผ่าน session flash (แทน &updated=1 ไม่งั้นขึ้น popup ซ้อนสองอัน)
+		$_SESSION['smp_flash'] = smp_cs_flash($csResult);
+		header('Location: register_supsmp.php?ref_idsmp=' . rawurlencode($result['ref_id']));
+		exit();
+	}
 	header('Location: register_supsmp.php?ref_idsmp=' . rawurlencode($result['ref_id']) . '&updated=1');
 	exit();
 } catch (SmpValidationException $e) {

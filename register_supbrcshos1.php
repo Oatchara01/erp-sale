@@ -17,6 +17,7 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include ("error_page.php");
+require_once __DIR__ . '/includes/brcs_cs_send.php';
 
 date_default_timezone_set("Asia/Bangkok");
 // เดิมเขียน $_POST["submit"] = "submit" (assignment) ทำให้เงื่อนไขเป็นจริงเสมอ
@@ -235,7 +236,9 @@ if ($iv_no !== '') {
 $iv_date = cs_post_date($conn, "admin_doc_date");
 $remark_cancel = cs_post($conn, "admin_cancel_reason");
 $que_ckk = cs_post($conn, "que_ckk", "0");
-$send_cs = cs_post_flag("send_cs");
+// send_cs / job_no เขียนโดย brcs_cs_send() ทางเดียว (includes/brcs_cs_send.php) หลังบันทึกเอกสารสำเร็จ
+// เอกสารใหม่จึงเริ่มที่ 0 เสมอ ไม่เอาค่า toggle จากฟอร์มมาเก็บ
+$send_cs = '0';
 // แท็บค่าจัดส่ง
 $date_ker = cs_post_date($conn, "shipping_date");
 $order_refer_code = cs_post($conn, "shipping_ref1");
@@ -445,7 +448,6 @@ if (!$qsave) {
 
 // คอลัมน์ที่ Google Sheet ระบุไว้แต่ยังไม่มีใน schema ปัจจุบัน — เขียนแบบมีเงื่อนไข
 // ถ้ารัน ALTER TABLE เพิ่มคอลัมน์ทีหลัง โค้ดนี้จะเริ่มบันทึกให้เองโดยไม่ต้องแก้ซ้ำ
-cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'job_no1', cs_post_raw('admin_work_no'));
 cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'cm_no', cs_post_raw('cm_no'));
 
 // ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
@@ -838,15 +840,19 @@ if (!$objQuery66) {
 if ($saveOk) {
 	mysqli_commit($conn);
 
+	// ส่งข้อมูลลงระบบ CS เมื่อผู้ใช้ติ๊ก toggle (Save Draft ไม่ส่ง: แกนกลางข้ามเอกสารสถานะ Draft)
+	// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
+	$csSendResult = cs_job_send_requested($_POST) ? brcs_cs_send($conn, $ref_id, $_SESSION) : null;
+
 	if ($isDraftRequest) {
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		echo json_encode(array(
+		echo json_encode(array_merge(array(
 			'success' => true,
 			'ref_id' => $ref_id,
 			'message' => 'บันทึกร่างเรียบร้อยแล้ว'
-		));
+		), cs_job_json_fields($csSendResult)));
 		exit();
 	}
 
@@ -857,7 +863,7 @@ if ($saveOk) {
 	if (ob_get_level() > 0) {
 		ob_end_clean();
 	}
-	header('Location: register_supbrcshos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+	header('Location: register_supbrcshos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . cs_job_redirect_query($csSendResult));
 	exit();
 } else {
 	mysqli_rollback($conn);

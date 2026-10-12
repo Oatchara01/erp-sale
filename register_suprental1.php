@@ -66,7 +66,8 @@ if (!$isDraftRequest) {
 	}
 }
 
-$send_cs = $_POST["send_cs"] ?? '';
+// send_cs / job_no เขียนโดย rental_cs_send() ทางเดียว (includes/rental_cs_send.php) หลังบันทึกเอกสารสำเร็จ
+require_once __DIR__ . '/includes/rental_cs_send.php';
 $type_doc = $_POST["type_doc"];
 $register_date = $_POST["register_date"];
 $rental_name = mysqli_real_escape_string($conn, $_POST["rental_name"]);
@@ -856,86 +857,6 @@ if (!$objQuery99) {
 
 	
 
-if($send_cs =='1'){
-
-$yearMonth = substr(date("Y")+543, -2).date("m");
-
-if ($job_no !== '') {
-	// ผู้ใช้กดไอคอน "Run" เลขที่ลงงานไว้ก่อนแล้ว (ajax_run_job_no.php จองแถวเปล่าไว้ใน
-	// tb_register_data ให้แล้วตอนกดปุ่ม) ใช้เลขเดิมนั้นต่อ ไม่สุ่มเลขใหม่ซ้อนกัน แล้ว UPDATE
-	// แถวที่จองไว้ให้มีข้อมูลใบงานจริงครบแทนที่จะ INSERT ซ้ำอีกแถว
-	$nextId = $job_no;
-
-	$strSQL89 = "UPDATE tb_register_data SET
-		start_date='".$start_date."', between_date='".$between_date."', start_time='".$start_time."',
-		end_time='".$end_time."', status='".$status."', fix_date='".$fix_date."', no_price='".$no_price."',
-		call_customer='".$call_customer."', credit='".$credit."', call_employee='".$call_employee."',
-		cash='".$chash."', check_peper='".$check_peper."', bill='".$bill."', department='".$department."',
-		type_customer='".$type_customer."', type_company='".$type_company."', customer_name='".$customer_name."',
-		customer_tel='".$customer_tel."', address_name='".$address_name."', address_send='".$address_send."',
-		want_bus='".$want_bus."', amphur_name='".$amphur_name."', province_name='".$province_name."',
-		product_name='".$product_name."', product_sn='".$product_sn."', unit_credit='".$unit_credit."',
-		price='".$price."', employee_name='".$employee_name."', employee_tel='".$employee_tel."',
-		add_by='".$add_by."', description='".$description."', have_map='".$havemap."', add_date='".$add_date."',
-		unit_bill='".$unit_bill1."', unit_check='".$unit_check1."', unit_tran='".$unit_tran."', tran='".$tran."',
-		check_detail='".$check_detail."', number='".$number."', status_comment='".$status_comment."',
-		dep='".$dep."', dept='".$dept."', department_show='".$department_show."', on_time='".$on_time."',
-		address_1='".$address_1."', mk_research='".$mk_research."', customer_contact='".$customer_contact."',
-		ref_id='".$ref_id."', count_box='".$count_box."', location_link='".$location_link."',
-		transport_company='".$transport_company."'
-		WHERE running = '".$nextId."'";
-
-	$objQuery89 = mysqli_query($conn, $strSQL89);
-	if (!$objQuery89) {
-		$saveOk = false;
-		$saveError = 'tb_register_data (UPDATE by job_no): ' . mysqli_error($conn);
-	}
-} else {
-	$sql = "SELECT MAX(running) AS MAXID FROM tb_register_data";
-	$qry = mysqli_query($conn,$sql);
-	$rs = mysqli_fetch_assoc($qry);
-	$maxId = substr($rs['MAXID'], -4);
-	$maxId1 = substr($rs['MAXID'],0,-4);
-
-	if($maxId1 == $yearMonth)
-	{
-	$maxId1 = ($maxId + 1);
-	$maxId2 = substr("00000".$maxId1, -4);
-	$nextId = $yearMonth.$maxId2;
-	}
-	else
-	{
-	$maxId1 = "0001";
-	$nextId = $yearMonth.$maxId1;
-	}
-
-	$strSQL89 =  "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,on_time,address_1,add_code,mk_research,customer_contact,ref_id,count_box,location_link,transport_company)
-
-	values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill1."','".$unit_check1."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$on_time."','".$address_1."','".$em_id."','".$mk_research."','".$customer_contact."','".$ref_id."','".$count_box."','".$location_link."','".$transport_company."')";
-
-	$objQuery89 = mysqli_query($conn,$strSQL89);
-	if (!$objQuery89) {
-		$saveOk = false;
-		$saveError = 'tb_register_data (send_cs insert): ' . mysqli_error($conn);
-	}
-}
-
-
-
- $strSQL90 =  "insert into tb_transaction (running,car_home,car_park,slope,bundai,unit_bundai,install,install_room,room_bigger,room_longer,bundai_big,lip_big,lip_long,lip_weight,want_employee,employee_unit,ferniger_name,description,height_ltd,add_date,add_by)
-
-values('".$nextId."','".$car_home."','".$car_park."','".$slope."','".$bundai."','".$unit_bundai."','".$install."','".$install_room."','".$room_bigger."','".$room_longer."','".$bundai_big."','".$lip_big."','".$lip_long."','".$lip_weight."','".$want_employee."','".$employee_unit."','".$ferniger_name."','".$addr_note."','".$height_ltd."','$add_date','".$add_by."')";
-
-$objQuery90 = mysqli_query($conn,$strSQL90);
-if (!$objQuery90) {
-	$saveOk = false;
-	$saveError = 'tb_transaction (send_cs insert): ' . mysqli_error($conn);
-}
-
-$strSQL26="Update hos__rental set job_no='".$nextId."',send_cs ='2'  where ref_id='".$ref_id."'";
-$objQuery26 = mysqli_query($conn,$strSQL26);
-
-	}
 	
 	
 	
@@ -1075,14 +996,19 @@ $objQuery = mysqli_query($conn,$strSQL);
 
 if ($saveOk) {
 	mysqli_commit($conn);
+
+	// ส่งข้อมูลลงระบบ CS เมื่อผู้ใช้ติ๊ก toggle (Save Draft ไม่ส่ง: แกนกลางข้ามเอกสารสถานะ Draft)
+	// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
+	$rtCsResult = cs_job_send_requested($_POST) ? rental_cs_send($conn, $ref_id, $_SESSION) : null;
+
 	if (ob_get_level() > 0) {
 		ob_end_clean();
 	}
 	if ($isDraftRequest) {
-		echo json_encode(array('success' => true, 'ref_id' => $ref_id));
+		echo json_encode(array_merge(array('success' => true, 'ref_id' => $ref_id), cs_job_json_fields($rtCsResult)));
 		exit();
 	}
-	header('Location: register_suprental.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+	header('Location: register_suprental.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . cs_job_redirect_query($rtCsResult));
 	exit();
 } else {
 	mysqli_rollback($conn);

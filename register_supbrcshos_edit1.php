@@ -22,6 +22,7 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include ("error_page.php");
+require_once __DIR__ . '/includes/brcs_cs_send.php';
 
 if (!function_exists('tableExists')) {
 	function tableExists($conn, $tableName)
@@ -274,7 +275,6 @@ if ($iv_no !== '') {
 $iv_date = cs_post_date($conn, "admin_doc_date");
 $remark_cancel = cs_post($conn, "admin_cancel_reason");
 $que_ckk = cs_post($conn, "que_ckk", "0");
-$send_cs = cs_post_flag("send_cs");
 $date_ker = cs_post_date($conn, "shipping_date");
 $order_refer_code = cs_post($conn, "shipping_ref1");
 $order_refer_code1 = cs_post($conn, "shipping_ref2");
@@ -347,7 +347,6 @@ $csConsigUpdateColumns = array(
 	'iv_date' => $iv_date,
 	'remark_cancel' => $remark_cancel,
 	'que_ckk' => $que_ckk,
-	'send_cs' => $send_cs,
 	'date_ker' => $date_ker,
 	'order_refer_code' => $order_refer_code,
 	'order_refer_code1' => $order_refer_code1,
@@ -395,7 +394,6 @@ if (!$qsave) {
 	$saveFailures[] = 'hos__consig: ' . mysqli_error($conn);
 }
 
-cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'job_no1', cs_post_raw('admin_work_no'));
 cs_update_column_if_exists($conn, 'hos__consig', 'ref_id', $ref_id, 'cm_no', cs_post_raw('cm_no'));
 
 // ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
@@ -754,6 +752,12 @@ if (!$objQuery66) {
 if ($saveOk) {
 	mysqli_commit($conn);
 
+	// ผู้ใช้ติ๊ก toggle "ส่งข้อมูลลงระบบ CS" และมีสิทธิ์ส่ง — ตัดสินจากสถานะก่อนขั้นอนุมัติด้านล่าง
+	// (ผู้อนุมัติที่ติ๊กแล้วกดอนุมัติต้องส่งได้ เหมือน SO) ส่วนสถานะหลัง action ที่ส่งไม่ได้ แกนกลางข้ามเอง
+	// หมายเหตุ: ขั้นตรวจ/หัวหน้าที่ยังไม่ใช่ขั้นสุดท้ายสถานะยังเป็น Request จึงส่งได้ในขั้นเหล่านั้นด้วย
+	$csSendPreDoc = cs_job_send_requested($_POST) ? brcs_cs_load_document($conn, $ref_id) : null;
+	$csSendWanted = $csSendPreDoc !== null && brcs_cs_user_can_send($csSendPreDoc, $_SESSION);
+
 	// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_supbrcshos.php =====
 	// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
 	// บล็อกนี้จึงเขียนทับเป็นสถานะสุดท้าย) — โครงเดียวกับ register_suphos_edit1.php:4029-4111
@@ -837,15 +841,39 @@ if ($saveOk) {
 		}
 	}
 
+	// ===== ส่งข้อมูลลงระบบ CS (หลังขั้นอนุมัติ เพื่อให้เห็นสถานะสุดท้ายของเอกสาร) =====
+	// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
+	$csSendResult = $csSendWanted ? brcs_cs_send($conn, $ref_id, $_SESSION) : null;
+
+	// ยกเลิก/ไม่อนุมัติเอกสารที่ส่ง CS แล้ว: ทำเครื่องหมายบนใบงาน ไม่ลบ ส่วน "ส่งกลับ" ไม่แตะใบงาน
+	$csMarkStatus = '';
+	$csMarkReason = '';
+	if ($isCancelDoc) {
+		$csMarkStatus = 'ยกเลิก';
+		$csMarkReason = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+		if ($csMarkReason === '') {
+			$csMarkReason = trim((string)($_POST['cs_approve_reason'] ?? ''));
+		}
+	} elseif ($csApproveAction === 'reject') {
+		$csMarkStatus = 'ไม่อนุมัติ';
+		$csMarkReason = trim((string)($_POST['cs_approve_reason'] ?? ''));
+	}
+	if ($csMarkStatus !== '') {
+		$csMarkWarning = brcs_cs_mark_cancelled($conn, $ref_id, $csMarkStatus, $csMarkReason);
+		if ($csMarkWarning !== null) {
+			$csSendResult = $csMarkWarning;
+		}
+	}
+
 	if ($isDraftRequest) {
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		echo json_encode(array(
+		echo json_encode(array_merge(array(
 			'success' => true,
 			'ref_id' => $ref_id,
 			'message' => 'บันทึกร่างเรียบร้อยแล้ว'
-		));
+		), cs_job_json_fields($csSendResult)));
 		exit();
 	}
 
@@ -853,7 +881,7 @@ if ($saveOk) {
 	if (ob_get_level() > 0) {
 		ob_end_clean();
 	}
-	header('Location: register_supbrcshos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+	header('Location: register_supbrcshos.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . cs_job_redirect_query($csSendResult));
 	exit();
 } else {
 	mysqli_rollback($conn);

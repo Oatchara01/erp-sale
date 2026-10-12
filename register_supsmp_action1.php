@@ -38,11 +38,34 @@ $smpDoneMessages = array(
 	'cancelled' => 'ยกเลิกเอกสารเรียบร้อยแล้ว',
 );
 
+/* ปุ่ม Update แบบจำกัดของ Admin / IT / Owner (ผู้ที่เปิดเอกสารแบบดูอย่างเดียว) — เหมือนปุ่ม Update แบบจำกัดของ SO:
+   ไม่ใช่ action ของแถบอนุมัติ ไม่เปลี่ยนสถานะ ไม่บันทึกค่าฟอร์ม ทำอย่างเดียวคือส่งใบงานจากข้อมูลที่บันทึกไว้ */
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && (string)($_POST['smp_send_cs'] ?? '') === '1') {
+	$smpCsResult = smp_cs_send($conn, $smpRefId, $_SESSION);
+	$_SESSION['smp_flash'] = $smpCsResult === null
+		? array('icon' => 'error', 'title' => 'ส่งข้อมูลลงระบบ CS ไม่ได้', 'text' => 'เอกสารนี้ส่งไปแล้ว อยู่ในสถานะที่ส่งไม่ได้ หรือคุณไม่มีสิทธิ์ส่ง กรุณาโหลดหน้าใหม่')
+		: smp_cs_flash($smpCsResult);
+	header('Location: ' . ($smpRefId !== '' ? 'register_supsmp.php?ref_idsmp=' . rawurlencode($smpRefId) : 'status_samplesup.php'));
+	exit();
+}
+
 try {
 	if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 		throw new SmpValidationException('รูปแบบคำขอไม่ถูกต้อง');
 	}
+	/* ผู้อนุมัติที่ติ๊ก toggle "ส่งข้อมูลลงระบบ CS" แล้วกดอนุมัติ: ส่งหลังขั้นอนุมัติ (เหมือน SO) สิทธิ์ดูจากสถานะก่อนอนุมัติ
+	   ส่วนสถานะหลัง action ที่ส่งไม่ได้ (ส่งกลับ/ไม่อนุมัติ) แกนกลางข้ามเอง */
+	$smpCsPreDoc = ($smpAction === 'approve' && cs_job_send_requested($_POST)) ? smp_load_document($conn, $smpRefId) : null;
+	$smpCsWanted = $smpCsPreDoc !== null && smp_cs_user_can_send($smpCsPreDoc, $_SESSION);
+
 	$smpResult = smp_run_document_action($conn, $smpRefId, $smpAction, $smpReason, $_SESSION);
+	if ($smpCsWanted) {
+		$smpCsResult = cs_job_send_document($conn, $smpRefId, $_SESSION, smp_cs_spec());
+		if ($smpCsResult !== null) {
+			$smpResult['warning'] = $smpCsResult['success'] ? '' : $smpCsResult['message'];
+			$smpResult['cs_message'] = $smpCsResult['success'] ? $smpCsResult['message'] : '';
+		}
+	}
 	$smpIsApproveSuccess = in_array($smpResult['outcome'], array('approved', 'forwarded'), true)
 		&& $smpResult['warning'] === '';
 
@@ -52,7 +75,7 @@ try {
 			? 'บันทึกข้อมูลเรียบร้อยแล้ว'
 			: ($smpDoneMessages[$smpResult['outcome']] ?? 'ดำเนินการเรียบร้อยแล้ว'),
 		'text'  => $smpIsApproveSuccess
-			? 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว'
+			? (($smpResult['cs_message'] ?? '') !== '' ? $smpResult['cs_message'] : 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว')
 			: 'เลขที่อ้างอิง: ' . $smpResult['ref_id'] . ($smpResult['warning'] !== '' ? "\n" . $smpResult['warning'] : ''),
 	);
 } catch (SmpValidationException $e) {

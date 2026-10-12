@@ -1,6 +1,7 @@
 <?php include('head.php');
 include('dbconnect_sale.php'); ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
+<?php require_once __DIR__ . '/includes/brcs_cs_send.php'; // สิทธิ์/สถานะ toggle "ส่งข้อมูลลงระบบ CS" ?>
 
 <?php
 		$emid = isset($_SESSION['code']) ? trim($_SESSION['code']) : '';
@@ -22,22 +23,32 @@ include('dbconnect_sale.php'); ?>
 <script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 <script src="js/cshos-modal.js?v=<?php echo filemtime(__DIR__ . '/js/cshos-modal.js'); ?>"></script>
 
-<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") {
+	// ผลส่งข้อมูลลงระบบ CS (ต่อมากับ URL จาก register_supbrcshos1.php / _edit1.php / _cs1.php)
+	$csSyncFlag = isset($_GET['cs_sync']) && !is_array($_GET['cs_sync']) ? (string)$_GET['cs_sync'] : '';
+	$csSyncMsg = isset($_GET['cs_sync_msg']) && !is_array($_GET['cs_sync_msg']) ? trim((string)$_GET['cs_sync_msg']) : '';
+?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			var cleanUrl = new URL(window.location.href);
 			cleanUrl.searchParams.delete('saved');
+			cleanUrl.searchParams.delete('cs_sync');
+			cleanUrl.searchParams.delete('cs_sync_msg');
 			window.history.replaceState({}, document.title, cleanUrl);
 
+			var csSyncMsg = <?php echo json_encode($csSyncMsg, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+			var csSyncFailed = <?php echo $csSyncFlag === '0' ? 'true' : 'false'; ?>;
+
 			if (typeof Swal === 'undefined') {
-				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว' + (csSyncMsg ? '
+' + csSyncMsg : ''));
 				return;
 			}
 
 			Swal.fire({
 				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
-				icon: 'success',
+				text: csSyncMsg || 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: csSyncFailed ? 'warning' : 'success',
 				confirmButtonColor: '#612989',
 				confirmButtonText: 'ตกลง'
 			});
@@ -213,6 +224,12 @@ include('dbconnect_sale.php'); ?>
 		element.classList.add('active');
 	}
 
+	// ผลส่งข้อมูลลงระบบ CS จาก response ของ register_supbrcshos_draft1.php -> query string ที่ popup หลัง redirect อ่าน
+	function brcsCsQuery(data) {
+		if (!data || data.cs_sync === undefined) return '';
+		return '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '');
+	}
+
 	function brcsSaveDraft() {
 		if (typeof syncDeptComments === 'function') {
 			syncDeptComments();
@@ -253,13 +270,13 @@ include('dbconnect_sale.php'); ?>
 							confirmButtonColor: '#612989'
 						}).then(function() {
 							if (data.ref_id) {
-								window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+								window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + brcsCsQuery(data);
 							}
 						});
 					} else {
 						alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
 						if (data.ref_id) {
-							window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							window.location.href = 'register_supbrcshos.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + brcsCsQuery(data);
 						}
 					}
 				} else {
@@ -663,7 +680,6 @@ if ($csPrefillSource !== null) {
 		'objective' => $csPrefillSource['objective'],
 		'objective_des' => $csPrefillSource['objective_des'],
 		'que_ckk' => $csPrefillSource['que_ckk'],
-		'send_cs' => $csPrefillSource['send_cs'] ?? '',
 		'sale_code' => $csPrefillSource['sale_code'],
 		'returns' => $csPrefillSource['returns'],
 		'returns_date' => $csPrefillSource['returns_date'],
@@ -1204,7 +1220,7 @@ if ($csPrefillSource !== null) {
 					['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
 					['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedBr !== null) ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
-					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no1'] ?? '') : '', 'icon' => 'img/icons/preview.png'],
+					['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedBr !== null) ? so_saved_h($savedBr['job_no'] ?? '') : '', 'disabled' => true, 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS'],
 				],
 			],
 		];
@@ -1418,6 +1434,14 @@ if ($csPrefillSource !== null) {
 
 		<!-- การ์ดแท็บ: ข้อมูลการจัดส่ง / ค่าจัดส่ง -->
 		<?php
+		// toggle "ส่งข้อมูลลงระบบ CS": เห็นเฉพาะ it / admin; กดได้เมื่อ brcs_cs_can_tick() ผ่าน
+		// (ยังไม่ Approve: ทั้งสอง role, Approve แล้ว: Admin เท่านั้น); ส่งแล้ว/สถานะที่ส่งไม่ได้: ล็อก
+		$csSeesToggle = cs_job_role_allowed($_SESSION, brcs_cs_spec()['roles']);
+		$csIsSent = $savedBr !== null && (string)($savedBr['send_cs'] ?? '') === '2';
+		$csJobNo = $csIsSent ? trim((string)($savedBr['job_no'] ?? '')) : '';
+		$csCanSend = brcs_cs_can_tick($savedBr, $_SESSION);
+		// Approve แล้วฟอร์มหลักบันทึกไม่ได้ (ไม่มี Submit/Update) Admin ส่ง CS ผ่านปุ่ม Update แบบจำกัดแทน
+		$csLimitedUpdate = $savedBr !== null && $csCanSend && (string)($savedBr['status_doc'] ?? '') === 'Approve';
 		$deliveryTab = [
 			'open_fn' => 'brOpenDelTab',
 			'grid_fields' => [
@@ -1455,11 +1479,13 @@ if ($csPrefillSource !== null) {
         'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
     ],
 
-    in_array($type_login_lower, ['it', 'admin'], true)
+    $csSeesToggle
         ? [
             'name' => 'send_cs',
             'id' => 'send_cs',
-            'label' => 'ส่งข้อมูลลงระบบ CS'
+            'label' => 'ส่งข้อมูลลงระบบ CS' . ($csJobNo !== '' ? ' (เลขที่ลงงาน ' . so_saved_h($csJobNo) . ')' : ''),
+            'checked' => $csIsSent,
+            'locked' => !$csCanSend,
         ]
         : null,
 ]),
@@ -2279,7 +2305,7 @@ $csCanShowApproveBar = $csIsEditMode && !$csIsSaleUser && ($csStatusDoc === 'Req
 // ซ่อนปุ่ม Update ตัวหลักเมื่อแถบอนุมัติโชว์อยู่ เพราะแถบอนุมัติมีปุ่ม Update ของตัวเองแล้ว
 $csHideUpdate = $csIsClosed || $csCanShowApproveBar;
 // เอกสารปิดแล้วไม่เหลือปุ่มในแถบ — ไม่ render แถบเปล่า (ย้อนกลับใช้ไอคอนที่หัวหน้าแทน)
-$csHasStickyActions = $csCanShowApproveBar || !$csHideSubmit || !$csHideUpdate;
+$csHasStickyActions = $csCanShowApproveBar || !$csHideSubmit || !$csHideUpdate || $csLimitedUpdate;
 ?>
 <?php if ($csHasStickyActions): ?>
 <div class="so-sticky-actions">
@@ -2312,8 +2338,52 @@ $csHasStickyActions = $csCanShowApproveBar || !$csHideSubmit || !$csHideUpdate;
 		<?php if (!$csHideUpdate): ?>
 			<button type="button" name="save_draft" class="btn-so-draft" onclick="brcsSaveDraft();"><i class="far fa-save"></i> <?php echo $csIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 		<?php endif; ?>
+		<?php if ($csLimitedUpdate): ?>
+			<!-- เอกสาร Approve แล้ว: ปุ่ม Update แบบจำกัดของ Admin ทำได้อย่างเดียวคือส่งใบงานตาม toggle ไม่บันทึกค่าฟอร์ม -->
+			<button type="button" id="btn_cs_send" class="btn-so-draft" onclick="brcsSendCs();" title="ส่งข้อมูลลงระบบ CS ตามที่ติ๊กไว้"><i class="far fa-save"></i> Update</button>
+		<?php endif; ?>
 	</div>
 </div>
+<?php endif; ?>
+<?php if ($csLimitedUpdate): ?>
+<script>
+	/* ปุ่ม Update แบบจำกัด: POST แยกจากฟอร์มหลัก (ไม่ส่งค่าฟอร์ม ไม่ผ่าน validation) — ไม่ได้ติ๊ก toggle = ไม่มีอะไรให้บันทึก */
+	function brcsSendCs() {
+		var toggle = document.getElementById('send_cs');
+		if (!toggle || !toggle.checked) {
+			var message = 'กรุณาติ๊ก "ส่งข้อมูลลงระบบ CS" ก่อนกด Update';
+			if (typeof Swal === 'undefined') {
+				alert(message);
+				return;
+			}
+			Swal.fire({
+				icon: 'warning',
+				title: message,
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+			return;
+		}
+		var button = document.getElementById('btn_cs_send');
+		if (button) button.disabled = true;
+		var csForm = document.createElement('form');
+		csForm.method = 'post';
+		csForm.action = 'register_supbrcshos_cs1.php';
+		var fields = {
+			ref_id: <?php echo json_encode((string)$savedBr['ref_id'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+			send_cs: '1'
+		};
+		Object.keys(fields).forEach(function(name) {
+			var input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = name;
+			input.value = fields[name];
+			csForm.appendChild(input);
+		});
+		document.body.appendChild(csForm);
+		csForm.submit();
+	}
+</script>
 <?php endif; ?>
 <script>
 	function toggleApproveOverflowMenu() {
@@ -2496,7 +2566,7 @@ $csHasStickyActions = $csCanShowApproveBar || !$csHideSubmit || !$csHideUpdate;
 			});
 
 			// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
-			['is_high_roof', 'call_customer', 'ref_12', 'send_cs', 'que_ckk'].forEach(function(name) {
+			['is_high_roof', 'call_customer', 'ref_12', 'que_ckk'].forEach(function(name) {
 				var el = document.querySelector('[name="' + name + '"]');
 				if (el) el.dispatchEvent(new Event('change', {
 					bubbles: true

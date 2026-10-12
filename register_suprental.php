@@ -1,6 +1,7 @@
 <?php include("head.php"); ?>
 <?php include('dbconnect_sale.php'); ?>
-<?php require_once __DIR__ . '/includes/so_saved_helpers.php'; // so_saved_h() ใช้โดย partials/admin_info_tab.php 
+<?php require_once __DIR__ . '/includes/so_saved_helpers.php'; // so_saved_h() ใช้โดย partials/admin_info_tab.php
+require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/สถานะ toggle "ส่งข้อมูลลงระบบ CS"
 ?>
 
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
@@ -29,11 +30,20 @@
 		}
 	}
 	$rtSoSyncHasSkip = is_array($rtSoSyncFlash) && !empty($rtSoSyncFlash['skipped']);
+	// ผลส่งข้อมูลลงระบบ CS (ต่อมากับ URL จาก register_suprental1.php / _edit1.php / _cs1.php)
+	$rtCsSync = isset($_GET['cs_sync']) && !is_array($_GET['cs_sync']) ? (string)$_GET['cs_sync'] : '';
+	$rtCsSyncMsg = isset($_GET['cs_sync_msg']) && !is_array($_GET['cs_sync_msg']) ? trim((string)$_GET['cs_sync_msg']) : '';
+	if ($rtCsSyncMsg !== '') {
+		$rtSoSyncLines[] = $rtCsSyncMsg;
+	}
+	$rtSoSyncHasSkip = $rtSoSyncHasSkip || $rtCsSync === '0';
 ?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			var cleanUrl = new URL(window.location.href);
 			cleanUrl.searchParams.delete('saved');
+			cleanUrl.searchParams.delete('cs_sync');
+			cleanUrl.searchParams.delete('cs_sync_msg');
 			window.history.replaceState({}, document.title, cleanUrl);
 
 			var soSyncLines = <?php echo json_encode($rtSoSyncLines, JSON_UNESCAPED_UNICODE); ?>;
@@ -715,7 +725,6 @@
 			'bank_name' => $rentalSrc['bank_name'],
 			'bank_no' => $rentalSrc['bank_no'],
 			'accbank_name' => $rentalSrc['accbank_name'],
-			'send_cs' => (($rentalSrc['send_cs'] ?? '') === '2') ? '1' : '0',
 			// ช่วงเวลา: โหลดเฉพาะเอกสารที่บันทึกแล้ว ($savedRental) ใบที่คัดลอกต้องเลือกใหม่
 			'time_range' => $savedRental['time_range'] ?? '',
 		);
@@ -889,6 +898,12 @@
 
 			// บันทึกร่าง: AJAX POST is_draft=1 ไปยัง register_suprental_draft1.php แล้ว redirect
 			// กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ — พอร์ตจาก register_supchange.php: chgSaveDraft
+			// ผลส่งข้อมูลลงระบบ CS จาก response ของ register_suprental_draft1.php -> query string ที่ popup หลัง redirect อ่าน
+			function rtCsQuery(data) {
+				if (!data || data.cs_sync === undefined) return '';
+				return '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '');
+			}
+
 			function rtSaveDraft() {
 				var form = document.forms['frmMain'];
 				if (!form) return;
@@ -923,13 +938,13 @@
 									confirmButtonColor: '#612989'
 								}).then(function() {
 									if (data.ref_id) {
-										window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+										window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + rtCsQuery(data);
 									}
 								});
 							} else {
 								alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
 								if (data.ref_id) {
-									window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+									window.location.href = 'register_suprental.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + rtCsQuery(data);
 								}
 							}
 						} else {
@@ -1428,7 +1443,7 @@
 								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_rt_run_doc_no', 'onclick' => 'rtRunDocumentNo();', 'variant' => 'purple'],
 							]],
 							['type' => 'date_th', 'name' => 'rt_admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedRental !== null) ? so_saved_iso_date_input($savedRental['iv_date'] ?? '') : '', 'calendar' => true],
-							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'rtRunJobNo();', 'icon_id' => 'btn_rt_run_job_no', 'value' => ($savedRental !== null) ? ($savedRental['job_no'] ?? '') : ''],
+							['type' => 'text', 'name' => 'rt_admin_work_no', 'label' => 'เลขที่ลงงาน', 'disabled' => true, 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS', 'value' => ($savedRental !== null) ? ($savedRental['job_no'] ?? '') : ''],
 						],
 						[
 							['type' => 'button_field', 'button' => ['type' => 'button', 'label' => 'หนังสือสัญญา', 'id' => 'btn_rt_contract', 'onclick' => "rtOpenSavedRentalDocument('promis_from.php');"]],
@@ -1530,72 +1545,6 @@
 							.then(function() {
 								if (runButton) {
 									runButton.disabled = false;
-								}
-							});
-					}
-
-					function rtRunJobNo() {
-						var jobNoInput = document.querySelector('input[name="rt_admin_work_no"]');
-						var refIdInput = document.querySelector('input[name="ref_id"]');
-						var startPromisInput = document.querySelector('input[name="start_promis"]');
-						var runIcon = document.getElementById('btn_rt_run_job_no');
-
-						if (!jobNoInput) {
-							return;
-						}
-
-						if (runIcon && runIcon.dataset.loading === '1') {
-							return;
-						}
-
-						if (jobNoInput.value.trim() !== '') {
-							if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
-								return;
-							}
-						}
-
-						var payload = new URLSearchParams();
-						payload.append('ref_id', refIdInput ? refIdInput.value : '');
-						payload.append('job_date', startPromisInput ? startPromisInput.value : '');
-
-						if (runIcon) {
-							runIcon.dataset.loading = '1';
-							runIcon.style.pointerEvents = 'none';
-							runIcon.style.opacity = '0.4';
-						}
-
-						fetch('ajax_run_job_no.php', {
-								method: 'POST',
-								credentials: 'same-origin',
-								cache: 'no-store',
-								headers: {
-									'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-								},
-								body: payload.toString()
-							})
-							.then(function(response) {
-								return response.json().then(function(data) {
-									return {
-										ok: response.ok,
-										data: data
-									};
-								});
-							})
-							.then(function(result) {
-								if (!result.ok || !result.data || !result.data.success) {
-									alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
-									return;
-								}
-								jobNoInput.value = result.data.job_no;
-							})
-							.catch(function() {
-								alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
-							})
-							.then(function() {
-								if (runIcon) {
-									runIcon.dataset.loading = '0';
-									runIcon.style.pointerEvents = '';
-									runIcon.style.opacity = '';
 								}
 							});
 					}
@@ -1839,6 +1788,14 @@
 
 				<!-- ===================== ข้อมูลการจัดส่ง / ค่าจัดส่ง ===================== -->
 				<?php
+				// toggle "ส่งข้อมูลลงระบบ CS": เห็นเฉพาะ it / admin / sol; กดได้เมื่อ rental_cs_user_can_send() ผ่าน
+				// (ยังไม่ Approve: ทั้งสาม role, Approve แล้ว: Admin เท่านั้น); ส่งแล้ว/สถานะที่ส่งไม่ได้: ล็อก
+				$rtCsSeesToggle = cs_job_role_allowed($_SESSION, rental_cs_spec()['roles']);
+				$rtCsIsSent = $savedRental !== null && (string)($savedRental['send_cs'] ?? '') === '2';
+				$rtCsJobNo = $rtCsIsSent ? trim((string)($savedRental['job_no'] ?? '')) : '';
+				$rtCsCanSend = rental_cs_can_tick($savedRental, $_SESSION);
+				// Approve แล้วฟอร์มหลักบันทึกไม่ได้ (ไม่มี Submit/Update) Admin ส่ง CS ผ่านปุ่ม Update แบบจำกัดแทน
+				$rtCsLimitedUpdate = $savedRental !== null && $rtCsCanSend && (string)($savedRental['status_doc'] ?? '') === 'Approve';
 				$deliveryTab = [
 					'open_fn' => 'rtOpenDelTab',
 					'grid_fields' => [
@@ -1876,11 +1833,13 @@
         'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
     ],
 
-    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+    $rtCsSeesToggle
         ? [
             'name' => 'send_cs',
             'id' => 'send_cs',
-            'label' => 'ส่งข้อมูลลงระบบ CS'
+            'label' => 'ส่งข้อมูลลงระบบ CS' . ($rtCsJobNo !== '' ? ' (เลขที่ลงงาน ' . so_saved_h($rtCsJobNo) . ')' : ''),
+            'checked' => $rtCsIsSent,
+            'locked' => !$rtCsCanSend,
         ]
         : null,
 ]),
@@ -2732,9 +2691,54 @@
 				<?php if (!$rtHideUpdate): ?>
 					<button type="button" name="save_draft" id="btn_save_draft" class="btn-so-draft" onclick="rtSaveDraft();"><i class="far fa-save"></i> <?php echo $rentalIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 				<?php endif; ?>
+				<?php if ($rtCsLimitedUpdate): ?>
+					<!-- เอกสาร Approve แล้ว: ปุ่ม Update แบบจำกัดของ Admin ทำได้อย่างเดียวคือส่งใบงานตาม toggle ไม่บันทึกค่าฟอร์ม -->
+					<button type="button" id="btn_rt_send_cs" class="btn-so-draft" onclick="rtSendCs();" title="ส่งข้อมูลลงระบบ CS ตามที่ติ๊กไว้"><i class="far fa-save"></i> Update</button>
+				<?php endif; ?>
 			</div>
 		</div>
 	</form>
+
+	<?php if ($rtCsLimitedUpdate): ?>
+		<script>
+			/* ปุ่ม Update แบบจำกัด: POST แยกจากฟอร์มหลัก (ไม่ส่งค่าฟอร์ม ไม่ผ่าน validation) — ไม่ได้ติ๊ก toggle = ไม่มีอะไรให้บันทึก */
+			function rtSendCs() {
+				var toggle = document.getElementById('send_cs');
+				if (!toggle || !toggle.checked) {
+					var message = 'กรุณาติ๊ก "ส่งข้อมูลลงระบบ CS" ก่อนกด Update';
+					if (typeof Swal === 'undefined') {
+						alert(message);
+						return;
+					}
+					Swal.fire({
+						icon: 'warning',
+						title: message,
+						confirmButtonColor: '#612989',
+						confirmButtonText: 'ตกลง'
+					});
+					return;
+				}
+				var button = document.getElementById('btn_rt_send_cs');
+				if (button) button.disabled = true;
+				var csForm = document.createElement('form');
+				csForm.method = 'post';
+				csForm.action = 'register_suprental_cs1.php';
+				var fields = {
+					ref_id: <?php echo json_encode((string)$savedRental['ref_id'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+					send_cs: '1'
+				};
+				Object.keys(fields).forEach(function(name) {
+					var input = document.createElement('input');
+					input.type = 'hidden';
+					input.name = name;
+					input.value = fields[name];
+					csForm.appendChild(input);
+				});
+				document.body.appendChild(csForm);
+				csForm.submit();
+			}
+		</script>
+	<?php endif; ?>
 
 	<script>
 		function toggleRtApproveOverflowMenu() {
@@ -2908,7 +2912,7 @@
 				}
 
 				// ให้ UI ที่ผูกกับ toggle pill/สไตล์ตาม checked อัปเดตตาม (onchange ทำสไตล์ ไม่ใช่ CSS :checked)
-				['is_high_roof', 'call_customer', 'no_money', 'send_cs'].forEach(function(name) {
+				['is_high_roof', 'call_customer', 'no_money'].forEach(function(name) {
 					var el = document.querySelector('[name="' + name + '"]');
 					if (el) el.dispatchEvent(new Event('change', {
 						bubbles: true

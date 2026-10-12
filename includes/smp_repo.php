@@ -10,6 +10,8 @@
  * - ทุกการเขียนอยู่ใน DB transaction เดียว (hos__smp / hos__subsmp / tb_register_data / tb_transaction)
  */
 
+require_once __DIR__ . '/cs_job_send.php';
+
 class SmpValidationException extends Exception
 {
 }
@@ -1047,114 +1049,80 @@ function smp_check_loan_clearance($conn, array $items, $useBreg)
 }
 
 /**
- * ส่งข้อมูลจัดส่งของใบที่อนุมัติจบไป DB ของ CS (allwell_cs) — พอร์ตจาก sample_approve*.php
- * เรียกหลัง commit (คนละ connection กับ $conn จึงอยู่ใน transaction เดียวกันไม่ได้)
- * อ่านจากแถว tb_register_data ของใบนี้ ไม่ใช่ POST; คงการ map ที่อยู่เดิม
- * @return string '' เมื่อสำเร็จ/ไม่เข้าเงื่อนไข, ข้อความเตือนเมื่อส่งไม่สำเร็จ
+ * ส่งใบงานของ SMP ลงสมุดลงงาน CS — ใช้กติกาเดียวกับ SO (includes/so_cs_send.php) ผ่านแกนกลาง includes/cs_job_send.php
+ * ไม่ส่งอัตโนมัติตอนอนุมัติแล้ว: ส่งเมื่อ Admin / IT / Owner ติ๊ก toggle "ส่งข้อมูลลงระบบ CS" แล้วกดปุ่มส่งใน register_supsmp.php
+ * (ไม่มีเงื่อนไขวิธีจัดส่ง/รหัสขายแบบ sample_approve*.php เดิมแล้ว — ผู้มีสิทธิ์เป็นคนตัดสินว่าจะส่งหรือไม่)
+ *
+ * ค่า hos__smp.send_cs: 0 = ยังไม่ส่ง, 2 = ส่งแล้ว (ล็อก) เลขที่ลงงานเก็บใน cs_no
  */
-function smp_export_to_cs($conn, array $doc, $variant)
+function smp_cs_spec()
 {
-	/* กลุ่มยกเว้นต่างกันตามหน้าเดิม: sample_approve.php มีวงเล็บ ('(SOL99)') ส่วน sample_approve1.php ไม่มี — คงไว้ตามเดิม */
-	$excluded = ($variant === 'amount')
-		? array('SOL99', 'EN', 'SOL1', 'SOL2', 'SOL3')
-		: array('(SOL99)', 'EN', '(SOL1)', '(SOL2)', 'SOL3');
-	/* ส่งเฉพาะบริษัทจัดส่ง: '5' = AllWell (รหัสปัจจุบัน), '2' = บริษัทจัดส่ง (รหัสเดิมของใบเก่าที่ยังค้างอนุมัติ) */
-	if (in_array((string)$doc['sale_code'], $excluded, true) || !in_array((string)$doc['delivery_type'], array('5', '2'), true)) {
-		return '';
+	return array(
+		'table'          => 'hos__smp',
+		'ref_column'     => 'ref_idsmp',
+		'job_column'     => 'cs_no',
+		'status_column'  => 'status_sup',
+		'roles'          => array('admin', 'it', 'owner'),
+		'blocked_status' => array('', 'Draft', 'Returned', 'Rejected'),
+		'log_tag'        => 'smp_cs_send',
+		'compose'        => 'smp_cs_compose_job_fields',
+		'job_overrides'  => 'smp_cs_job_overrides',
+	);
+}
+
+/** ช่องใบงานสำรองเมื่อแถวข้อมูลจัดส่งว่าง (หน้า SMP บันทึกช่องพวกนี้ลง tb_register_data ครบอยู่แล้ว) */
+function smp_cs_compose_job_fields($conn, $refId, array $doc, array $session)
+{
+	return array_merge(
+		array('status' => 'ส่ง'),
+		cs_job_compose_sale_fields($conn, $doc['sale_code'] ?? '', $doc['sale_name'] ?? '', $session)
+	);
+}
+
+/** รูปแบบเลขอ้างอิงของใบงาน SMP ตาม sample_approve*.php เดิม */
+function smp_cs_job_overrides(array $doc, array $reg)
+{
+	return array('product_sn' => (string)($reg['product_sn'] ?? '') . ' เลขที่อ้างอิง : ' . (string)$doc['ref_idsmp']);
+}
+
+/**
+ * ผู้ใช้ส่งใบนี้ลง CS ได้ตอนนี้หรือไม่ — ใช้ทั้งแสดง toggle/ปุ่มในหน้า และตรวจซ้ำที่ server
+ * Request: Admin / IT / Owner, Approve: Admin เท่านั้น (เหมือน SO), สถานะอื่นและใบที่ส่งแล้ว: ไม่ได้
+ */
+function smp_cs_user_can_send(array $doc, array $session)
+{
+	$spec = smp_cs_spec();
+	if ((string)($doc['send_cs'] ?? '') === '2' || !cs_job_role_allowed($session, $spec['roles'])) {
+		return false;
 	}
-	/* เหมือน dm_approve.php: ไม่ส่งซ้ำถ้าเคยส่งไป CS แล้ว */
-	if (trim((string)($doc['cs_no'] ?? '')) !== '' || (string)($doc['send_cs'] ?? '') === '2') {
-		return '';
+	$status = (string)($doc['status_sup'] ?? '');
+	if ($status === 'Approve') {
+		return cs_job_role_allowed($session, array('admin'));
 	}
+	return !in_array($status, $spec['blocked_status'], true);
+}
 
-	$refId = (string)$doc['ref_idsmp'];
-	try {
-		$reg = smp_load_row($conn, 'tb_register_data', 'ref_id', $refId);
-		if ($reg === null) {
-			throw new RuntimeException('ไม่พบข้อมูลจัดส่ง (tb_register_data) ของ ' . $refId);
-		}
-
-		include __DIR__ . '/../dbconnect_cs.php';
-		if (!isset($com1) || !$com1) {
-			throw new RuntimeException('เชื่อมต่อฐานข้อมูล CS ไม่ได้');
-		}
-		@mysqli_query($com1, "SET SESSION sql_mode = ''");
-
-		$yearMonth = substr(date('Y') + 543, -2) . date('m');
-		$maxRunning = (string)smp_query_value($com1, 'SELECT MAX(running) FROM tb_register_data', '', array(), '');
-		$lastSeq = substr($maxRunning, -4);
-		$lastMonth = substr($maxRunning, 0, -4);
-		$nextId = ($lastMonth == $yearMonth)
-			? $yearMonth . substr('00000' . ((int)$lastSeq + 1), -4)
-			: $yearMonth . '0001';
-
-		$pick = function ($column, $default = '') use ($reg) {
-			$value = (string)($reg[$column] ?? '');
-			return $value !== '' ? $value : $default;
-		};
-		smp_db_insert($com1, 'tb_register_data', array(
-			'running'          => $nextId,
-			'start_date'       => $pick('start_date', '0000-00-00'),
-			'between_date'     => $pick('between_date'),
-			'start_time'       => $pick('start_time'),
-			'end_time'         => $pick('end_time'),
-			'status'           => $pick('status'),
-			'fix_date'         => $pick('fix_date', '0'),
-			'no_price'         => $pick('no_price', '0'),
-			'call_customer'    => $pick('call_customer', '0'),
-			'credit'           => $pick('credit', '0'),
-			'call_employee'    => $pick('call_employee', '0'),
-			'cash'             => $pick('cash', '0'),
-			'check_peper'      => $pick('check_peper', '0'),
-			'bill'             => $pick('bill', '0'),
-			'department'       => $pick('department'),
-			'type_customer'    => $pick('type_customer'),
-			'type_company'     => $pick('type_company'),
-			'customer_name'    => $pick('customer_name'),
-			'customer_tel'     => $pick('customer_tel'),
-			'address_name'     => $pick('address_1') . ' ' . $pick('province_name'),
-			'address_send'     => $pick('address_name') . ' ' . $pick('address_send'),
-			'want_bus'         => $pick('want_bus', '0'),
-			'amphur_name'      => $pick('amphur_name'),
-			'province_name'    => $pick('province_name'),
-			'product_name'     => $pick('product_name'),
-			'product_sn'       => $pick('product_sn') . ' เลขที่อ้างอิง : ' . $refId,
-			'unit_credit'      => $pick('unit_credit'),
-			'price'            => $pick('price'),
-			'employee_name'    => $pick('employee_name'),
-			'employee_tel'     => $pick('employee_tel'),
-			'add_by'           => $pick('add_by'),
-			'description'      => $pick('description'),
-			'have_map'         => $pick('have_map'),
-			'add_date'         => date('Y-m-d H:i:s'),
-			'unit_bill'        => $pick('unit_bill'),
-			'unit_check'       => $pick('unit_check'),
-			'unit_tran'        => $pick('unit_tran'),
-			'tran'             => $pick('tran', '0'),
-			'check_detail'     => $pick('check_detail', '0'),
-			'number'           => '',
-			'status_comment'   => $pick('status_comment'),
-			'dep'              => $pick('dep', '0'),
-			'dept'             => $pick('dept'),
-			'department_show'  => $pick('department_show'),
-			'address_bus'      => $pick('province_name'),
-			'customer_contact' => $pick('customer_contact'),
-			'on_time'          => $pick('on_time', '0'),
-			'add_code'         => $pick('add_code'),
-			'ref_id'           => $refId,
-		));
-		smp_db_insert($com1, 'tb_transaction', array('running' => $nextId));
-
-		$csFields = array('send_cs' => '2');
-		if ($variant === 'amount') {
-			$csFields['cs_no'] = $nextId; /* sample_approve1.php เท่านั้นที่บันทึก cs_no */
-		}
-		smp_db_update($conn, 'hos__smp', $csFields, 'ref_idsmp', $refId);
-		return '';
-	} catch (Throwable $e) {
-		error_log('[smp_export_to_cs] ' . $refId . ': ' . $e->getMessage());
-		return 'อนุมัติเอกสารแล้ว แต่ส่งข้อมูลจัดส่งไประบบ CS ไม่สำเร็จ กรุณาแจ้งผู้ดูแลระบบ (เลขที่ ' . $refId . ')';
+/**
+ * @return array|null null = ไม่มีอะไรต้องทำ (ไม่มีสิทธิ์ / ส่งไปแล้ว / สถานะเอกสารไม่ให้ส่ง),
+ *                    array = ผลการส่ง ['success', 'message', 'job_no']
+ */
+function smp_cs_send($conn, $refId, array $session)
+{
+	$doc = smp_load_document($conn, trim((string)$refId));
+	if ($doc === null || !smp_cs_user_can_send($doc, $session)) {
+		return null;
 	}
+	return cs_job_send_document($conn, $doc['ref_idsmp'], $session, smp_cs_spec());
+}
+
+/** popup หลังบันทึกเมื่อมีผลการส่ง CS — หน้าตาเดียวกับ SO: หัวข้อ "บันทึกข้อมูลเรียบร้อยแล้ว" + เลขที่ลงงาน หรือไอคอนเตือนเมื่อส่งไม่สำเร็จ */
+function smp_cs_flash(array $csResult)
+{
+	return array(
+		'icon'  => $csResult['success'] ? 'success' : 'warning',
+		'title' => 'บันทึกข้อมูลเรียบร้อยแล้ว',
+		'text'  => $csResult['message'],
+	);
 }
 
 /**
@@ -1185,7 +1153,6 @@ function smp_run_document_action($conn, $refId, $action, $reason, array $session
 	$today = date('Y-m-d');
 	$now = date('Y-m-d H:i:s');
 	$outcome = '';
-	$csVariant = null;
 	$doc = null;
 
 	mysqli_begin_transaction($conn);
@@ -1256,7 +1223,6 @@ function smp_run_document_action($conn, $refId, $action, $reason, array $session
 				smp_exec_write($conn, "UPDATE hos__subsmp SET status_smp = 'Approve' WHERE reff_idsmp = ?", 's', array($refId));
 				smp_log_status($conn, $refId, 'DM Approved', '', $session);
 				$outcome = 'approved';
-				$csVariant = 'default';
 			} else {
 				$items = smp_load_items($conn, $refId);
 				$variant = smp_approve_variant($doc, $session);
@@ -1275,7 +1241,6 @@ function smp_run_document_action($conn, $refId, $action, $reason, array $session
 					smp_exec_write($conn, "UPDATE hos__subsmp SET status_smp = 'Approve' WHERE reff_idsmp = ?", 's', array($refId));
 					smp_log_status($conn, $refId, 'Sup Approved', '', $session);
 					$outcome = 'approved';
-					$csVariant = $variant;
 				}
 			}
 		}
@@ -1286,9 +1251,12 @@ function smp_run_document_action($conn, $refId, $action, $reason, array $session
 		throw $e;
 	}
 
+	/* ใบที่ส่ง CS ไปแล้วถูกไม่อนุมัติ/ยกเลิก: ทำเครื่องหมายบนใบงาน ไม่ลบ (หลัง commit เพราะฐาน CS เป็นคนละ connection)
+	   ส่งกลับไม่แตะใบงาน เพราะใบจะถูก Submit ใหม่ */
 	$warning = '';
-	if ($csVariant !== null) {
-		$warning = smp_export_to_cs($conn, $doc, $csVariant);
+	if ($outcome === 'rejected' || $outcome === 'cancelled') {
+		$csCancel = cs_job_mark_cancelled($conn, $refId, smp_cs_spec(), $outcome === 'cancelled' ? 'ยกเลิก' : 'ไม่อนุมัติ', $reason);
+		$warning = $csCancel === null ? '' : $csCancel['message'];
 	}
 	return array('ref_id' => $refId, 'action' => $action, 'outcome' => $outcome, 'warning' => $warning);
 }

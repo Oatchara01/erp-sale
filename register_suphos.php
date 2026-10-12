@@ -2679,7 +2679,7 @@ include("head.php"); ?>
 									['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'runDocumentNo();', 'variant' => 'purple'],
 								],
 							],
-							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
 							['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['job_no'] ?? '') : '', 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS', 'disabled' => true],
 						],
 						[
@@ -2694,7 +2694,7 @@ include("head.php"); ?>
 							],
 						],
 						[
-							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt'],
+							['type' => 'date_th', 'name' => 'admin_old_doc_date', 'label' => 'วันที่ออกเอกสาร (เดิม)', 'value' => ($savedSo !== null) ? so_saved_iso_date_input($savedSo['date_oldbill'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
 							['type' => 'text', 'name' => 'admin_edit_reason', 'label' => 'สาเหตุการแก้ไขบิล', 'value' => ($savedSo !== null) ? so_saved_h($savedSo['desnew_bill'] ?? '') : '', 'icon' => 'fas fa-times', 'clearable' => true, 'span' => 2],
 						],
 					],

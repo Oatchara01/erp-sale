@@ -75,6 +75,14 @@ $smpReadOnly = $smpHasDocument && !smp_user_can_edit_document($smpDoc, $_SESSION
 $smpBackUrl = $smpCanAct ? ($smpStage === 'dm' ? 'status_smpapprove.php' : 'status_sample_approve.php') : 'status_samplesup.php';
 /* ปุ่มยกเลิกของเจ้าของใบ Draft/Returned (ใบที่อยู่ในคิวอนุมัติให้ผู้อนุมัติยกเลิกจาก overflow) */
 $smpCanCancelOwn = $smpHasDocument && ($smpIsDraft || $smpIsReturned) && smp_user_can_cancel($smpDoc, $_SESSION);
+/* ส่งใบงานเข้าระบบ CS: ทำจริงโดย smp_cs_send() ผ่านปุ่ม "ส่งข้อมูลลงระบบ CS" (register_supsmp_action1.php) ไม่ส่งอัตโนมัติตอนอนุมัติแล้ว
+   toggle เห็นเฉพาะ Admin / IT / Owner; กดได้เมื่อ smp_cs_user_can_send() ผ่าน (Request: ทั้งสาม role, Approve: Admin เท่านั้น) ส่งแล้วล็อก */
+$smpCsSeesToggle = cs_job_role_allowed($_SESSION, smp_cs_spec()['roles']);
+$smpCsIsSent = $smpHasDocument && (string)$smpDoc['send_cs'] === '2';
+$smpCsCanSend = $smpHasDocument && smp_cs_user_can_send($smpDoc, $_SESSION);
+$smpCsJobNo = $smpCsIsSent ? trim((string)$smpDoc['cs_no']) : '';
+/* ผู้ที่แก้เอกสารได้ (ผู้อนุมัติของด่าน) ส่งผ่านปุ่ม Update / อนุมัติ ปกติของฟอร์ม; ผู้ที่เปิดดูอย่างเดียวได้ปุ่ม Update แบบจำกัดแทน */
+$smpCsLimitedUpdate = $smpCsCanSend && $smpReadOnly;
 
 /* ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — ใช้แสดงแบนเนอร์เหตุผลล่าสุดและแท็บประวัติ */
 $smpLogLabels = array('Returned' => 'ส่งกลับ', 'ส่งกลับ' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร', 'ยกเลิก' => 'ยกเลิกเอกสาร');
@@ -668,9 +676,16 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				array('type' => 'text', 'span' => 4, 'name' => 'status_comment', 'label' => 'หมายเหตุสถานะ', 'clearable' => true),
 				array('type' => 'toggle', 'span' => 2, 'name' => 'call_customer', 'id' => 'call_customer', 'label' => 'ต้องการให้โทรแจ้ง'),
 			),
-			'toggle_buttons' => array(
+			'toggle_buttons' => array_filter(array(
 				array('name' => 'no_money', 'id' => 'no_money', 'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'),
-			),
+				$smpCsSeesToggle ? array(
+					'name' => 'send_cs',
+					'id' => 'send_cs',
+					'label' => 'ส่งข้อมูลลงระบบ CS' . ($smpCsJobNo !== '' ? ' (เลขที่ลงงาน ' . $smpCsJobNo . ')' : ''),
+					'checked' => $smpCsIsSent,
+					'locked' => !$smpCsCanSend,
+				) : null,
+			)),
 			'cost_fields' => array(
 				array('type' => 'date', 'name' => 'shipping_date', 'label' => 'วันที่คีย์ค่าส่ง'),
 				array('type' => 'text', 'name' => 'shipping_ref1', 'label' => 'รหัสอ้างอิง 1'),
@@ -799,6 +814,12 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<i class="far fa-save"></i> <?php echo $smpHasDocument ? 'Update' : 'Save Draft'; ?>
 			</button>
 			<?php } ?>
+			<?php if ($smpCsLimitedUpdate) { ?>
+			<!-- เปิดดูอย่างเดียวแต่ส่ง CS ได้: ปุ่ม Update แบบจำกัดเหมือน SO — ทำได้อย่างเดียวคือส่งใบงานตาม toggle ไม่บันทึกค่าฟอร์ม -->
+			<button type="button" id="smp_btn_send_cs" onclick="smpSendCs();" title="ส่งข้อมูลลงระบบ CS ตามที่ติ๊กไว้" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+				<i class="far fa-save"></i> Update
+			</button>
+			<?php } ?>
 			<?php if ($smpCanCancelOwn) { ?>
 			<button type="button" id="smp_btn_cancel_doc" onclick="smpTriggerCancelDoc();" style="background-color: white; color: #FF0000; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; height: 40px; display: flex; align-items: center; gap: 8px;">
 				<img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร
@@ -907,10 +928,41 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 			var keepClasses = ['btn-preview-so', 'so-tab-btn', 'so-latest-reason-close', 'so-back-btn'];
 			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function (el) {
 				if (el.type === 'hidden' || el.name === 'cancel_edit') return;
+				/* toggle/ปุ่มส่ง CS ใช้ได้แม้เปิดดูอย่างเดียว (toggle ที่ล็อกถูก disabled มาจาก partial อยู่แล้ว) */
+				if (el.id === 'send_cs' || el.id === 'smp_btn_send_cs') return;
 				for (var i = 0; i < keepClasses.length; i++) { if (el.classList.contains(keepClasses[i])) return; }
 				el.disabled = true;
 			});
 		})();
+	</script>
+<?php } ?>
+<?php if ($smpCsLimitedUpdate) { ?>
+	<script>
+		/* ปุ่ม Update แบบจำกัด: POST แยกจากฟอร์มหลัก (ไม่ส่งค่าฟอร์ม ไม่ผ่าน validation ของฟอร์ม) — ไม่ได้ติ๊ก toggle = ไม่มีอะไรให้บันทึก */
+		function smpSendCs() {
+			var toggle = document.getElementById('send_cs');
+			if (!toggle || !toggle.checked) {
+				var message = 'กรุณาติ๊ก "ส่งข้อมูลลงระบบ CS" ก่อนกด Update';
+				if (typeof Swal === 'undefined') { alert(message); return; }
+				Swal.fire({ icon: 'warning', title: message, confirmButtonColor: '#612989', confirmButtonText: 'ตกลง' });
+				return;
+			}
+			var button = document.getElementById('smp_btn_send_cs');
+			if (button) button.disabled = true;
+			var csForm = document.createElement('form');
+			csForm.method = 'post';
+			csForm.action = 'register_supsmp_action1.php';
+			var fields = { ref_idsmp: <?php echo json_encode((string)$smpDoc['ref_idsmp'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>, smp_send_cs: '1' };
+			Object.keys(fields).forEach(function (name) {
+				var input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = name;
+				input.value = fields[name];
+				csForm.appendChild(input);
+			});
+			document.body.appendChild(csForm);
+			csForm.submit();
+		}
 	</script>
 <?php } ?>
 <?php
