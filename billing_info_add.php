@@ -1,6 +1,7 @@
 <?php
 include('head.php');
 include('dbconnect.php');
+include('customer_code_lib.php');
 
 date_default_timezone_set('Asia/Bangkok');
 
@@ -79,35 +80,47 @@ function postValue($key, $default = '')
     return isset($_POST[$key]) ? trim($_POST[$key]) : $default;
 }
 
-$prefaceOptions = array(
-    'คุณ',
-    'มหาวิทยาลัย',
-    'บริษัท',
-    'หจก.',
-    'คลินิก',
-    'ร้าน',
-    'มูลนิธิ',
-    'ร้านขายยา',
-    'ร้านค้า',
-    'โรงพยาบาล',
-    'โรงเรียน',
-    'สถาบัน',
-    'สำนักงาน',
-    'หสน.',
-    'หสม.'
-);
-
 $provinces = fetchRows($conn, "SELECT province_name FROM tb_province ORDER BY province_name");
 $defaultTypeCustomer = fetchValue($conn, "SELECT type_id FROM tb_typecustomer ORDER BY type_id ASC LIMIT 1", '');
 $customerId = isset($_GET['customer_id']) ? (int)$_GET['customer_id'] : (isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0);
 $billingRecordId = isset($_GET['billing_id']) ? (int)$_GET['billing_id'] : (isset($_POST['billing_id']) ? (int)$_POST['billing_id'] : 0);
-$isEditMode = $customerId > 0;
 
+// ข้อมูลการออกบิลต้องอยู่ภายใต้ลูกค้าเสมอ หน้านี้ไม่สร้างลูกค้าใหม่ (สร้างที่ customer_add.php)
+// มี billing_id = แก้ไขบิลเดิม / ไม่มี billing_id = เพิ่มบิลใหม่ต่อท้ายใต้ลูกค้านั้น
+$blockMessage = '';
+$customerRow = null;
+if ($customerId > 0) {
+    $customerRows = fetchRows($conn, "SELECT * FROM tb_customer WHERE customer_id = " . (int)$customerId . " LIMIT 1");
+    $customerRow = !empty($customerRows) ? $customerRows[0] : null;
+}
+if (!$customerRow) {
+    $blockMessage = 'กรุณาเลือกลูกค้าก่อนเพิ่มข้อมูลออกบิล';
+}
+
+// ต้องมีตารางและคอลัมน์รหัสบิล 2+ ก่อนอ่าน/เขียน (ALTER commit ทรานแซกชันเอง จึงทำก่อน begin_transaction)
+ensureCustomerChildTables($conn);
+customer_code_ensure_billing_column($conn, 'awl');
+customer_code_ensure_billing_column($conn, 'nbm');
+
+// ใบหลัก = แถวบิลลำดับแรกของลูกค้า (ลำดับเดียวกับการ์ดใบที่ 1 ใน customer_add.php) ไม่อิง is_primary เพราะหน้านี้เคยตั้ง 1 ให้ทุกแถวที่ถูกแก้
+$primaryBillingId = $customerRow ? (int)fetchValue($conn, "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " ORDER BY billing_index ASC, id ASC LIMIT 1", 0) : 0;
+
+$billingRow = null;
+if ($customerRow && $billingRecordId > 0) {
+    $billingRows = fetchRows($conn, "SELECT * FROM tb_customer_billing_address WHERE id = " . (int)$billingRecordId . " AND customer_id = " . (int)$customerId . " LIMIT 1");
+    $billingRow = !empty($billingRows) ? $billingRows[0] : null;
+    if (!$billingRow) {
+        $blockMessage = 'ไม่พบข้อมูลออกบิลนี้ของลูกค้า';
+    }
+}
+$isEditMode = $billingRow !== null;
+
+// คำนำหน้าชื่อไม่มีในฟอร์มแล้ว ค่าเดิมในฐานข้อมูลคงไว้ตามที่โหลดมา (เพิ่มใหม่ = ว่าง)
 $formData = array(
     'customer_id' => $customerId,
     'billing_id' => $billingRecordId,
-    'customer_code' => '',
-    'customer_coden' => '',
+    'code_awl' => '',
+    'code_nbm' => '',
     'preface_name' => '',
     'bill_name' => '',
     'bill_tel' => '',
@@ -124,59 +137,41 @@ $formData = array(
 $successMessage = '';
 $successCustomerId = 0;
 
-if ($isEditMode) {
-    $customerRow = fetchRows($conn, "SELECT * FROM tb_customer WHERE customer_id = {$customerId} LIMIT 1");
-    $customerRow = !empty($customerRow) ? $customerRow[0] : null;
-    if ($customerRow) {
-        $primaryBillingRow = null;
-        if ($billingRecordId > 0) {
-            $billingRows = fetchRows($conn, "SELECT * FROM tb_customer_billing_address WHERE id = {$billingRecordId} AND customer_id = {$customerId} LIMIT 1");
-            $primaryBillingRow = !empty($billingRows) ? $billingRows[0] : null;
-        }
-        if (!$primaryBillingRow) {
-            // ใบหลัก = แถวบิลลำดับแรก (การ์ดใบที่ 1 ใน customer_add.php) ไม่อิง is_primary เพราะหน้านี้เคยตั้ง 1 ให้ทุกแถวที่ถูกแก้
-            $billingRows = fetchRows($conn, "SELECT * FROM tb_customer_billing_address WHERE customer_id = {$customerId} ORDER BY billing_index ASC, id ASC LIMIT 1");
-            $primaryBillingRow = !empty($billingRows) ? $billingRows[0] : null;
-        }
-
-        $formData['preface_name'] = $customerRow['preface_name'] ?? '';
-        $formData['customer_code'] = $customerRow['customer_code'] ?? '';
-        $formData['customer_coden'] = $customerRow['customer_coden'] ?? '';
-        $formData['bill_name'] = $customerRow['bill_name'] ?? '';
-        $formData['bill_tel'] = $customerRow['bill_tel'] ?? '';
-        $formData['tax_id'] = $customerRow['tax_id'] ?? '';
-        $formData['email_cus'] = $customerRow['email_cus'] ?? '';
-        $formData['bill_address'] = $customerRow['bill_address'] ?? '';
-        $formData['bill_province'] = $customerRow['billl_province'] ?? '';
-        $formData['bill_ampher'] = $customerRow['bill_ampher'] ?? '';
-        $formData['bill_postcode'] = $customerRow['bill_postcode'] ?? '';
-        $formData['branch_type'] = $customerRow['h_ckk'] !== '' ? $customerRow['h_ckk'] : '1';
-        $formData['branch_no'] = $customerRow['brun_no'] !== '' ? $customerRow['brun_no'] : '00000';
-
-        if ($primaryBillingRow) {
-            $formData['billing_id'] = (int)($primaryBillingRow['id'] ?? 0);
-            $formData['preface_name'] = $primaryBillingRow['billing_preface_name'] ?? $formData['preface_name'];
-            $formData['bill_name'] = $primaryBillingRow['billing_name'] ?? $formData['bill_name'];
-            $formData['bill_tel'] = $primaryBillingRow['billing_tel'] ?? $formData['bill_tel'];
-            $formData['tax_id'] = $primaryBillingRow['billing_tax_id'] ?? $formData['tax_id'];
-            $formData['email_cus'] = $primaryBillingRow['billing_email'] ?? $formData['email_cus'];
-            $formData['bill_address'] = $primaryBillingRow['billing_address'] ?? $formData['bill_address'];
-            $formData['bill_province'] = $primaryBillingRow['billing_province'] ?? $formData['bill_province'];
-            $formData['bill_ampher'] = $primaryBillingRow['billing_ampher'] ?? $formData['bill_ampher'];
-            $formData['bill_postcode'] = $primaryBillingRow['billing_postcode'] ?? $formData['bill_postcode'];
-            $formData['branch_type'] = $primaryBillingRow['billing_branch_type'] !== '' ? $primaryBillingRow['billing_branch_type'] : $formData['branch_type'];
-            $formData['branch_no'] = $primaryBillingRow['billing_branch_no'] !== '' ? $primaryBillingRow['billing_branch_no'] : $formData['branch_no'];
-        }
+if ($billingRow) {
+    $formData['billing_id'] = (int)$billingRow['id'];
+    $formData['preface_name'] = $billingRow['billing_preface_name'] ?? '';
+    $formData['bill_name'] = $billingRow['billing_name'] ?? '';
+    $formData['bill_tel'] = $billingRow['billing_tel'] ?? '';
+    $formData['tax_id'] = $billingRow['billing_tax_id'] ?? '';
+    $formData['email_cus'] = $billingRow['billing_email'] ?? '';
+    $formData['bill_address'] = $billingRow['billing_address'] ?? '';
+    $formData['bill_province'] = $billingRow['billing_province'] ?? '';
+    $formData['bill_ampher'] = $billingRow['billing_ampher'] ?? '';
+    $formData['bill_postcode'] = $billingRow['billing_postcode'] ?? '';
+    $formData['branch_type'] = ($billingRow['billing_branch_type'] ?? '') !== '' ? $billingRow['billing_branch_type'] : '1';
+    $formData['branch_no'] = ($billingRow['billing_branch_no'] ?? '') !== '' ? $billingRow['billing_branch_no'] : '00000';
+    // รหัสบิล 1 อยู่ใน tb_customer ส่วนบิล 2+ อยู่ในแถวบิลเอง (ดู customer_code_lib.php)
+    if ($formData['billing_id'] === $primaryBillingId) {
+        $formData['code_awl'] = trim((string)($customerRow['customer_code'] ?? ''));
+        $formData['code_nbm'] = trim((string)($customerRow['customer_coden'] ?? ''));
+    } else {
+        $formData['code_awl'] = trim((string)($billingRow['billing_code'] ?? ''));
+        $formData['code_nbm'] = trim((string)($billingRow['billing_coden'] ?? ''));
     }
 }
+
+// ลูกค้าที่ยังไม่มีแถวบิลเลย บิลที่จะเพิ่มคือใบหลัก ใช้รหัสเดิมของลูกค้าต่อ ไม่ให้เขียนทับเป็นว่าง
+if (!$billingRow && $customerRow && $primaryBillingId === 0) {
+    $formData['code_awl'] = trim((string)($customerRow['customer_code'] ?? ''));
+    $formData['code_nbm'] = trim((string)($customerRow['customer_coden'] ?? ''));
+}
+
+// รหัสที่บันทึกอยู่ในฐานของบิลที่เปิดอยู่ ใช้เทียบว่าผู้ใช้กด Run รหัสใหม่มาหรือไม่
+$savedCodes = array('awl' => $formData['code_awl'], 'nbm' => $formData['code_nbm']);
 
 $errorMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customerId = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : $customerId;
-    $billingRecordId = isset($_POST['billing_id']) ? (int)$_POST['billing_id'] : $billingRecordId;
-    $isEditMode = $customerId > 0;
-
     foreach ($formData as $key => $value) {
         $formData[$key] = postValue($key, $value);
     }
@@ -193,8 +188,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formData['branch_no'] = '00000';
     }
 
-    if (
-        $formData['preface_name'] === '' ||
+    $formData['code_awl'] = preg_replace('/\s+/', '', $formData['code_awl']);
+    $formData['code_nbm'] = preg_replace('/\s+/', '', $formData['code_nbm']);
+
+    if ($blockMessage !== '') {
+        $errorMessage = $blockMessage;
+    } elseif (
         $formData['bill_name'] === '' ||
         $formData['bill_tel'] === '' ||
         $formData['tax_id'] === '' ||
@@ -210,192 +209,156 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($formData['email_cus'], FILTER_VALIDATE_EMAIL)) {
         $errorMessage = 'รูปแบบ E-mail ไม่ถูกต้อง';
     } else {
-        $duplicateSql = "SELECT customer_id FROM tb_customer WHERE bill_name='" . esc($conn, $formData['bill_name']) . "' AND tax_id='" . esc($conn, $formData['tax_id']) . "' AND bill_tel='" . esc($conn, $formData['bill_tel']) . "'";
-        if ($isEditMode) {
-            $duplicateSql .= " AND customer_id <> " . (int)$customerId;
-        }
-        $duplicateSql .= " LIMIT 1";
+        // เช็คซ้ำเฉพาะบิลของลูกค้าคนเดียวกัน (ลูกค้าคนละคนมีข้อมูลบิลเหมือนกันได้)
+        $duplicateSql = "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " AND billing_name='" . esc($conn, $formData['bill_name']) . "' AND billing_tax_id='" . esc($conn, $formData['tax_id']) . "' AND billing_tel='" . esc($conn, $formData['bill_tel']) . "' AND id <> " . (int)$billingRecordId . " LIMIT 1";
         $duplicateQuery = mysqli_query($conn, $duplicateSql);
         if ($duplicateQuery && mysqli_num_rows($duplicateQuery) > 0) {
             $errorMessage = 'ข้อมูลออกบิลนี้มีอยู่ในระบบแล้ว';
         }
     }
 
+    // ใบหลัก = แถวบิลลำดับแรกของลูกค้า ติ๊ก "ใช้เป็นข้อมูลหลัก" บนบิลใบอื่นจะสลับบิลนั้นขึ้นเป็นใบแรกพร้อมรหัส (เหมือนการ์ดใน customer_add.php)
+    // แก้บิลใบอื่นโดยไม่ติ๊กต้องไม่เขียนทับค่าเริ่มต้นของลูกค้าใน tb_customer
+    // ลูกค้าที่ยังไม่มีแถวบิลเลย บิลที่เพิ่มคือใบแรก = ใบหลัก
+    $isPrimaryBillingRow = $primaryBillingId === 0 || $billingRecordId === $primaryBillingId;
+    $becomesPrimary = !$isPrimaryBillingRow && isset($_POST['is_primary']);
+
+    // รหัสที่กด Run มา: รันใหม่ถ้าไม่ใช่เลขเดือนนี้หรือมีคนใช้ไปก่อนแล้ว ต้องถือ lock ก่อนเริ่มทรานแซกชันให้ครอบถึงตอนเขียน
+    $resolvedCodes = $savedCodes;
+    if ($errorMessage === '') {
+        foreach (array('awl' => 'code_awl', 'nbm' => 'code_nbm') as $codeType => $codeField) {
+            $postedCode = $formData[$codeField];
+            if ($postedCode === '' || $postedCode === $savedCodes[$codeType]) {
+                continue;
+            }
+            if (!customer_code_acquire_lock($conn, $codeType)) {
+                $errorMessage = 'ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง';
+                break;
+            }
+            $keepCode = preg_match('/^' . customer_code_prefix($codeType) . '\d{4}$/', $postedCode) === 1 && !customer_code_is_used($conn, $codeType, $postedCode);
+            $resolvedCodes[$codeType] = $keepCode ? $postedCode : customer_code_next($conn, $codeType);
+            if ($resolvedCodes[$codeType] === '') {
+                $errorMessage = 'เลขรันรหัสลูกค้าของเดือนนี้เต็มแล้ว';
+                break;
+            }
+        }
+    }
+
     if ($errorMessage === '') {
         mysqli_begin_transaction($conn);
-        $allOk = ensureCustomerChildTables($conn);
-        // ใบหลัก = แถวบิลลำดับแรกของลูกค้า (ลำดับเดียวกับการ์ดใบที่ 1 ใน customer_add.php) เลือกใบหลักได้จากปุ่ม "ใช้เป็นข้อมูลหลัก" ในหน้านั้นที่เดียว
-        // แก้บิลใบอื่นจากหน้านี้ต้องไม่เขียนทับค่าเริ่มต้นของลูกค้าใน tb_customer
-        $primaryBillingId = $isEditMode ? (int)fetchValue($conn, "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " ORDER BY billing_index ASC, id ASC LIMIT 1", 0) : 0;
-        $isPrimaryBillingRow = $primaryBillingId === 0 || $billingRecordId === 0 || $billingRecordId === $primaryBillingId;
-        $existingCustomerRow = null;
-        if ($isEditMode) {
-            $existingCustomerRows = fetchRows($conn, "SELECT * FROM tb_customer WHERE customer_id = {$customerId} LIMIT 1");
-            $existingCustomerRow = !empty($existingCustomerRows) ? $existingCustomerRows[0] : null;
-        }
+        $allOk = true;
+        $existingCustomerRow = $customerRow;
 
         $fullName = trim($formData['preface_name'] . ' ' . $formData['bill_name']);
-        if ($isEditMode && $existingCustomerRow) {
-            $customerSqlData = array(
-                "customer_code='" . esc($conn, $existingCustomerRow['customer_code'] ?? '') . "'",
-                "customer_name='" . esc($conn, $fullName) . "'",
-                "type_customer='" . esc($conn, $existingCustomerRow['type_customer'] ?? $defaultTypeCustomer) . "'",
-                "preface_name='" . esc($conn, $formData['preface_name']) . "'",
-                "cus_address='" . esc($conn, $existingCustomerRow['cus_address'] ?? '') . "'",
-                "cus_ampher='" . esc($conn, $existingCustomerRow['cus_ampher'] ?? '') . "'",
-                "cus_province='" . esc($conn, $existingCustomerRow['cus_province'] ?? '') . "'",
-                "cus_postcode='" . esc($conn, $existingCustomerRow['cus_postcode'] ?? '') . "'",
-                "cus_tel='" . esc($conn, $existingCustomerRow['cus_tel'] ?? $formData['bill_tel']) . "'",
-                "cus_fax='" . esc($conn, $existingCustomerRow['cus_fax'] ?? '') . "'",
-                "bill_name='" . esc($conn, $formData['bill_name']) . "'",
-                "bill_address='" . esc($conn, $formData['bill_address']) . "'",
-                "bill_ampher='" . esc($conn, $formData['bill_ampher']) . "'",
-                "billl_province='" . esc($conn, $formData['bill_province']) . "'",
-                "bill_postcode='" . esc($conn, $formData['bill_postcode']) . "'",
-                "bill_tel='" . esc($conn, $formData['bill_tel']) . "'",
-                "tax_id='" . esc($conn, $formData['tax_id']) . "'",
-                "delivery_name='" . esc($conn, $existingCustomerRow['delivery_name'] ?? '') . "'",
-                "del_address='" . esc($conn, $existingCustomerRow['del_address'] ?? '') . "'",
-                "del_ampher='" . esc($conn, $existingCustomerRow['del_ampher'] ?? '') . "'",
-                "del_province='" . esc($conn, $existingCustomerRow['del_province'] ?? '') . "'",
-                "del_postcode='" . esc($conn, $existingCustomerRow['del_postcode'] ?? '') . "'",
-                "del_tel='" . esc($conn, $existingCustomerRow['del_tel'] ?? '') . "'",
-                "contact_name='" . esc($conn, $existingCustomerRow['contact_name'] ?? '') . "'",
-                "warranty='" . esc($conn, $existingCustomerRow['warranty'] ?? '') . "'",
-                "brun_no='" . esc($conn, $formData['branch_no']) . "'",
-                "h_ckk='" . esc($conn, $formData['branch_type']) . "'",
-                "rental_name='" . esc($conn, $existingCustomerRow['rental_name'] ?? '') . "'",
-                "rental_emer='" . esc($conn, $existingCustomerRow['rental_emer'] ?? '') . "'",
-                "rental_address='" . esc($conn, $existingCustomerRow['rental_address'] ?? '') . "'",
-                "rental_ampher='" . esc($conn, $existingCustomerRow['rental_ampher'] ?? '') . "'",
-                "rental_province='" . esc($conn, $existingCustomerRow['rental_province'] ?? '') . "'",
-                "rental_postcode='" . esc($conn, $existingCustomerRow['rental_postcode'] ?? '') . "'",
-                "rental_emertel='" . esc($conn, $existingCustomerRow['rental_emertel'] ?? '') . "'",
-                "rental_tel='" . esc($conn, $existingCustomerRow['rental_tel'] ?? '') . "'",
-                "patient_name='" . esc($conn, $existingCustomerRow['patient_name'] ?? '') . "'",
-                "install_address='" . esc($conn, $existingCustomerRow['install_address'] ?? '') . "'",
-                "rental_contact='" . esc($conn, $existingCustomerRow['rental_contact'] ?? '') . "'",
-                "rental_contacttel='" . esc($conn, $existingCustomerRow['rental_contacttel'] ?? '') . "'",
-                "mode_name='" . esc($conn, $existingCustomerRow['mode_name'] ?? '') . "'",
-                "email_cus='" . esc($conn, $formData['email_cus']) . "'",
-                "vip_ckk='" . esc($conn, $existingCustomerRow['vip_ckk'] ?? '0') . "'",
-                "credit_ckk='" . esc($conn, $existingCustomerRow['credit_ckk'] ?? '') . "'",
-                "customer_coden='" . esc($conn, $existingCustomerRow['customer_coden'] ?? '') . "'",
-                "close_ckk='" . esc($conn, $existingCustomerRow['close_ckk'] ?? '0') . "'",
-                "remark_cus='" . esc($conn, $existingCustomerRow['remark_cus'] ?? '') . "'"
-            );
-        } else {
-            $customerSqlData = array(
-                "first_name=''",
-                "last_name=''",
-                "customer_no=''",
-                "customer_coden=''",
-                "customer_code=''",
-                "customer_name='" . esc($conn, $fullName) . "'",
-                "type_customer='" . esc($conn, $defaultTypeCustomer) . "'",
-                "preface_name='" . esc($conn, $formData['preface_name']) . "'",
-                "cus_address='" . esc($conn, $formData['bill_address']) . "'",
-                "cus_ampher='" . esc($conn, $formData['bill_ampher']) . "'",
-                "cus_province='" . esc($conn, $formData['bill_province']) . "'",
-                "cus_postcode='" . esc($conn, $formData['bill_postcode']) . "'",
-                "cus_tel='" . esc($conn, $formData['bill_tel']) . "'",
-                "cus_fax=''",
-                "bill_name='" . esc($conn, $formData['bill_name']) . "'",
-                "bill_address='" . esc($conn, $formData['bill_address']) . "'",
-                "bill_ampher='" . esc($conn, $formData['bill_ampher']) . "'",
-                "billl_province='" . esc($conn, $formData['bill_province']) . "'",
-                "bill_postcode='" . esc($conn, $formData['bill_postcode']) . "'",
-                "bill_tel='" . esc($conn, $formData['bill_tel']) . "'",
-                "tax_id='" . esc($conn, $formData['tax_id']) . "'",
-                "delivery_name=''",
-                "del_address=''",
-                "del_ampher=''",
-                "del_province=''",
-                "del_postcode=''",
-                "del_tel=''",
-                "contact_name=''",
-                "warranty=''",
-                "brun_no='" . esc($conn, $formData['branch_no']) . "'",
-                "h_ckk='" . esc($conn, $formData['branch_type']) . "'",
-                "rental_name=''",
-                "rental_emer=''",
-                "rental_address=''",
-                "rental_ampher=''",
-                "rental_province=''",
-                "rental_postcode=''",
-                "rental_emertel=''",
-                "rental_tel=''",
-                "patient_name=''",
-                "install_address=''",
-                "rental_contact=''",
-                "rental_contacttel=''",
-                "mode_name=''",
-                "email_cus='" . esc($conn, $formData['email_cus']) . "'",
-                "vip_ckk='0'",
-                "credit_ckk=''",
-                "customer_coden=''",
-                "close_ckk='0'",
-                "remark_cus=''"
-            );
+        $customerSqlData = array(
+            "customer_code='" . esc($conn, $resolvedCodes['awl']) . "'",
+            "customer_name='" . esc($conn, $fullName) . "'",
+            "type_customer='" . esc($conn, $existingCustomerRow['type_customer'] ?? $defaultTypeCustomer) . "'",
+            "preface_name='" . esc($conn, $formData['preface_name']) . "'",
+            "cus_address='" . esc($conn, $existingCustomerRow['cus_address'] ?? '') . "'",
+            "cus_ampher='" . esc($conn, $existingCustomerRow['cus_ampher'] ?? '') . "'",
+            "cus_province='" . esc($conn, $existingCustomerRow['cus_province'] ?? '') . "'",
+            "cus_postcode='" . esc($conn, $existingCustomerRow['cus_postcode'] ?? '') . "'",
+            "cus_tel='" . esc($conn, $existingCustomerRow['cus_tel'] ?? $formData['bill_tel']) . "'",
+            "cus_fax='" . esc($conn, $existingCustomerRow['cus_fax'] ?? '') . "'",
+            "bill_name='" . esc($conn, $formData['bill_name']) . "'",
+            "bill_address='" . esc($conn, $formData['bill_address']) . "'",
+            "bill_ampher='" . esc($conn, $formData['bill_ampher']) . "'",
+            "billl_province='" . esc($conn, $formData['bill_province']) . "'",
+            "bill_postcode='" . esc($conn, $formData['bill_postcode']) . "'",
+            "bill_tel='" . esc($conn, $formData['bill_tel']) . "'",
+            "tax_id='" . esc($conn, $formData['tax_id']) . "'",
+            "delivery_name='" . esc($conn, $existingCustomerRow['delivery_name'] ?? '') . "'",
+            "del_address='" . esc($conn, $existingCustomerRow['del_address'] ?? '') . "'",
+            "del_ampher='" . esc($conn, $existingCustomerRow['del_ampher'] ?? '') . "'",
+            "del_province='" . esc($conn, $existingCustomerRow['del_province'] ?? '') . "'",
+            "del_postcode='" . esc($conn, $existingCustomerRow['del_postcode'] ?? '') . "'",
+            "del_tel='" . esc($conn, $existingCustomerRow['del_tel'] ?? '') . "'",
+            "contact_name='" . esc($conn, $existingCustomerRow['contact_name'] ?? '') . "'",
+            "warranty='" . esc($conn, $existingCustomerRow['warranty'] ?? '') . "'",
+            "brun_no='" . esc($conn, $formData['branch_no']) . "'",
+            "h_ckk='" . esc($conn, $formData['branch_type']) . "'",
+            "rental_name='" . esc($conn, $existingCustomerRow['rental_name'] ?? '') . "'",
+            "rental_emer='" . esc($conn, $existingCustomerRow['rental_emer'] ?? '') . "'",
+            "rental_address='" . esc($conn, $existingCustomerRow['rental_address'] ?? '') . "'",
+            "rental_ampher='" . esc($conn, $existingCustomerRow['rental_ampher'] ?? '') . "'",
+            "rental_province='" . esc($conn, $existingCustomerRow['rental_province'] ?? '') . "'",
+            "rental_postcode='" . esc($conn, $existingCustomerRow['rental_postcode'] ?? '') . "'",
+            "rental_emertel='" . esc($conn, $existingCustomerRow['rental_emertel'] ?? '') . "'",
+            "rental_tel='" . esc($conn, $existingCustomerRow['rental_tel'] ?? '') . "'",
+            "patient_name='" . esc($conn, $existingCustomerRow['patient_name'] ?? '') . "'",
+            "install_address='" . esc($conn, $existingCustomerRow['install_address'] ?? '') . "'",
+            "rental_contact='" . esc($conn, $existingCustomerRow['rental_contact'] ?? '') . "'",
+            "rental_contacttel='" . esc($conn, $existingCustomerRow['rental_contacttel'] ?? '') . "'",
+            "mode_name='" . esc($conn, $existingCustomerRow['mode_name'] ?? '') . "'",
+            "email_cus='" . esc($conn, $formData['email_cus']) . "'",
+            "vip_ckk='" . esc($conn, $existingCustomerRow['vip_ckk'] ?? '0') . "'",
+            "credit_ckk='" . esc($conn, $existingCustomerRow['credit_ckk'] ?? '') . "'",
+            "customer_coden='" . esc($conn, $resolvedCodes['nbm']) . "'",
+            "close_ckk='" . esc($conn, $existingCustomerRow['close_ckk'] ?? '0') . "'",
+            "remark_cus='" . esc($conn, $existingCustomerRow['remark_cus'] ?? '') . "'"
+        );
+
+        // บิลที่เพิ่มเป็นใบแรก / ติ๊กเป็นใบหลัก = เขียนค่าลง tb_customer ส่วนบิลใบอื่นที่ไม่ติ๊กต้องไม่เขียนทับค่าเริ่มต้นของลูกค้า
+        if ($allOk && ($isPrimaryBillingRow || $becomesPrimary)) {
+            $customerUpdateSql = "UPDATE tb_customer SET " . implode(', ', $customerSqlData) . " WHERE customer_id='" . esc($conn, $customerId) . "'";
+            $allOk = mysqli_query($conn, $customerUpdateSql) ? true : false;
         }
 
         if ($allOk) {
-            if ($isEditMode) {
-                if ($isPrimaryBillingRow) {
-                    $customerUpdateSql = "UPDATE tb_customer SET " . implode(', ', $customerSqlData) . " WHERE customer_id='" . esc($conn, $customerId) . "'";
-                    $allOk = mysqli_query($conn, $customerUpdateSql) ? true : false;
-                }
+            // บิล 1 เก็บรหัสไว้ใน tb_customer ด้วย แถวบิลทุกแถวเก็บรหัสของตัวเอง (เหมือน edit_customer1.php)
+            $codeAwlSql = $resolvedCodes['awl'] === '' ? 'NULL' : "'" . esc($conn, $resolvedCodes['awl']) . "'";
+            $codeNbmSql = $resolvedCodes['nbm'] === '' ? 'NULL' : "'" . esc($conn, $resolvedCodes['nbm']) . "'";
+            $targetBillingId = $billingRecordId;
+
+            if ($targetBillingId === 0) {
+                // เพิ่มบิลใหม่ต่อท้ายใต้ลูกค้านี้ (ลูกค้าที่ยังไม่มีบิลเลย บิลนี้คือลำดับ 1)
+                $nextBillingIndex = (int)fetchValue($conn, "SELECT MAX(billing_index) FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId, 0) + 1;
+                $billingInsertSql = "INSERT INTO tb_customer_billing_address
+                    (customer_id, billing_index, billing_code, billing_coden, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
+                    VALUES
+                    ('" . esc($conn, $customerId) . "', '" . $nextBillingIndex . "', " . $codeAwlSql . ", " . $codeNbmSql . ", '" . esc($conn, $formData['preface_name']) . "', '" . esc($conn, $formData['bill_name']) . "', '" . esc($conn, $formData['tax_id']) . "', '" . esc($conn, $formData['bill_tel']) . "', '" . esc($conn, $formData['email_cus']) . "', '" . esc($conn, $formData['bill_address']) . "', '" . esc($conn, $formData['bill_ampher']) . "', '" . esc($conn, $formData['bill_province']) . "', '" . esc($conn, $formData['bill_postcode']) . "', '" . esc($conn, $formData['branch_type']) . "', '" . esc($conn, $formData['branch_no']) . "', '" . ($nextBillingIndex === 1 ? 1 : 0) . "')";
+                $allOk = mysqli_query($conn, $billingInsertSql) ? true : false;
+                $targetBillingId = $allOk ? (int)mysqli_insert_id($conn) : 0;
             } else {
-                $customerInsertSql = "INSERT INTO tb_customer SET " . implode(', ', $customerSqlData);
-                $allOk = mysqli_query($conn, $customerInsertSql) ? true : false;
-                $customerId = $allOk ? mysqli_insert_id($conn) : 0;
+                // คำนำหน้าชื่อไม่มีในฟอร์ม จึงไม่แตะ billing_preface_name ของแถวที่แก้
+                $existingBillingSql = "UPDATE tb_customer_billing_address SET
+                    billing_code=" . $codeAwlSql . ",
+                    billing_coden=" . $codeNbmSql . ",
+                    billing_name='" . esc($conn, $formData['bill_name']) . "',
+                    billing_tax_id='" . esc($conn, $formData['tax_id']) . "',
+                    billing_tel='" . esc($conn, $formData['bill_tel']) . "',
+                    billing_email='" . esc($conn, $formData['email_cus']) . "',
+                    billing_address='" . esc($conn, $formData['bill_address']) . "',
+                    billing_ampher='" . esc($conn, $formData['bill_ampher']) . "',
+                    billing_province='" . esc($conn, $formData['bill_province']) . "',
+                    billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
+                    billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
+                    billing_branch_no='" . esc($conn, $formData['branch_no']) . "'
+                    WHERE id='" . esc($conn, $targetBillingId) . "' AND customer_id='" . esc($conn, $customerId) . "'";
+                $allOk = mysqli_query($conn, $existingBillingSql) ? true : false;
             }
-        }
 
-        if ($allOk && $customerId > 0) {
-            $primaryBillingSql = "INSERT INTO tb_customer_billing_address
-                (customer_id, billing_index, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
-                VALUES
-                ('" . esc($conn, $customerId) . "', '1', '" . esc($conn, $formData['preface_name']) . "', '" . esc($conn, $formData['bill_name']) . "', '" . esc($conn, $formData['tax_id']) . "', '" . esc($conn, $formData['bill_tel']) . "', '" . esc($conn, $formData['email_cus']) . "', '" . esc($conn, $formData['bill_address']) . "', '" . esc($conn, $formData['bill_ampher']) . "', '" . esc($conn, $formData['bill_province']) . "', '" . esc($conn, $formData['bill_postcode']) . "', '" . esc($conn, $formData['branch_type']) . "', '" . esc($conn, $formData['branch_no']) . "', '1')";
-
-            if ($isEditMode) {
-                if ($billingRecordId > 0) {
-                    $existingBillingSql = "UPDATE tb_customer_billing_address SET
-                        billing_preface_name='" . esc($conn, $formData['preface_name']) . "',
-                        billing_name='" . esc($conn, $formData['bill_name']) . "',
-                        billing_tax_id='" . esc($conn, $formData['tax_id']) . "',
-                        billing_tel='" . esc($conn, $formData['bill_tel']) . "',
-                        billing_email='" . esc($conn, $formData['email_cus']) . "',
-                        billing_address='" . esc($conn, $formData['bill_address']) . "',
-                        billing_ampher='" . esc($conn, $formData['bill_ampher']) . "',
-                        billing_province='" . esc($conn, $formData['bill_province']) . "',
-                        billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
-                        billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
-                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "'
-                        WHERE id='" . esc($conn, $billingRecordId) . "' AND customer_id='" . esc($conn, $customerId) . "'";
-                    $allOk = mysqli_query($conn, $existingBillingSql) ? true : false;
-                } else {
-                    if ($primaryBillingId > 0) {
-                        $existingPrimaryBillingSql = "UPDATE tb_customer_billing_address SET
-                        billing_preface_name='" . esc($conn, $formData['preface_name']) . "',
-                        billing_name='" . esc($conn, $formData['bill_name']) . "',
-                        billing_tax_id='" . esc($conn, $formData['tax_id']) . "',
-                        billing_tel='" . esc($conn, $formData['bill_tel']) . "',
-                        billing_email='" . esc($conn, $formData['email_cus']) . "',
-                        billing_address='" . esc($conn, $formData['bill_address']) . "',
-                        billing_ampher='" . esc($conn, $formData['bill_ampher']) . "',
-                        billing_province='" . esc($conn, $formData['bill_province']) . "',
-                        billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
-                        billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
-                        billing_branch_no='" . esc($conn, $formData['branch_no']) . "'
-                        WHERE id='" . esc($conn, $primaryBillingId) . "' AND customer_id='" . esc($conn, $customerId) . "'";
-                        $allOk = mysqli_query($conn, $existingPrimaryBillingSql) ? true : false;
-                    } else {
-                        $allOk = mysqli_query($conn, $primaryBillingSql) ? true : false;
+            if ($allOk && $becomesPrimary) {
+                // ย้ายบิลนี้ขึ้นเป็นลำดับ 1 ที่เหลือเรียงต่อตามเดิม ใบหลักเดิมส่งรหัสใน tb_customer ลงแถวของตัวเอง
+                $orderedIds = array($targetBillingId);
+                foreach (fetchRows($conn, "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " ORDER BY billing_index ASC, id ASC") as $orderRow) {
+                    if ((int)$orderRow['id'] !== $targetBillingId) {
+                        $orderedIds[] = (int)$orderRow['id'];
                     }
                 }
-            } else {
-                $allOk = mysqli_query($conn, $primaryBillingSql) ? true : false;
+                foreach ($orderedIds as $position => $orderedId) {
+                    $reorderSet = "billing_index=" . ($position + 1) . ", is_primary=" . ($position === 0 ? 1 : 0);
+                    if ($orderedId === $primaryBillingId) {
+                        $oldAwl = trim((string)($existingCustomerRow['customer_code'] ?? ''));
+                        $oldNbm = trim((string)($existingCustomerRow['customer_coden'] ?? ''));
+                        $reorderSet .= ", billing_code=" . ($oldAwl === '' ? 'NULL' : "'" . esc($conn, $oldAwl) . "'") . ", billing_coden=" . ($oldNbm === '' ? 'NULL' : "'" . esc($conn, $oldNbm) . "'");
+                    }
+                    $allOk = mysqli_query($conn, "UPDATE tb_customer_billing_address SET " . $reorderSet . " WHERE id=" . $orderedId . " AND customer_id=" . (int)$customerId) ? true : false;
+                    if (!$allOk) {
+                        break;
+                    }
+                }
             }
         }
 
@@ -403,11 +366,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_commit($conn);
             $successMessage = $isEditMode ? 'อัปเดตข้อมูลสำเร็จ' : 'บันทึกข้อมูลสำเร็จ';
             $successCustomerId = (int)$customerId;
+            // เพิ่มสำเร็จแล้วหน้านี้กลายเป็นการแก้บิลใบที่เพิ่งสร้าง กดซ้ำจะไม่เพิ่มบิลซ้ำ
+            $billingRecordId = $targetBillingId;
+            $formData['billing_id'] = $targetBillingId;
+            $savedCodes = $resolvedCodes;
+            $formData['code_awl'] = $resolvedCodes['awl'];
+            $formData['code_nbm'] = $resolvedCodes['nbm'];
         } else {
             mysqli_rollback($conn);
             $errorMessage = 'ไม่สามารถบันทึกข้อมูลออกบิลได้';
         }
     }
+}
+
+// บิลที่เปิดอยู่เป็นใบหลักหรือไม่ (หลังบันทึกแล้วอ่านใหม่ เพราะการติ๊กอาจสลับลำดับ) ใบหลักติ๊กค้างเอาออกไม่ได้ บิลที่กำลังเพิ่มติ๊กเองได้
+$displayBillingId = (int)$formData['billing_id'];
+$displayPrimaryId = $customerRow ? (int)fetchValue($conn, "SELECT id FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId . " ORDER BY billing_index ASC, id ASC LIMIT 1", 0) : 0;
+$isPrimaryLocked = $displayBillingId > 0 ? $displayBillingId === $displayPrimaryId : $displayPrimaryId === 0;
+$isPrimaryChecked = $isPrimaryLocked || isset($_POST['is_primary']);
+$isFormBlocked = $blockMessage !== '';
+if ($isFormBlocked && $errorMessage === '') {
+    $errorMessage = $blockMessage;
 }
 ?>
 <!DOCTYPE html>
@@ -415,15 +394,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>เพิ่มข้อมูลการออกบิล</title>
     <style>
         :root {
             --primary: #612989;
-            --primary-soft: #f5eefb;
-            --border: #ece7f2;
+            --primary-soft: #f1e1ff;
+            --border: #ede9f0;
             --input-bg: #f5f6f8;
-            --text: #2f3337;
-            --muted: #8b8196;
+            --text: #3b3b3b;
+            --placeholder: #696969;
             --danger: #d92d20;
             --shadow: 0 22px 54px rgba(35, 20, 49, 0.18);
         }
@@ -442,8 +422,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .billing-page {
-            max-width: 1120px;
+            max-width: 1096px;
             margin: 0 auto;
+            padding: 25px 32px;
             background: #fff;
             border-radius: 10px;
             box-shadow: var(--shadow);
@@ -451,71 +432,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .billing-header {
-            position: relative;
-            padding: 22px 32px 16px;
-            border-bottom: 1px solid var(--border);
+            padding: 0 10px 2px;
+            border-bottom: 2px solid var(--border);
+            margin: 0 0 15px;
         }
 
         .billing-header h1 {
             margin: 0;
             font-size: 20px;
-            font-weight: 600;
-            color: #3b3b3b;
+            font-weight: 500;
+            line-height: 30px;
+            color: var(--text);
         }
 
-        .close-button {
-            position: absolute;
-            top: 10px;
-            right: 18px;
+        .form-fieldset {
+            min-width: 0;
+            margin: 0;
+            padding: 0;
             border: 0;
-            background: transparent;
-            color: #494949;
-            font-size: 38px;
-            line-height: 1;
-            cursor: pointer;
         }
 
-        .billing-form {
-            padding: 18px 32px 24px;
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(12, minmax(0, 1fr));
-            gap: 18px 22px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px;
         }
 
         .field {
-            grid-column: span 4;
+            min-width: 0;
         }
 
-        .field.span-2 {
-            grid-column: span 2;
-        }
-
-        .field.span-3 {
-            grid-column: span 3;
-        }
-
-        .field.span-8 {
-            grid-column: span 8;
+        .field.span-full {
+            grid-column: 1 / -1;
         }
 
         .label {
             display: block;
-            margin: 0 0 8px;
+            margin: 0 0 0 10px;
             color: var(--primary);
             font-size: 14px;
             font-weight: 400;
+            line-height: 21px;
             white-space: nowrap;
         }
 
         .required {
-            color: #f04438;
+            color: red;
         }
 
         .control,
         .select {
+            display: block;
             width: 100%;
             height: 42px;
             border: 0;
@@ -528,29 +500,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             outline: none;
         }
 
+        .control:focus,
+        .select:focus {
+            box-shadow: 0 0 0 2px rgba(97, 41, 137, 0.25);
+        }
+
+        .control::placeholder {
+            color: var(--placeholder);
+        }
+
+        .select {
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
         .control-wrap {
             position: relative;
         }
 
-        .control.has-clear {
-            padding-right: 42px;
+        .control-wrap.has-clear .control {
+            padding-right: 48px;
+        }
+
+        .control-wrap.has-chevron .control,
+        .control-wrap.has-chevron .select {
+            padding-right: 48px;
         }
 
         .clear {
             position: absolute;
-            top: 50%;
-            right: 12px;
-            transform: translateY(-50%);
+            top: 9px;
+            right: 16px;
+            width: 24px;
+            height: 24px;
+            display: grid;
+            place-items: center;
             border: 0;
+            padding: 0;
             background: transparent;
-            color: #6d6d6d;
-            font-size: 18px;
             cursor: pointer;
         }
 
-        .readonly {
-            color: #4c4c4c;
+        .clear img {
+            width: 12px;
+            height: 12px;
+        }
+
+        .chevron {
+            position: absolute;
+            top: 9px;
+            right: 16px;
+            width: 24px;
+            height: 24px;
+            pointer-events: none;
+        }
+
+        .code-field {
+            display: flex;
+            align-items: flex-end;
+            gap: 24px;
+        }
+
+        .code-group {
+            flex: 1 1 0;
+            max-width: 152px;
+            min-width: 0;
+        }
+
+        .control.readonly {
+            font-size: 14px;
             font-weight: 500;
+            color: var(--text);
+        }
+
+        .run-button {
+            flex: none;
+            width: 152px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 0;
+            border-radius: 21px;
+            background: var(--primary-soft);
+            box-shadow: 0 0 2px rgba(97, 41, 137, 0.25);
+            color: var(--primary);
+            font-family: 'Prompt', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 9px 8px 9px 13px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .run-button .run-icon {
+            width: 24px;
+            height: 24px;
+            display: grid;
+            place-items: center;
+            flex: none;
+        }
+
+        .run-button .run-icon img {
+            width: 21.5px;
+            height: 17.5px;
+        }
+
+        .run-button:hover {
+            background: #e8cffb;
+        }
+
+        .run-button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .primary-field {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .primary-toggle {
+            width: 152px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: var(--input-bg);
+            color: var(--placeholder);
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .primary-toggle input {
+            display: none;
+        }
+
+        .primary-toggle img {
+            width: 24px;
+            height: 24px;
+            filter: brightness(0) opacity(0.35);
+        }
+
+        .primary-toggle.is-active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .primary-toggle.is-active img {
+            filter: none;
         }
 
         .error-box {
@@ -614,18 +718,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .actions {
             display: flex;
             justify-content: flex-end;
-            gap: 16px;
-            padding-top: 24px;
+            gap: 24px;
+            padding-top: 28px;
         }
 
         .btn {
-            min-width: 158px;
-            height: 42px;
-            border-radius: 24px;
+            width: 157px;
+            height: 40px;
+            border-radius: 25px;
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
         }
 
         .btn-primary {
@@ -635,29 +740,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .btn-secondary {
-            border: 1px solid #dfdfdf;
+            border: 0;
             background: #fff;
-            color: #333;
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+            color: var(--text);
         }
 
         @media (max-width: 900px) {
-
-            .field,
-            .field.span-2,
-            .field.span-3,
-            .field.span-8 {
-                grid-column: span 12;
-            }
-
             body {
                 padding: 10px;
             }
 
-            .billing-header,
-            .billing-form {
-                padding-left: 18px;
-                padding-right: 18px;
+            .billing-page {
+                padding: 20px 18px;
+            }
+
+            .grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .field.span-full {
+                grid-column: auto;
             }
 
             .actions {
@@ -684,95 +786,121 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="error-box"><?php echo h($errorMessage); ?></div>
             <?php } ?>
 
+            <fieldset class="form-fieldset" <?php echo $isFormBlocked ? 'disabled' : ''; ?>>
             <div class="grid">
-                <div class="field span-2">
-                    <label class="label">รหัสลูกค้า AWL</label>
-                    <input type="text" class="control readonly" value="<?php echo h($formData['customer_code'] !== '' ? $formData['customer_code'] : 'Auto'); ?>" readonly>
+                <div class="field code-field js-code-row" data-code-type="awl">
+                    <div class="code-group">
+                        <label class="label">รหัสลูกค้า AWL</label>
+                        <input type="text" class="control readonly js-code-display" value="<?php echo h($formData['code_awl'] !== '' ? $formData['code_awl'] : 'Auto'); ?>" readonly>
+                        <input type="hidden" class="js-code-value" name="code_awl" value="<?php echo h($formData['code_awl']); ?>" data-saved-code="<?php echo h($savedCodes['awl']); ?>">
+                    </div>
+                    <button type="button" class="run-button js-code-run">
+                        <span class="run-icon"><img src="img/icons/figma_user_id.svg" alt=""></span>
+                        <span>Run รหัสลูกค้า</span>
+                    </button>
                 </div>
 
-                <div class="field span-2">
-                    <label class="label">รหัสลูกค้า NBM</label>
-                    <input type="text" class="control readonly" value="<?php echo h($formData['customer_coden'] !== '' ? $formData['customer_coden'] : 'Auto'); ?>" readonly>
+                <div class="field code-field js-code-row" data-code-type="nbm">
+                    <div class="code-group">
+                        <label class="label">รหัสลูกค้า NBM</label>
+                        <input type="text" class="control readonly js-code-display" value="<?php echo h($formData['code_nbm'] !== '' ? $formData['code_nbm'] : 'Auto'); ?>" readonly>
+                        <input type="hidden" class="js-code-value" name="code_nbm" value="<?php echo h($formData['code_nbm']); ?>" data-saved-code="<?php echo h($savedCodes['nbm']); ?>">
+                    </div>
+                    <button type="button" class="run-button js-code-run">
+                        <span class="run-icon"><img src="img/icons/figma_user_id.svg" alt=""></span>
+                        <span>Run รหัสลูกค้า</span>
+                    </button>
                 </div>
 
-                <div class="field span-4">
-                    <label class="label" for="preface_name">คำนำหน้าชื่อ<span class="required">*</span></label>
-                    <select class="select" name="preface_name" id="preface_name" required>
-                        <option value="">Select</option>
-                        <?php foreach ($prefaceOptions as $option) { ?>
-                            <option value="<?php echo h($option); ?>" <?php echo ($formData['preface_name'] === $option) ? 'selected' : ''; ?>><?php echo h($option); ?></option>
-                        <?php } ?>
-                    </select>
-                </div>
-
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="bill_name">ชื่อในการออกบิล<span class="required">*</span></label>
-                    <div class="control-wrap">
-                        <input type="text" class="control has-clear" name="bill_name" id="bill_name" value="<?php echo h($formData['bill_name']); ?>" required>
-                        <button type="button" class="clear" data-clear-target="bill_name">&times;</button>
+                    <div class="control-wrap has-clear">
+                        <input type="text" class="control" name="bill_name" id="bill_name" value="<?php echo h($formData['bill_name']); ?>" placeholder="ใส่ชื่อในการออกบิล" required>
+                        <button type="button" class="clear" data-clear-target="bill_name" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
                     </div>
                 </div>
 
-                <div class="field span-4">
-                    <label class="label" for="bill_tel">เบอร์โทร<span class="required">*</span></label>
-                    <input type="text" class="control" name="bill_tel" id="bill_tel" inputmode="numeric" maxlength="15" value="<?php echo h($formData['bill_tel']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
-                </div>
-
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
                     <input type="text" class="control" name="tax_id" id="tax_id" inputmode="numeric" maxlength="20" value="<?php echo h($formData['tax_id']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                 </div>
 
-                <div class="field span-4">
-                    <label class="label" for="email_cus">E-mail<span class="required">*</span></label>
-                    <input type="email" class="control" name="email_cus" id="email_cus" value="<?php echo h($formData['email_cus']); ?>" required>
+                <div class="field">
+                    <label class="label" for="bill_tel">เบอร์โทร<span class="required">*</span></label>
+                    <input type="text" class="control" name="bill_tel" id="bill_tel" inputmode="numeric" maxlength="15" value="<?php echo h($formData['bill_tel']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                 </div>
 
-                <div class="field span-8">
+                <div class="field">
+                    <label class="label" for="email_cus">E-mail<span class="required">*</span></label>
+                    <input type="email" class="control" name="email_cus" id="email_cus" value="<?php echo h($formData['email_cus']); ?>" placeholder="ใส่ที่อยู่อีเมล" required>
+                </div>
+
+                <div class="field span-full">
                     <label class="label" for="bill_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
-                    <div class="control-wrap">
-                        <input type="text" class="control has-clear" name="bill_address" id="bill_address" value="<?php echo h($formData['bill_address']); ?>" required>
-                        <button type="button" class="clear" data-clear-target="bill_address">&times;</button>
+                    <div class="control-wrap has-clear">
+                        <input type="text" class="control" name="bill_address" id="bill_address" value="<?php echo h($formData['bill_address']); ?>" placeholder="ใส่เลขที่ ตรอก ซอย ถนน" required>
+                        <button type="button" class="clear" data-clear-target="bill_address" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
                     </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="bill_province">จังหวัด<span class="required">*</span></label>
-                    <select class="select" name="bill_province" id="bill_province" required>
-                        <option value="">Select</option>
-                        <?php foreach ($provinces as $province) { ?>
-                            <option value="<?php echo h($province['province_name']); ?>" <?php echo ($formData['bill_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
-                        <?php } ?>
-                    </select>
+                    <div class="control-wrap has-chevron">
+                        <select class="select" name="bill_province" id="bill_province" required>
+                            <option value="">Select</option>
+                            <?php foreach ($provinces as $province) { ?>
+                                <option value="<?php echo h($province['province_name']); ?>" <?php echo ($formData['bill_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
+                            <?php } ?>
+                        </select>
+                        <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
+                    </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="bill_ampher">เขต/อำเภอ<span class="required">*</span></label>
-                    <input type="text" class="control" name="bill_ampher" id="bill_ampher" value="<?php echo h($formData['bill_ampher']); ?>" required>
+                    <div class="control-wrap has-clear">
+                        <input type="text" class="control" name="bill_ampher" id="bill_ampher" value="<?php echo h($formData['bill_ampher']); ?>" placeholder="ใส่เขต/อำเภอ" required>
+                        <button type="button" class="clear" data-clear-target="bill_ampher" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
+                    </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="bill_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
-                    <input type="text" class="control" name="bill_postcode" id="bill_postcode" inputmode="numeric" maxlength="10" value="<?php echo h($formData['bill_postcode']); ?>" required>
+                    <div class="control-wrap has-clear">
+                        <input type="text" class="control" name="bill_postcode" id="bill_postcode" inputmode="numeric" maxlength="10" value="<?php echo h($formData['bill_postcode']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
+                        <button type="button" class="clear" data-clear-target="bill_postcode" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
+                    </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="branch_type">เลือกสาขา<span class="required">*</span></label>
-                    <select class="select" name="branch_type" id="branch_type" required>
-                        <option value="">Select</option>
-                        <option value="1" <?php echo ($formData['branch_type'] === '1') ? 'selected' : ''; ?>>สำนักงานใหญ่</option>
-                        <option value="2" <?php echo ($formData['branch_type'] === '2') ? 'selected' : ''; ?>>สาขา</option>
-                    </select>
+                    <div class="control-wrap has-chevron">
+                        <select class="select" name="branch_type" id="branch_type" required>
+                            <option value="">Select</option>
+                            <option value="1" <?php echo ($formData['branch_type'] === '1') ? 'selected' : ''; ?>>สำนักงานใหญ่</option>
+                            <option value="2" <?php echo ($formData['branch_type'] === '2') ? 'selected' : ''; ?>>สาขา</option>
+                        </select>
+                        <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
+                    </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field">
                     <label class="label" for="branch_no">เลขที่สาขา<span class="required">*</span></label>
                     <input type="text" class="control" name="branch_no" id="branch_no" inputmode="numeric" maxlength="10" value="<?php echo h($formData['branch_no']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                 </div>
+
+                <div class="field primary-field">
+                    <label class="primary-toggle<?php echo $isPrimaryChecked ? ' is-active' : ''; ?>" id="primaryToggle">
+                        <input type="checkbox" name="is_primary" id="is_primary" value="1" <?php echo $isPrimaryChecked ? 'checked' : ''; ?> data-locked="<?php echo $isPrimaryLocked ? '1' : '0'; ?>">
+                        <img src="img/icons/dropdown-arrow-down.svg" alt="" aria-hidden="true">
+                        <span>ใช้เป็นข้อมูลหลัก</span>
+                    </label>
+                </div>
             </div>
+            </fieldset>
 
             <div class="actions">
-                <button type="submit" class="btn btn-primary"><?php echo h($isEditMode ? 'อัปเดต' : 'เพิ่ม'); ?></button>
+                <button type="submit" class="btn btn-primary" <?php echo $isFormBlocked ? 'disabled' : ''; ?>><?php echo h($isEditMode ? 'อัปเดต' : 'เพิ่ม'); ?></button>
                 <button type="button" class="btn btn-secondary" onclick="window.location.href='register_suphos.php'">ยกเลิก</button>
             </div>
         </form>
@@ -788,6 +916,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.querySelectorAll('[data-clear-target]').forEach(function(button) {
             button.addEventListener('click', function() {
@@ -816,6 +945,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
         }
+
+        // ใบหลักและลูกค้าใหม่ติ๊กค้างเอาออกไม่ได้ (ลูกค้าต้องมีใบหลักหนึ่งใบเสมอ) บิลใบอื่นติ๊กเพื่อสลับขึ้นเป็นใบหลักตอนกดบันทึก
+        (function() {
+            var toggle = document.getElementById('primaryToggle');
+            var checkbox = document.getElementById('is_primary');
+            if (!toggle || !checkbox) return;
+
+            checkbox.addEventListener('change', function() {
+                if (checkbox.getAttribute('data-locked') === '1') {
+                    checkbox.checked = true;
+                }
+                toggle.classList.toggle('is-active', checkbox.checked);
+            });
+        })();
+
+        // Run รหัสลูกค้า: คำนวณเลขถัดไปให้ดู บันทึกจริงตอนกดเพิ่ม/อัปเดต (ดู ajax_customer_run_code.php)
+        (function() {
+            var codeLabels = {
+                awl: 'รหัสลูกค้า AWL',
+                nbm: 'รหัสลูกค้า NBM'
+            };
+
+            function notify(options) {
+                if (window.Swal) {
+                    return Swal.fire(options);
+                }
+                window.alert((options.title ? options.title + '\n' : '') + (options.text || ''));
+                return Promise.resolve({
+                    isConfirmed: true
+                });
+            }
+
+            function runCode(row, button) {
+                var type = row.getAttribute('data-code-type');
+                var body = new URLSearchParams();
+                body.append('type', type);
+
+                button.disabled = true;
+                fetch('ajax_customer_run_code.php', {
+                        method: 'POST',
+                        body: body
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(result) {
+                        if (!result.success) {
+                            throw new Error(result.message || 'รันรหัสลูกค้าไม่สำเร็จ');
+                        }
+                        row.querySelector('.js-code-value').value = result.code;
+                        row.querySelector('.js-code-display').value = result.code;
+                        notify({
+                            icon: 'success',
+                            title: 'รันรหัสลูกค้าแล้ว',
+                            text: codeLabels[type] + ': ' + result.code + ' (บันทึกจริงตอนกดบันทึก หากเลขนี้ถูกใช้ไปก่อน ระบบจะรันเลขใหม่ให้อัตโนมัติ)'
+                        });
+                    })
+                    .catch(function(error) {
+                        notify({
+                            icon: 'error',
+                            title: 'เกิดข้อผิดพลาด',
+                            text: error.message || 'รันรหัสลูกค้าไม่สำเร็จ'
+                        });
+                    })
+                    .finally(function() {
+                        button.disabled = false;
+                    });
+            }
+
+            document.querySelectorAll('.js-code-run').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var row = button.closest('.js-code-row');
+                    var codeInput = row.querySelector('.js-code-value');
+                    var savedCode = codeInput.getAttribute('data-saved-code') || '';
+
+                    // ถามเฉพาะตอนจะทับรหัสที่บันทึกในฐานแล้ว เลขที่เพิ่งรันในหน้านี้กดซ้ำได้เลย
+                    if (savedCode === '' || codeInput.value.trim() !== savedCode) {
+                        runCode(row, button);
+                        return;
+                    }
+
+                    var type = row.getAttribute('data-code-type');
+                    var safeCode = savedCode.replace(/[&<>"']/g, '');
+                    if (!window.Swal) {
+                        if (window.confirm('รัน' + codeLabels[type] + 'ใหม่?\nรหัสเดิม ' + safeCode + ' จะถูกแทนที่เมื่อกดบันทึก')) {
+                            runCode(row, button);
+                        }
+                        return;
+                    }
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'รัน' + codeLabels[type] + 'ใหม่?',
+                        html: 'รหัสเดิม <b>' + safeCode + '</b> จะถูกแทนที่เมื่อกดบันทึก<br>เอกสารเดิมที่อ้างรหัสนี้จะไม่ถูกแก้ไข',
+                        showCancelButton: true,
+                        confirmButtonText: 'รันรหัสใหม่',
+                        cancelButtonText: 'ยกเลิก',
+                        confirmButtonColor: '#612989'
+                    }).then(function(choice) {
+                        if (choice.isConfirmed) {
+                            runCode(row, button);
+                        }
+                    });
+                });
+            });
+        })();
 
         (function() {
             var successModal = document.getElementById('billingSuccessModal');

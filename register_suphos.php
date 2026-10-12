@@ -4864,7 +4864,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 							<input type="text" id="fullBillPopupSearch" placeholder="ค้นหาด้วยชื่อ / เบอร์โทร">
 						</div>
 					</div>
-					<button type="button" class="customer-popup-add" onclick="window.open('billing_info_add.php', '_blank');">
+					<button type="button" class="customer-popup-add" onclick="openBillingInfoAddForSelectedCustomer();">
 						<i class="fas fa-sliders-h" aria-hidden="true"></i>
 						เพิ่มข้อมูลออกบิล
 					</button>
@@ -5154,6 +5154,16 @@ $canShowETReport = ($ivPrefix === 'ET');
 				}
 			}
 			window.open(url, '_blank');
+		}
+
+		// ข้อมูลออกบิลต้องอยู่ภายใต้ลูกค้าเสมอ จึงเพิ่มได้เฉพาะเมื่อเลือกลูกค้าในฟอร์มแล้ว (หน้าเพิ่มจะไม่สร้างลูกค้าใหม่)
+		function openBillingInfoAddForSelectedCustomer() {
+			var customerId = getSelectedCustomerIdForBilling();
+			if (!customerId) {
+				Swal.fire('แจ้งเตือน', 'กรุณาเลือกลูกค้าก่อนเพิ่มข้อมูลออกบิล', 'warning');
+				return;
+			}
+			openBillingInfoCreatePage(customerId, '');
 		}
 
 		// บังคับให้มี customer ก่อนจึงจะสร้าง shipping address ใหม่ได้ เพราะ shipping ผูกกับ customer โดยตรง
