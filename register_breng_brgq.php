@@ -8,6 +8,7 @@ include('dbconnect.php');
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-breng-brgq.css?v=<?php echo filemtime(__DIR__ . '/css/register-breng-brgq.css'); ?>">
 <link rel="stylesheet" href="css/breq-po-modal.css?v=<?php echo filemtime(__DIR__ . '/css/breq-po-modal.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/breq-po-modal.js?v=<?php echo filemtime(__DIR__ . '/js/breq-po-modal.js'); ?>"></script>
 <script src="js/breq-item-table.js?v=<?php echo filemtime(__DIR__ . '/js/breq-item-table.js'); ?>"></script>

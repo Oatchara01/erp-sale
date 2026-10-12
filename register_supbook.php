@@ -88,11 +88,13 @@ if ($savedRefId !== "") {
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
 <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
+<script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 
 <!-- Shared .so-* design-system primitives (cards, inputs, labels, buttons, credit-term modal, etc.) -->
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <!-- Page-specific styling for register_supbook.php -->
 <link rel="stylesheet" href="css/register-supbook.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbook.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
 
 <div class="w3-container register-so-main" style="max-width: 1200px; margin: 0 auto;">
 	<?php

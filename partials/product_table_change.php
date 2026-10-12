@@ -449,7 +449,7 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 <div class="so-product-empty-state" id="ptc_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
 <!-- Modal "ข้อมูลรายการสินค้าเพิ่มเติม" มีเฉพาะ หมายเลข SN และ หมายเหตุสินค้า ตาม Figma -->
-<div id="ptc_edit_modal" class="cs-modal-overlay" style="display:none;">
+<div id="ptc_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">
 	<div class="cs-modal-card">
 		<div class="cs-modal-header">
 			<h3 class="cs-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>

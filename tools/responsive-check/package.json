@@ -1,0 +1,12 @@
+{
+  "name": "erpsale-responsive-check",
+  "private": true,
+  "description": "ตรวจ responsive ของ modal บน iPad ด้วย Chrome headless (ดู docs/ipad-modal-responsive-pattern.md)",
+  "scripts": {
+    "check": "node check-modals.js",
+    "lock": "node check-scroll-lock.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

@@ -23,3 +23,5 @@ img_pro/
 *.bak
 Thumbs.db
 .DS_Store
+/tools/responsive-check/node_modules/
+/tools/responsive-check/out/

@@ -8,11 +8,13 @@ include('dbconnect_sale.php');
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/register-supchange.css?v=<?php echo filemtime(__DIR__ . '/css/register-supchange.css'); ?>">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
 <script src="js/customer-popup.js?v=<?php echo filemtime(__DIR__ . '/js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
 <script src="js/doc-tabs-attach.js?v=<?php echo filemtime(__DIR__ . '/js/doc-tabs-attach.js'); ?>"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
+<script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>

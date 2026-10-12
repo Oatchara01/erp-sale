@@ -26,8 +26,10 @@ include("head.php"); ?>
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <!-- Page-specific styling for register_suphos.php -->
 <link rel="stylesheet" href="css/register-suphos.css?v=<?php echo filemtime(__DIR__ . '/css/register-suphos.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
 <!-- ต้องโหลดก่อน setElementValue ด้านล่าง ซึ่งเรียก soSyncDisplayText -->
 <script src="js/so-display-text.js?v=<?php echo filemtime(__DIR__ . '/js/so-display-text.js'); ?>"></script>
+<script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 <script>
 	var HttPRequest = false;
 	var clearLoanPopupTimer = null;
@@ -4598,6 +4600,8 @@ $canShowETReport = ($ivPrefix === 'ET');
 	</script>
 
 <?php } ?>
+				</div><!-- /.so-sticky-actions-inner -->
+			</div><!-- /.so-sticky-actions -->
 		<script>
 			function soEnsureSubmitMarker() {
 				var form = document.forms['frmMain'];
@@ -4877,7 +4881,7 @@ $canShowETReport = ($ivPrefix === 'ET');
 						<tr>
 							<th>ชื่อลูกค้า</th>
 							<th>เบอร์โทร</th>
-							<th>วันที่ต้องการสินค้า</th>
+							<th>รายละเอียดการออกบิล</th>
 							<th>เลขที่ผู้เสียภาษี</th>
 							<th></th>
 						</tr>

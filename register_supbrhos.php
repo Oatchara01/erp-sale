@@ -9,8 +9,10 @@
 <link rel="stylesheet" href="css/register-supbrhos.css?v=<?php echo filemtime(__DIR__ . '/css/register-supbrhos.css'); ?>">
 <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo filemtime(__DIR__ . '/css/credit-term-modal.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo filemtime(__DIR__ . '/css/so-modal-ipad.css'); ?>">
 <script type="text/javascript" src="js/customer-popup.js"></script>
 <script type="text/javascript" src="js/credit-term-modal.js?v=<?php echo filemtime(__DIR__ . '/js/credit-term-modal.js'); ?>"></script>
+<script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 
 <?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
 	<script>

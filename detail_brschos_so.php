@@ -618,7 +618,7 @@
 	</div>
 
 	<!-- Modal Popup (Figma node 984-5469: ข้อมูลรายการสินค้าเพิ่มเติม) -->
-	<div id="cs_edit_modal" class="cs-modal-overlay" style="display:none;">
+	<div id="cs_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">
 		<div class="cs-modal-card">
 			<div class="cs-modal-header">
 				<h3 class="cs-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>

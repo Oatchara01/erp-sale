@@ -431,9 +431,11 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 <link rel="stylesheet" href="css/register-supbrcshos.css?v=<?php echo $assetVersion('css/register-supbrcshos.css'); ?>">
 <link rel="stylesheet" href="css/credit-term-modal.css?v=<?php echo $assetVersion('css/credit-term-modal.css'); ?>">
 <link rel="stylesheet" href="css/register-supsmp.css?v=<?php echo $assetVersion('css/register-supsmp.css'); ?>">
+<link rel="stylesheet" href="css/so-modal-ipad.css?v=<?php echo $assetVersion('css/so-modal-ipad.css'); ?>">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/customer-popup.js?v=<?php echo $assetVersion('js/customer-popup.js'); ?>"></script>
 <script src="js/credit-term-modal.js?v=<?php echo $assetVersion('js/credit-term-modal.js'); ?>"></script>
+<script src="js/so-modal-scroll-lock.js?v=<?php echo $assetVersion('js/so-modal-scroll-lock.js'); ?>"></script>
 
 <?php if (($_GET['saved'] ?? '') === '1' || ($_GET['submitted'] ?? '') === '1' || ($_GET['updated'] ?? '') === '1') { ?>
 	<script>document.addEventListener('DOMContentLoaded', function () { window.history.replaceState({}, document.title, 'register_supsmp.php?ref_idsmp=<?php echo rawurlencode($referenceId); ?>'); });</script>
@@ -807,7 +809,7 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 </form>
 
 <!-- ===================== Modal: ข้อมูลรายการสินค้าเพิ่มเติม ===================== -->
-<div id="smp_edit_modal" class="cs-modal-overlay" style="display:none;">
+<div id="smp_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">
 	<div class="cs-modal-card smp-remark-modal-card" role="dialog" aria-modal="true" aria-labelledby="smp_edit_modal_title">
 		<div class="cs-modal-header"><h3 class="cs-modal-title" id="smp_edit_modal_title">ข้อมูลรายการสินค้าเพิ่มเติม</h3><button type="button" class="cs-modal-close-btn" onclick="smpCloseEditModal();" aria-label="ปิด">&times;</button></div>
 		<div class="cs-modal-body smp-modal-body">

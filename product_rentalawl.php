@@ -623,7 +623,7 @@
 </div>
 <div class="so-product-empty-state" id="rt_empty_state"<?php if (!empty($savedRentalProducts)) echo ' style="display:none;"'; ?>>ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
-<div id="rt_edit_modal" class="cs-modal-overlay" style="display:none;">
+<div id="rt_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">
 	<div class="cs-modal-card">
 		<div class="cs-modal-header">
 			<h3 class="cs-modal-title">ข้อมูลรายการสินค้าเพิ่มเติม</h3>

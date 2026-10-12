@@ -1083,7 +1083,7 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
     <div class="so-product-empty-state" id="product_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
     <!-- Edit Modal -->
-    <div class="so-modal-overlay" id="productEditModal">
+    <div class="so-modal-overlay" id="productEditModal" data-so-modal-lock>
         <div class="so-modal-content" role="dialog" aria-modal="true" aria-labelledby="productEditModalTitle">
             <div class="so-modal-header">
                 <h3 class="so-modal-title" id="productEditModalTitle">ข้อมูลรายการสินค้าเพิ่มเติม</h3>
