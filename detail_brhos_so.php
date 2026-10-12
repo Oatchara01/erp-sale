@@ -401,7 +401,7 @@ function br_product_row_hos($i)
 	}
 
 	function brFetchProduct(rowIndex, productCode) {
-		var pmeters = 'product_code=' + encodeURIComponent(productCode) + '&format=json&type_company=' + encodeURIComponent(brGetSelectedCompanyType());
+		var pmeters = 'product_code=' + encodeURIComponent(productCode) + '&format=json&allow_demo=1&type_company=' + encodeURIComponent(brGetSelectedCompanyType());
 		fetch('data_product_hos1.php', {
 				method: 'POST',
 				headers: {

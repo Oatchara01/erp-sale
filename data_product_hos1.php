@@ -28,12 +28,23 @@ $typeCompanyEscaped = mysqli_real_escape_string(
 );
 
 
+/* allow_demo=1 : ใบยืม (BR) ยืมสินค้า Demo (group1 8002) ได้ ต้องตรงกับ
+   ajax_product_search_br.php ที่ค้นเจอสินค้า Demo — หน้าอื่นยังตัดทั้ง 8001/8002 */
+
+$excludedGroups = (
+    isset($_POST['allow_demo']) &&
+    $_POST['allow_demo'] === '1'
+)
+    ? '8001'
+    : '8002, 8001';
+
+
 $strSQL = "
     SELECT *
     FROM tb_product
     WHERE access_code = '$strProduct_escaped'
       AND type_company = '$typeCompanyEscaped'
-      AND group1 NOT IN (8002, 8001)
+      AND group1 NOT IN ($excludedGroups)
     LIMIT 1
 ";
 
