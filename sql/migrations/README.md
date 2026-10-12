@@ -7,7 +7,9 @@
 - `up` ต้องรันซ้ำได้: เช็ค `information_schema` ก่อน ALTER/CREATE (MySQL ทำ DDL ใน transaction ไม่ได้ ถ้าพังกลางคัน statement ก่อนหน้าไม่ถูกยกเลิก)
 - ห้ามใช้ `DELIMITER`/stored program; แยกคำสั่งด้วย `;`
 - UPDATE/DELETE ย้อนกลับด้วย down ไม่ได้ — เขียนคอมเมนต์เตือนและ backup ก่อนรัน
-- ไม่ครอบคลุมฐาน CS (`$com1`); ไฟล์เก่า `sql/*.sql` ยังรันมือผ่าน phpMyAdmin ตามเดิม
+- ปกติรันบนฐานขาย (`$conn`); ไฟล์ที่ต้องรันบนฐานอื่นให้ใส่บรรทัด `-- @connection: acc` (ฐานบัญชี `$code`) หรือ `-- @connection: cs` (ฐาน CS `$com1`) ทั้งใน up และ down — หนึ่งไฟล์รันได้ฐานเดียว ใช้ connection จาก `dbconnect_acc.php` / `dbconnect_cs.php` ของเครื่องนั้น และ Dry-run แสดงชื่อฐานที่จะรัน
+- ฐานบัญชี/ฐาน CS ไม่ได้ปิด strict mode เหมือนฐานขาย — ถ้า ALTER ตารางที่มี default วันที่ `0000-00-00` ให้ `SET SESSION sql_mode = ''` ต้นไฟล์แล้วคืนค่าท้ายไฟล์
+- ไฟล์เก่า `sql/*.sql` ยังรันมือผ่าน phpMyAdmin ตามเดิม
 - Rollback ถอยทีละ 1 ไฟล์ (ล่าสุดตามชื่อ)
 
 ## ตัวอย่างเพิ่มคอลัมน์ (up)

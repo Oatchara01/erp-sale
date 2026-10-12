@@ -4,7 +4,8 @@
  * ตัวรัน migration ของฐานขาย — ใช้โดย migrate.php (CLI และหน้าเว็บ)
  *
  * ไฟล์อยู่ที่ sql/migrations/YYYYMMDDHHMM_ชื่อ.up.sql คู่กับ .down.sql
- * สถานะเก็บในตาราง schema_migrations (สร้างเองเมื่อรันครั้งแรก)
+ * สถานะเก็บในตาราง schema_migrations ของฐานขาย (สร้างเองเมื่อรันครั้งแรก)
+ * ไฟล์ที่มีบรรทัด "-- @connection: acc" หรือ "-- @connection: cs" รันบนฐานบัญชี/ฐาน CS แทน (ดู migrator_target)
  *
  * MySQL ทำ DDL แบบ transaction ไม่ได้ จึงไม่มี rollback อัตโนมัติ: ถ้า statement ไหนพัง runner หยุด
  * บันทึกแถวเป็น failed แล้วรัน up ซ้ำได้ (ไฟล์ up ต้องเช็ค information_schema ก่อนแก้ตาราง)
@@ -166,6 +167,64 @@ if (!function_exists('migrator_data_warning')) {
 	}
 }
 
+/** ฐานที่ไฟล์ระบุด้วยบรรทัด "-- @connection: acc|cs" — คืน '' เมื่อไม่ระบุ (= ฐานขาย) */
+if (!function_exists('migrator_connection_key')) {
+	function migrator_connection_key($sql)
+	{
+		return preg_match('/^--\s*@connection:\s*(\w+)/mi', (string)$sql, $m) ? strtolower($m[1]) : '';
+	}
+}
+
+/**
+ * connection ที่ต้องใช้รันไฟล์นี้ คืน array(mysqli|null, error)
+ * ฐานอื่นต่อเมื่อมีไฟล์เรียกใช้เท่านั้น ผ่าน dbconnect_*.php ของเครื่องนั้น (ชื่อฐานต่างกันระหว่าง local กับ production)
+ * ต่อไม่ได้ก็พังเฉพาะไฟล์นั้น ไม่ลามถึง migration ของฐานขาย
+ */
+if (!function_exists('migrator_target')) {
+	function migrator_target(mysqli $conn, $sql)
+	{
+		static $cache = array();
+		$map = array(
+			'acc' => array('dbconnect_acc.php', 'code'),
+			'cs'  => array('dbconnect_cs.php', 'com1'),
+		);
+		$key = migrator_connection_key($sql);
+		if ($key === '') {
+			return array($conn, '');
+		}
+		if (!isset($map[$key])) {
+			return array(null, 'ไม่รู้จัก @connection: ' . $key . ' (ใช้ได้: ' . implode(', ', array_keys($map)) . ')');
+		}
+		if (!isset($cache[$key])) {
+			list($file, $var) = $map[$key];
+			ob_start();
+			try {
+				@include dirname(__DIR__) . '/' . $file;
+			} catch (Throwable $e) {
+			}
+			ob_end_clean();
+			$cache[$key] = isset($$var) && $$var instanceof mysqli ? $$var : false;
+		}
+		if (!$cache[$key]) {
+			return array(null, 'ต่อฐาน ' . $key . ' ไม่ได้ (' . $map[$key][0] . ')');
+		}
+		return array($cache[$key], '');
+	}
+}
+
+/** ชื่อฐานที่ไฟล์นี้จะรัน — ใช้แสดงใน Dry-run */
+if (!function_exists('migrator_target_db')) {
+	function migrator_target_db(mysqli $conn, $sql)
+	{
+		list($target, $error) = migrator_target($conn, $sql);
+		if (!$target) {
+			return $error;
+		}
+		$res = $target->query('SELECT DATABASE() AS db');
+		return $res ? (string)$res->fetch_assoc()['db'] : '?';
+	}
+}
+
 /** รันทีละคำสั่ง คืน array(ok, error, ran) — หยุดที่คำสั่งแรกที่พัง */
 if (!function_exists('migrator_execute')) {
 	function migrator_execute(mysqli $conn, array $statements)
@@ -202,7 +261,11 @@ if (!function_exists('migrator_up')) {
 		$results = array();
 		foreach (migrator_pending($conn) as $name) {
 			$sql = migrator_read_sql($name, 'up');
-			list($ok, $error) = migrator_execute($conn, migrator_split($sql));
+			list($target, $error) = migrator_target($conn, $sql);
+			$ok = false;
+			if ($target) {
+				list($ok, $error) = migrator_execute($target, migrator_split($sql));
+			}
 			migrator_record($conn, $name, $ok ? 'ok' : 'failed', $ok ? null : $error, $by);
 			$results[] = array('name' => $name, 'ok' => $ok, 'error' => $error);
 			if (!$ok) {
@@ -226,7 +289,11 @@ if (!function_exists('migrator_down')) {
 		if ($sql === null) {
 			return array('name' => $name, 'ok' => false, 'error' => 'ไม่พบไฟล์ ' . $name . '.down.sql');
 		}
-		list($ok, $error) = migrator_execute($conn, migrator_split($sql));
+		list($target, $error) = migrator_target($conn, $sql);
+		$ok = false;
+		if ($target) {
+			list($ok, $error) = migrator_execute($target, migrator_split($sql));
+		}
 		if ($ok) {
 			$stmt = $conn->prepare("DELETE FROM schema_migrations WHERE name = ?");
 			$stmt->bind_param('s', $name);

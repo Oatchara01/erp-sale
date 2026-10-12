@@ -49,8 +49,9 @@ if (PHP_SAPI === 'cli') {
 	}
 	if ($cmd === 'dry-run') {
 		foreach (migrator_pending($conn) as $name) {
-			$stmts = migrator_split(migrator_read_sql($name, 'up'));
-			echo '== ' . $name . ' (' . count($stmts) . ' คำสั่ง)' . (migrator_data_warning($stmts) ? '  ⚠ แก้/ลบข้อมูล ย้อนกลับด้วย down ไม่ได้' : '') . PHP_EOL;
+			$sql = migrator_read_sql($name, 'up');
+			$stmts = migrator_split($sql);
+			echo '== ' . $name . ' (' . count($stmts) . ' คำสั่ง บนฐาน ' . migrator_target_db($conn, $sql) . ')' . (migrator_data_warning($stmts) ? '  ⚠ แก้/ลบข้อมูล ย้อนกลับด้วย down ไม่ได้' : '') . PHP_EOL;
 			foreach ($stmts as $s) {
 				echo $s . ';' . PHP_EOL . PHP_EOL;
 			}
@@ -146,6 +147,7 @@ $_SESSION['migrate_last'] = time();
 $by = (string)$_SESSION['migrate_user'];
 $messages = array();
 $dryRun = array();
+$dryRunDb = array();
 
 if ($action === 'up') {
 	foreach (migrator_up($conn, $by) as $r) {
@@ -164,7 +166,9 @@ if ($action === 'up') {
 	}
 } elseif ($action === 'dry') {
 	foreach (migrator_pending($conn) as $name) {
-		$dryRun[$name] = migrator_split(migrator_read_sql($name, 'up'));
+		$sql = migrator_read_sql($name, 'up');
+		$dryRun[$name] = migrator_split($sql);
+		$dryRunDb[$name] = migrator_target_db($conn, $sql);
 	}
 }
 
@@ -225,7 +229,7 @@ $dbName = $dbRes ? $dbRes->fetch_assoc()['db'] : '?';
 
 	<?php foreach ($dryRun as $name => $stmts) : ?>
 		<div class="card">
-			<strong><?= $h($name) ?></strong> — <?= count($stmts) ?> คำสั่ง
+			<strong><?= $h($name) ?></strong> — <?= count($stmts) ?> คำสั่ง บนฐาน <strong><?= $h($dryRunDb[$name]) ?></strong>
 			<?php if (migrator_data_warning($stmts)) : ?><div class="warn">⚠ มีคำสั่งแก้/ลบข้อมูล (UPDATE/DELETE/DROP) — ย้อนกลับด้วย down ไม่ได้ ควร backup ก่อน</div><?php endif; ?>
 			<pre><?= $h(implode(";\n\n", $stmts) . ';') ?></pre>
 		</div>
