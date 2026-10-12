@@ -1963,7 +1963,7 @@ $adminInfoTab = [
 			// ฟิลด์บังคับ (name) ที่ปุ่มอนุมัติตรวจ — ชุดเดียวกับที่ตรวจมาแต่เดิม ไม่รวมดอกจันที่เพิ่งเริ่มบังคับ
 			var BR_APPROVE_REQUIRED_FIELDS = [
 				'transport_company', 'start_time', 'customer_name', 'customer_tel', 'province_name', 'address_name', 'address_send',
-				'returns_date', 'return_time_range', 'returns_time', 'returns_name', 'returns_contact', 'returns_address'
+				'returns_name', 'returns_contact', 'returns_address'
 			];
 
 			function fncSubmit() //ห้ามชื่อสินค้า ยี่ห้อสินค้า รุ่นสินค้าเป็
@@ -3268,7 +3268,7 @@ $adminInfoTab = [
 				<!-- Row 1: 5 columns (date from/to, time range, time from/to) -->
 				<div class="br-returns-row-grid">
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">วันที่รับคืน <span style="color:red;">*</span></label>
+						<label class="so-label" style="color: #612989;">วันที่รับคืน</label>
 						<div class="calendar-wrapper" style="width: 100%; display: flex;">
 							<input name="returns_date" type="date" id="returns_date" class="so-input" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 40px;" />
 						</div>
@@ -3280,7 +3280,7 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">เลือกช่วงเวลา <span style="color:red;">*</span></label>
+						<label class="so-label" style="color: #612989;">เลือกช่วงเวลา</label>
 						<div class="so-select-wrapper">
 							<select name="return_time_range" id="return_time_range" class="so-select" style="background-color: #F4F3F7; border:none; border-radius: 8px;">
 								<option value="">Select</option>
@@ -3292,7 +3292,7 @@ $adminInfoTab = [
 						</div>
 					</div>
 					<div class="so-field-group" style="margin-bottom: 0;">
-						<label class="so-label" style="color: #612989;">ตั้งแต่เวลา <span style="color:red;">*</span></label>
+						<label class="so-label" style="color: #612989;">ตั้งแต่เวลา</label>
 						<div class="time-wrapper" style="width: 100%; display: flex;">
 							<input id="returns_time" name="returns_time" class="so-input" type="time" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; padding-right: 40px;" />
 						</div>
