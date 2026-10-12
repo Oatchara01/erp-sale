@@ -2288,10 +2288,20 @@ $adminInfoTab = [
 
 				<div class="so-grid-3">
 					<div class="so-field-group">
-						<label class="so-label" for="date_br">วันที่ <span style="color:red;">*</span></label>
-						<div class="calendar-wrapper">
-							<input type="date" name="date_br" id="date_br" value="<?php echo $today; ?>" class="so-input" onchange="brUpdateReturnDate();">
-						</div>
+						<?php
+						// วันที่เอกสารแสดงอย่างเดียว: สร้างใหม่ = วันนี้, แก้ไข = วันที่เดิมของเอกสาร
+						// ค่าจริงอยู่ใน hidden #date_br (brUpdateReturnDate() และการบันทึกยังอ่านจากช่องนี้)
+						$brDateValue = ($savedBr !== null) ? (string) $savedBr['date_br'] : $today;
+						$brDateTime = DateTime::createFromFormat('!Y-m-d', substr($brDateValue, 0, 10));
+						$brDateErrors = DateTime::getLastErrors();
+						$brDateValid = $brDateTime !== false
+							&& empty($brDateErrors['warning_count'])
+							&& empty($brDateErrors['error_count']);
+						$brDateLabel = $brDateValid ? $brDateTime->format('d/m/Y') : '-';
+						?>
+						<label class="so-label">วันที่</label>
+						<div id="date_br_label" style="padding: 8px 0;"><?php echo so_saved_h($brDateLabel); ?></div>
+						<input type="hidden" name="date_br" id="date_br" value="<?php echo so_saved_h($brDateValue); ?>">
 					</div>
 					<div class="so-field-group">
 						<label class="so-label">&nbsp;</label>
