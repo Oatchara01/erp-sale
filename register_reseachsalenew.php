@@ -1,4 +1,9 @@
-<?php include "test.php"; ?>
+<?php
+// test.php ไม่ได้อยู่ใน repo (มีเฉพาะบางเครื่อง) — include เฉพาะเมื่อมีไฟล์
+if (is_file(__DIR__ . '/test.php')) {
+	include __DIR__ . '/test.php';
+}
+?>
 
 <?php 
 include "dbconnect.php"; 

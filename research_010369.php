@@ -3,7 +3,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <?php
-include "test.php";
+// test.php ไม่ได้อยู่ใน repo (มีเฉพาะบางเครื่อง) — include เฉพาะเมื่อมีไฟล์
+if (is_file(__DIR__ . '/test.php')) {
+  include __DIR__ . '/test.php';
+}
 include "dbconnect.php";
 include "dbconnect_cs.php";
 date_default_timezone_set("Asia/Bangkok");

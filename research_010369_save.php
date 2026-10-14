@@ -50,6 +50,10 @@ if (isset($_POST['team_send']) && clean_text($_POST['team_send']) !== '') {
   $incoming['team_send'] = clean_text($_POST['team_send']);
 }
 
+if (isset($_POST['running_id']) && clean_text($_POST['running_id']) !== '') {
+  $incoming['running_id'] = clean_text($_POST['running_id']);
+}
+
 /* ===== เพิ่มบันทึก: iv_number, iv_date, product_name, sale_code ===== */
 if (isset($_POST['iv_number']) && clean_text($_POST['iv_number']) !== '') {
   $incoming['iv_number'] = clean_text($_POST['iv_number']);

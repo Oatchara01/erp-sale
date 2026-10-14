@@ -1,4 +1,9 @@
-<?php include "test.php"; ?>
+<?php
+// test.php ไม่ได้อยู่ใน repo (มีเฉพาะบางเครื่อง) — include เฉพาะเมื่อมีไฟล์
+if (is_file(__DIR__ . '/test.php')) {
+  include __DIR__ . '/test.php';
+}
+?>
 
 <?php 
 include "dbconnect.php"; 
@@ -91,17 +96,24 @@ input[type="radio"] { transform:scale(1.25); margin:6px; }
 $month = date('m'); $day = date('d'); $year = date('Y');
 $today = $year . '-' . $month . '-' . $day;
 
-$strSQL  = "SELECT * FROM tb_research WHERE running_id = '".$_GET["running"]."' ";
-$objQuery = mysqli_query($com1,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
+$running_get = mysqli_real_escape_string($com1, $_GET["running"] ?? '');
+$ref_id_get  = mysqli_real_escape_string($conn, $_GET["ref_id"] ?? '');
 
-$strSQL1  = "SELECT * FROM hos__so WHERE ref_id = '".$_GET["ref_id"]."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error());
-$objResult1 = mysqli_fetch_array($objQuery1);
+$strSQL  = "SELECT * FROM tb_research WHERE running_id = '".$running_get."' ";
+$objQuery = mysqli_query($com1,$strSQL) or die(mysqli_error($com1));
+$objResult = mysqli_fetch_array($objQuery) ?: []; // ยังไม่เคยทำแบบสอบถาม = ไม่มีแถว
 
-$strSQL2  = "SELECT * FROM tb_register_data WHERE ref_id = '".$_GET["ref_id"]."' ";
-$objQuery2 = mysqli_query($conn,$strSQL2) or die(mysqli_error());
-$objResult2 = mysqli_fetch_array($objQuery2);
+$strSQL1  = "SELECT * FROM hos__so WHERE ref_id = '".$ref_id_get."' ";
+$objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error($conn));
+$objResult1 = mysqli_fetch_array($objQuery1) ?: [];
+
+$strSQL2  = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_get."' ";
+$objQuery2 = mysqli_query($conn,$strSQL2) or die(mysqli_error($conn));
+$objResult2 = mysqli_fetch_array($objQuery2) ?: [];
+
+function h($v){
+  return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+}
 ?>
 
 <div class="w3-container w3-padding-large">
@@ -110,7 +122,7 @@ $objResult2 = mysqli_fetch_array($objQuery2);
   <div class="form-row grid">
     <label>ลูกค้าเกรด :</label>
     <div>
-      <?php if($objResult1["sale_code"]=='S31' || $objResult1["sale_code"]=='MM1'){ ?>
+      <?php if(($objResult1["sale_code"] ?? '')=='S31' || ($objResult1["sale_code"] ?? '')=='MM1'){ ?>
         <label><input type="radio" name="grade" value="B" checked> B</label>
       <?php } else { ?>
         <label><input type="radio" name="grade" value="A" checked> A</label>
@@ -122,42 +134,42 @@ $objResult2 = mysqli_fetch_array($objQuery2);
   <div class="form-row grid">
     <label>วันที่ :</label>
     <input type="date" name="date_sale" class="w3-input" value="<?php echo $today; ?>" readonly>
-    <input type="hidden" name="iv_date" class="w3-input" value="<?php echo $objResult1["iv_date"]; ?>" readonly>
+    <input type="hidden" name="iv_date" class="w3-input" value="<?php echo h($objResult1["iv_date"] ?? ''); ?>" readonly>
   </div>
 
   <!-- ชื่อลูกค้า -->
   <div class="form-row grid">
     <label>ชื่อลูกค้า :</label>
-    <input name="customer_name" type="text" id="customer_name" value="<?php echo $objResult1["bill_name"]; ?>" class="w3-input"/>
-    <input name="running_id" type="hidden" id="running_id" value="<?=$objResult1["job_no"]?>" class="w3-input" readonly/>
+    <input name="customer_name" type="text" id="customer_name" value="<?php echo h($objResult1["bill_name"] ?? ''); ?>" class="w3-input"/>
+    <input name="running_id" type="hidden" id="running_id" value="<?=h($objResult1["job_no"] ?? '')?>" class="w3-input" readonly/>
   </div>
 
   <!-- โทรศัพท์ -->
   <div class="form-row grid">
     <label>โทรศัพท์ :</label>
-    <input name="customer_tel" type="text" id="customer_tel" value="<?php echo $objResult2["customer_tel"];?>" class="w3-input" />
+    <input name="customer_tel" type="text" id="customer_tel" value="<?php echo h($objResult2["customer_tel"] ?? ''); ?>" class="w3-input" />
   </div>
 
-  <input name="ref_id" type="hidden" id="ref_id" value="<?php echo $objResult1["ref_id"];?>" class="w3-input"  />
+  <input name="ref_id" type="hidden" id="ref_id" value="<?php echo h($objResult1["ref_id"] ?? ''); ?>" class="w3-input"  />
 
   <!-- เลขที่ IV -->
   <div class="form-row grid">
     <label>เลขที่ IV :</label>
-    <input name="iv_number" type="text" id="iv_number" value="<?php echo $objResult1["iv_no"];?>" class="w3-input"/>
-    <input name="employee_code" type="hidden" id="employee_code" value="<?php echo $objResult["employee_code"];?>" class="w3-input"/>
-    <input name="sale_code" type="hidden" id="sale_code" value="<?php echo $objResult1["sale_code"];?>" class="w3-input"/>
+    <input name="iv_number" type="text" id="iv_number" value="<?php echo h($objResult1["iv_no"] ?? ''); ?>" class="w3-input"/>
+    <input name="employee_code" type="hidden" id="employee_code" value="<?php echo h($objResult["employee_code"] ?? ''); ?>" class="w3-input"/>
+    <input name="sale_code" type="hidden" id="sale_code" value="<?php echo h($objResult1["sale_code"] ?? ''); ?>" class="w3-input"/>
   </div>
 
   <!-- สินค้า -->
   <div class="form-row grid">
     <label>สินค้า :</label>
-    <textarea name="product_name" id="product_name" rows="2" class="w3-input"><?php echo $objResult2["product_name"];?></textarea>
+    <textarea name="product_name" id="product_name" rows="2" class="w3-input"><?php echo h($objResult2["product_name"] ?? ''); ?></textarea>
   </div>
 
   <!-- ชื่อพนักงานส่ง -->
   <div class="form-row grid">
     <label>ชื่อพนักงานส่ง :</label>
-    <input name="team_send" type="text" id="team_send" value="<?php echo $objResult["team_send"];?>" class="w3-input" />
+    <input name="team_send" type="text" id="team_send" value="<?php echo h($objResult["team_send"] ?? ''); ?>" class="w3-input" />
   </div>
 
   <p>

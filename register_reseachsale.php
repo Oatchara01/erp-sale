@@ -1,4 +1,9 @@
-<?php include "test.php"; ?>
+<?php
+// test.php ไม่ได้อยู่ใน repo (มีเฉพาะบางเครื่อง) — include เฉพาะเมื่อมีไฟล์
+if (is_file(__DIR__ . '/test.php')) {
+  include __DIR__ . '/test.php';
+}
+?>
 
 <?php 
 include "dbconnect.php"; 
@@ -92,17 +97,24 @@ $today = $year . '-' . $month . '-' . $day;
 
 
 
-$strSQL = "SELECT * FROM tb_research WHERE running_id = '".$_GET["running"]."' ";
-$objQuery = mysqli_query($com1,$strSQL) or die(mysqli_error());
-$objResult = mysqli_fetch_array($objQuery);
-		
-$strSQL1 = "SELECT * FROM hos__so WHERE ref_id = '".$_GET["ref_id"]."' ";
-$objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error());
-$objResult1 = mysqli_fetch_array($objQuery1);
-		
-$strSQL2 = "SELECT * FROM tb_register_data WHERE ref_id = '".$_GET["ref_id"]."' ";
-$objQuery2 = mysqli_query($conn,$strSQL2) or die(mysqli_error());
-$objResult2 = mysqli_fetch_array($objQuery2);
+$running_get = mysqli_real_escape_string($com1, $_GET["running"] ?? '');
+$ref_id_get  = mysqli_real_escape_string($conn, $_GET["ref_id"] ?? '');
+
+$strSQL = "SELECT * FROM tb_research WHERE running_id = '".$running_get."' ";
+$objQuery = mysqli_query($com1,$strSQL) or die(mysqli_error($com1));
+$objResult = mysqli_fetch_array($objQuery) ?: []; // ยังไม่เคยทำแบบสอบถาม = ไม่มีแถว
+
+$strSQL1 = "SELECT * FROM hos__so WHERE ref_id = '".$ref_id_get."' ";
+$objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error($conn));
+$objResult1 = mysqli_fetch_array($objQuery1) ?: [];
+
+$strSQL2 = "SELECT * FROM tb_register_data WHERE ref_id = '".$ref_id_get."' ";
+$objQuery2 = mysqli_query($conn,$strSQL2) or die(mysqli_error($conn));
+$objResult2 = mysqli_fetch_array($objQuery2) ?: [];
+
+function h($v){
+  return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+}
 
 ?>
 
@@ -110,7 +122,7 @@ $objResult2 = mysqli_fetch_array($objQuery2);
 <div class="w3-container w3-padding-large">
 
 	ลูกค้าเกรด :
-	<?php if($objResult1["sale_code"]=='S31' or $objResult1["sale_code"]=='MM1'){ ?>
+	<?php if(($objResult1["sale_code"] ?? '')=='S31' or ($objResult1["sale_code"] ?? '')=='MM1'){ ?>
      <input type='radio' name = "grade"  name='grade'  value="B" checked="checked" size='10' > B
 	
 	<?php }else { ?> 
@@ -121,27 +133,27 @@ $objResult2 = mysqli_fetch_array($objQuery2);
 	
 	  วันที่ :</p>
       <input type='date' name = "date_sale" class="button4"  name='date_sale'  value="<?php echo $today; ?>" size='10' readonly> </p>
-<input type='hidden' name = "iv_date" class="button4"  name='iv_date'  value="<?php echo $objResult1["iv_date"]; ?>" size='10' readonly> </p>
+<input type='hidden' name = "iv_date" class="button4"  name='iv_date'  value="<?php echo h($objResult1["iv_date"] ?? ''); ?>" size='10' readonly> </p>
 
   ชื่อลูกค้า :</p>
-	   <input name="customer_name" type='text' id="customer_name" value="<?php echo $objResult1["bill_name"]; ?>" size="40%"  class="button4"/>&nbsp;&nbsp;&nbsp;</p>
-      <input name="running_id" type='hidden' id="running_id"  size="6" value="<?=$objResult1["job_no"]?>" class="button4" readonly/>
+	   <input name="customer_name" type='text' id="customer_name" value="<?php echo h($objResult1["bill_name"] ?? ''); ?>" size="40%"  class="button4"/>&nbsp;&nbsp;&nbsp;</p>
+      <input name="running_id" type='hidden' id="running_id"  size="6" value="<?=h($objResult1["job_no"] ?? '')?>" class="button4" readonly/>
      โทรศัพท์ :</p>
-      <input name="customer_tel" type='text' id="customer_tel" value="<?php echo $objResult2["customer_tel"];?>" size="40%" class="button4"  /></p>
+      <input name="customer_tel" type='text' id="customer_tel" value="<?php echo h($objResult2["customer_tel"] ?? ''); ?>" size="40%" class="button4"  /></p>
 	  
-<input name="ref_id" type='hidden' id="ref_id" value="<?php echo $objResult1["ref_id"];?>" size="40%" class="button4"  />
+<input name="ref_id" type='hidden' id="ref_id" value="<?php echo h($objResult1["ref_id"] ?? ''); ?>" size="40%" class="button4"  />
 
 	  
 	   เลขที่ IV :</p>
-      <input name="iv_number" type='text' id="iv_number" value="<?php echo $objResult1["iv_no"];?>" size="40%"  class="button4"/>&nbsp;&nbsp;&nbsp;</p>
-      <input name="employee_code" type='hidden' id="employee_code" value="<?php echo $objResult["employee_code"];?>" size="40%"  class="button4"/>
-	<input name="sale_code" type='hidden' id="sale_code" value="<?php echo $objResult1["sale_code"];?>" size="40%"  class="button4"/>
+      <input name="iv_number" type='text' id="iv_number" value="<?php echo h($objResult1["iv_no"] ?? ''); ?>" size="40%"  class="button4"/>&nbsp;&nbsp;&nbsp;</p>
+      <input name="employee_code" type='hidden' id="employee_code" value="<?php echo h($objResult["employee_code"] ?? ''); ?>" size="40%"  class="button4"/>
+	<input name="sale_code" type='hidden' id="sale_code" value="<?php echo h($objResult1["sale_code"] ?? ''); ?>" size="40%"  class="button4"/>
 
  สินค้า :</p>
-      <textarea name="product_name"  id="product_name" cols="40" rows="2"  class="button4"><?php echo $objResult2["product_name"];?></textarea>&nbsp;&nbsp;&nbsp;</p>
+      <textarea name="product_name"  id="product_name" cols="40" rows="2"  class="button4"><?php echo h($objResult2["product_name"] ?? ''); ?></textarea>&nbsp;&nbsp;&nbsp;</p>
 
 ชื่อพนักงานส่ง :</p>
-      <input name="team_send" type='text' id="team_send" value="<?php echo $objResult["team_send"];?>" size="40%" class="button4"  />
+      <input name="team_send" type='text' id="team_send" value="<?php echo h($objResult["team_send"] ?? ''); ?>" size="40%" class="button4"  />
 
 
 
