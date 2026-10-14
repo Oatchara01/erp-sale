@@ -899,3 +899,14 @@
 .cs-modal-btn-cancel:hover {
 	background-color: #e2e8f0;
 }
+
+/* กล่องแจ้งตอนยังไม่มีรายการสินค้า (เหมือน .so-product-empty-state ของ register-supbrhos.css) */
+.so-product-empty-state {
+	padding: 28px 16px;
+	text-align: center;
+	font-size: 14px;
+	color: #8E8B94;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
+}

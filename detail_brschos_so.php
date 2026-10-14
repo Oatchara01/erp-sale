@@ -220,16 +220,19 @@
 			}
 		}
 
-		/* ไม่ +1 อีกต่อไป - ตารางโชว์เฉพาะแถวที่มีข้อมูลจริง แถวว่างถัดไปไม่ต้องเปิดค้างไว้
-		   เพราะการเพิ่มสินค้าใหม่ทำผ่านช่องค้นหา (ซึ่งหาแถวว่างเองได้แม้แถวนั้นถูกซ่อนอยู่)
-		   แต่ยังคง Math.max(1, ...) ไว้ให้มีแถวเริ่มต้นว่างๆ โชว์ไว้ 1 แถวเสมอตอนยังไม่มีข้อมูลเลย
-		   เผื่อผู้ใช้ต้องการกรอกจำนวน/ราคาเองโดยไม่ผ่านช่องค้นหา */
-		var maxVisible = Math.min(10, Math.max(1, highestFilled));
+		/* ตารางโชว์เฉพาะแถวที่มีข้อมูลจริง ไม่มีแถวว่างค้างไว้ - การเพิ่มสินค้าทำผ่านช่องค้นหา
+		   (csFindEmptyRowIndex หาแถวว่างเองได้แม้แถวนั้นถูกซ่อนอยู่) ถ้ายังไม่มีข้อมูลเลย
+		   โชว์กล่อง #cs_empty_state แทน (เหมือน #br_empty_state ของ detail_brhos_so.php) */
+		var maxVisible = Math.min(10, highestFilled);
 		for (var j = 1; j <= 10; j++) {
 			var row = document.getElementById('cs_row' + j);
 			if (row) {
 				row.style.display = (j <= maxVisible) ? '' : 'none';
 			}
+		}
+		var emptyState = document.getElementById('cs_empty_state');
+		if (emptyState) {
+			emptyState.style.display = (highestFilled > 0) ? 'none' : '';
 		}
 	}
 
@@ -675,7 +678,7 @@
 				function cs_product_row($i)
 				{
 				?>
-					<tr class="so-product-row" id="cs_row<?php echo $i; ?>">
+					<tr class="so-product-row" id="cs_row<?php echo $i; ?>" style="display:none;">
 						<td>
 							<div class="cs-row-controls-inner">
 								<i class="fas fa-grip-vertical cs-drag-handle rd-handle"
@@ -733,6 +736,7 @@
 			</tbody>
 		</table>
 	</div>
+	<div class="so-product-empty-state" id="cs_empty_state">ยังไม่มีรายการสินค้า — ค้นหาสินค้าจากช่องด้านบน</div>
 
 	<!-- Modal Popup (Figma node 984-5469: ข้อมูลรายการสินค้าเพิ่มเติม) -->
 	<div id="cs_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">

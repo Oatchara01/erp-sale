@@ -31,8 +31,11 @@
 .breq-empty-state {
 	text-align: center;
 	color: #8E8B94;
-	padding: 24px 12px;
+	padding: 28px 16px;
 	font-size: 14px;
+	background: #FAF9FC;
+	border: 1px dashed #E3DCEA;
+	border-radius: 10px;
 }
 
 /* ป้ายเลขที่ PO ที่เลือกแล้ว — อยู่ในปุ่มเดียวกับ "ค้นหาเอกสาร PO" (สลับข้อความกันเมื่อมี/ไม่มีเลขที่
