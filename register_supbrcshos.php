@@ -1533,7 +1533,7 @@ if ($csPrefillSource !== null) {
 					<div class="so-field-group">
 						<label class="so-label" for="customer_name">ชื่อผู้ติดต่อ <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input name="customer_name" class="so-input" type='text' id="customer_name">
+							<input name="customer_name" class="so-input" type='text' id="customer_name" placeholder="ใส่ชื่อผู้ติดต่อ">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
@@ -1564,7 +1564,7 @@ if ($csPrefillSource !== null) {
 				<div class="so-field-group" style="margin-top: 16px;">
 					<label class="so-label" for="address_name">ที่อยู่ในการส่งสินค้า <span style="color:red;">*</span></label>
 					<div class="so-input-wrapper">
-						<input class="so-input" type="text" name="address_name" id="address_name">
+						<input class="so-input" type="text" name="address_name" id="address_name" placeholder="ใส่ที่อยู่ส่งสินค้า">
 						<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value=''; clearShippingAddressParts();" aria-label="ล้างค่า"></button>
 					</div>
 					<input type="hidden" name="shipping_address_raw" id="shipping_address_raw">
@@ -1576,14 +1576,14 @@ if ($csPrefillSource !== null) {
 					<div class="so-field-group">
 						<label class="so-label" for="address_send">สถานที่ติดตั้งเครื่อง <span style="color:red;">*</span></label>
 						<div class="so-input-wrapper">
-							<input class="so-input" type="text" name="address_send" id="address_send">
+							<input class="so-input" type="text" name="address_send" id="address_send" placeholder="ใส่ที่ติดตั้งเครื่อง">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
 					<div class="so-field-group">
 						<label class="so-label" for="location_link">Location Link</label>
 						<div class="so-input-wrapper">
-							<input name="location_link" type='text' id="location_link" class="so-input">
+							<input name="location_link" type='text' id="location_link" class="so-input" placeholder="วางลิงก์ Google Maps หรือพิกัด">
 							<button type="button" class="fas fa-times so-clear-icon" onclick="var i=this.closest('.so-input-wrapper').querySelector('input'); if(i) i.value='';" aria-label="ล้างค่า"></button>
 						</div>
 					</div>
