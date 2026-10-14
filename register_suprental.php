@@ -1122,79 +1122,6 @@ require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/ส
 							<span class="so-ref-value"><?php echo $rentalIsEditMode ? so_saved_h($savedRental['ref_id']) : so_saved_h($so . $nextId); ?></span>
 						</div>
 					</div>
-					<div class="so-header-right">
-						<?php
-						// รายละเอียดจัดส่ง (7112018_new.php) แสดงเมื่อมีเลขที่ลงงานแล้ว — ไม่มีเลข ปุ่ม Preview เปิดใบสั่งเช่าตรงๆ เหมือนเดิม
-						$rtPreviewJobNo = ($savedRental !== null) ? trim((string)($savedRental['job_no'] ?? '')) : '';
-						?>
-						<?php if ($rtPreviewJobNo === '') { ?>
-						<button type="button" class="btn-preview-so" onclick="rtOpenPreview();"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
-						<?php } else { ?>
-						<div class="so-preview-menu-wrap">
-							<button type="button" class="btn-preview-so" id="btn_rt_preview_menu" onclick="rtTogglePreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="rtPreviewMenu"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
-							<div id="rtPreviewMenu" class="so-preview-menu so-preview-menu--down" hidden>
-								<div class="so-preview-menu-label">Preview</div>
-								<div class="so-preview-menu-box" role="menu">
-									<button type="button" role="menuitem" onclick="rtPreviewSelect('rental');">ใบสั่งเช่า</button>
-									<button type="button" role="menuitem" onclick="rtPreviewSelect('delivery');">รายละเอียดจัดส่ง</button>
-								</div>
-							</div>
-						</div>
-						<script>
-							function rtSetPreviewMenuOpen(open) {
-								var menu = document.getElementById('rtPreviewMenu');
-								var trigger = document.getElementById('btn_rt_preview_menu');
-								if (!menu || !trigger) return;
-								menu.hidden = !open;
-								trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-							}
-
-							function rtTogglePreviewMenu(event) {
-								if (event) event.stopPropagation();
-								var menu = document.getElementById('rtPreviewMenu');
-								rtSetPreviewMenuOpen(menu ? menu.hidden : false);
-							}
-
-							function rtPreviewSelect(kind) {
-								rtSetPreviewMenuOpen(false);
-								if (kind === 'rental') {
-									rtOpenPreview();
-									return;
-								}
-								// รายละเอียดจัดส่ง: post เฉพาะเลขที่ลงงาน + ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ (ไม่บันทึกลงฐาน)
-								var productNote = document.getElementById('delivery_product_note');
-								var fields = {
-									running: <?php echo json_encode($rtPreviewJobNo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
-									product: productNote ? productNote.value : '',
-									doc_type: 'rental',
-									_report_preview: '1'
-								};
-								var previewForm = document.createElement('form');
-								previewForm.method = 'post';
-								previewForm.action = '7112018_new.php';
-								previewForm.target = '_blank';
-								Object.keys(fields).forEach(function(name) {
-									var input = document.createElement('input');
-									input.type = 'hidden';
-									input.name = name;
-									input.value = fields[name];
-									previewForm.appendChild(input);
-								});
-								document.body.appendChild(previewForm);
-								previewForm.submit();
-								document.body.removeChild(previewForm);
-							}
-
-							document.addEventListener('click', function(event) {
-								var wrap = document.querySelector('.so-header-right .so-preview-menu-wrap');
-								if (wrap && !wrap.contains(event.target)) rtSetPreviewMenuOpen(false);
-							});
-							document.addEventListener('keydown', function(event) {
-								if (event.key === 'Escape') rtSetPreviewMenuOpen(false);
-							});
-						</script>
-						<?php } ?>
-					</div>
 				</div>
 				<?php
 				$latestRentalDocumentReasonTitleMap = array(
@@ -2774,6 +2701,75 @@ require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/ส
 					<!-- เอกสาร Approve แล้ว: ปุ่ม Update แบบจำกัดของ Admin ทำได้อย่างเดียวคือส่งใบงานตาม toggle ไม่บันทึกค่าฟอร์ม -->
 					<button type="button" id="btn_rt_send_cs" class="btn-so-draft" onclick="rtSendCs();" title="ส่งข้อมูลลงระบบ CS ตามที่ติ๊กไว้"><i class="far fa-save"></i> Update</button>
 				<?php endif; ?>
+				<?php
+				// รายละเอียดจัดส่ง (7112018_new.php) แสดงเมื่อมีเลขที่ลงงานแล้ว
+				$rtPreviewJobNo = ($savedRental !== null) ? trim((string)($savedRental['job_no'] ?? '')) : '';
+				?>
+				<div class="so-preview-menu-wrap">
+					<button type="button" class="btn-so-draft" id="btn_rt_preview_menu" onclick="rtTogglePreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="rtPreviewMenu"><img src="img/icons/preview.png" alt="" style="width: 16px; height: 16px;"> Preview</button>
+					<div id="rtPreviewMenu" class="so-preview-menu" hidden>
+						<div class="so-preview-menu-label">Preview</div>
+						<div class="so-preview-menu-box" role="menu">
+							<button type="button" role="menuitem" onclick="rtPreviewSelect('rental');">ใบสั่งเช่า</button>
+							<?php if ($rtPreviewJobNo !== '') { ?>
+								<button type="button" role="menuitem" onclick="rtPreviewSelect('delivery');">รายละเอียดจัดส่ง</button>
+							<?php } ?>
+						</div>
+					</div>
+				</div>
+				<script>
+					function rtSetPreviewMenuOpen(open) {
+						var menu = document.getElementById('rtPreviewMenu');
+						var trigger = document.getElementById('btn_rt_preview_menu');
+						if (!menu || !trigger) return;
+						menu.hidden = !open;
+						trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+					}
+
+					function rtTogglePreviewMenu(event) {
+						if (event) event.stopPropagation();
+						var menu = document.getElementById('rtPreviewMenu');
+						rtSetPreviewMenuOpen(menu ? menu.hidden : false);
+					}
+
+					function rtPreviewSelect(kind) {
+						rtSetPreviewMenuOpen(false);
+						if (kind === 'rental') {
+							rtOpenPreview();
+							return;
+						}
+						// รายละเอียดจัดส่ง: post เฉพาะเลขที่ลงงาน + ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ (ไม่บันทึกลงฐาน)
+						var productNote = document.getElementById('delivery_product_note');
+						var fields = {
+							running: <?php echo json_encode($rtPreviewJobNo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+							product: productNote ? productNote.value : '',
+							doc_type: 'rental',
+							_report_preview: '1'
+						};
+						var previewForm = document.createElement('form');
+						previewForm.method = 'post';
+						previewForm.action = '7112018_new.php';
+						previewForm.target = '_blank';
+						Object.keys(fields).forEach(function(name) {
+							var input = document.createElement('input');
+							input.type = 'hidden';
+							input.name = name;
+							input.value = fields[name];
+							previewForm.appendChild(input);
+						});
+						document.body.appendChild(previewForm);
+						previewForm.submit();
+						document.body.removeChild(previewForm);
+					}
+
+					document.addEventListener('click', function(event) {
+						var wrap = document.querySelector('.so-sticky-actions .so-preview-menu-wrap');
+						if (wrap && !wrap.contains(event.target)) rtSetPreviewMenuOpen(false);
+					});
+					document.addEventListener('keydown', function(event) {
+						if (event.key === 'Escape') rtSetPreviewMenuOpen(false);
+					});
+				</script>
 			</div>
 		</div>
 	</form>
