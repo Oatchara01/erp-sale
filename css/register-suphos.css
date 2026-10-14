@@ -976,6 +976,25 @@
   cursor: pointer;
 }
 
+/* iPad Safari: ช่องวันที่ native มีความกว้างขั้นต่ำของตัวเองและล้นคอลัมน์ grid ไปทับช่องข้าง ๆ (เช่นปุ่มงานด่วน)
+   ปิดหน้าตา native ให้ช่องย่อตามคอลัมน์ และจัดข้อความวันที่ชิดซ้ายแบบเดียวกับช่องอื่น — ชุดเดียวกับ css/register-supbook.css */
+.calendar-wrapper input[type="date"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.calendar-wrapper input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
+.so-grid-3-custom > .so-field-group {
+  min-width: 0;
+}
+
 .time-wrapper {
   position: relative;
   display: flex;
