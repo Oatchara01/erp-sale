@@ -11,6 +11,35 @@
 	var customerPopupAbortController = null;
 	var customerPopupRequestId = 0;
 
+	// แป้นพิมพ์ iPad ลอยทับหน้าเว็บโดยไม่ย่อ layout viewport: อ่านพื้นที่ที่ยังมองเห็นจาก visualViewport
+	// แล้วส่งให้ css/so-modal-ipad.css ย่อกล่อง popup (--cpvv-h/--cpvv-top + คลาส is-kb-open)
+	// ถ้า layout viewport ย่อเองอยู่แล้ว (Android Chrome) หรือผู้ใช้ซูมอยู่ จะไม่ทำอะไร
+	function syncCustomerPopupViewport() {
+		var modal = document.getElementById('customerPopupModal');
+		var vv = window.visualViewport;
+		if (!modal || !vv) return;
+
+		var keyboardOpen = vv.scale <= 1.01 && (window.innerHeight - vv.height) > 120;
+		modal.classList.toggle('is-kb-open', keyboardOpen);
+		if (keyboardOpen) {
+			modal.style.setProperty('--cpvv-h', Math.round(vv.height) + 'px');
+			modal.style.setProperty('--cpvv-top', Math.round(vv.offsetTop) + 'px');
+		} else {
+			modal.style.removeProperty('--cpvv-h');
+			modal.style.removeProperty('--cpvv-top');
+		}
+	}
+
+	function bindCustomerPopupViewport(enable) {
+		var vv = window.visualViewport;
+		if (!vv) return;
+
+		var method = enable ? 'addEventListener' : 'removeEventListener';
+		vv[method]('resize', syncCustomerPopupViewport);
+		vv[method]('scroll', syncCustomerPopupViewport);
+		if (enable) syncCustomerPopupViewport();
+	}
+
 	// ฟังก์ชันควบคุมป๊อปอัปรายชื่อลูกค้า
 	function openCustomerPopup() {
 		var modal = document.getElementById('customerPopupModal');
@@ -25,20 +54,29 @@
 		customerPopupNextLastId = null;
 		customerPopupHasMore = false;
 		toggleCustomerPopupLoadMore(false, false);
+		bindCustomerPopupViewport(true);
 
 		loadCustomerPopupRows(customerPopupKeyword, false);
-		setTimeout(function() {
-			if (search) {
-				search.focus();
-				search.select();
-			}
-		}, 50);
+		// จอสัมผัส (iPad): ไม่โฟกัสอัตโนมัติ ไม่งั้นแป้นพิมพ์ขึ้นบังรายชื่อทันทีที่เปิด ให้ผู้ใช้แตะช่องค้นหาเอง
+		var isTouchOnly = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+		if (!isTouchOnly) {
+			setTimeout(function() {
+				if (search) {
+					search.focus();
+					search.select();
+				}
+			}, 50);
+		}
 	}
 
 	function closeCustomerPopup() {
 		var modal = document.getElementById('customerPopupModal');
 		if (!modal) return;
 
+		bindCustomerPopupViewport(false);
+		modal.classList.remove('is-kb-open');
+		modal.style.removeProperty('--cpvv-h');
+		modal.style.removeProperty('--cpvv-top');
 		modal.style.display = 'none';
 		modal.setAttribute('aria-hidden', 'true');
 	}

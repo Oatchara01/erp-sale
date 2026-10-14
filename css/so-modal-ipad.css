@@ -134,6 +134,42 @@
   }
 }
 
+/* ===== แป้นพิมพ์ iPad บัง popup ลูกค้า (js/customer-popup.js ใส่ is-kb-open + --cpvv-h/--cpvv-top ตอนแป้นพิมพ์เปิด) =====
+ * ย่อกล่องให้พอดีพื้นที่เหนือแป้นพิมพ์ ปุ่ม ตกลง/ยกเลิก จะลอยเหนือแป้นพิมพ์ และซ่อนชื่อ popup เพื่อให้แนวนอนเห็นรายชื่อมากขึ้น
+ * ใช้ #customerPopupModal เพื่อไม่กระทบ modal อื่นที่ใช้คลาส .customer-popup-modal (เครดิตเทอม, ข้อมูลออกบิล)
+ */
+#customerPopupModal.customer-popup-modal.is-kb-open {
+  top: var(--cpvv-top, 0);
+  bottom: auto;
+  height: var(--cpvv-h, 100%);
+  padding: 12px;
+}
+
+#customerPopupModal.is-kb-open .customer-popup-box {
+  height: min(1226px, calc(var(--cpvv-h, 100vh) - 24px));
+  max-height: none;
+}
+
+#customerPopupModal.is-kb-open .customer-popup-header {
+  padding: 8px 64px 4px 18px; /* ขวา 64px เว้นที่ให้ปุ่ม × ไม่ทับปุ่ม "เพิ่มข้อมูลลูกค้า" */
+}
+
+#customerPopupModal.is-kb-open .customer-popup-header h2 {
+  display: none;
+}
+
+#customerPopupModal.is-kb-open .customer-popup-toolbar {
+  margin-top: 0 !important; /* ตัวอย่างหน้าตั้ง margin-top ด้วย inline style */
+}
+
+#customerPopupModal.is-kb-open .customer-popup-table-wrap {
+  margin-top: 8px;
+}
+
+#customerPopupModal.is-kb-open .customer-popup-actions {
+  padding: 8px 18px;
+}
+
 /* ===== ล็อกการเลื่อนของหน้าหลังขณะ modal เปิด (js/so-modal-scroll-lock.js) =====
  * คลาสอยู่บน <html> แยกจาก swal2-shown ที่ SweetAlert ใส่ให้ <body>
  * padding-right ชดเชยความกว้าง scrollbar ที่หายไป ไม่ให้หน้าขยับ
