@@ -759,6 +759,14 @@ body {
 		position: sticky;
 		bottom: 0;
 		z-index: 5;
+		/* iPad Safari: เลเยอร์ของตัวเอง กันแถบไหลแล้วกระโดดกลับตอนแถบเครื่องมือ Safari หด/ขยายระหว่างเลื่อน */
+		-webkit-transform: translateZ(0);
+		transform: translateZ(0);
+	}
+
+	/* ไม่ให้ทั้งหน้าเด้งเมื่อเลื่อนสุด แถบ sticky จะได้ไม่เด้งตามจนเห็นพื้นหลังใต้แถบ */
+	html {
+		overscroll-behavior-y: none;
 	}
 }
 
