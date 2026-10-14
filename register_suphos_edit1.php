@@ -4177,6 +4177,12 @@ values ('" . $ref_id . "','" . $sale_count30 . "','" . $sale_count30 . "','" . $
 
 	// toggle "ส่งข้อมูลลงระบบ CS" — ทำหลังขั้นอนุมัติเพื่อให้เห็นสถานะสุดท้ายของเอกสาร (ไม่อนุมัติ/ยกเลิก = ไม่ส่ง)
 	// SO ต้อง save สำเร็จเสมอแม้ส่งไม่ผ่าน ผลลัพธ์ไปแสดงใน popup หลัง redirect
+	// ช่อง "สินค้า/เอกสาร" ของหน้าใหม่ -> tb_register_data.product_name (ต้องก่อนส่ง CS)
+	// หน้าเก่า (register_suphos_edit.php / register_veiwsup.php) ไม่ส่ง flag นี้ จึงใช้สูตร $product_name เดิมด้านบน
+	if ($qsave && ($_POST['product_note_form'] ?? '') === '1') {
+		so_save_product_note($conn, $ref_id, $_POST['product'] ?? '');
+	}
+
 	$soCsResult = null;
 	if ($qsave) {
 		if ($cancelDocPost === '1') {

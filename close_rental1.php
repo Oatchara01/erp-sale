@@ -3,9 +3,10 @@
 
 <?php
 include("dbconnect.php");
-include("dbconnect_cs.php");
+// งานรับคืนลง CS ออกผ่าน rental_cs_send_return() (ต่อฐาน CS เอง ถือ lock เดียวกับเอกสารอื่น)
+require_once __DIR__ . '/includes/rental_cs_send.php';
 
-include ("error_page.php"); 
+include ("error_page.php");
 
 date_default_timezone_set("Asia/Bangkok");
 if ($_POST["submit"] = "submit") {
@@ -60,12 +61,18 @@ $ref_id = $_POST["ref_id"];
 $save="UPDATE hos__rental_runiv SET close_date='".$add_date."',close_name='".$add_by."',close_ckk='1'  where ref_idren='".$ref_id."' ";
 $qsave=mysqli_query($conn,$save);
 
-if($type_doc=='3'){
+// $service / $servicenb ไม่มีไฟล์ไหนประกาศ (dbconnect_service.php เขียนทับ $conn จึง include ตรงๆ ไม่ได้)
+// ข้ามการปิดงานติดตั้งไปก่อนเพื่อไม่ให้ fatal ก่อนถึงขั้นส่ง CS — การต่อฐาน service จริงเป็นงานแยก
+if(($type_doc=='3' && empty($service)) || ($type_doc=='4' && empty($servicenb))){
+
+error_log('[close_rental] ' . $ref_id . ': ไม่มี connection ฐาน service ข้ามการปิดงานติดตั้ง (type_doc ' . $type_doc . ')');
+
+}else if($type_doc=='3'){
 
 $save1="UPDATE tb_installation_data SET close_install='1'  where ref_id='".$ref_id."' ";
 $qsave1=mysqli_query($service,$save1);
 
-	
+
 $strSQL2 ="SELECT product_sn FROM tb_installation_data where ref_id='".$ref_id."' ";
 
 $objQuery2 =mysqli_query($service,$strSQL2);
@@ -215,51 +222,27 @@ $objQuery66 = mysqli_query($conn,$strSQL66) or die(mysqli_error());
 	
 
 	
+// งานรับคืนลงสมุดลงงาน CS: ออกเลขผ่านแกนกลาง (lock เดียวกับเอกสารอื่น) ส่งไม่สำเร็จการปิดเช่ายังบันทึกตามปกติ
+$csResult = null;
 if($send_cs =='1'){
-
-$yearMonth = substr(date("Y")+543, -2).date("m");
-$sql = "SELECT MAX(running) AS MAXID FROM tb_register_data";
-$qry = mysqli_query($com1,$sql) or die(mysqli_error());
-$rs = mysqli_fetch_assoc($qry);
-$maxId = substr($rs['MAXID'], -4);
-$maxId1 = substr($rs['MAXID'],0,-4);
-
-if($maxId1 == $yearMonth)
-{
-$maxId1 = ($maxId + 1);
-$maxId2 = substr("00000".$maxId1, -4);
-$nextId = $yearMonth.$maxId2;
+	$csResult = rental_cs_send_return($conn, $ref_id, $_SESSION, array(
+		'start_date' => $start_date, 'between_date' => $between_date, 'start_time' => $start_time, 'end_time' => $end_time,
+		'fix_date' => $fix_date, 'no_price' => $no_price, 'call_customer' => $call_customer, 'credit' => $credit,
+		'call_employee' => $call_employee, 'cash' => $chash, 'check_peper' => $check_peper, 'bill' => $bill,
+		'department' => $department, 'type_customer' => $type_customer, 'type_company' => $type_company,
+		'customer_name' => $customer_name, 'customer_tel' => $customer_tel, 'address_name' => $address_name,
+		'address_send' => $address_send, 'want_bus' => $want_bus, 'amphur_name' => $amphur_name, 'province_name' => $province_name,
+		'product_name' => $product_name, 'unit_credit' => $unit_credit, 'price' => $price,
+		'employee_name' => $employee_name, 'employee_tel' => $employee_tel, 'add_by' => $add_by, 'description' => $description,
+		'have_map' => $havemap, 'unit_bill' => $unit_bill, 'unit_check' => $unit_check, 'unit_tran' => $unit_tran,
+		'tran' => $tran, 'check_detail' => $check_detail, 'status_comment' => $status_comment, 'dep' => $dep, 'dept' => $dept,
+		'department_show' => $department_show, 'customer_contact' => $customer_contact, 'on_time' => $on_time, 'mk_research' => $mk_research,
+	));
 }
-else 
-{
-$maxId1 = "0001"; 
-$nextId = $yearMonth.$maxId1;
-}
-
-$strSQL89 =  "insert into tb_register_data (running,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,amphur_name,province_name,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,number,status_comment,dep,dept,department_show,address_bus,customer_contact,ref_id,iv_date,return_ckk) 
-
-values('".$nextId."','".$start_date."','".$between_date."','".$start_time."','".$end_time."','".$status."','".$fix_date."','".$no_price."','".$call_customer."','".$credit."','".$call_employee."','".$chash."','".$check_peper."','".$bill."','".$department."','".$type_customer."','".$type_company."','".$customer_name."','".$customer_tel."','".$address_name."','".$address_send."','".$want_bus."','".$amphur_name."','".$province_name."','".$product_name."','".$product_sn."','".$unit_credit."','".$price."','".$employee_name."','".$employee_tel."','".$add_by."','".$description."','".$havemap."','$add_date','".$unit_bill."','".$unit_check."','".$unit_tran."','".$tran."','".$check_detail."','".$number."','".$status_comment."','".$dep."','".$dept."','".$department_show."','".$province_name."','".$customer_contact."','".$ref_id."','".$doc_release_date."','1')";
-
- $objQuery89 = mysqli_query($com1,$strSQL89) or die(mysqli_error());
-
-
- 
- $strSQL90 =  "insert into tb_transaction (running) 
-
-values('".$nextId."')";
-
-$objQuery90 = mysqli_query($com1,$strSQL90) or die(mysqli_error());
-		
-$strSQL26="Update  hos__rental set job_idreturn='".$nextId."',send_callcs ='2'  where ref_id='".$ref_id."'";
-$objQuery26 = mysqli_query($conn,$strSQL26);
-	
-	}
 
 
  if($qsave){
-   echo "<script language=\"JavaScript\">";
-echo "alert('บันทึกข้อมูลของท่านเรียบร้อยแล้ว');window.location='status_kangiv.php';";
-echo "</script>";
+	rental_cs_close_alert($csResult, 'status_kangiv.php');
   } else {
    echo "Cannot";
   }

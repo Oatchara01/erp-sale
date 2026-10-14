@@ -448,7 +448,12 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 		$query1 = mysqli_query($conn,$sql1);
 		$fetch1 = mysqli_fetch_array($query1,MYSQLI_ASSOC); 
 	?>
-	<input type="checkbox" name="send_cs" value="1">&nbsp;ส่งข้อมูลไปสมุดลงงาน CS 
+<?php if ($objResult['send_callcs']=='2'){ ?>
+	<?php // ส่งงานรับคืนแล้ว: ล็อกไว้ ไม่ส่งไปกับฟอร์ม (disabled) — close_rental1.php ไม่ออกเลขซ้ำอยู่แล้ว ?>
+	<input type="checkbox" checked='checked' disabled>&nbsp;ส่งข้อมูลไปสมุดลงงาน CS แล้ว เลขที่ลงงาน <?php echo htmlspecialchars((string)$objResult['job_idreturn']); ?>
+<?php }else{ ?>
+	<input type="checkbox" name="send_cs" value="1">&nbsp;ส่งข้อมูลไปสมุดลงงาน CS
+<?php } ?>
 <br>
  วันที่ รับ-ส่ง :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <input name="start_date" type='date' id="start_date"  class="button4" style="width:20%" /></p>

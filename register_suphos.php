@@ -3137,6 +3137,13 @@ include("head.php"); ?>
 								</div>
 							</div>
 						</div>
+
+						<div class="so-field-group" style="margin-top: 16px;">
+							<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
+							<!-- เก็บที่ tb_register_data.product_name ผ่าน so_save_product_note(); flag บอก handler ว่ามาจากหน้าใหม่ (หน้าเก่าใช้สูตรเดิม) -->
+							<input type="hidden" name="product_note_form" value="1">
+							<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo ($savedSo !== null) ? so_saved_h(trim((string)($savedRegister['product_name'] ?? ''))) : ''; ?></textarea>
+						</div>
 					</div>
 
 					<!-- TAB 2: ที่อยู่เพิ่มเติม -->
@@ -4343,6 +4350,11 @@ $soPreviewIvNo = ($savedSo !== null)
 
 $ivPrefix = strtoupper(substr($soPreviewIvNo, 0, 2));
 
+// เลขที่ลงงาน CS (ได้หลังบันทึกพร้อมติ๊ก "ส่งข้อมูลลงระบบ CS")
+$soPreviewJobNo = ($savedSo !== null)
+	? trim((string)($savedSo['job_no'] ?? ''))
+	: '';
+
 
 // =========================================================
 // Permission
@@ -4368,6 +4380,11 @@ $canShowIEReport = (
 // report_EThos.php
 // เอกสารขึ้นต้น ET
 $canShowETReport = ($ivPrefix === 'ET');
+
+
+// 7112018_new.php (ใบแจ้งรายละเอียดการจัดส่งสินค้า)
+// แสดงเมื่อมีเลขที่ลงงานแล้ว
+$canShowDeliveryInfo = ($soPreviewJobNo !== '');
 
 ?>
 
@@ -4463,6 +4480,20 @@ $canShowETReport = ($ivPrefix === 'ET');
 
 				<?php } ?>
 
+
+				<!-- รายละเอียดจัดส่ง (ใบงาน CS) -->
+				<?php if ($canShowDeliveryInfo) { ?>
+
+					<button
+						type="button"
+						role="menuitem"
+						onclick="soPreviewSelect('delivery');"
+					>
+						รายละเอียดจัดส่ง
+					</button>
+
+				<?php } ?>
+
 			</div>
 
 		</div>
@@ -4473,7 +4504,8 @@ $canShowETReport = ($ivPrefix === 'ET');
 	<script>
 
 		var soPreviewTaxInfo = {
-			refId: <?php echo json_encode($soPreviewSavedRefId); ?>
+			refId: <?php echo json_encode($soPreviewSavedRefId); ?>,
+			jobNo: <?php echo json_encode($soPreviewJobNo); ?>
 		};
 
 
@@ -4563,6 +4595,43 @@ $canShowETReport = ($ivPrefix === 'ET');
 					),
 					'_blank'
 				);
+
+				return;
+			}
+
+
+			// ==============================
+			// รายละเอียดจัดส่ง (ใบงาน CS)
+			// ==============================
+
+			if (kind === 'delivery') {
+
+				// post ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ไปแสดงด้วย (ไม่บันทึกลงฐาน)
+				var productNote =
+					document.getElementById('delivery_product_note');
+
+				var fields = {
+					running: soPreviewTaxInfo.jobNo,
+					product: productNote ? productNote.value : '',
+					_report_preview: '1'
+				};
+
+				var previewForm = document.createElement('form');
+				previewForm.method = 'post';
+				previewForm.action = '7112018_new.php';
+				previewForm.target = '_blank';
+
+				Object.keys(fields).forEach(function(name) {
+					var input = document.createElement('input');
+					input.type = 'hidden';
+					input.name = name;
+					input.value = fields[name];
+					previewForm.appendChild(input);
+				});
+
+				document.body.appendChild(previewForm);
+				previewForm.submit();
+				document.body.removeChild(previewForm);
 
 				return;
 			}

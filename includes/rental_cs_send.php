@@ -7,7 +7,7 @@
  * ไฟล์นี้เหลือเฉพาะส่วนของใบเช่า: ตาราง/คอลัมน์, สิทธิ์, และวิธีประกอบช่องใบงานจากใบเช่า
  *
  * ค่า hos__rental.send_cs: 0 = ยังไม่ส่ง, 2 = ส่งแล้ว (ล็อก) เลขที่ลงงานเก็บใน job_no
- * ส่งงาน "ส่ง" 1 ใบเสมอ งานรับคืน (job_idreturn) ออกโดยหน้าปิดเช่า ไม่เกี่ยวกับ toggle นี้
+ * ส่งงาน "ส่ง" 1 ใบเสมอ งานรับคืน (job_idreturn, send_callcs) ออกตอนปิดเช่าผ่าน rental_cs_send_return() ไม่เกี่ยวกับ toggle นี้
  */
 
 require_once __DIR__ . '/cs_job_send.php';
@@ -29,14 +29,82 @@ if (!function_exists('rental_cs_spec')) {
 	}
 }
 
+if (!function_exists('rental_cs_compose_product_name')) {
+	/** ข้อความ "สินค้า/เอกสาร" ของใบงานที่ประกอบจากใบเช่า: "ส่ง <ทรัพย์ที่เช่า>" (hos__rental.des_productunit) */
+	function rental_cs_compose_product_name(array $doc)
+	{
+		$productName = trim((string)($doc['des_productunit'] ?? ''));
+		return $productName !== '' ? 'ส่ง ' . $productName : '';
+	}
+}
+
+if (!function_exists('rental_product_note_display')) {
+	/**
+	 * ค่าในช่อง "สินค้า/เอกสาร" — ค่า "ส่ง" ล้วน (สูตรเดิมตอนสร้างที่ไม่มีชื่อสินค้า) นับเป็นช่องว่าง
+	 * เพื่อไม่ให้บัง placeholder และให้ตอนบันทึกประกอบข้อความจากใบเช่าแทน
+	 */
+	function rental_product_note_display($value)
+	{
+		$value = trim((string)$value);
+		return ($value === 'ส่ง') ? '' : $value;
+	}
+}
+
+if (!function_exists('rental_save_product_note')) {
+	/**
+	 * ช่อง "สินค้า/เอกสาร" (name="product") ของ register_suprental.php -> tb_register_data.product_name
+	 * ว่างไว้ = rental_cs_compose_product_name(); ถ้าส่ง CS แล้ว (send_cs=2) อัปเดตใบงานงาน "ส่ง" (job_no) ในฐาน CS ด้วย
+	 * เรียกหลังบันทึกแถวข้อมูลจัดส่ง และก่อน rental_cs_send() เพื่อให้ใบงานที่ส่งในรอบเดียวกันได้ค่านี้
+	 * หน้าเก่าที่ post มา handler เดียวกันไม่มี flag product_note_form จึงไม่เข้าฟังก์ชันนี้
+	 * อัปเดตฐาน CS ไม่สำเร็จไม่ทำให้การบันทึกใบเช่าเสีย แค่เขียน error_log
+	 */
+	function rental_save_product_note($conn, $refId, $postedText)
+	{
+		$doc = rental_cs_load_document($conn, $refId);
+		if ($doc === null) {
+			return;
+		}
+		$refId = (string)$doc['ref_id'];
+
+		$text = rental_product_note_display($postedText);
+		if ($text === '') {
+			$text = rental_cs_compose_product_name($doc);
+		}
+
+		$stmt = mysqli_prepare($conn, "UPDATE tb_register_data SET product_name = ? WHERE ref_id = ?");
+		if ($stmt) {
+			mysqli_stmt_bind_param($stmt, 'ss', $text, $refId);
+			mysqli_stmt_execute($stmt);
+			mysqli_stmt_close($stmt);
+		}
+
+		$jobNo = trim((string)($doc['job_no'] ?? ''));
+		if ($jobNo === '' || (string)($doc['send_cs'] ?? '') !== '2') {
+			return;
+		}
+
+		try {
+			$com1 = cs_job_connect();
+			$csStmt = mysqli_prepare($com1, "UPDATE tb_register_data SET product_name = ? WHERE running = ? AND ref_id = ?");
+			if (!$csStmt) {
+				throw new RuntimeException(mysqli_error($com1));
+			}
+			mysqli_stmt_bind_param($csStmt, 'sss', $text, $jobNo, $refId);
+			mysqli_stmt_execute($csStmt);
+			mysqli_stmt_close($csStmt);
+		} catch (Throwable $e) {
+			error_log('rental_save_product_note ' . $refId . ': ' . $e->getMessage());
+		}
+	}
+}
+
 if (!function_exists('rental_cs_compose_job_fields')) {
 	/** ช่องใบงานสำรองเมื่อแถวข้อมูลจัดส่งของใบเช่าว่าง (หน้าใบเช่าบันทึกช่องพวกนี้ลง tb_register_data ครบอยู่แล้ว) */
 	function rental_cs_compose_job_fields($conn, $refId, array $doc, array $session)
 	{
-		$productName = trim((string)($doc['des_productunit'] ?? ''));
 		return array_merge(array(
 			'status'       => 'ส่ง',
-			'product_name' => $productName !== '' ? 'ส่ง ' . $productName : '',
+			'product_name' => rental_cs_compose_product_name($doc),
 			'type_company' => ((string)($doc['type_doc'] ?? '') === '4') ? 'โนเบิล เมด บจก.' : 'ออลล์เวล ไลฟ์ บจก.',
 		), cs_job_compose_sale_fields($conn, $doc['sale_code'] ?? '', '', $session));
 	}
@@ -51,13 +119,9 @@ if (!function_exists('rental_cs_job_overrides')) {
 	{
 		$docNo = trim((string)($doc['iv_no'] ?? ''));
 		$promisNo = trim((string)($doc['promis_no'] ?? ''));
-		$overrides = array();
-		// หน้าใบเช่าเก็บชื่อสินค้าในใบงานเป็น "ส่ง <ชื่อสินค้าเช่า>" (create ของเดิมบันทึกได้แค่ "ส่ง " เปล่า) ใช้ค่าจากเอกสารเสมอ
-		$productName = trim((string)($doc['des_productunit'] ?? ''));
-		if ($productName !== '') {
-			$overrides['product_name'] = 'ส่ง ' . $productName;
-		}
-		return $overrides + array(
+		// product_name ไม่ override แล้ว: ใช้ค่าในแถวข้อมูลจัดส่ง (ช่อง "สินค้า/เอกสาร" ที่ rental_save_product_note() เขียนไว้)
+		// ว่างจึงใช้ rental_cs_compose_product_name() ผ่าน compose
+		return array(
 			'status'     => 'ส่ง',
 			'product_sn' => 'เลขที่เอกสาร ' . ($docNo !== '' ? $docNo : '-') . ' เลขที่สัญญา ' . ($promisNo !== '' ? $promisNo : '-'),
 		);
@@ -145,6 +209,95 @@ if (!function_exists('rental_cs_mark_cancelled')) {
 	function rental_cs_mark_cancelled($conn, $refId, $statusDoc, $reason)
 	{
 		return cs_job_mark_cancelled($conn, $refId, rental_cs_spec(), $statusDoc, $reason);
+	}
+}
+
+if (!function_exists('rental_cs_send_return')) {
+	/**
+	 * งาน "รับ" (รับคืนเครื่องเช่า) ตอนปิดเช่า — เรียกจาก close_rental1.php และ close_suprental1.php
+	 * ออกเลขผ่าน lock/ตัวนับเดียวกับเอกสารอื่น เลขเก็บใน hos__rental.job_idreturn และตั้ง send_callcs = 2
+	 *
+	 * ต่างจาก rental_cs_send(): ช่องใบงานมาจากฟอร์มปิดเช่า ($fields) ไม่ใช่แถวข้อมูลจัดส่งในฐาน
+	 * เพราะวันเวลา/ที่อยู่รับคืนกรอกตอนปิดเช่าและไม่ได้เก็บที่อื่น สิทธิ์คงตามหน้าปิดเช่า (ใครเปิดหน้าได้ก็ส่งได้)
+	 *
+	 * @param array $fields คอลัมน์ tb_register_data => ค่าจากฟอร์มปิดเช่า
+	 * @return array|null null = ส่งงานรับคืนไปแล้ว ไม่ทำซ้ำ, array = ผลการส่ง ['success', 'message', 'job_no']
+	 */
+	function rental_cs_send_return($conn, $refId, array $session, array $fields)
+	{
+		$refId = trim((string)$refId);
+		$lockName = '';
+		$com1 = null;
+		try {
+			$doc = rental_cs_load_document($conn, $refId);
+			if ($doc === null) {
+				throw new RuntimeException('ไม่พบใบเช่า ' . $refId);
+			}
+			if (trim((string)($doc['job_idreturn'] ?? '')) !== '') {
+				return null;
+			}
+
+			$com1 = cs_job_connect();
+			$yearMonth = cs_job_year_month();
+			$lockName = cs_job_acquire_lock($com1, $yearMonth);
+			$jobNo = cs_job_next_no($com1, $yearMonth);
+
+			$desProduct = trim((string)($doc['des_productunit'] ?? ''));
+			$composed = array_merge(
+				cs_job_compose_sale_fields($conn, $doc['sale_code'] ?? '', '', $session),
+				array(
+					'product_name' => $desProduct !== '' ? 'รับคืน ' . $desProduct : '',
+					'type_company' => ((string)($doc['type_doc'] ?? '') === '4') ? 'โนเบิล เมด บจก.' : 'ออลล์เวล ไลฟ์ บจก.',
+				)
+			);
+			$pick = function ($column, $default = '') use ($fields, $composed) {
+				$value = (string)($fields[$column] ?? '');
+				if (trim($value) !== '') {
+					return $value;
+				}
+				return (($composed[$column] ?? '') !== '') ? $composed[$column] : $default;
+			};
+			$docNo = trim((string)($doc['iv_no'] ?? ''));
+			$promisNo = trim((string)($doc['promis_no'] ?? ''));
+			$overrides = array(
+				'status'       => 'รับ',
+				'return_ckk'   => '1',
+				'product_sn'   => 'เลขที่เอกสาร ' . ($docNo !== '' ? $docNo : '-') . ' เลขที่สัญญา ' . ($promisNo !== '' ? $promisNo : '-'),
+				// ที่อยู่คงตามที่หน้าปิดเช่าเดิมเขียนลงใบงาน (ค่าจากฟอร์มตรงๆ ไม่ใช้สูตรต่อจังหวัดของแกนกลาง)
+				'address_name' => (string)($fields['address_name'] ?? ''),
+				'address_send' => (string)($fields['address_send'] ?? ''),
+			);
+			cs_job_insert_job($com1, $jobNo, $refId, $pick, array(), $doc['sale_code'] ?? '', $doc['iv_date'] ?? '', date('Y-m-d H:i:s'), $overrides);
+
+			cs_job_query($conn, "UPDATE hos__rental SET job_idreturn = '" . mysqli_real_escape_string($conn, $jobNo) . "', send_callcs = '2'
+				WHERE ref_id = '" . mysqli_real_escape_string($conn, $refId) . "'");
+
+			return cs_job_result(true, 'ส่งงานรับคืนลงระบบ CS แล้ว เลขที่ลงงาน ' . $jobNo, $jobNo);
+		} catch (Throwable $e) {
+			error_log('[rental_cs_send_return] ' . $refId . ': ' . $e->getMessage());
+			return cs_job_result(false, 'ปิดการเช่าแล้ว แต่ส่งงานรับคืนลงระบบ CS ไม่สำเร็จ กรุณาแจ้งผู้ดูแลระบบ');
+		} finally {
+			cs_job_release_lock($com1, $lockName);
+		}
+	}
+}
+
+if (!function_exists('rental_cs_close_alert')) {
+	/**
+	 * หน้าผลการบันทึกปิดเช่า: SweetAlert2 แสดงเลขงานรับคืน/คำเตือน แล้วกลับหน้ารายการ
+	 * หน้าปิดเช่า include head.php ไปแล้ว จึงพิมพ์ script ต่อท้ายได้เลย
+	 */
+	function rental_cs_close_alert($csResult, $backUrl)
+	{
+		$flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+		$options = array(
+			'icon'  => ($csResult === null || $csResult['success']) ? 'success' : 'warning',
+			'title' => 'บันทึกข้อมูลของท่านเรียบร้อยแล้ว',
+			'text'  => ($csResult === null) ? '' : $csResult['message'],
+		);
+		echo '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>';
+		echo '<script>Swal.fire(' . json_encode($options, $flags) . ').then(function () { window.location = '
+			. json_encode((string)$backUrl, $flags) . '; });</script>';
 	}
 }
 

@@ -2614,8 +2614,9 @@ mysqli_query($conn,"SELECT RELEASE_LOCK('".mysqli_real_escape_string($conn,$lock
 	}
 
 
+// st__main อยู่ในฐาน stock ($new) ไม่ใช่ฐานขาย ($conn)
 $strSQL89="Update  st__main set iv_no = '".$iv_no."'  where ref_idsale='".$ref_id."'";
-$objQuery89 = mysqli_query($conn,$strSQL89);
+$objQuery89 = mysqli_query($new,$strSQL89);
 
 if($status_doc !=''){
 	

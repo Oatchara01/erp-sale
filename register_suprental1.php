@@ -997,6 +997,12 @@ $objQuery = mysqli_query($conn,$strSQL);
 if ($saveOk) {
 	mysqli_commit($conn);
 
+	// ช่อง "สินค้า/เอกสาร" ของหน้าใหม่ (หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรเดิมด้านบน)
+	// ต้องมาก่อน rental_cs_send() เพื่อให้ใบงานที่ส่งในรอบนี้ได้ค่าเดียวกัน
+	if (($_POST['product_note_form'] ?? '') === '1') {
+		rental_save_product_note($conn, $ref_id, $_POST['product'] ?? '');
+	}
+
 	// ส่งข้อมูลลงระบบ CS เมื่อผู้ใช้ติ๊ก toggle (Save Draft ไม่ส่ง: แกนกลางข้ามเอกสารสถานะ Draft)
 	// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
 	$rtCsResult = cs_job_send_requested($_POST) ? rental_cs_send($conn, $ref_id, $_SESSION) : null;

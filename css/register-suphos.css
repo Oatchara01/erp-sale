@@ -63,6 +63,12 @@
   min-width: 294px;
 }
 
+/* ปุ่ม Preview ที่หัวหน้า (เช่น ใบสั่งเช่า) เปิดเมนูลงด้านล่างแทน */
+.so-preview-menu--down {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
 .so-preview-menu[hidden] {
   display: none;
 }

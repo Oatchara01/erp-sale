@@ -1123,7 +1123,77 @@ require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/ส
 						</div>
 					</div>
 					<div class="so-header-right">
+						<?php
+						// รายละเอียดจัดส่ง (7112018_new.php) แสดงเมื่อมีเลขที่ลงงานแล้ว — ไม่มีเลข ปุ่ม Preview เปิดใบสั่งเช่าตรงๆ เหมือนเดิม
+						$rtPreviewJobNo = ($savedRental !== null) ? trim((string)($savedRental['job_no'] ?? '')) : '';
+						?>
+						<?php if ($rtPreviewJobNo === '') { ?>
 						<button type="button" class="btn-preview-so" onclick="rtOpenPreview();"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
+						<?php } else { ?>
+						<div class="so-preview-menu-wrap">
+							<button type="button" class="btn-preview-so" id="btn_rt_preview_menu" onclick="rtTogglePreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="rtPreviewMenu"><i class="fas fa-file-alt" aria-hidden="true"></i> Preview</button>
+							<div id="rtPreviewMenu" class="so-preview-menu so-preview-menu--down" hidden>
+								<div class="so-preview-menu-label">Preview</div>
+								<div class="so-preview-menu-box" role="menu">
+									<button type="button" role="menuitem" onclick="rtPreviewSelect('rental');">ใบสั่งเช่า</button>
+									<button type="button" role="menuitem" onclick="rtPreviewSelect('delivery');">รายละเอียดจัดส่ง</button>
+								</div>
+							</div>
+						</div>
+						<script>
+							function rtSetPreviewMenuOpen(open) {
+								var menu = document.getElementById('rtPreviewMenu');
+								var trigger = document.getElementById('btn_rt_preview_menu');
+								if (!menu || !trigger) return;
+								menu.hidden = !open;
+								trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+							}
+
+							function rtTogglePreviewMenu(event) {
+								if (event) event.stopPropagation();
+								var menu = document.getElementById('rtPreviewMenu');
+								rtSetPreviewMenuOpen(menu ? menu.hidden : false);
+							}
+
+							function rtPreviewSelect(kind) {
+								rtSetPreviewMenuOpen(false);
+								if (kind === 'rental') {
+									rtOpenPreview();
+									return;
+								}
+								// รายละเอียดจัดส่ง: post เฉพาะเลขที่ลงงาน + ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ (ไม่บันทึกลงฐาน)
+								var productNote = document.getElementById('delivery_product_note');
+								var fields = {
+									running: <?php echo json_encode($rtPreviewJobNo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+									product: productNote ? productNote.value : '',
+									doc_type: 'rental',
+									_report_preview: '1'
+								};
+								var previewForm = document.createElement('form');
+								previewForm.method = 'post';
+								previewForm.action = '7112018_new.php';
+								previewForm.target = '_blank';
+								Object.keys(fields).forEach(function(name) {
+									var input = document.createElement('input');
+									input.type = 'hidden';
+									input.name = name;
+									input.value = fields[name];
+									previewForm.appendChild(input);
+								});
+								document.body.appendChild(previewForm);
+								previewForm.submit();
+								document.body.removeChild(previewForm);
+							}
+
+							document.addEventListener('click', function(event) {
+								var wrap = document.querySelector('.so-header-right .so-preview-menu-wrap');
+								if (wrap && !wrap.contains(event.target)) rtSetPreviewMenuOpen(false);
+							});
+							document.addEventListener('keydown', function(event) {
+								if (event.key === 'Escape') rtSetPreviewMenuOpen(false);
+							});
+						</script>
+						<?php } ?>
 					</div>
 				</div>
 				<?php
@@ -1954,6 +2024,13 @@ require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/ส
 										<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link').value='';" aria-label="ล้างค่า"></button>
 									</div>
 								</div>
+							</div>
+
+							<!-- สินค้า/เอกสาร -> tb_register_data.product_name (ว่างไว้ = "ส่ง <ทรัพย์ที่เช่า>") ดู rental_save_product_note() -->
+							<div class="so-field-group" style="margin-top: 16px;">
+								<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
+								<input type="hidden" name="product_note_form" value="1">
+								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo ($savedRental !== null) ? so_saved_h(rental_product_note_display($savedRegister['product_name'] ?? '')) : ''; ?></textarea>
 							</div>
 						</div>
 

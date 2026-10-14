@@ -631,9 +631,10 @@ while($objResult1 = mysqli_fetch_array($objQuery1))
 		$fetch1 = mysqli_fetch_array($query1,MYSQLI_ASSOC); 
 	?>
 <?php if ($objResult['send_callcs']=='2'){ ?>
-	<input type="checkbox" name="send_callcs" checked='checked' value="2">&nbsp;ส่งข้อมูลไปสมุดลงงาน CS 
+	<?php // ส่งงานรับคืนแล้ว: ล็อกไว้ ไม่ส่งไปกับฟอร์ม (disabled) — close_suprental1.php ไม่ออกเลขซ้ำอยู่แล้ว ?>
+	<input type="checkbox" checked='checked' disabled>&nbsp;ส่งข้อมูลไปสมุดลงงาน CS แล้ว เลขที่ลงงาน <?php echo htmlspecialchars((string)$objResult['job_idreturn']); ?>
 
-	<?php }else if ($objResult['send_callcs']=='0'){ ?>
+	<?php }else{ ?>
 
 	<input type="checkbox" name="send_callcs" value="1">&nbsp;ส่งข้อมูลไปสมุดลงงาน CS 
 
