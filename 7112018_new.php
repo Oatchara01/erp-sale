@@ -111,6 +111,24 @@ function fetch_row_or_blank($query)
 	return $blank;
 }
 
+// query ของส่วนเสริม (การรับเช็ค-วางบิล, ชื่อธนาคาร, ใบมอบอำนาจ) ห้ามทำให้ทั้งหน้าพัง:
+// ฐานขายของ production ไม่มี tb_document_all และ PHP 8.1+ โยน exception เมื่อ query ล้มเหลว
+// -> คืนแถวว่าง (array()) แล้วเขียน error_log ส่วนนั้นของหน้าจะไม่แสดง
+function query_row_or_blank($link, $sql)
+{
+	try {
+		$query = mysqli_query($link, $sql);
+	} catch (mysqli_sql_exception $e) {
+		error_log('7112018_new.php: ' . $e->getMessage());
+		return array();
+	}
+	if ($query === false) {
+		error_log('7112018_new.php: ' . mysqli_error($link));
+		return array();
+	}
+	return fetch_row_or_blank($query);
+}
+
 // escape ค่าก่อนแสดงผลใน HTML
 function h($value)
 {
@@ -139,14 +157,12 @@ $objResult4 = fetch_row_or_blank($objQuery4);
 
 
 $strSQL13 = "SELECT * FROM tb_document WHERE id_customer_run = '".mysqli_real_escape_string($sol, $objResult2["bill_id"])."' ";
-$objQuery13 = mysqli_query($sol,$strSQL13)or die ("Error Query [".$strSQL13."]");
-$objResult13 = fetch_row_or_blank($objQuery13);
+$objResult13 = query_row_or_blank($sol, $strSQL13);
 
 
 
-$strSQL3 = "SELECT * FROM tb_document_all WHERE ref_idd = '".mysqli_real_escape_string($sol, $objResult13["ref_id"])."' ";
-$objQuery3 = mysqli_query($sol,$strSQL3)or die ("Error Query [".$strSQL3."]");
-$objResult3 = fetch_row_or_blank($objQuery3);
+$strSQL3 = "SELECT * FROM tb_document_all WHERE ref_idd = '".mysqli_real_escape_string($sol, $objResult13["ref_id"] ?? '')."' ";
+$objResult3 = query_row_or_blank($sol, $strSQL3);
 
 
 date_default_timezone_set("Asia/Bangkok");
@@ -975,7 +991,7 @@ foreach (array(
 <?php } ?>	
 	
 	
-<?php if($objResult2["bill_id"]!='' and $objResult3["ref_idd"]!=''){	
+<?php if($objResult2["bill_id"]!='' and ($objResult3["ref_idd"] ?? '')!=''){
 	
 	
 $date_bill = $objResult3["date_bill"];	
@@ -1090,16 +1106,14 @@ $tel_wt = $objResult3["tel_wt"];
 	
 	
 $strSQLbk = "SELECT pay_in FROM tb_bank WHERE id = '".mysqli_real_escape_string($conn2, $objResult3["payment_name"])."' ";
-$objQuerybk = mysqli_query($conn2,$strSQLbk)or die ("Error Query [".$strSQLbk."]");
-$objResultbk = fetch_row_or_blank($objQuerybk);
-	
-$pay_in = $objResultbk["pay_in"];
-	
+$objResultbk = query_row_or_blank($conn2, $strSQLbk);
+
+$pay_in = $objResultbk["pay_in"] ?? '';
+
 $strSQLbk1 = "SELECT pay_in FROM tb_bank WHERE id = '".mysqli_real_escape_string($conn2, $objResult3["payment_name1"])."' ";
-$objQuerybk1 = mysqli_query($conn2,$strSQLbk1)or die ("Error Query [".$strSQLbk1."]");
-$objResultbk1 = fetch_row_or_blank($objQuerybk1);
-	
-$pay_in1 = $objResultbk1["pay_in"];	
+$objResultbk1 = query_row_or_blank($conn2, $strSQLbk1);
+
+$pay_in1 = $objResultbk1["pay_in"] ?? '';
 	
 if($objResult3["payment_name"]!='0'){	
 $payment_name = "การชำระเงิน AWL $pay_in";	
@@ -1142,23 +1156,21 @@ $withtax_ckk="";
 
 	
 $strSQLnt = "SELECT note FROM tb_note WHERE id = '".mysqli_real_escape_string($sol, $objResult3["note"])."' ";
-$objQuerynt = mysqli_query($sol,$strSQLnt)or die ("Error Query [".$strSQLnt."]");
-$objResultnt = fetch_row_or_blank($objQuerynt);
+$objResultnt = query_row_or_blank($sol, $strSQLnt);
 
-$note = $objResultnt["note"];	
+$note = $objResultnt["note"] ?? '';
 	
 
 	
 $strSQLbk2 = "SELECT pay_in FROM tb_bank WHERE id = '".mysqli_real_escape_string($conn2, $objResult3["bank_tran"])."' ";
-$objQuerybk2 = mysqli_query($conn2,$strSQLbk2)or die ("Error Query [".$strSQLbk2."]");
-$objResultbk2 = fetch_row_or_blank($objQuerybk2);
+$objResultbk2 = query_row_or_blank($conn2, $strSQLbk2);
 	
 $step_delivery1 = $objResult3["step_delivery1"];	
 $date_timdel = $objResult3["date_timdel"];	
 $add_del = $objResult3["add_del"];	
 $name_condel = $objResult3["name_condel"];	
 $remark1 = $objResult3["remark1"];	
-$bank_tran = $objResultbk2["pay_in"];		
+$bank_tran = $objResultbk2["pay_in"] ?? '';
 $doc_del = $objResult3["doc_del"];	
 $step_billcs = $objResult3["step_billcs"];
 $step_delivery2 = $objResult3["step_delivery2"];
