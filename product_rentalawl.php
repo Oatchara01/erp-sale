@@ -1,4 +1,5 @@
 <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
+<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(__DIR__ . '/css/so-product-search.css'); ?>" type="text/css" />
 <script type="text/javascript" src="js/autocomplete.js"></script>
 <script type="text/javascript" src="js/jquery.min.js"></script>
 <script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
@@ -510,11 +511,12 @@
 </div>
 
 <div class="cs-product-toolbar-row rt-product-header-row">
-	<div class="so-field-group cs-product-search-wrap">
+	<div class="so-field-group so-search-group">
 		<label class="so-label" for="rt_product_search">ค้นหารายการสินค้า</label>
-		<div class="cs-product-search-bar">
-			<i class="fas fa-search" aria-hidden="true"></i>
-			<input type="text" id="rt_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off">
+		<div class="so-search-box">
+			<i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+			<input type="text" id="rt_product_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="rt_product_results">
+			<ul class="so-search-results" id="rt_product_results" role="listbox" hidden></ul>
 		</div>
 	</div>
 
@@ -653,43 +655,154 @@
 		}
 	})();
 
-	var rtProductAcInstance = new Autocomplete("rt_product_search", function() {
-		this.setValue = function(accessCode) {
-			if (!accessCode) return;
-			if (!rtValidateHeaderFields()) {
-				document.getElementById('rt_product_search').value = '';
-				return;
-			}
-			var rowIndex = rtFindFirstEmptyRow();
-			if (rowIndex === -1) {
-				alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม ' + RT_ROW_COUNT + ' รายการแล้ว)');
-				document.getElementById('rt_product_search').value = '';
-				return;
-			}
-			rtDoCallAjax(accessCode, rowIndex);
-			document.getElementById('rt_product_search').value = '';
-		};
+	/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md (endpoint ajax_rental_product.php)
+	   เลือก -> ตรวจ header -> เติมแถวว่างแถวแรก -> rtDoCallAjax ดึงรายละเอียดเต็ม -> focus ช่องจำนวน (พฤติกรรมเดิม) */
+	var rtSearchTimer = null;
+	var rtSearchToken = 0;
+	var rtSearchItems = [];
+	var rtSearchActive = -1;
 
-		if (this.value.length < 1 && this.isNotClick) return;
-		return "data_pro_rental.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + encodeURIComponent(rtGetSelectedCompany());
-	}, {
-		select_first: 0
-	});
-
-	if (rtProductAcInstance.image && rtProductAcInstance.image.e) {
-		rtProductAcInstance.image.e.style.display = 'none';
+	function rtCloseSearchResults() {
+		var list = document.getElementById('rt_product_results');
+		var input = document.getElementById('rt_product_search');
+		if (!list || !input) return;
+		list.hidden = true;
+		list.innerHTML = '';
+		input.setAttribute('aria-expanded', 'false');
+		input.removeAttribute('aria-activedescendant');
+		rtSearchItems = [];
+		rtSearchActive = -1;
 	}
 
-	(function() {
-		var searchInput = document.getElementById('rt_product_search');
-		var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-		searchInput.addEventListener('paste', function() {
-			setTimeout(function() {
-				acInstance.isModified = 1;
-				acInstance.isNotClick = 1;
-				acInstance.isON = 1;
-				acInstance.request();
-			}, 0);
+	function rtShowSearchNote(message) {
+		var list = document.getElementById('rt_product_results');
+		rtSearchItems = [];
+		rtSearchActive = -1;
+		list.innerHTML = '<li class="so-search-note" role="presentation">' + rtEscapeHtml(message) + '</li>';
+		list.hidden = false;
+		document.getElementById('rt_product_search').setAttribute('aria-expanded', 'true');
+	}
+
+	function rtSetActiveSearchOption(index) {
+		var options = document.getElementById('rt_product_results').querySelectorAll('.so-search-option');
+		var input = document.getElementById('rt_product_search');
+		rtSearchActive = index;
+		Array.prototype.forEach.call(options, function(option, i) {
+			var active = (i === index);
+			option.classList.toggle('is-active', active);
+			option.setAttribute('aria-selected', active ? 'true' : 'false');
+			if (active) {
+				input.setAttribute('aria-activedescendant', option.id);
+				option.scrollIntoView({
+					block: 'nearest'
+				});
+			}
+		});
+	}
+
+	function rtRenderSearchResults(items, hasMore) {
+		if (items.length === 0) {
+			rtShowSearchNote('ไม่พบสินค้าเช่าที่ตรงกับคำค้นของบริษัทที่เลือก');
+			return;
+		}
+		var list = document.getElementById('rt_product_results');
+		rtSearchItems = items;
+		list.innerHTML = items.map(function(item, index) {
+			var sub = String(item.access_name || '').trim();
+			return '<li class="so-search-option" role="option" id="rt_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+				'<span class="so-search-option-code">' + rtEscapeHtml(item.access_code) + '</span>' +
+				'<span class="so-search-option-name">' + rtEscapeHtml(item.sol_name) + '</span>' +
+				(sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + rtEscapeHtml(sub) + '</span>' : '') +
+				'</li>';
+		}).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+		list.hidden = false;
+		document.getElementById('rt_product_search').setAttribute('aria-expanded', 'true');
+		rtSetActiveSearchOption(0);
+	}
+
+	function rtRunSearch() {
+		var keyword = document.getElementById('rt_product_search').value.trim();
+		var token = ++rtSearchToken;
+		if (keyword === '') {
+			rtCloseSearchResults();
+			return;
+		}
+		fetch('ajax_rental_product.php?q=' + encodeURIComponent(keyword) + '&company=' + encodeURIComponent(rtGetSelectedCompany()), {
+				credentials: 'same-origin',
+				cache: 'no-store'
+			})
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(data) {
+				if (token !== rtSearchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+				if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+				rtRenderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+			})
+			.catch(function(error) {
+				if (token !== rtSearchToken) return;
+				rtShowSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+			});
+	}
+
+	function rtPickSearchOption(index) {
+		var item = rtSearchItems[index];
+		if (!item) return;
+		var input = document.getElementById('rt_product_search');
+		input.value = '';
+		rtSearchToken++;
+		rtCloseSearchResults();
+		if (!rtValidateHeaderFields()) return;
+		var rowIndex = rtFindFirstEmptyRow();
+		if (rowIndex === -1) {
+			alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม ' + RT_ROW_COUNT + ' รายการแล้ว)');
+			return;
+		}
+		rtDoCallAjax(item.access_code, rowIndex);
+	}
+
+	(function rtBindProductSearch() {
+		var input = document.getElementById('rt_product_search');
+		var list = document.getElementById('rt_product_results');
+		if (!input || !list) return;
+
+		input.addEventListener('input', function() {
+			clearTimeout(rtSearchTimer);
+			rtSearchTimer = setTimeout(rtRunSearch, 250);
+		});
+
+		input.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter') {
+				event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+				if (rtSearchActive >= 0) rtPickSearchOption(rtSearchActive);
+				return;
+			}
+			if (event.key === 'Escape') {
+				if (!list.hidden) {
+					event.stopPropagation();
+					rtCloseSearchResults();
+				}
+				return;
+			}
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+			if (rtSearchItems.length === 0) return;
+			event.preventDefault();
+			var next = rtSearchActive + (event.key === 'ArrowDown' ? 1 : -1);
+			if (next < 0) next = rtSearchItems.length - 1;
+			if (next >= rtSearchItems.length) next = 0;
+			rtSetActiveSearchOption(next);
+		});
+
+		// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+		list.addEventListener('mousedown', function(event) {
+			var option = event.target.closest('.so-search-option');
+			if (!option) return;
+			event.preventDefault();
+			rtPickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+		});
+
+		input.addEventListener('blur', function() {
+			setTimeout(rtCloseSearchResults, 150);
 		});
 	})();
 
@@ -720,6 +833,8 @@
 			}
 			var searchInput = document.getElementById('rt_product_search');
 			if (searchInput) searchInput.value = '';
+			rtSearchToken++;
+			rtCloseSearchResults();
 			var selectAll = document.getElementById('rt_select_all');
 			if (selectAll) selectAll.checked = false;
 			rtUpdateDeleteButtonVisibility();

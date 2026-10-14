@@ -131,9 +131,9 @@
 }
 
 /* ===== toolbar: ช่องค้นหา (ซ้าย) + radio สลับกลุ่ม (ขวา) แถวเดียวกันบน desktop =====
-   .cs-product-toolbar-row/.cs-product-search-wrap เป็นคลาสร่วมกับ SO/CS/CH —
+   .cs-product-toolbar-row เป็นคลาสร่วมกับ SO/CS/CH —
    ปรับเฉพาะผ่าน .breg-toolbar-row เพิ่มเติม ไม่แตะคลาสฐาน */
-.breg-toolbar-row .cs-product-search-wrap {
+.breg-toolbar-row .so-search-group {
 	min-width: 240px;
 }
 

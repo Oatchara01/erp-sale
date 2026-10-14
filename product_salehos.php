@@ -12,6 +12,7 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
 
 <head>
     <link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
+    <link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(__DIR__ . '/css/so-product-search.css'); ?>" type="text/css" />
     <script type="text/javascript" src="js/autocomplete.js"></script>
     <script type="text/javascript" src="js/jquery.min.js"></script>
     <script type="text/javascript">
@@ -412,36 +413,6 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
             font-size: 28px;
             font-weight: 400;
             color: #612989;
-        }
-
-        .pf-search-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background-color: #ffffff;
-            border: 1px solid #EBEBEB;
-            border-radius: 24px;
-            height: 44px;
-            padding: 0 16px;
-            box-sizing: border-box;
-            margin-bottom: 16px;
-            width: 100%;
-            max-width: 680px;
-        }
-
-        .pf-search-bar i {
-            color: #A098AE;
-            font-size: 16px;
-        }
-
-        .pf-search-bar input {
-            border: none !important;
-            outline: none !important;
-            background: transparent !important;
-            font-family: 'Prompt', sans-serif;
-            font-size: 14px;
-            color: #2D2533;
-            width: 100%;
         }
 
         .so-product-row.dragging {
@@ -972,11 +943,12 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
     </div>
 
     <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px;">
-        <div class="so-product-search-col" style="flex: 1; min-width: 260px;">
+        <div class="so-product-search-col so-search-group" style="flex: 1; min-width: 260px;">
             <label for="global_product_search" class="so-summary-label" style="display: block; color: #612989; margin-bottom: 4px; font-size: 14px; font-weight: 400;">ค้นหารายการสินค้า</label>
-            <div class="pf-search-bar" style="margin-bottom: 0;">
-                <i class="fas fa-search"></i>
-                <input type="text" id="global_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า">
+            <div class="so-search-box">
+                <i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+                <input type="text" id="global_product_search" class="so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="global_product_results">
+                <ul class="so-search-results" id="global_product_results" role="listbox" hidden></ul>
             </div>
         </div>
         <div style="align-self: flex-end;">
@@ -1781,95 +1753,203 @@ $productTableWarrantyBySn = !$productTableIsPo && !empty($productTableWarrantyBy
             }, 200); // Slight delay to let jAutoCalc run first
         }
 
-        // Global Product Search: show suggestions first, add only after the user selects one.
-        new Autocomplete("global_product_search", function() {
-            this.setValue = function(id) {
-                if (!id) {
+        // เติมสินค้าที่เลือกลงแถวว่างแถวแรก (ตรรกะเดิมของช่องค้นหา — ย้ายมาเป็นฟังก์ชันให้ dropdown เรียก)
+        function addProductByCode(id) {
+            if (!id) {
+                return;
+            }
+
+            // Find the first empty row
+            let emptyRowIndex = -1;
+            for (let i = 1; i <= 30; i++) {
+                let codeInput = document.getElementById('product_codet' + i);
+                if (codeInput && codeInput.value.trim() === '') {
+                    emptyRowIndex = i;
+                    break;
+                }
+            }
+
+            if (emptyRowIndex !== -1) {
+                let codeInput = document.getElementById('product_codet' + emptyRowIndex);
+                let hiddenCodeInput = document.getElementById('h_product_codet' + emptyRowIndex);
+                let rowDeletedInput = document.getElementById('row_deleted' + emptyRowIndex);
+                let subsoDbIdInput = document.getElementById('subso_db_id' + emptyRowIndex);
+
+                codeInput.value = id;
+                if (hiddenCodeInput) hiddenCodeInput.value = id;
+                if (rowDeletedInput) rowDeletedInput.value = '0';
+                if (subsoDbIdInput) subsoDbIdInput.value = '';
+                // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
+                // เพราะแถวนี้อาจเป็นแถวที่เพิ่งลบสินค้าเดิมไป แล้วเลือกสินค้าใหม่ทันที
+                // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
+
+                // กันค่า clear_br/clear_ivno/jong_ckk/jong_no ของสินค้าเดิม (จากการเคลียร์ยืม/จอง)
+                // ติดค้างมากับแถวที่เพิ่งเลือกสินค้าใหม่เข้ามาทับ
+                var clearBrInput = document.getElementById('clear_br' + emptyRowIndex);
+                var clearIvnoInput = document.getElementById('clear_ivno' + emptyRowIndex);
+                var jongCkkInput = document.getElementById('jong_ckk' + emptyRowIndex);
+                var jongNoInput = document.getElementById('jong_no' + emptyRowIndex);
+                if (clearBrInput) clearBrInput.value = '';
+                if (clearIvnoInput) clearIvnoInput.value = '';
+                if (jongCkkInput) jongCkkInput.value = '';
+                if (jongNoInput) jongNoInput.value = '';
+
+                // Trigger the ajax call to populate the row
+                doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);
+
+                // Ensure the row is visible
+                document.getElementById('product_row_' + emptyRowIndex).style.display = '';
+
+                // Focus on the quantity field
+                setTimeout(function() {
+                    let qtyInput = document.getElementById('sale_count' + emptyRowIndex);
+                    if (qtyInput) {
+                        qtyInput.value = "1"; // Default quantity
+                        // Trigger change for jAutoCalc
+                        qtyInput.dispatchEvent(new Event('change'));
+                        qtyInput.focus();
+                        qtyInput.select();
+                    }
+                    calculateSummary();
+                }, 300);
+            } else {
+                alert("ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 30 รายการแล้ว)");
+            }
+        }
+
+        // dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md (endpoint ajax_smp_product.php)
+        var searchTimer = null;
+        var searchToken = 0;
+        var searchItems = [];
+        var searchActive = -1;
+
+        function closeSearchResults() {
+            var list = document.getElementById('global_product_results');
+            var input = document.getElementById('global_product_search');
+            if (!list || !input) return;
+            list.hidden = true;
+            list.innerHTML = '';
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            searchItems = [];
+            searchActive = -1;
+        }
+
+        function showSearchNote(message) {
+            searchItems = [];
+            searchActive = -1;
+            var list = document.getElementById('global_product_results');
+            list.innerHTML = '<li class="so-search-note" role="presentation">' + escapeHtml(message) + '</li>';
+            list.hidden = false;
+            document.getElementById('global_product_search').setAttribute('aria-expanded', 'true');
+        }
+
+        function setActiveSearchOption(index) {
+            var options = document.getElementById('global_product_results').querySelectorAll('.so-search-option');
+            var input = document.getElementById('global_product_search');
+            searchActive = index;
+            Array.prototype.forEach.call(options, function(option, i) {
+                var active = (i === index);
+                option.classList.toggle('is-active', active);
+                option.setAttribute('aria-selected', active ? 'true' : 'false');
+                if (active) {
+                    input.setAttribute('aria-activedescendant', option.id);
+                    option.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        }
+
+        function renderSearchResults(items, hasMore) {
+            if (items.length === 0) {
+                showSearchNote('ไม่พบสินค้าที่ตรงกับคำค้นของบริษัทที่เลือก');
+                return;
+            }
+            var list = document.getElementById('global_product_results');
+            searchItems = items;
+            list.innerHTML = items.map(function(item, index) {
+                var sub = String(item.access_name || '').trim();
+                return '<li class="so-search-option" role="option" id="global_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+                    '<span class="so-search-option-code">' + escapeHtml(item.access_code) + '</span>' +
+                    '<span class="so-search-option-name">' + escapeHtml(item.sol_name) + '</span>' +
+                    (sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + escapeHtml(sub) + '</span>' : '') +
+                    '</li>';
+            }).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+            list.hidden = false;
+            document.getElementById('global_product_search').setAttribute('aria-expanded', 'true');
+            setActiveSearchOption(0);
+        }
+
+        function runSearch() {
+            var keyword = document.getElementById('global_product_search').value.trim();
+            var token = ++searchToken;
+            if (keyword === '') {
+                closeSearchResults();
+                return;
+            }
+            fetch('ajax_smp_product.php?q=' + encodeURIComponent(keyword) + '&company=' + getSelectedTypeCompany(), { credentials: 'same-origin', cache: 'no-store' })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (token !== searchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+                    if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+                    renderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+                })
+                .catch(function(error) {
+                    if (token !== searchToken) return;
+                    showSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+                });
+        }
+
+        function pickSearchOption(index) {
+            var item = searchItems[index];
+            if (!item) return;
+            document.getElementById('global_product_search').value = '';
+            searchToken++;
+            closeSearchResults();
+            addProductByCode(item.access_code); // focus ไปช่องจำนวนของแถวที่เติม (ตรรกะเดิม)
+        }
+
+        (function() {
+            var input = document.getElementById('global_product_search');
+            var list = document.getElementById('global_product_results');
+            if (!input || !list) return;
+
+            input.addEventListener('input', function() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(runSearch, 250);
+            });
+
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+                    if (searchActive >= 0) pickSearchOption(searchActive);
                     return;
                 }
-
-                // Find the first empty row
-                let emptyRowIndex = -1;
-                for (let i = 1; i <= 30; i++) {
-                    let codeInput = document.getElementById('product_codet' + i);
-                    if (codeInput && codeInput.value.trim() === '') {
-                        emptyRowIndex = i;
-                        break;
+                if (event.key === 'Escape') {
+                    if (!list.hidden) {
+                        event.stopPropagation();
+                        closeSearchResults();
                     }
+                    return;
                 }
+                if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                if (searchItems.length === 0) return;
+                event.preventDefault();
+                var next = searchActive + (event.key === 'ArrowDown' ? 1 : -1);
+                if (next < 0) next = searchItems.length - 1;
+                if (next >= searchItems.length) next = 0;
+                setActiveSearchOption(next);
+            });
 
-                if (emptyRowIndex !== -1) {
-                    let codeInput = document.getElementById('product_codet' + emptyRowIndex);
-                    let hiddenCodeInput = document.getElementById('h_product_codet' + emptyRowIndex);
-                    let rowDeletedInput = document.getElementById('row_deleted' + emptyRowIndex);
-                    let subsoDbIdInput = document.getElementById('subso_db_id' + emptyRowIndex);
+            // mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+            list.addEventListener('mousedown', function(event) {
+                var option = event.target.closest('.so-search-option');
+                if (!option) return;
+                event.preventDefault();
+                pickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+            });
 
-                    codeInput.value = id;
-                    if (hiddenCodeInput) hiddenCodeInput.value = id;
-                    if (rowDeletedInput) rowDeletedInput.value = '0';
-                    if (subsoDbIdInput) subsoDbIdInput.value = '';
-                    // หมายเหตุ: ไม่ล้าง deleted_subso_db_id/deleted_product_code ที่นี่
-                    // เพราะแถวนี้อาจเป็นแถวที่เพิ่งลบสินค้าเดิมไป แล้วเลือกสินค้าใหม่ทันที
-                    // ถ้าล้างทิ้ง คำสั่งลบของเดิมจะหายไป (ของเดิมค้างใน DB ไม่ถูกลบ)
-
-                    // กันค่า clear_br/clear_ivno/jong_ckk/jong_no ของสินค้าเดิม (จากการเคลียร์ยืม/จอง)
-                    // ติดค้างมากับแถวที่เพิ่งเลือกสินค้าใหม่เข้ามาทับ
-                    var clearBrInput = document.getElementById('clear_br' + emptyRowIndex);
-                    var clearIvnoInput = document.getElementById('clear_ivno' + emptyRowIndex);
-                    var jongCkkInput = document.getElementById('jong_ckk' + emptyRowIndex);
-                    var jongNoInput = document.getElementById('jong_no' + emptyRowIndex);
-                    if (clearBrInput) clearBrInput.value = '';
-                    if (clearIvnoInput) clearIvnoInput.value = '';
-                    if (jongCkkInput) jongCkkInput.value = '';
-                    if (jongNoInput) jongNoInput.value = '';
-
-                    // Trigger the ajax call to populate the row
-                    doCallAjax('product_codet' + emptyRowIndex, 'product_id' + emptyRowIndex, 'product_name' + emptyRowIndex, 'unit_name' + emptyRowIndex, 'product_price' + emptyRowIndex, 'discount_unit' + emptyRowIndex, 'warranty' + emptyRowIndex);
-
-                    // Ensure the row is visible
-                    document.getElementById('product_row_' + emptyRowIndex).style.display = '';
-
-                    // Focus on the quantity field
-                    setTimeout(function() {
-                        let qtyInput = document.getElementById('sale_count' + emptyRowIndex);
-                        if (qtyInput) {
-                            qtyInput.value = "1"; // Default quantity
-                            // Trigger change for jAutoCalc
-                            qtyInput.dispatchEvent(new Event('change'));
-                            qtyInput.focus();
-                            qtyInput.select();
-                        }
-                        calculateSummary();
-                    }, 300);
-                } else {
-                    alert("ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 30 รายการแล้ว)");
-                }
-
-                // Clear the global search box
-                document.getElementById('global_product_search').value = '';
-            };
-
-            if (this.value.length < 1 && this.isNotClick) return;
-            return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + getSelectedTypeCompany();
-        }, {
-            select_first: 0
-        });
-
-        // ปุ่ม autocomplete เดิม (js/autocomplete.js) ฟังแค่ event keydown/keypress เท่านั้น
-        // การวางข้อความ (คลิกขวา > วาง หรือบางเบราว์เซอร์กับ Ctrl+V) ไม่ทำให้เกิด keypress
-        // จึงไม่มีการค้นหาเกิดขึ้นเลย ต้องดักจับ event "paste" แล้วสั่งค้นหาซ้ำเอง
-        (function() {
-            var searchInput = document.getElementById('global_product_search');
-            var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-            // ซ่อนไอคอนสถานะเล็กๆ ทางขวาของช่องค้นหา (autocomplete.js สร้างให้อัตโนมัติ) เพราะไม่ได้ใช้
-            acInstance.image.e.style.display = 'none';
-            searchInput.addEventListener('paste', function() {
-                setTimeout(function() {
-                    acInstance.isModified = 1;
-                    acInstance.isNotClick = 1;
-                    acInstance.isON = 1; // request() ยิง AJAX ก็ต่อเมื่อ isON=1 เท่านั้น (ปกติถูกตั้งค่าตอน keydown)
-                    acInstance.request();
-                }, 0);
+            input.addEventListener('blur', function() {
+                setTimeout(closeSearchResults, 150);
             });
         })();
 

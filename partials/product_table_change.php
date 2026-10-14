@@ -10,9 +10,6 @@ if (!isset($ptcIsEngDept)) {
 	$ptcIsEngDept = (($_SESSION["department"] ?? '') === 'วิศวกรรม');
 }
 
-$ptcSearchCodeEndpoint = $ptcIsEngDept ? 'data_product_engi.php' : 'data_product_hosi.php';
-$ptcSearchNameEndpoint = $ptcIsEngDept ? 'data_product_eng_ptc.php' : 'data_product_hos_ptc.php';
-$ptcSearchThaiEndpoint = $ptcIsEngDept ? 'data_product_ength.php' : 'data_product_searchth.php';
 /* endpoint แยกเฉพาะ flow นี้ (ไม่ใช้ data_product_hos1.php ร่วมกับหน้าอื่นอีก 100+ หน้า)
    เพื่อ enforce close_pro/group1/แผนกให้ตรงกับ autocomplete ด้านบน */
 $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
@@ -317,57 +314,161 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 	</div>
 </div>
 
-<!-- C1: ช่องค้นหาสินค้าเดียวเหนือตาราง แทนช่องค้นหา 3 ช่องต่อแถวเดิม ผูกกับ endpoint
-     ตามแผนก ($ptcSearchNameEndpoint ที่คำนวณไว้ด้านบนแล้ว) เลือกแล้วเติมแถวว่างแถวแรก -->
+<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(dirname(__DIR__) . '/css/so-product-search.css'); ?>">
+
+<!-- C1: ช่องค้นหาสินค้าเดียวเหนือตาราง แทนช่องค้นหา 3 ช่องต่อแถวเดิม ผูกกับ ajax_change_product.php
+     (แยก sale/eng ตามแผนกด้วย $ptcIsEngDept) เลือกแล้วเติมแถวว่างแถวแรก -->
 <div class="cs-product-toolbar-row">
-	<div class="so-field-group cs-product-search-wrap">
+	<div class="so-field-group so-search-group">
 		<label class="so-label" for="ptc_product_search">ค้นหารายการสินค้า</label>
-		<div class="cs-product-search-bar">
-			<i class="fas fa-search" aria-hidden="true"></i>
-			<input type="text" id="ptc_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off">
+		<div class="so-search-box">
+			<i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+			<input type="text" id="ptc_product_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ptc_product_results">
+			<ul class="so-search-results" id="ptc_product_results" role="listbox" hidden></ul>
 		</div>
 	</div>
 </div>
 
 <script type="text/javascript">
 	(function() {
-		var ptcProductAcInstance = new Autocomplete("ptc_product_search", function() {
-			this.setValue = function(accessCode) {
-				if (!accessCode) {
-					return;
-				}
-				var rowIndex = ptcFindEmptyRowIndex();
-				if (rowIndex === -1) {
-					alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 6 รายการแล้ว)');
-					document.getElementById('ptc_product_search').value = '';
-					return;
-				}
-				ptcSearchDoCallAjax(accessCode, rowIndex);
-				document.getElementById('ptc_product_search').value = '';
-			};
+		/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md
+		   เลือกแล้วเติมแถวว่างแถวแรก (สูงสุด 6) แล้วเรียก ptcSearchDoCallAjax ตามเดิม */
+		var PTC_SEARCH_DEPT = '<?php echo $ptcIsEngDept ? 'eng' : 'sale'; ?>';
+		var input = document.getElementById('ptc_product_search');
+		var list = document.getElementById('ptc_product_results');
+		if (!input || !list) return;
+		var searchTimer = null;
+		var searchToken = 0;
+		var searchItems = [];
+		var searchActive = -1;
 
-			if (this.value.length < 1 && this.isNotClick) return;
-			return '<?php echo $ptcSearchNameEndpoint; ?>?product_code_search=' + encodeURIComponent(this.value) + '&type_company=' + ptcGetSelectedTypeCompany();
-		}, {
-			select_first: 0
-		});
-
-		/* autocomplete.js สร้างไอคอนวงกลมขวาสุดทับ input เองทุกครั้งที่ new Autocomplete() -
-		   ซ่อนเฉพาะของ instance นี้เพราะมีไอคอนแว่นขยายซ้ายมืออยู่แล้ว (เหมือน detail_brschos_so.php) */
-		if (ptcProductAcInstance.image && ptcProductAcInstance.image.e) {
-			ptcProductAcInstance.image.e.style.display = 'none';
+		function escapeHtml(value) {
+			return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function(ch) {
+				return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch];
+			});
 		}
 
-		/* ดักจับ paste ด้วยเมาส์ (js/autocomplete.js เดิมฟังแค่ keydown/keypress) */
-		var ptcSearchInput = document.getElementById('ptc_product_search');
-		var ptcAcInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-		ptcSearchInput.addEventListener('paste', function() {
-			setTimeout(function() {
-				ptcAcInstance.isModified = 1;
-				ptcAcInstance.isNotClick = 1;
-				ptcAcInstance.isON = 1;
-				ptcAcInstance.request();
-			}, 0);
+		function closeSearchResults() {
+			list.hidden = true;
+			list.innerHTML = '';
+			input.setAttribute('aria-expanded', 'false');
+			input.removeAttribute('aria-activedescendant');
+			searchItems = [];
+			searchActive = -1;
+		}
+
+		function showSearchNote(message) {
+			searchItems = [];
+			searchActive = -1;
+			list.innerHTML = '<li class="so-search-note" role="presentation">' + escapeHtml(message) + '</li>';
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+		}
+
+		function setActiveSearchOption(index) {
+			var options = list.querySelectorAll('.so-search-option');
+			searchActive = index;
+			Array.prototype.forEach.call(options, function(option, i) {
+				var active = (i === index);
+				option.classList.toggle('is-active', active);
+				option.setAttribute('aria-selected', active ? 'true' : 'false');
+				if (active) {
+					input.setAttribute('aria-activedescendant', option.id);
+					option.scrollIntoView({ block: 'nearest' });
+				}
+			});
+		}
+
+		function renderSearchResults(items, hasMore) {
+			if (items.length === 0) {
+				showSearchNote('ไม่พบสินค้าที่ตรงกับคำค้นของบริษัทที่เลือก');
+				return;
+			}
+			searchItems = items;
+			list.innerHTML = items.map(function(item, index) {
+				var sub = String(item.access_name || '').trim();
+				return '<li class="so-search-option" role="option" id="ptc_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+					'<span class="so-search-option-code">' + escapeHtml(item.access_code) + '</span>' +
+					'<span class="so-search-option-name">' + escapeHtml(item.sol_name) + '</span>' +
+					(sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + escapeHtml(sub) + '</span>' : '') +
+					'</li>';
+			}).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+			setActiveSearchOption(0);
+		}
+
+		function runSearch() {
+			var keyword = input.value.trim();
+			var token = ++searchToken;
+			if (keyword === '') {
+				closeSearchResults();
+				return;
+			}
+			fetch('ajax_change_product.php?q=' + encodeURIComponent(keyword) + '&company=' + ptcGetSelectedTypeCompany() + '&dept=' + PTC_SEARCH_DEPT, { credentials: 'same-origin', cache: 'no-store' })
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					if (token !== searchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+					if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+					renderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+				})
+				.catch(function(error) {
+					if (token !== searchToken) return;
+					showSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+				});
+		}
+
+		function pickSearchOption(index) {
+			var item = searchItems[index];
+			if (!item) return;
+			input.value = '';
+			searchToken++;
+			closeSearchResults();
+			var rowIndex = ptcFindEmptyRowIndex();
+			if (rowIndex === -1) {
+				alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 6 รายการแล้ว)');
+				return;
+			}
+			ptcSearchDoCallAjax(item.access_code, rowIndex);
+		}
+
+		input.addEventListener('input', function() {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(runSearch, 250);
+		});
+
+		input.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter') {
+				event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+				if (searchActive >= 0) pickSearchOption(searchActive);
+				return;
+			}
+			if (event.key === 'Escape') {
+				if (!list.hidden) {
+					event.stopPropagation();
+					closeSearchResults();
+				}
+				return;
+			}
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+			if (searchItems.length === 0) return;
+			event.preventDefault();
+			var next = searchActive + (event.key === 'ArrowDown' ? 1 : -1);
+			if (next < 0) next = searchItems.length - 1;
+			if (next >= searchItems.length) next = 0;
+			setActiveSearchOption(next);
+		});
+
+		// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+		list.addEventListener('mousedown', function(event) {
+			var option = event.target.closest('.so-search-option');
+			if (!option) return;
+			event.preventDefault();
+			pickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+		});
+
+		input.addEventListener('blur', function() {
+			setTimeout(closeSearchResults, 150);
 		});
 	})();
 </script>
@@ -503,4 +604,4 @@ $ptcDetailEndpoint = 'data_product_hos1_ptc.php';
 	ptcUpdatePendingState();
 </script>
 <?php
-unset($ptcIsEngDept, $ptcSearchCodeEndpoint, $ptcSearchNameEndpoint, $ptcSearchThaiEndpoint, $ptcDetailEndpoint);
+unset($ptcIsEngDept, $ptcDetailEndpoint);

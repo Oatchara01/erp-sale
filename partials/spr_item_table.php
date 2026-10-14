@@ -373,43 +373,148 @@ $sprRowsToJs = function (array $rows) {
 	</div>
 </div>
 
+<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(dirname(__DIR__) . '/css/so-product-search.css'); ?>">
+
 <div class="cs-product-toolbar-row spr-toolbar-row">
-	<div class="so-field-group cs-product-search-wrap">
+	<div class="so-field-group so-search-group">
 		<label class="so-label" for="spr_product_search">ค้นหารายการสินค้า</label>
-		<div class="cs-product-search-bar">
-			<i class="fas fa-search" aria-hidden="true"></i>
-			<input type="text" id="spr_product_search" placeholder="ค้นหาด้วยรหัส / ชื่อสินค้า" autocomplete="off">
+		<div class="so-search-box">
+			<i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+			<input type="text" id="spr_product_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัส / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="spr_product_results">
+			<ul class="so-search-results" id="spr_product_results" role="listbox" hidden></ul>
 		</div>
 	</div>
 </div>
 
 <script type="text/javascript">
 	(function() {
-		var sprAcInstance = new Autocomplete("spr_product_search", function() {
-			this.setValue = function(accessCode) {
-				if (!accessCode) return;
-				sprFetchProduct(accessCode);
-				document.getElementById('spr_product_search').value = '';
-			};
+		/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md
+		   endpoint ajax_breg_product.php (ตัวกรองเดียวกับ data_product_engall.php เดิม: engineer_ckk = 1)
+		   เลือกแล้วเรียก sprFetchProduct ตามเดิม */
+		var input = document.getElementById('spr_product_search');
+		var list = document.getElementById('spr_product_results');
+		if (!input || !list) return;
+		var searchTimer = null;
+		var searchToken = 0;
+		var searchItems = [];
+		var searchActive = -1;
 
-			if (this.value.length < 1 && this.isNotClick) return;
-			return 'data_product_engall.php?product_code_search=' + encodeURIComponent(this.value) +
-				'&type_company=' + sprGetTypeCompany();
-		}, { select_first: 0 });
-
-		if (sprAcInstance.image && sprAcInstance.image.e) {
-			sprAcInstance.image.e.style.display = 'none';
+		function closeSearchResults() {
+			list.hidden = true;
+			list.innerHTML = '';
+			input.setAttribute('aria-expanded', 'false');
+			input.removeAttribute('aria-activedescendant');
+			searchItems = [];
+			searchActive = -1;
 		}
 
-		var searchInput = document.getElementById('spr_product_search');
-		var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-		searchInput.addEventListener('paste', function() {
-			setTimeout(function() {
-				acInstance.isModified = 1;
-				acInstance.isNotClick = 1;
-				acInstance.isON = 1;
-				acInstance.request();
-			}, 0);
+		function showSearchNote(message) {
+			searchItems = [];
+			searchActive = -1;
+			list.innerHTML = '<li class="so-search-note" role="presentation">' + sprEscapeHtml(message) + '</li>';
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+		}
+
+		function setActiveSearchOption(index) {
+			var options = list.querySelectorAll('.so-search-option');
+			searchActive = index;
+			Array.prototype.forEach.call(options, function(option, i) {
+				var active = (i === index);
+				option.classList.toggle('is-active', active);
+				option.setAttribute('aria-selected', active ? 'true' : 'false');
+				if (active) {
+					input.setAttribute('aria-activedescendant', option.id);
+					option.scrollIntoView({ block: 'nearest' });
+				}
+			});
+		}
+
+		function renderSearchResults(items, hasMore) {
+			if (items.length === 0) {
+				showSearchNote('ไม่พบสินค้าที่ตรงกับคำค้นของบริษัทที่เลือก');
+				return;
+			}
+			searchItems = items;
+			list.innerHTML = items.map(function(item, index) {
+				var sub = String(item.access_name || '').trim();
+				return '<li class="so-search-option" role="option" id="spr_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+					'<span class="so-search-option-code">' + sprEscapeHtml(item.access_code) + '</span>' +
+					'<span class="so-search-option-name">' + sprEscapeHtml(item.sol_name) + '</span>' +
+					(sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + sprEscapeHtml(sub) + '</span>' : '') +
+					'</li>';
+			}).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+			setActiveSearchOption(0);
+		}
+
+		function runSearch() {
+			var keyword = input.value.trim();
+			var token = ++searchToken;
+			if (keyword === '') {
+				closeSearchResults();
+				return;
+			}
+			fetch('ajax_breg_product.php?q=' + encodeURIComponent(keyword) + '&company=' + sprGetTypeCompany(), { credentials: 'same-origin', cache: 'no-store' })
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					if (token !== searchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+					if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+					renderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+				})
+				.catch(function(error) {
+					if (token !== searchToken) return;
+					showSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+				});
+		}
+
+		function pickSearchOption(index) {
+			var item = searchItems[index];
+			if (!item) return;
+			input.value = '';
+			searchToken++;
+			closeSearchResults();
+			sprFetchProduct(item.access_code);
+		}
+
+		input.addEventListener('input', function() {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(runSearch, 250);
+		});
+
+		input.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter') {
+				event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+				if (searchActive >= 0) pickSearchOption(searchActive);
+				return;
+			}
+			if (event.key === 'Escape') {
+				if (!list.hidden) {
+					event.stopPropagation();
+					closeSearchResults();
+				}
+				return;
+			}
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+			if (searchItems.length === 0) return;
+			event.preventDefault();
+			var next = searchActive + (event.key === 'ArrowDown' ? 1 : -1);
+			if (next < 0) next = searchItems.length - 1;
+			if (next >= searchItems.length) next = 0;
+			setActiveSearchOption(next);
+		});
+
+		// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+		list.addEventListener('mousedown', function(event) {
+			var option = event.target.closest('.so-search-option');
+			if (!option) return;
+			event.preventDefault();
+			pickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+		});
+
+		input.addEventListener('blur', function() {
+			setTimeout(closeSearchResults, 150);
 		});
 	})();
 </script>

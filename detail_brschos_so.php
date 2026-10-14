@@ -2,6 +2,7 @@
 
 <head>
 	<link rel="stylesheet" href="css/autocomplete.css" type="text/css" />
+	<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(__DIR__ . '/css/so-product-search.css'); ?>" type="text/css" />
 	<script type="text/javascript" src="js/autocomplete.js"></script>
 	<script type="text/javascript" src="js/jquery.min.js"></script>
 	<script type="text/javascript" src="js/row-drag.js?v=<?php echo filemtime(__DIR__ . '/js/row-drag.js'); ?>"></script>
@@ -470,11 +471,12 @@
 	</div>
 
 	<div class="cs-product-toolbar-row">
-		<div class="so-field-group cs-product-search-wrap">
+		<div class="so-field-group so-search-group">
 			<label class="so-label" for="cs_product_search">ค้นหารายการสินค้า</label>
-			<div class="cs-product-search-bar">
-				<i class="fas fa-search" aria-hidden="true"></i>
-				<input type="text" id="cs_product_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off">
+			<div class="so-search-box">
+				<i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+				<input type="text" id="cs_product_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="cs_product_results">
+				<ul class="so-search-results" id="cs_product_results" role="listbox" hidden></ul>
 			</div>
 		</div>
 
@@ -486,50 +488,165 @@
 	</div>
 
 	<script type="text/javascript">
-		/* ผูก #cs_product_search กับตัวค้นหาสินค้าจริงจาก DB (adapt จาก product_salehos.php's
-		   global_product_search): พิมพ์ -> เห็นรายการแนะนำ -> เลือก -> เติมแถวว่างแถวแรกอัตโนมัติ
-		   ช่องนี้ไม่กรองแถวที่มีอยู่แล้วอีกต่อไป (เดิมมี csFilterProductRows แต่ชนกับการค้นหาสินค้าใหม่ -
-		   พิมพ์หาสินค้าตัวที่ 2 แล้วซ่อนแถวที่เพิ่งเพิ่มไปเพราะข้อความไม่ตรงชื่อ/รหัส) */
-		var csProductAcInstance = new Autocomplete("cs_product_search", function() {
-			this.setValue = function(accessCode) {
-				if (!accessCode) {
-					return;
-				}
-				var rowIndex = csFindEmptyRowIndex();
-				if (rowIndex === -1) {
-					alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 10 รายการแล้ว)');
-					document.getElementById('cs_product_search').value = '';
-					return;
-				}
-				csDoCallAjax(accessCode, rowIndex);
-				document.getElementById('cs_product_search').value = '';
-			};
+		/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md (endpoint ajax_smp_product.php)
+		   เลือก -> เติมแถวว่างแถวแรก (สูงสุด 10) -> csDoCallAjax ดึงรายละเอียดเต็ม -> focus ช่องจำนวน (พฤติกรรมเดิม)
+		   ช่องนี้ไม่กรองแถวที่มีอยู่แล้ว (เดิมมี csFilterProductRows แต่ชนกับการค้นหาสินค้าใหม่) */
+		var csSearchTimer = null;
+		var csSearchToken = 0;
+		var csSearchItems = [];
+		var csSearchActive = -1;
 
-			if (this.value.length < 1 && this.isNotClick) return;
-			return "data_pro_notdemoth.php?product_code_search=" + encodeURIComponent(this.value) + "&type_company=" + csGetSelectedTypeCompany();
-		}, {
-			select_first: 0
-		});
-
-		/* autocomplete.js สร้างไอคอนวงกลมขวาสุด (คลาส NSImage) เองแบบ dynamic ทับ input ทุกครั้งที่
-		   new Autocomplete() ทำงาน - ซ่อนเฉพาะของ instance นี้ (ไม่แก้ไฟล์ autocomplete.js ที่ใช้
-		   ร่วมกับ autocomplete ค้นหาลูกค้า/สินค้าหน้าอื่นทั้งเว็บ) เพราะมีไอคอนแว่นขยายซ้ายมืออยู่แล้ว */
-		if (csProductAcInstance.image && csProductAcInstance.image.e) {
-			csProductAcInstance.image.e.style.display = 'none';
+		function csEscapeHtml(value) {
+			return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+				return {
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#039;'
+				} [ch];
+			});
 		}
 
-		/* ปุ่ม autocomplete เดิม (js/autocomplete.js) ฟังแค่ keydown/keypress การวางข้อความด้วยเมาส์
-		   จึงไม่ค้นหา - ดักจับ "paste" แล้วสั่งค้นหาซ้ำเอง (ปัญหาเดียวกับที่แก้ไว้แล้วใน product_salehos.php) */
+		function csCloseSearchResults() {
+			var list = document.getElementById('cs_product_results');
+			var input = document.getElementById('cs_product_search');
+			if (!list || !input) return;
+			list.hidden = true;
+			list.innerHTML = '';
+			input.setAttribute('aria-expanded', 'false');
+			input.removeAttribute('aria-activedescendant');
+			csSearchItems = [];
+			csSearchActive = -1;
+		}
+
+		function csShowSearchNote(message) {
+			var list = document.getElementById('cs_product_results');
+			csSearchItems = [];
+			csSearchActive = -1;
+			list.innerHTML = '<li class="so-search-note" role="presentation">' + csEscapeHtml(message) + '</li>';
+			list.hidden = false;
+			document.getElementById('cs_product_search').setAttribute('aria-expanded', 'true');
+		}
+
+		function csSetActiveSearchOption(index) {
+			var options = document.getElementById('cs_product_results').querySelectorAll('.so-search-option');
+			var input = document.getElementById('cs_product_search');
+			csSearchActive = index;
+			Array.prototype.forEach.call(options, function(option, i) {
+				var active = (i === index);
+				option.classList.toggle('is-active', active);
+				option.setAttribute('aria-selected', active ? 'true' : 'false');
+				if (active) {
+					input.setAttribute('aria-activedescendant', option.id);
+					option.scrollIntoView({
+						block: 'nearest'
+					});
+				}
+			});
+		}
+
+		function csRenderSearchResults(items, hasMore) {
+			if (items.length === 0) {
+				csShowSearchNote('ไม่พบสินค้าที่ตรงกับคำค้นของบริษัทที่เลือก');
+				return;
+			}
+			var list = document.getElementById('cs_product_results');
+			csSearchItems = items;
+			list.innerHTML = items.map(function(item, index) {
+				var sub = String(item.access_name || '').trim();
+				return '<li class="so-search-option" role="option" id="cs_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+					'<span class="so-search-option-code">' + csEscapeHtml(item.access_code) + '</span>' +
+					'<span class="so-search-option-name">' + csEscapeHtml(item.sol_name) + '</span>' +
+					(sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + csEscapeHtml(sub) + '</span>' : '') +
+					'</li>';
+			}).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+			list.hidden = false;
+			document.getElementById('cs_product_search').setAttribute('aria-expanded', 'true');
+			csSetActiveSearchOption(0);
+		}
+
+		function csRunSearch() {
+			var keyword = document.getElementById('cs_product_search').value.trim();
+			var token = ++csSearchToken;
+			if (keyword === '') {
+				csCloseSearchResults();
+				return;
+			}
+			fetch('ajax_smp_product.php?q=' + encodeURIComponent(keyword) + '&company=' + csGetSelectedTypeCompany(), {
+					credentials: 'same-origin',
+					cache: 'no-store'
+				})
+				.then(function(res) {
+					return res.json();
+				})
+				.then(function(data) {
+					if (token !== csSearchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+					if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+					csRenderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+				})
+				.catch(function(error) {
+					if (token !== csSearchToken) return;
+					csShowSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+				});
+		}
+
+		function csPickSearchOption(index) {
+			var item = csSearchItems[index];
+			if (!item) return;
+			document.getElementById('cs_product_search').value = '';
+			csSearchToken++;
+			csCloseSearchResults();
+			var rowIndex = csFindEmptyRowIndex();
+			if (rowIndex === -1) {
+				alert('ไม่สามารถเพิ่มสินค้าได้ (ตารางเต็ม 10 รายการแล้ว)');
+				return;
+			}
+			csDoCallAjax(item.access_code, rowIndex);
+		}
+
 		(function() {
-			var searchInput = document.getElementById('cs_product_search');
-			var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-			searchInput.addEventListener('paste', function() {
-				setTimeout(function() {
-					acInstance.isModified = 1;
-					acInstance.isNotClick = 1;
-					acInstance.isON = 1;
-					acInstance.request();
-				}, 0);
+			var input = document.getElementById('cs_product_search');
+			var list = document.getElementById('cs_product_results');
+			if (!input || !list) return;
+
+			input.addEventListener('input', function() {
+				clearTimeout(csSearchTimer);
+				csSearchTimer = setTimeout(csRunSearch, 250);
+			});
+
+			input.addEventListener('keydown', function(event) {
+				if (event.key === 'Enter') {
+					event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+					if (csSearchActive >= 0) csPickSearchOption(csSearchActive);
+					return;
+				}
+				if (event.key === 'Escape') {
+					if (!list.hidden) {
+						event.stopPropagation();
+						csCloseSearchResults();
+					}
+					return;
+				}
+				if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+				if (csSearchItems.length === 0) return;
+				event.preventDefault();
+				var next = csSearchActive + (event.key === 'ArrowDown' ? 1 : -1);
+				if (next < 0) next = csSearchItems.length - 1;
+				if (next >= csSearchItems.length) next = 0;
+				csSetActiveSearchOption(next);
+			});
+
+			// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+			list.addEventListener('mousedown', function(event) {
+				var option = event.target.closest('.so-search-option');
+				if (!option) return;
+				event.preventDefault();
+				csPickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+			});
+
+			input.addEventListener('blur', function() {
+				setTimeout(csCloseSearchResults, 150);
 			});
 		})();
 	</script>

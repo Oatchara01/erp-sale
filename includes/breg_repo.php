@@ -1323,3 +1323,47 @@ if (!function_exists('breg_type_product_options')) {
 		return $options;
 	}
 }
+
+if (!defined('BREG_PRODUCT_SEARCH_LIMIT')) {
+	define('BREG_PRODUCT_SEARCH_LIMIT', 50);
+}
+
+if (!function_exists('breg_search_products')) {
+	/**
+	 * ค้นสินค้าสำหรับ dropdown ค้นหาอะไหล่ของ register_bregawl.php
+	 * เงื่อนไขเดียวกับ data_product_engall.php (engineer_ckk = '1', type_company, close_pro = '0';
+	 * ไม่ตัดเดโม ไม่ตัดกลุ่ม 8001/8002) ค้นรหัส / ชื่ออังกฤษ / ชื่อไทย
+	 * คืนสูงสุด BREG_PRODUCT_SEARCH_LIMIT + 1 แถว เพื่อให้ผู้เรียกรู้ว่ายังมีผลเหลือ
+	 */
+	function breg_search_products($conn, $keyword, $typeCompany)
+	{
+		$keyword = trim((string)$keyword);
+		if ($keyword === '') {
+			return array();
+		}
+		$stmt = mysqli_prepare($conn, "SELECT product_ID, access_code, sol_name, access_name
+			FROM tb_product
+			WHERE engineer_ckk = '1' AND close_pro = '0' AND type_company = ?
+				AND (LOCATE(?, access_code) > 0 OR LOCATE(?, access_name) > 0 OR LOCATE(?, sol_name) > 0)
+			ORDER BY (LOCATE(?, access_code) = 1) DESC, access_code ASC
+			LIMIT " . (BREG_PRODUCT_SEARCH_LIMIT + 1));
+		if (!$stmt) {
+			throw new RuntimeException(mysqli_error($conn));
+		}
+		$company = $typeCompany === 'NBM' ? 'NBM' : 'AWL';
+		mysqli_stmt_bind_param($stmt, 'sssss', $company, $keyword, $keyword, $keyword, $keyword);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+		$rows = array();
+		while ($result && ($row = mysqli_fetch_assoc($result))) {
+			$rows[] = array(
+				'product_id'  => (string)$row['product_ID'],
+				'access_code' => (string)$row['access_code'],
+				'sol_name'    => (string)$row['sol_name'],
+				'access_name' => (string)$row['access_name'],
+			);
+		}
+		mysqli_stmt_close($stmt);
+		return $rows;
+	}
+}

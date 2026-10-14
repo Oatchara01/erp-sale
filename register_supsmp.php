@@ -633,9 +633,13 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<div class="smp-summary-item"><span class="smp-summary-label">ยอดรวม</span><strong class="smp-summary-value" id="smp_grand_total">0.00</strong></div>
 			</div>
 			<div class="cs-product-toolbar-row">
-				<div class="so-field-group cs-product-search-wrap smp-product-search">
+				<div class="so-field-group smp-search-group">
 					<label class="so-label" for="smp_product_search">ค้นหารายการสินค้า</label>
-					<div class="cs-product-search-bar"><i class="fas fa-search" aria-hidden="true"></i><input type="text" id="smp_product_search" placeholder="ค้นหาด้วยรหัส / ชื่อสินค้า" autocomplete="off"></div>
+					<div class="smp-search-box">
+						<i class="fas fa-search smp-search-icon" aria-hidden="true"></i>
+						<input type="text" id="smp_product_search" class="so-input smp-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="smp_product_results">
+						<ul class="smp-search-results" id="smp_product_results" role="listbox" hidden></ul>
+					</div>
 				</div>
 				<div class="cs-product-header-row">
 					<button type="button" class="cs-delete-selected-btn" id="smp_delete_selected_btn" onclick="smpDeleteSelectedRows();"><i class="far fa-trash-alt"></i> ลบรายการที่เลือก</button>

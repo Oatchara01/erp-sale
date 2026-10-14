@@ -1,0 +1,102 @@
+/* ช่องค้นหาสินค้าแบบ autocomplete dropdown — pattern: docs/product-search-dropdown-pattern.md
+   ใช้ร่วมกันผ่าน product_salehos.php (SO / PO / ใบเช่า / legacy ที่ include ไฟล์นั้น)
+   หน้า legacy ไม่โหลด so-core.css จึงใส่ค่า fallback ให้ตัวแปรทุกตัวและตั้งสไตล์ input เอง */
+
+.so-search-group {
+	flex: 1 1 320px;
+	min-width: 0;
+}
+
+.so-search-box {
+	position: relative;
+	width: 100%;
+	max-width: 680px;
+}
+
+.so-search-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--so-text, #3B3B3B);
+	font-size: 16px;
+	pointer-events: none;
+}
+
+.so-search-input {
+	display: block;
+	width: 100%;
+	height: 44px;
+	padding: 0 16px 0 42px;
+	box-sizing: border-box;
+	border: 1px solid var(--so-border, #EFEBEF);
+	border-radius: 10px;
+	background: #F5F6F8;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+	color: var(--so-text, #3B3B3B);
+	outline: none;
+}
+
+.so-search-input:focus {
+	border-color: var(--so-primary, #612989);
+}
+
+/* z-index สูงกว่าแถบปุ่มล่าง (.so-sticky-actions = 5) */
+.so-search-results {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 20;
+	max-height: 320px;
+	margin: 0;
+	padding: 6px 0;
+	overflow-y: auto;
+	list-style: none;
+	background: #FFFFFF;
+	border: 1px solid var(--so-border, #EFEBEF);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* จำเป็น: display ที่เขียนเองจะทับ attribute hidden ถ้าไม่มีกฎนี้ */
+.so-search-results[hidden] {
+	display: none;
+}
+
+.so-search-option {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 16px;
+	cursor: pointer;
+	font-family: 'Prompt', sans-serif;
+	font-size: 14px;
+}
+
+.so-search-option:hover,
+.so-search-option.is-active {
+	background: #F4EFF8;
+}
+
+.so-search-option-code {
+	color: var(--so-primary, #612989);
+	font-weight: 500;
+}
+
+.so-search-option-name {
+	color: var(--so-text, #3B3B3B);
+}
+
+.so-search-option-sub {
+	color: var(--so-muted, #8E8B94);
+	font-size: 12px;
+}
+
+.so-search-note {
+	padding: 8px 16px;
+	font-family: 'Prompt', sans-serif;
+	color: var(--so-muted, #8E8B94);
+	font-size: 13px;
+}

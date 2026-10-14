@@ -317,12 +317,15 @@ $bregRowsToJs = function (array $rows) {
 	}
 </script>
 
+<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(dirname(__DIR__) . '/css/so-product-search.css'); ?>">
+
 <div class="cs-product-toolbar-row breg-toolbar-row">
-	<div class="so-field-group cs-product-search-wrap">
+	<div class="so-field-group so-search-group">
 		<label class="so-label" for="breg_product_search">ค้นหารายการอะไหล่</label>
-		<div class="cs-product-search-bar">
-			<i class="fas fa-search" aria-hidden="true"></i>
-			<input type="text" id="breg_product_search" placeholder="ค้นหาด้วยรหัส / ชื่ออะไหล่" autocomplete="off">
+		<div class="so-search-box">
+			<i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+			<input type="text" id="breg_product_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัส / ชื่ออะไหล่" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="breg_product_results">
+			<ul class="so-search-results" id="breg_product_results" role="listbox" hidden></ul>
 		</div>
 	</div>
 
@@ -341,42 +344,156 @@ $bregRowsToJs = function (array $rows) {
 
 <script type="text/javascript">
 	(function() {
-		/* ช่องค้นหาช่องเดียวใช้ร่วมกันทั้งสองกลุ่ม — เติมลงกลุ่มที่กำลังเปิดอยู่
-		   (autocomplete.js ผูก instance กับ id เดียว จึงสร้างช่องเดียวแล้วอ่าน radio
-		   ตอนเลือกสินค้า แทนการสร้าง 2 instance ที่ต้อง sync กันเอง) */
+		/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md (endpoint ajax_breg_product.php)
+		   ช่องค้นหาช่องเดียวใช้ร่วมกันทั้งสองกลุ่ม — เติมลงกลุ่มที่ radio เลือกอยู่ตอนเลือกสินค้า */
 		function bregActiveGroup() {
 			var checked = document.querySelector('input[name="breg_group"]:checked');
 			return checked ? checked.value : 'g1';
 		}
 
-		var bregAcInstance = new Autocomplete("breg_product_search", function() {
-			this.setValue = function(accessCode) {
-				if (!accessCode) return;
-				bregFetchProduct(bregActiveGroup(), accessCode);
-				document.getElementById('breg_product_search').value = '';
-			};
-
-			if (this.value.length < 1 && this.isNotClick) return;
-			return 'data_product_engall.php?product_code_search=' + encodeURIComponent(this.value) +
-				'&type_company=' + bregGetTypeCompany();
-		}, { select_first: 0 });
-
-		/* autocomplete.js แปะไอคอนวงกลมทับ input ทุกครั้งที่ new Autocomplete()
-		   ซ่อนทิ้งเพราะช่องนี้มีไอคอนแว่นขยายด้านซ้ายอยู่แล้ว (เหมือน partials/product_table_change.php) */
-		if (bregAcInstance.image && bregAcInstance.image.e) {
-			bregAcInstance.image.e.style.display = 'none';
+		function bregEscapeHtml(value) {
+			return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+				return {
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#039;'
+				} [ch];
+			});
 		}
 
-		/* autocomplete.js เดิมฟังแค่ keydown/keypress — เพิ่ม paste ด้วยเมาส์ */
-		var searchInput = document.getElementById('breg_product_search');
-		var acInstance = Autocomplete.inst[Autocomplete.inst.length - 1];
-		searchInput.addEventListener('paste', function() {
-			setTimeout(function() {
-				acInstance.isModified = 1;
-				acInstance.isNotClick = 1;
-				acInstance.isON = 1;
-				acInstance.request();
-			}, 0);
+		var input = document.getElementById('breg_product_search');
+		var list = document.getElementById('breg_product_results');
+		if (!input || !list) return;
+		var searchTimer = null;
+		var searchToken = 0;
+		var searchItems = [];
+		var searchActive = -1;
+
+		function closeSearchResults() {
+			list.hidden = true;
+			list.innerHTML = '';
+			input.setAttribute('aria-expanded', 'false');
+			input.removeAttribute('aria-activedescendant');
+			searchItems = [];
+			searchActive = -1;
+		}
+
+		function showSearchNote(message) {
+			searchItems = [];
+			searchActive = -1;
+			list.innerHTML = '<li class="so-search-note" role="presentation">' + bregEscapeHtml(message) + '</li>';
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+		}
+
+		function setActiveSearchOption(index) {
+			var options = list.querySelectorAll('.so-search-option');
+			searchActive = index;
+			Array.prototype.forEach.call(options, function(option, i) {
+				var active = (i === index);
+				option.classList.toggle('is-active', active);
+				option.setAttribute('aria-selected', active ? 'true' : 'false');
+				if (active) {
+					input.setAttribute('aria-activedescendant', option.id);
+					option.scrollIntoView({
+						block: 'nearest'
+					});
+				}
+			});
+		}
+
+		function renderSearchResults(items, hasMore) {
+			if (items.length === 0) {
+				showSearchNote('ไม่พบอะไหล่ที่ตรงกับคำค้น');
+				return;
+			}
+			searchItems = items;
+			list.innerHTML = items.map(function(item, index) {
+				var sub = String(item.access_name || '').trim();
+				return '<li class="so-search-option" role="option" id="breg_product_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+					'<span class="so-search-option-code">' + bregEscapeHtml(item.access_code) + '</span>' +
+					'<span class="so-search-option-name">' + bregEscapeHtml(item.sol_name) + '</span>' +
+					(sub !== '' && sub !== item.sol_name ? '<span class="so-search-option-sub">' + bregEscapeHtml(sub) + '</span>' : '') +
+					'</li>';
+			}).join('') + (hasMore ? '<li class="so-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+			list.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
+			setActiveSearchOption(0);
+		}
+
+		function runSearch() {
+			var keyword = input.value.trim();
+			var token = ++searchToken;
+			if (keyword === '') {
+				closeSearchResults();
+				return;
+			}
+			fetch('ajax_breg_product.php?q=' + encodeURIComponent(keyword) + '&company=' + bregGetTypeCompany(), {
+					credentials: 'same-origin',
+					cache: 'no-store'
+				})
+				.then(function(res) {
+					return res.json();
+				})
+				.then(function(data) {
+					if (token !== searchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+					if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+					renderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+				})
+				.catch(function(error) {
+					if (token !== searchToken) return;
+					showSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+				});
+		}
+
+		function pickSearchOption(index) {
+			var item = searchItems[index];
+			if (!item) return;
+			input.value = '';
+			searchToken++;
+			closeSearchResults();
+			bregFetchProduct(bregActiveGroup(), item.access_code); // เพิ่มแถวท้ายกลุ่มที่เลือกอยู่ แล้ว focus ช่องจำนวน (พฤติกรรมเดิม)
+		}
+
+		input.addEventListener('input', function() {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(runSearch, 250);
+		});
+
+		input.addEventListener('keydown', function(event) {
+			if (event.key === 'Enter') {
+				event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+				if (searchActive >= 0) pickSearchOption(searchActive);
+				return;
+			}
+			if (event.key === 'Escape') {
+				if (!list.hidden) {
+					event.stopPropagation();
+					closeSearchResults();
+				}
+				return;
+			}
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+			if (searchItems.length === 0) return;
+			event.preventDefault();
+			var next = searchActive + (event.key === 'ArrowDown' ? 1 : -1);
+			if (next < 0) next = searchItems.length - 1;
+			if (next >= searchItems.length) next = 0;
+			setActiveSearchOption(next);
+		});
+
+		// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+		list.addEventListener('mousedown', function(event) {
+			var option = event.target.closest('.so-search-option');
+			if (!option) return;
+			event.preventDefault();
+			pickSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+		});
+
+		input.addEventListener('blur', function() {
+			setTimeout(closeSearchResults, 150);
 		});
 	})();
 </script>

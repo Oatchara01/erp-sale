@@ -1260,3 +1260,44 @@ function smp_run_document_action($conn, $refId, $action, $reason, array $session
 	}
 	return array('ref_id' => $refId, 'action' => $action, 'outcome' => $outcome, 'warning' => $warning);
 }
+
+define('SMP_PRODUCT_SEARCH_LIMIT', 50);
+
+/**
+ * ค้นสินค้าสำหรับช่องค้นหาของ register_supsmp.php (autocomplete dropdown)
+ * เงื่อนไขเดียวกับ data_pro_notdemoth.php (ขายได้, ไม่ใช่เดโม, ไม่ปิด, ตัดกลุ่ม 8001/8002) + ค้นชื่ออังกฤษ
+ * คืนสูงสุด SMP_PRODUCT_SEARCH_LIMIT + 1 แถว เพื่อให้ผู้เรียกรู้ว่ายังมีผลเหลือ
+ * $typeCompany = 'AWL' | 'NBM' (ค่าในคอลัมน์ tb_product.type_company)
+ */
+function smp_search_products($conn, $keyword, $typeCompany)
+{
+	$keyword = trim((string)$keyword);
+	if ($keyword === '') {
+		return array();
+	}
+	$stmt = mysqli_prepare($conn, "SELECT product_ID, access_code, sol_name, access_name
+		FROM tb_product
+		WHERE sale_ckk = '1' AND demo_ckk = '0' AND close_pro = '0' AND type_company = ?
+			AND group1 NOT IN (8002, 8001)
+			AND (LOCATE(?, access_code) > 0 OR LOCATE(?, sol_name) > 0 OR LOCATE(?, access_name) > 0)
+		ORDER BY (LOCATE(?, access_code) = 1) DESC, access_code ASC
+		LIMIT " . (SMP_PRODUCT_SEARCH_LIMIT + 1));
+	if (!$stmt) {
+		throw new RuntimeException(mysqli_error($conn));
+	}
+	$company = $typeCompany === 'NBM' ? 'NBM' : 'AWL';
+	mysqli_stmt_bind_param($stmt, 'sssss', $company, $keyword, $keyword, $keyword, $keyword);
+	mysqli_stmt_execute($stmt);
+	$result = mysqli_stmt_get_result($stmt);
+	$rows = array();
+	while ($result && ($row = mysqli_fetch_assoc($result))) {
+		$rows[] = array(
+			'product_id'  => (string)$row['product_ID'],
+			'access_code' => (string)$row['access_code'],
+			'sol_name'    => (string)$row['sol_name'],
+			'access_name' => (string)$row['access_name'],
+		);
+	}
+	mysqli_stmt_close($stmt);
+	return $rows;
+}

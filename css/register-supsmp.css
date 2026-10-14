@@ -32,7 +32,20 @@
 .smp-summary-label { font-size: 14px; color: #7A767D; }
 .smp-summary-value { font-size: 22px; line-height: 1.2; font-weight: 400; color: #3B3B3B; }
 .smp-summary-divider { width: 1px; background: #B9B5BC; }
-.smp-product-search { max-width: 680px; margin-bottom: 18px; }
+/* ช่องค้นหาสินค้า (autocomplete dropdown) — pattern: docs/product-search-dropdown-pattern.md */
+.smp-search-group { flex: 1 1 320px; max-width: 680px; margin-bottom: 0; }
+.smp-search-box { position: relative; }
+.smp-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--so-text); font-size: 16px; pointer-events: none; }
+.so-input.smp-search-input { padding-left: 42px; }
+/* z-index สูงกว่าแถบปุ่มล่าง (.so-sticky-actions = 5) */
+.smp-search-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; max-height: 320px; margin: 0; padding: 6px 0; overflow-y: auto; list-style: none; background: #FFFFFF; border: 1px solid var(--so-border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.smp-search-results[hidden] { display: none; }
+.smp-search-option { display: flex; flex-direction: column; gap: 2px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+.smp-search-option:hover, .smp-search-option.is-active { background: #F4EFF8; }
+.smp-search-option-code { color: var(--so-primary); font-weight: 500; }
+.smp-search-option-name { color: var(--so-text); }
+.smp-search-option-sub { color: var(--so-muted); font-size: 12px; }
+.smp-search-note { padding: 8px 16px; color: var(--so-muted); font-size: 13px; }
 .smp-items-card .so-product-table-wrap { width: calc(100% + 2 * clamp(16px, 3vw, 32px)); margin: 0 calc(-1 * clamp(16px, 3vw, 32px)) 16px; overflow-x: auto; }
 /* 9 คอลัมน์: ลาก | เลือก | รหัส | ชื่อ | จำนวน | ราคา/หน่วย | ยอดรวม | SN | ปุ่ม
    .so-product-table เป็น table-layout: fixed ความกว้างจึงคุมด้วย nth-child และต้องใส่ทั้ง th และ td */

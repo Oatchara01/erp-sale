@@ -388,31 +388,6 @@
 	max-width: 640px;
 }
 
-.br-global-search-bar {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	background-color: var(--so-input-bg);
-	border-radius: 8px;
-	padding: 0 14px;
-	height: 38px;
-}
-
-.br-global-search-bar i {
-	color: var(--so-muted);
-	font-size: 14px;
-}
-
-.br-global-search-bar input {
-	border: none;
-	background: transparent;
-	width: 100%;
-	outline: none;
-	font-size: 13px;
-	font-family: 'Prompt', sans-serif;
-	color: var(--so-text);
-}
-
 .br-delete-selected-btn {
 	display: none;
 	align-items: center;

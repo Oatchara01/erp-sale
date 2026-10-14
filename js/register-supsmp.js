@@ -118,7 +118,8 @@
 				'<input type="hidden" name="' + p + '[product_name]" value="' + esc(data.product_name) + '">' +
 				'<input type="hidden" name="' + p + '[unit_name]" value="' + esc(data.unit_name) + '"></td>' +
 			'<td><div class="cs-cell-pill"><input type="text" name="' + p + '[sale_count]" class="so-input smp-f-count" inputmode="decimal" style="text-align:center" value="' + esc(data.sale_count || '1') + '"></div></td>' +
-			'<td><div class="cs-cell-pill"><input type="text" name="' + p + '[unit_price]" class="so-input smp-f-price" inputmode="decimal" style="text-align:right" value="' + esc(data.unit_price || '0') + '"></div></td>' +
+			'<td class="smp-cell-amount" style="text-align:right"><span data-smp-price-text>' + esc(money(parseFloat(String(data.unit_price || '0').replace(/,/g, '')) || 0)) + '</span>' +
+				'<input type="hidden" name="' + p + '[unit_price]" class="smp-f-price" value="' + esc(data.unit_price || '0') + '"></td>' +
 			'<td class="smp-cell-amount" data-smp-amount>0.00</td>' +
 			'<td><div class="cs-cell-pill"><input type="text" name="' + p + '[sn]" class="so-input smp-f-sn" value="' + esc(data.sn) + '" placeholder="ใส่เลข SN" autocomplete="off"></div></td>' +
 			'<td class="cs-row-actions-cell">' +
@@ -210,10 +211,6 @@
 			var v = parseFloat(String(target.value).replace(/[^0-9.]/g, ''));
 			target.value = (isNaN(v) || v <= 0) ? '1' : String(v);
 			refreshSummary();
-		} else if (target.classList.contains('smp-f-price')) {
-			var pv = parseFloat(String(target.value).replace(/[^0-9.]/g, ''));
-			target.value = isNaN(pv) ? '0' : String(pv);
-			refreshSummary();
 		}
 	});
 	tbody().addEventListener('click', function (event) {
@@ -296,22 +293,93 @@
 		};
 		request.send('product_code=' + encodeURIComponent(accessCode) + '&type_company=' + companyCode() + '&format=json');
 	}
-	(function initProductSearch() {
-		var input = el('smp_product_search');
-		var ac = new Autocomplete('smp_product_search', function () {
-			this.setValue = function (accessCode) {
-				if (!accessCode) return;
-				fetchAndAddProduct(accessCode);
-				input.value = '';
-			};
-			if (this.value.length < 1 && this.isNotClick) return;
-			return 'data_pro_notdemoth.php?product_code_search=' + encodeURIComponent(this.value) + '&type_company=' + companyCode();
-		}, { select_first: 0 });
-		if (ac.image && ac.image.e) ac.image.e.style.display = 'none';
-		var instance = Autocomplete.inst[Autocomplete.inst.length - 1];
-		input.addEventListener('paste', function () {
-			setTimeout(function () { instance.isModified = 1; instance.isNotClick = 1; instance.isON = 1; instance.request(); }, 0);
+	/* dropdown ค้นหาสินค้า — pattern: docs/product-search-dropdown-pattern.md (endpoint ajax_smp_product.php) */
+	var searchTimer = null;
+	var searchToken = 0;
+	var searchItems = [];
+	var searchActive = -1;
+	function closeSearchResults() {
+		var list = el('smp_product_results'), input = el('smp_product_search');
+		list.hidden = true; list.innerHTML = '';
+		input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
+		searchItems = []; searchActive = -1;
+	}
+	function showSearchNote(message) {
+		searchItems = []; searchActive = -1;
+		el('smp_product_results').innerHTML = '<li class="smp-search-note" role="presentation">' + esc(message) + '</li>';
+		el('smp_product_results').hidden = false;
+		el('smp_product_search').setAttribute('aria-expanded', 'true');
+	}
+	function setActiveSearchOption(index) {
+		var options = el('smp_product_results').querySelectorAll('.smp-search-option');
+		searchActive = index;
+		Array.prototype.forEach.call(options, function (option, i) {
+			var active = (i === index);
+			option.classList.toggle('is-active', active);
+			option.setAttribute('aria-selected', active ? 'true' : 'false');
+			if (active) { el('smp_product_search').setAttribute('aria-activedescendant', option.id); option.scrollIntoView({ block: 'nearest' }); }
 		});
+	}
+	function renderSearchResults(items, hasMore) {
+		if (items.length === 0) { showSearchNote('ไม่พบสินค้าที่ตรงกับคำค้นของบริษัทที่เลือก'); return; }
+		searchItems = items;
+		el('smp_product_results').innerHTML = items.map(function (item, index) {
+			var sub = String(item.access_name || '').trim();
+			return '<li class="smp-search-option" role="option" id="smp_product_option_' + index + '" data-smp-index="' + index + '" aria-selected="false">' +
+				'<span class="smp-search-option-code">' + esc(item.access_code) + '</span>' +
+				'<span class="smp-search-option-name">' + esc(item.sol_name) + '</span>' +
+				(sub !== '' && sub !== item.sol_name ? '<span class="smp-search-option-sub">' + esc(sub) + '</span>' : '') + '</li>';
+		}).join('') + (hasMore ? '<li class="smp-search-note" role="presentation">แสดง ' + items.length + ' รายการแรก — พิมพ์คำค้นให้เจาะจงขึ้น</li>' : '');
+		el('smp_product_results').hidden = false;
+		el('smp_product_search').setAttribute('aria-expanded', 'true');
+		setActiveSearchOption(0);
+	}
+	function runSearch() {
+		var keyword = el('smp_product_search').value.trim();
+		var token = ++searchToken;
+		if (keyword === '') { closeSearchResults(); return; }
+		fetch('ajax_smp_product.php?q=' + encodeURIComponent(keyword) + '&company=' + companyCode(), { credentials: 'same-origin', cache: 'no-store' })
+			.then(function (response) { return response.json(); })
+			.then(function (data) {
+				if (token !== searchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+				if (!data || !data.success) throw new Error((data && data.message) || 'ไม่สามารถค้นหาสินค้าได้');
+				renderSearchResults(Array.isArray(data.items) ? data.items : [], !!data.has_more);
+			})
+			.catch(function (error) {
+				if (token !== searchToken) return;
+				showSearchNote(error && error.message ? error.message : 'ไม่สามารถค้นหาสินค้าได้');
+			});
+	}
+	function pickSearchOption(index) {
+		var item = searchItems[index];
+		if (!item) return;
+		el('smp_product_search').value = '';
+		searchToken++;
+		closeSearchResults();
+		fetchAndAddProduct(item.access_code); // ราคา/หน่วย/รับประกันมาจาก data_product_hos1.php เหมือนเดิม และย้าย focus ไปช่องจำนวน
+	}
+	(function initProductSearch() {
+		var input = el('smp_product_search'), list = el('smp_product_results');
+		input.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 250); });
+		input.addEventListener('keydown', function (event) {
+			if (event.key === 'Enter') { event.preventDefault(); if (searchActive >= 0) pickSearchOption(searchActive); return; }
+			if (event.key === 'Escape') { if (!list.hidden) { event.stopPropagation(); closeSearchResults(); } return; }
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+			if (searchItems.length === 0) return;
+			event.preventDefault();
+			var next = searchActive + (event.key === 'ArrowDown' ? 1 : -1);
+			if (next < 0) next = searchItems.length - 1;
+			if (next >= searchItems.length) next = 0;
+			setActiveSearchOption(next);
+		});
+		// mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+		list.addEventListener('mousedown', function (event) {
+			var option = event.target.closest('.smp-search-option');
+			if (!option) return;
+			event.preventDefault();
+			pickSearchOption(parseInt(option.getAttribute('data-smp-index'), 10));
+		});
+		input.addEventListener('blur', function () { setTimeout(closeSearchResults, 150); });
 	})();
 
 	/* ===================== เคลียร์ยืม ===================== */

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
 <script defer data-so-web-selects src="js/so-web-select.js?v=<?php echo filemtime(__DIR__ . '/js/so-web-select.js'); ?>"></script>
 <!-- Page-specific styling for register_credinot.php -->
+<link rel="stylesheet" href="css/so-product-search.css?v=<?php echo filemtime(__DIR__ . '/css/so-product-search.css'); ?>">
 <link rel="stylesheet" href="css/register-credinot.css?v=<?php echo filemtime(__DIR__ . '/css/register-credinot.css'); ?>">
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1096,13 +1097,11 @@
                 <?php if (!$creditItemsLocked) { ?>
                     <div class="so-field-group credinot-search-wrap">
                         <label class="so-label" for="credinot_search">ค้นหารายการสินค้า</label>
-                        <div class="customer-popup-search pf-search-bar">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="credinot_search" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" autocomplete="off"
-                                oninput="filterCreditNoteRows(this.value); handleCreditSearchSuggestInput(this.value);"
-                                onfocus="if (this.value.trim() !== '') handleCreditSearchSuggestInput(this.value);">
+                        <div class="so-search-box">
+                            <i class="fas fa-search so-search-icon" aria-hidden="true"></i>
+                            <input type="text" id="credinot_search" class="so-input so-search-input" autocomplete="off" placeholder="ค้นหาด้วยรหัสสินค้า / ชื่อสินค้า" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="credinotSearchSuggest">
+                            <ul class="so-search-results" id="credinotSearchSuggest" role="listbox" hidden></ul>
                         </div>
-                        <div id="credinotSearchSuggest" class="credinot-search-suggest" style="display:none;"></div>
                     </div>
                 <?php } ?>
 
@@ -1544,103 +1543,96 @@
             }
         }
 
-        /* ===== Autocomplete แทรกสินค้าใหม่จากช่องค้นหา #credinot_search (ทำงานควบคู่กับ filterCreditNoteRows ด้านล่าง) ===== */
-        var creditSearchSuggestTimer = null;
-        var creditSearchSuggestData = [];
-        var creditSearchSuggestAbort = null;
-        var creditSearchSuggestReqId = 0;
-        var creditSearchSuggestKeyword = '';
+        /* ===== dropdown ค้นหาสินค้าเพื่อเพิ่มแถวใหม่จาก #credinot_search — pattern: docs/product-search-dropdown-pattern.md
+           (endpoint ajax_credinot_product_search.php เดิม) ทำงานควบคู่กับ filterCreditNoteRows ด้านล่าง ===== */
+        var creditSearchTimer = null;
+        var creditSearchToken = 0;
+        var creditSearchItems = [];
+        var creditSearchActive = -1;
 
-        function handleCreditSearchSuggestInput(keyword) {
-            clearTimeout(creditSearchSuggestTimer);
-            if (!keyword || keyword.trim() === '') {
-                hideCreditSearchSuggest();
-                return;
-            }
-            creditSearchSuggestTimer = setTimeout(function() {
-                fetchCreditSearchSuggest(keyword.trim());
-            }, 250);
+        function closeCreditSearchResults() {
+            var list = document.getElementById('credinotSearchSuggest');
+            var input = document.getElementById('credinot_search');
+            if (!list || !input) return;
+            list.hidden = true;
+            list.innerHTML = '';
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            creditSearchItems = [];
+            creditSearchActive = -1;
         }
 
-        function fetchCreditSearchSuggest(keyword) {
-            if (creditSearchSuggestAbort) {
-                creditSearchSuggestAbort.abort();
+        function showCreditSearchNote(message) {
+            var list = document.getElementById('credinotSearchSuggest');
+            creditSearchItems = [];
+            creditSearchActive = -1;
+            list.innerHTML = '<li class="so-search-note" role="presentation">' + escapeDocRefHtml(message) + '</li>';
+            list.hidden = false;
+            document.getElementById('credinot_search').setAttribute('aria-expanded', 'true');
+        }
+
+        function setActiveCreditSearchOption(index) {
+            var options = document.getElementById('credinotSearchSuggest').querySelectorAll('.so-search-option');
+            var input = document.getElementById('credinot_search');
+            creditSearchActive = index;
+            Array.prototype.forEach.call(options, function(option, i) {
+                var active = (i === index);
+                option.classList.toggle('is-active', active);
+                option.setAttribute('aria-selected', active ? 'true' : 'false');
+                if (active) {
+                    input.setAttribute('aria-activedescendant', option.id);
+                    option.scrollIntoView({
+                        block: 'nearest'
+                    });
+                }
+            });
+        }
+
+        function renderCreditSearchResults(products) {
+            if (products.length === 0) {
+                showCreditSearchNote('ไม่พบสินค้า');
+                return;
             }
-            creditSearchSuggestAbort = new AbortController();
-            var requestController = creditSearchSuggestAbort;
-            var requestId = ++creditSearchSuggestReqId;
-            creditSearchSuggestKeyword = keyword;
+            var list = document.getElementById('credinotSearchSuggest');
+            creditSearchItems = products;
+            list.innerHTML = products.map(function(prod, index) {
+                return '<li class="so-search-option" role="option" id="credinot_search_option_' + index + '" data-so-index="' + index + '" aria-selected="false">' +
+                    '<span class="so-search-option-code">' + escapeDocRefHtml(prod.access_code || '-') + '</span>' +
+                    '<span class="so-search-option-name">' + escapeDocRefHtml(prod.sol_name || '-') + '</span>' +
+                    '</li>';
+            }).join('');
+            list.hidden = false;
+            document.getElementById('credinot_search').setAttribute('aria-expanded', 'true');
+            setActiveCreditSearchOption(0);
+        }
 
-            showCreditSearchSuggestMessage('กำลังค้นหา...');
-
+        function runCreditSearch() {
+            var keyword = document.getElementById('credinot_search').value.trim();
+            var token = ++creditSearchToken;
+            if (keyword === '') {
+                closeCreditSearchResults();
+                return;
+            }
             fetch('ajax_credinot_product_search.php?q=' + encodeURIComponent(keyword) + '&limit=8', {
                     credentials: 'same-origin',
-                    signal: requestController.signal
+                    cache: 'no-store'
                 })
                 .then(function(response) {
                     return response.json();
                 })
                 .then(function(data) {
-                    if (requestId !== creditSearchSuggestReqId) return;
-                    if (!data || !data.success) {
-                        renderCreditSearchSuggest([]);
-                        return;
-                    }
-                    renderCreditSearchSuggest(data.products || []);
+                    if (token !== creditSearchToken) return; // พิมพ์ต่อไปแล้วระหว่างรอ
+                    if (!data || !data.success) throw new Error('ค้นหาไม่สำเร็จ');
+                    renderCreditSearchResults(Array.isArray(data.products) ? data.products : []);
                 })
-                .catch(function(error) {
-                    if (error && error.name === 'AbortError') return;
-                    if (requestId !== creditSearchSuggestReqId) return;
-                    showCreditSearchSuggestMessage('ไม่สามารถค้นหาข้อมูลได้');
+                .catch(function() {
+                    if (token !== creditSearchToken) return;
+                    showCreditSearchNote('ไม่สามารถค้นหาข้อมูลได้');
                 });
         }
 
-        function renderCreditSearchSuggest(products) {
-            var box = document.getElementById('credinotSearchSuggest');
-            if (!box) return;
-
-            creditSearchSuggestData = products || [];
-
-            if (creditSearchSuggestData.length === 0) {
-                showCreditSearchSuggestMessage('ไม่พบสินค้า');
-                return;
-            }
-
-            box.innerHTML = creditSearchSuggestData.map(function(prod, index) {
-                var displayName = highlightCreditSearchKeyword(prod.sol_name || '-', creditSearchSuggestKeyword);
-                return '<div class="credinot-search-suggest-item" onclick="pickCreditSearchSuggest(' + index + ')">' +
-                    displayName +
-                    '</div>';
-            }).join('');
-            box.style.display = '';
-        }
-
-        // ทำตัวหนาคำที่ตรงกับคำค้น เลียนแบบ logic ฝั่ง PHP ใน data_pro_notdemoth.php:44-46 (ที่ใช้กับ product_salehos.php)
-        function highlightCreditSearchKeyword(text, keyword) {
-            var safeText = escapeDocRefHtml(text);
-            var trimmedKeyword = (keyword || '').trim();
-            if (trimmedKeyword === '') return safeText;
-
-            var safeKeyword = escapeDocRefHtml(trimmedKeyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            var re = new RegExp('(' + safeKeyword + ')', 'giu');
-            return safeText.replace(re, '<b>$1</b>');
-        }
-
-        function showCreditSearchSuggestMessage(message) {
-            var box = document.getElementById('credinotSearchSuggest');
-            if (!box) return;
-            box.innerHTML = '<div class="credinot-search-suggest-empty">' + escapeDocRefHtml(message) + '</div>';
-            box.style.display = '';
-        }
-
-        function hideCreditSearchSuggest() {
-            var box = document.getElementById('credinotSearchSuggest');
-            if (!box) return;
-            box.style.display = 'none';
-        }
-
-        function pickCreditSearchSuggest(index) {
-            var prod = (creditSearchSuggestData || [])[index];
+        function pickCreditSearchOption(index) {
+            var prod = creditSearchItems[index];
             if (!prod) return;
 
             addProductRowToTable(prod);
@@ -1650,9 +1642,56 @@
                 search.value = '';
                 search.focus();
             }
+            creditSearchToken++;
             filterCreditNoteRows('');
-            hideCreditSearchSuggest();
+            closeCreditSearchResults();
         }
+
+        (function bindCreditProductSearch() {
+            var input = document.getElementById('credinot_search');
+            var list = document.getElementById('credinotSearchSuggest');
+            if (!input || !list) return; // ใบที่ล็อกรายการ (creditItemsLocked) ไม่มีช่องค้นหา
+
+            input.addEventListener('input', function() {
+                filterCreditNoteRows(input.value);
+                clearTimeout(creditSearchTimer);
+                creditSearchTimer = setTimeout(runCreditSearch, 250);
+            });
+
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Enter ในช่องค้นหาต้องไม่ submit ฟอร์ม
+                    if (creditSearchActive >= 0) pickCreditSearchOption(creditSearchActive);
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    if (!list.hidden) {
+                        event.stopPropagation();
+                        closeCreditSearchResults();
+                    }
+                    return;
+                }
+                if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                if (creditSearchItems.length === 0) return;
+                event.preventDefault();
+                var next = creditSearchActive + (event.key === 'ArrowDown' ? 1 : -1);
+                if (next < 0) next = creditSearchItems.length - 1;
+                if (next >= creditSearchItems.length) next = 0;
+                setActiveCreditSearchOption(next);
+            });
+
+            // mousedown (ไม่ใช่ click) — เลือกก่อนที่ช่องค้นหาจะเสีย focus
+            list.addEventListener('mousedown', function(event) {
+                var option = event.target.closest('.so-search-option');
+                if (!option) return;
+                event.preventDefault();
+                pickCreditSearchOption(parseInt(option.getAttribute('data-so-index'), 10));
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(closeCreditSearchResults, 150);
+            });
+        })();
 
         // ค้นหารายการสินค้าในตาราง (กรองด้วยรหัสสินค้า/ชื่อสินค้า)
         function filterCreditNoteRows(keyword) {
@@ -2795,14 +2834,7 @@
                 if (event.key !== 'Escape') return;
                 if (custModal && custModal.style.display === 'flex') closeCustomerSearchPopup();
                 if (prodModal && prodModal.style.display === 'flex') closeProductSearchPopup();
-                hideCreditSearchSuggest();
-            });
-
-            document.addEventListener('click', function(event) {
-                var searchWrap = document.querySelector('.credinot-search-wrap');
-                if (searchWrap && !searchWrap.contains(event.target)) {
-                    hideCreditSearchSuggest();
-                }
+                closeCreditSearchResults();
             });
         });
     </script>
