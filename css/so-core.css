@@ -764,6 +764,12 @@ body {
 		transform: translateZ(0);
 	}
 
+	/* แป้นพิมพ์ iPad เปิดอยู่ (js/so-sticky-keyboard.js): ปลดแถบกลับไปท้ายฟอร์ม ไม่ให้ลอยกลางจอ */
+	html.so-kb-open .so-sticky-actions {
+		position: static;
+		transform: none;
+	}
+
 	/* ไม่ให้ทั้งหน้าเด้งเมื่อเลื่อนสุด แถบ sticky จะได้ไม่เด้งตามจนเห็นพื้นหลังใต้แถบ */
 	html {
 		overscroll-behavior-y: none;

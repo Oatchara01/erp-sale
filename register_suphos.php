@@ -32,6 +32,7 @@ include("head.php"); ?>
 <!-- ต้องโหลดก่อน setElementValue ด้านล่าง ซึ่งเรียก soSyncDisplayText -->
 <script src="js/so-display-text.js?v=<?php echo filemtime(__DIR__ . '/js/so-display-text.js'); ?>"></script>
 <script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
+<script src="js/so-sticky-keyboard.js?v=<?php echo filemtime(__DIR__ . '/js/so-sticky-keyboard.js'); ?>"></script>
 <script>
 	var HttPRequest = false;
 	var clearLoanPopupTimer = null;
