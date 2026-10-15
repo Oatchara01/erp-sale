@@ -209,7 +209,8 @@ $upload_name  =$objResult["upload_name"];
 $product_sn =$objResult["product_sn"];
 $product_name=$objResult["product_name"];
 // Preview: ใช้ช่อง "สินค้า/เอกสาร" ที่ยังไม่บันทึก ว่างไว้ = ข้อความที่ระบบจะสร้างจากรายการสินค้า (ไม่เขียนฐาน)
-// doc_type บอกชนิดเอกสารที่เปิด Preview: rental = register_suprental.php, ไม่ส่งมา = SO (register_suphos.php)
+// doc_type บอกชนิดเอกสารที่เปิด Preview: rental = register_suprental.php, change = register_supchange.php,
+// ไม่ส่งมา = SO (register_suphos.php)
 if (($_POST["_report_preview"] ?? '') === '1') {
 	$product_name = trim((string)($_POST["product"] ?? ''));
 	if (($_POST["doc_type"] ?? '') === 'rental') {
@@ -220,6 +221,9 @@ if (($_POST["_report_preview"] ?? '') === '1') {
 		if (($_POST["doc_type"] ?? '') === 'rental') {
 			$rentalDoc = rental_cs_load_document($sol, $ref_id);
 			$product_name = ($rentalDoc !== null) ? rental_cs_compose_product_name($rentalDoc) : '';
+		} elseif (($_POST["doc_type"] ?? '') === 'change') {
+			require_once __DIR__ . '/includes/change_cs_send.php';
+			$product_name = chg_cs_compose_product_name($sol, $ref_id);
 		} else {
 			require_once __DIR__ . '/includes/so_cs_send.php';
 			$product_name = so_cs_compose_product_name($sol, $ref_id);

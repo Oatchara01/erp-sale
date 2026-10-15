@@ -2,6 +2,7 @@
 include('dbconnect_sale.php');
 ?>
 <?php require_once __DIR__ . '/includes/so_saved_helpers.php'; ?>
+<?php require_once __DIR__ . '/includes/change_cs_send.php'; // สิทธิ์/สถานะ toggle "ส่งข้อมูลลงระบบ CS" + ช่องสินค้า/เอกสาร ?>
 
 <link rel="stylesheet" href="css/so-core.css?v=<?php echo filemtime(__DIR__ . '/css/so-core.css'); ?>">
 <link rel="stylesheet" href="css/so-web-select.css?v=<?php echo filemtime(__DIR__ . '/css/so-web-select.css'); ?>">
@@ -18,22 +19,31 @@ include('dbconnect_sale.php');
 <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
 <script src="js/so-modal-scroll-lock.js?v=<?php echo filemtime(__DIR__ . '/js/so-modal-scroll-lock.js'); ?>"></script>
 
-<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") { ?>
+<?php if (isset($_GET["saved"]) && $_GET["saved"] === "1") {
+	// ผลส่งข้อมูลลงระบบ CS (ต่อมากับ URL จาก register_supchange1.php / _edit1.php / _cs1.php)
+	$csSyncFlag = isset($_GET['cs_sync']) && !is_array($_GET['cs_sync']) ? (string)$_GET['cs_sync'] : '';
+	$csSyncMsg = isset($_GET['cs_sync_msg']) && !is_array($_GET['cs_sync_msg']) ? trim((string)$_GET['cs_sync_msg']) : '';
+?>
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			var cleanUrl = new URL(window.location.href);
 			cleanUrl.searchParams.delete('saved');
+			cleanUrl.searchParams.delete('cs_sync');
+			cleanUrl.searchParams.delete('cs_sync_msg');
 			window.history.replaceState({}, document.title, cleanUrl);
 
+			var csSyncMsg = <?php echo json_encode($csSyncMsg, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+			var csSyncFailed = <?php echo $csSyncFlag === '0' ? 'true' : 'false'; ?>;
+
 			if (typeof Swal === 'undefined') {
-				alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+				alert('บันทึกข้อมูลเรียบร้อยแล้ว' + (csSyncMsg ? '\n' + csSyncMsg : ''));
 				return;
 			}
 
 			Swal.fire({
 				title: 'บันทึกข้อมูลเรียบร้อยแล้ว',
-				text: 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
-				icon: 'success',
+				text: csSyncMsg || 'ระบบแสดงข้อมูลที่บันทึกไว้ในหน้านี้แล้ว',
+				icon: csSyncFailed ? 'warning' : 'success',
 				confirmButtonColor: '#612989',
 				confirmButtonText: 'ตกลง'
 			});
@@ -392,7 +402,7 @@ if ($chgSrc !== null) {
 		'objective' => $chgSrc['objective'],
 		'objective_des' => $chgSrc['objective_des'],
 		'que_ckk' => $chgSrc['que_ckk'] ?? '',
-		'send_cs' => $chgSrc['send_cs'] ?? '',
+		// send_cs ไม่ prefill: สถานะ toggle มาจาก PHP (checked = ส่งแล้ว, locked) และใบที่คัดลอกต้องเริ่มที่ยังไม่ส่ง
 		'sale_code' => $chgSrc['sale_code'],
 		// ฝั่งจัดส่ง: คอลัมน์ delivery_* ถูกเก็บด้วยชื่อฟิลด์คนละชื่อกับในฟอร์ม
 		'address_name' => $chgSrc['delivery_name'],
@@ -560,9 +570,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 					<span class="so-ref-label">เลขที่อ้างอิง</span>
 					<span class="so-ref-value"><?php echo $chgIsEditMode ? so_saved_h($savedChg['ref_id']) : $so . $nextId; ?></span>
 				</div>
-			</div>
-			<div class="so-header-right">
-				<button type="button" class="btn-preview-so" onclick="chgOpenPreview();"><img src="img/icons/preview.png" alt="preview" style="width: 16px; height: 16px;"> Preview</button>
 			</div>
 		</div>
 
@@ -930,7 +937,8 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								['type' => 'text', 'name' => 'admin_doc_no', 'label' => 'เลขที่เอกสาร', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['iv_no'] ?? '') : '', 'placeholder' => 'No.'],
 								['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no', 'onclick' => 'chgRunDocumentNo();', 'variant' => 'purple'],
 								['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($savedChg !== null) ? so_saved_iso_date_input($savedChg['iv_date'] ?? '') : '', 'icon' => 'far fa-calendar-alt', 'calendar' => true],
-								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'chgRunJobNo();', 'icon_id' => 'btn_run_job_no'],
+								// เลขที่ลงงานออกโดย chg_cs_send() ตอนบันทึกเมื่อติ๊ก "ส่งข้อมูลลงระบบ CS" เท่านั้น (disabled = ไม่ถูก POST)
+								['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($savedChg !== null) ? so_saved_h($savedChg['job_no'] ?? '') : '', 'disabled' => true, 'placeholder' => 'ออกให้เมื่อส่งข้อมูลลงระบบ CS'],
 							],
 						],
 					];
@@ -1010,87 +1018,6 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 								.then(function() {
 									if (runButton) {
 										runButton.disabled = false;
-									}
-								});
-						}
-
-						// ไอคอนในช่อง 'เลขที่ลงงาน' (แท็บ Admin) — ขอเลขที่ลงงานจาก ajax_run_job_no.php
-						// พอร์ตจาก register_suphos.php:5413-5480 เพิ่มเติมคือกด Run แล้วติ๊ก send_cs ให้อัตโนมัติ
-						// เพราะการออกเลขที่ลงงานถือว่าเอกสารพร้อมส่งข้อมูลลงระบบ CS แล้ว
-						function chgRunJobNo() {
-							var jobNoInput = document.querySelector('input[name="admin_work_no"]');
-							var refIdInput = document.querySelector('input[name="ref_id"]');
-							// วันในการจัดส่งเป็นตัวกำหนดปี/เดือนของเลข ถ้ายังไม่กรอก server จะใช้วันที่ปัจจุบันแทน
-							var jobDateInput = document.querySelector('input[name="start_date"]');
-							var runIcon = document.getElementById('btn_run_job_no');
-
-							if (!jobNoInput) {
-								return;
-							}
-
-							// icon ไม่มี disabled attribute แบบปุ่ม ใช้ dataset flag กันคลิกซ้ำระหว่างรอ response แทน
-							if (runIcon && runIcon.dataset.loading === '1') {
-								return;
-							}
-
-							if (jobNoInput.value.trim() !== '') {
-								// เลขที่ออกไปแล้วถูกจองในฐานข้อมูลแล้ว การกดซ้ำจะกินเลขเพิ่มโดยเปล่าประโยชน์
-								if (!confirm('เอกสารนี้มีเลขที่ลงงาน ' + jobNoInput.value.trim() + ' อยู่แล้ว ต้องการออกเลขใหม่ทับหรือไม่?')) {
-									return;
-								}
-							}
-
-							var payload = new URLSearchParams();
-							payload.append('ref_id', refIdInput ? refIdInput.value : '');
-							payload.append('job_date', jobDateInput ? jobDateInput.value : '');
-
-							if (runIcon) {
-								runIcon.dataset.loading = '1';
-								runIcon.style.pointerEvents = 'none';
-								runIcon.style.opacity = '0.4';
-							}
-
-							fetch('ajax_run_job_no.php', {
-									method: 'POST',
-									credentials: 'same-origin',
-									cache: 'no-store',
-									headers: {
-										'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-									},
-									body: payload.toString()
-								})
-								.then(function(response) {
-									return response.json().then(function(data) {
-										return {
-											ok: response.ok,
-											data: data
-										};
-									});
-								})
-								.then(function(result) {
-									if (!result.ok || !result.data || !result.data.success) {
-										alert((result.data && result.data.message) ? result.data.message : 'ไม่สามารถออกเลขที่ลงงานได้');
-										return;
-									}
-									jobNoInput.value = result.data.job_no;
-
-									// การออกเลขที่ลงงานถือว่าเอกสารพร้อมส่งข้อมูลลงระบบ CS แล้ว ติ๊ก send_cs ให้อัตโนมัติ
-									var sendCsInput = document.getElementById('send_cs') || document.querySelector('input[name="send_cs"]');
-									if (sendCsInput && !sendCsInput.checked) {
-										sendCsInput.checked = true;
-										sendCsInput.dispatchEvent(new Event('change', {
-											bubbles: true
-										}));
-									}
-								})
-								.catch(function() {
-									alert('ไม่สามารถติดต่อเซิร์ฟเวอร์เพื่อออกเลขที่ลงงานได้ กรุณาลองใหม่อีกครั้ง');
-								})
-								.then(function() {
-									if (runIcon) {
-										runIcon.dataset.loading = '0';
-										runIcon.style.pointerEvents = '';
-										runIcon.style.opacity = '';
 									}
 								});
 						}
@@ -1242,6 +1169,14 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 				<!-- ===================== ข้อมูลการจัดส่ง ===================== -->
 				<div id="step-delivery">
 					<?php
+					// toggle "ส่งข้อมูลลงระบบ CS": เห็นเฉพาะ it / admin / sol; กดได้เมื่อ chg_cs_can_tick() ผ่าน
+					// (ยังไม่ Approve: ทั้งสาม role, Approve แล้ว: Admin เท่านั้น); ส่งแล้ว/สถานะที่ส่งไม่ได้: ล็อก
+					$csSeesToggle = cs_job_role_allowed($_SESSION, chg_cs_spec()['roles']);
+					$csIsSent = $savedChg !== null && (string)($savedChg['send_cs'] ?? '') === '2';
+					$csJobNo = $csIsSent ? trim((string)($savedChg['job_no'] ?? '')) : '';
+					$csCanSend = chg_cs_can_tick($savedChg, $_SESSION);
+					// Approve แล้วฟอร์มหลักบันทึกไม่ได้ (ไม่มี Submit/Update) Admin ส่ง CS ผ่านปุ่ม Update แบบจำกัดแทน
+					$csLimitedUpdate = $savedChg !== null && $csCanSend && (string)($savedChg['status_doc'] ?? '') === 'Approve';
 					$deliveryTab = [
 						'open_fn' => 'brOpenDelTab',
 						'grid_fields' => [
@@ -1279,11 +1214,13 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
         'label' => 'ส่งสินค้าด้วยใบส่งสินค้า (ไม่ระบุราคา)'
     ],
 
-    in_array($type_login_lower, ['it', 'admin', 'sol'], true)
+    $csSeesToggle
         ? [
             'name' => 'send_cs',
             'id' => 'send_cs',
-            'label' => 'ส่งข้อมูลลงระบบ CS'
+            'label' => 'ส่งข้อมูลลงระบบ CS' . ($csJobNo !== '' ? ' (เลขที่ลงงาน ' . so_saved_h($csJobNo) . ')' : ''),
+            'checked' => $csIsSent,
+            'locked' => !$csCanSend,
         ]
         : null,
 ]),
@@ -1380,6 +1317,17 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 										<button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link').value='';" aria-label="ล้างค่า"></button>
 									</div>
 								</div>
+							</div>
+
+							<?php
+							// สินค้า/เอกสาร -> tb_register_data.product_name (chg_save_product_note()) — ว่างไว้ระบบประกอบ "ส่ง ..." จากรายการสินค้า
+							// ค่าเริ่มเฉพาะเอกสารของตัวเอง ใบที่คัดลอกมาเริ่มว่าง; สตริงสรุปจากสูตรเดิมนับเป็นว่าง (chg_product_note_display())
+							$chgProductNote = ($savedChg !== null && $savedRegister !== null) ? chg_product_note_display($savedRegister['product_name'] ?? '', $savedChg) : '';
+							?>
+							<div class="so-field-group" style="margin-top: 16px;">
+								<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
+								<input type="hidden" name="product_note_form" value="1">
+								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo so_saved_h($chgProductNote); ?></textarea>
 							</div>
 						</div>
 
@@ -1936,9 +1884,122 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 			<?php if (!$chgHideUpdate): ?>
 				<button type="button" name="save_draft" class="btn-so-draft" onclick="chgSaveDraft();"><i class="far fa-save"></i> <?php echo $chgIsEditMode ? 'Update' : 'Save Draft'; ?></button>
 			<?php endif; ?>
+			<?php if ($csLimitedUpdate): ?>
+				<!-- เอกสาร Approve แล้ว: ปุ่ม Update แบบจำกัดของ Admin ทำได้อย่างเดียวคือส่งใบงานตาม toggle ไม่บันทึกค่าฟอร์ม -->
+				<button type="button" id="btn_chg_send_cs" class="btn-so-draft" onclick="chgSendCs();" title="ส่งข้อมูลลงระบบ CS ตามที่ติ๊กไว้"><i class="far fa-save"></i> Update</button>
+			<?php endif; ?>
+			<?php
+			// รายละเอียดจัดส่ง (7112018_new.php) แสดงเมื่อมีเลขที่ลงงานแล้ว
+			$chgPreviewJobNo = ($savedChg !== null) ? trim((string)($savedChg['job_no'] ?? '')) : '';
+			?>
+			<div class="so-preview-menu-wrap">
+				<button type="button" class="btn-so-draft" id="btn_chg_preview_menu" onclick="chgTogglePreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="chgPreviewMenu"><img src="img/icons/preview.png" alt="" style="width: 16px; height: 16px;"> Preview</button>
+				<div id="chgPreviewMenu" class="so-preview-menu" hidden>
+					<div class="so-preview-menu-label">Preview</div>
+					<div class="so-preview-menu-box" role="menu">
+						<button type="button" role="menuitem" onclick="chgPreviewSelect('change');">ใบแลกเปลี่ยนสินค้า</button>
+						<?php if ($chgPreviewJobNo !== '') { ?>
+							<button type="button" role="menuitem" onclick="chgPreviewSelect('delivery');">รายละเอียดจัดส่ง</button>
+						<?php } ?>
+					</div>
+				</div>
+			</div>
+			<script>
+				function chgSetPreviewMenuOpen(open) {
+					var menu = document.getElementById('chgPreviewMenu');
+					var trigger = document.getElementById('btn_chg_preview_menu');
+					if (!menu || !trigger) return;
+					menu.hidden = !open;
+					trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+				}
+
+				function chgTogglePreviewMenu(event) {
+					if (event) event.stopPropagation();
+					var menu = document.getElementById('chgPreviewMenu');
+					chgSetPreviewMenuOpen(menu ? menu.hidden : false);
+				}
+
+				function chgPreviewSelect(kind) {
+					chgSetPreviewMenuOpen(false);
+					if (kind === 'change') {
+						chgOpenPreview();
+						return;
+					}
+					// รายละเอียดจัดส่ง: post เฉพาะเลขที่ลงงาน + ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ (ไม่บันทึกลงฐาน)
+					var productNote = document.getElementById('delivery_product_note');
+					var fields = {
+						running: <?php echo json_encode($chgPreviewJobNo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+						product: productNote ? productNote.value : '',
+						doc_type: 'change',
+						_report_preview: '1'
+					};
+					var previewForm = document.createElement('form');
+					previewForm.method = 'post';
+					previewForm.action = '7112018_new.php';
+					previewForm.target = '_blank';
+					Object.keys(fields).forEach(function(name) {
+						var input = document.createElement('input');
+						input.type = 'hidden';
+						input.name = name;
+						input.value = fields[name];
+						previewForm.appendChild(input);
+					});
+					document.body.appendChild(previewForm);
+					previewForm.submit();
+					document.body.removeChild(previewForm);
+				}
+
+				document.addEventListener('click', function(event) {
+					var wrap = document.querySelector('.so-sticky-actions .so-preview-menu-wrap');
+					if (wrap && !wrap.contains(event.target)) chgSetPreviewMenuOpen(false);
+				});
+				document.addEventListener('keydown', function(event) {
+					if (event.key === 'Escape') chgSetPreviewMenuOpen(false);
+				});
+			</script>
 		</div>
 	</div>
 </form>
+<?php if ($csLimitedUpdate): ?>
+<script>
+	/* ปุ่ม Update แบบจำกัด: POST แยกจากฟอร์มหลัก (ไม่ส่งค่าฟอร์ม ไม่ผ่าน validation) — ไม่ได้ติ๊ก toggle = ไม่มีอะไรให้บันทึก */
+	function chgSendCs() {
+		var toggle = document.getElementById('send_cs');
+		if (!toggle || !toggle.checked) {
+			var message = 'กรุณาติ๊ก "ส่งข้อมูลลงระบบ CS" ก่อนกด Update';
+			if (typeof Swal === 'undefined') {
+				alert(message);
+				return;
+			}
+			Swal.fire({
+				icon: 'warning',
+				title: message,
+				confirmButtonColor: '#612989',
+				confirmButtonText: 'ตกลง'
+			});
+			return;
+		}
+		var button = document.getElementById('btn_chg_send_cs');
+		if (button) button.disabled = true;
+		var csForm = document.createElement('form');
+		csForm.method = 'post';
+		csForm.action = 'register_supchange_cs1.php';
+		var fields = {
+			ref_id: <?php echo json_encode((string)$savedChg['ref_id'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+			send_cs: '1'
+		};
+		Object.keys(fields).forEach(function(name) {
+			var input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = name;
+			input.value = fields[name];
+			csForm.appendChild(input);
+		});
+		document.body.appendChild(csForm);
+		csForm.submit();
+	}
+</script>
+<?php endif; ?>
 
 <script language="JavaScript">
 	function toggleChgApproveOverflowMenu() {
@@ -2080,6 +2141,12 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 		window.location.href = 'status_adminchange.php';
 	}
 
+	// ผลส่งข้อมูลลงระบบ CS จาก response ของ register_supchange_draft1.php -> query string ที่ popup หลัง redirect อ่าน
+	function chgCsQuery(data) {
+		if (!data || data.cs_sync === undefined) return '';
+		return '&cs_sync=' + encodeURIComponent(data.cs_sync) + '&cs_sync_msg=' + encodeURIComponent(data.cs_sync_msg || '');
+	}
+
 	// พอร์ตจาก brcsSaveDraft() (register_supbrcshos.php:206-283) — AJAX POST is_draft=1 ไปยัง
 	// register_supchange_draft1.php แล้ว redirect กลับมาหน้านี้ในโหมด view/edit เมื่อสำเร็จ
 	function chgSaveDraft() {
@@ -2115,13 +2182,13 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							confirmButtonColor: '#612989'
 						}).then(function() {
 							if (data.ref_id) {
-								window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+								window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + chgCsQuery(data);
 							}
 						});
 					} else {
 						alert('บันทึกร่างเรียบร้อยแล้ว (Ref ID: ' + (data.ref_id || '') + ')');
 						if (data.ref_id) {
-							window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1';
+							window.location.href = 'register_supchange.php?ref_id=' + encodeURIComponent(data.ref_id) + '&saved=1' + chgCsQuery(data);
 						}
 					}
 				} else {

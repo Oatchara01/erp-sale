@@ -17,6 +17,7 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include("error_page.php");
+require_once __DIR__ . '/includes/change_cs_send.php';
 
 date_default_timezone_set("Asia/Bangkok");
 // เดิมเขียน $_POST["submit"] = "submit" (assignment) ทำให้เงื่อนไขเป็นจริงเสมอ
@@ -212,7 +213,9 @@ $date_send_key = cs_post($conn, "between_date");
 // แท็บ Admin
 $iv_no = cs_post($conn, "admin_doc_no");
 $iv_date = cs_post_date($conn, "admin_doc_date");
-$send_cs = cs_post_flag("send_cs");
+// send_cs / job_no เขียนโดย chg_cs_send() ทางเดียว (includes/change_cs_send.php) หลังบันทึกเอกสารสำเร็จ
+// ค่า 1 จาก toggle เป็นแค่คำสั่ง "ส่งเดี๋ยวนี้" ไม่ถูกเก็บลงฐาน
+$send_cs = '0';
 
 // แท็บค่าจัดส่ง
 $date_ker = cs_post_date($conn, "shipping_date");
@@ -356,10 +359,6 @@ if (!$qsave) {
 	$saveOk = false;
 	$saveFailures[] = 'hos__change: ' . mysqli_error($conn);
 }
-
-// job_no ไม่ได้อยู่ใน INSERT list ด้านบน จึงยังเขียนด้วย UPDATE แบบมีเงื่อนไขตามเดิม
-// (que_ckk / is_cancel / remark_cancel ย้ายไปอยู่ใน INSERT แล้ว)
-cs_update_column_if_exists($conn, 'hos__change', 'ref_id', $ref_id, 'job_no', cs_post_raw('admin_work_no'));
 
 // ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
 if (in_array(cs_post_raw('time_range'), array('morning', 'afternoon', 'allday', 'specific'), true)) {
@@ -562,10 +561,8 @@ $dept = cs_post($conn, "dept");
 $status_comment = cs_post($conn, "status_comment");
 $address_1 = cs_post_raw("address_1") !== '' ? cs_post($conn, "address_1") : $address_name;
 
-// เลขที่ลงงาน (admin_work_no): ถ้ากด "Run เลขที่ลงงาน" มาก่อน ajax_run_job_no.php ได้ INSERT แถวจองไว้ใน
-// tb_register_data แล้ว (ref_id ตรงกับเอกสารนี้, running=เลขที่ลงงาน) ต้อง DELETE แถวจองนั้นทิ้งก่อน แล้ว
-// INSERT แถวข้อมูลจริงพร้อมคอลัมน์ running กันมีสองแถวซ้ำ/เลขที่ลงงานหาย
-$running = cs_post($conn, "admin_work_no");
+// แถวนี้คือข้อมูลจัดส่งของเอกสารในฐานขาย running ว่างเสมอ — ใบงานที่ CS เห็นอยู่ฐาน CS (chg_cs_send())
+$running = '';
 mysqli_query($conn, "DELETE FROM tb_register_data WHERE ref_id = '" . $ref_id_escaped . "'");
 
 $strSQL66 = "insert into tb_register_data (ref_id,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,dep,dept,department_show,customer_contact,status_comment,on_time,address_1,add_code,province_name,transport_company,location_link,running)
@@ -586,15 +583,25 @@ if (!$objQuery66) {
 if ($saveOk) {
 	mysqli_commit($conn);
 
+	// ช่อง "สินค้า/เอกสาร" -> tb_register_data.product_name (ว่าง = ข้อความ "ส่ง ..." จากรายการสินค้า)
+	// ต้องมาก่อนส่ง CS เพื่อให้ใบงานได้ค่านี้ — หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรสรุปเดิมด้านบน
+	if (($_POST['product_note_form'] ?? '') === '1') {
+		chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''));
+	}
+
+	// ส่งข้อมูลลงระบบ CS เมื่อผู้ใช้ติ๊ก toggle (Save Draft ไม่ส่ง: แกนกลางข้ามเอกสารสถานะ Draft)
+	// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
+	$csSendResult = cs_job_send_requested($_POST) ? chg_cs_send($conn, $ref_id, $_SESSION) : null;
+
 	if ($isDraftRequest) {
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		echo json_encode(array(
+		echo json_encode(array_merge(array(
 			'success' => true,
 			'ref_id' => $ref_id,
 			'message' => 'บันทึกร่างเรียบร้อยแล้ว'
-		));
+		), cs_job_json_fields($csSendResult)));
 		exit();
 	}
 
@@ -606,7 +613,7 @@ if ($saveOk) {
 	if (ob_get_level() > 0) {
 		ob_end_clean();
 	}
-	header('Location: register_supchange.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+	header('Location: register_supchange.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . cs_job_redirect_query($csSendResult));
 	exit();
 } else {
 	mysqli_rollback($conn);

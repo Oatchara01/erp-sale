@@ -22,6 +22,7 @@ if (!$isDraftRequest) {
 <?php
 include("dbconnect.php");
 include("error_page.php");
+require_once __DIR__ . '/includes/change_cs_send.php';
 
 if (!function_exists('tableExists')) {
 	function tableExists($conn, $tableName)
@@ -242,7 +243,7 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		}
 	}
 	$iv_date = cs_post_date($conn, "admin_doc_date");
-	$send_cs = cs_post_flag("send_cs");
+	// send_cs / job_no ไม่อยู่ใน UPDATE: chg_cs_send() เป็นผู้เขียนทางเดียว ค่า 2 (ส่งแล้ว) จึงไม่หายเมื่อบันทึกซ้ำ
 
 	$date_ker = cs_post_date($conn, "shipping_date");
 	$order_refer_code = cs_post($conn, "shipping_ref1");
@@ -326,7 +327,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			'returns_contact' => $returns_contact,
 			'iv_no' => $iv_no,
 			'iv_date' => $iv_date,
-			'send_cs' => $send_cs,
 			'date_ker' => $date_ker,
 			'order_refer_code' => $order_refer_code,
 			'order_refer_code1' => $order_refer_code1,
@@ -372,8 +372,6 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 			$saveOk = false;
 			$saveFailures[] = 'hos__change: ' . mysqli_error($conn);
 		}
-
-		cs_update_column_if_exists($conn, 'hos__change', 'ref_id', $ref_id, 'job_no', cs_post_raw('admin_work_no'));
 
 		// ช่วงเวลาจัดส่ง (sql/delivery_time_range.sql): เขียนเฉพาะค่าที่รู้จัก หน้าที่ไม่ส่งฟิลด์นี้มาจึงไม่ล้างค่าเดิม
 		if (in_array(cs_post_raw('time_range'), array('morning', 'afternoon', 'allday', 'specific'), true)) {
@@ -569,8 +567,8 @@ values('" . $ref_id . "','" . $chg_car_park . "','" . $chg_car_road . "','" . $c
 		$address_1 = cs_post_raw("address_1") !== '' ? cs_post($conn, "address_1") : $address_name;
 
 		// ===== tb_register_data — ต่างจาก create handler: ต้อง DELETE ก่อนเพราะเป็นแถวเดิมที่มีอยู่แล้ว =====
-		// running มาจาก admin_work_no: กัน DELETE ด้านบนลบแถวที่ ajax_run_job_no.php จองเลขที่ลงงานไว้แล้วทำให้เลขหาย
-		$running = cs_post($conn, "admin_work_no");
+		// แถวนี้คือข้อมูลจัดส่งของเอกสารในฐานขาย running ว่างเสมอ — ใบงานที่ CS เห็นอยู่ฐาน CS (chg_cs_send())
+		$running = '';
 		mysqli_query($conn, "DELETE FROM tb_register_data WHERE ref_id = '" . $ref_id_escaped . "'");
 
 		$strSQL66 = "insert into tb_register_data (ref_id,start_date,between_date,start_time,end_time,status,fix_date,no_price,call_customer,credit,call_employee,cash,check_peper,bill,department,type_customer,type_company,customer_name,customer_tel,address_name,address_send,want_bus,product_name,product_sn,unit_credit,price,employee_name,employee_tel,add_by,description,have_map,add_date,unit_bill,unit_check,unit_tran,tran,check_detail,dep,dept,department_show,customer_contact,status_comment,on_time,address_1,add_code,province_name,transport_company,location_link,running)
@@ -589,6 +587,17 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 
 	if ($saveOk) {
 		mysqli_commit($conn);
+
+		// ผู้ใช้ติ๊ก toggle "ส่งข้อมูลลงระบบ CS" และมีสิทธิ์ส่ง — ตัดสินจากสถานะก่อนขั้นอนุมัติด้านล่าง
+		// (ผู้อนุมัติที่ติ๊กแล้วกดอนุมัติต้องส่งได้ เหมือน SO/BRCS) ส่วนสถานะหลัง action ที่ส่งไม่ได้ แกนกลางข้ามเอง
+		$csSendPreDoc = cs_job_send_requested($_POST) ? chg_cs_load_document($conn, $ref_id) : null;
+		$csSendWanted = $csSendPreDoc !== null && chg_cs_user_can_send($csSendPreDoc, $_SESSION);
+
+		// ช่อง "สินค้า/เอกสาร" -> tb_register_data.product_name (+ ใบงาน CS ถ้าส่งแล้ว) ก่อนส่ง CS ในรอบนี้
+		// หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรสรุปเดิมด้านบน
+		if (($_POST['product_note_form'] ?? '') === '1') {
+			chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''));
+		}
 
 		// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_supchange.php =====
 		// ทำงานหลังบันทึกฟอร์มปกติเสร็จแล้ว (การบันทึกด้านบนเพิ่งตั้ง status_doc='Request' ไป
@@ -648,15 +657,39 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 			}
 		}
 
+		// ===== ส่งข้อมูลลงระบบ CS (หลังขั้นอนุมัติ เพื่อให้เห็นสถานะสุดท้ายของเอกสาร) =====
+		// ส่งไม่สำเร็จไม่ทำให้เอกสารที่บันทึกแล้วย้อนกลับ ผู้ใช้ได้ popup เตือนให้ลองใหม่
+		$csSendResult = $csSendWanted ? chg_cs_send($conn, $ref_id, $_SESSION) : null;
+
+		// ยกเลิก/ไม่อนุมัติเอกสารที่ส่ง CS แล้ว: ทำเครื่องหมายบนใบงาน ไม่ลบ ส่วน "ส่งกลับ" ไม่แตะใบงาน
+		$csMarkStatus = '';
+		$csMarkReason = '';
+		if ($isCancelDoc) {
+			$csMarkStatus = 'ยกเลิก';
+			$csMarkReason = trim((string)($_POST['admin_cancel_reason'] ?? ''));
+			if ($csMarkReason === '') {
+				$csMarkReason = trim((string)($_POST['chg_approve_reason'] ?? ''));
+			}
+		} elseif ($chgApproveAction === 'reject') {
+			$csMarkStatus = 'ไม่อนุมัติ';
+			$csMarkReason = trim((string)($_POST['chg_approve_reason'] ?? ''));
+		}
+		if ($csMarkStatus !== '') {
+			$csMarkWarning = chg_cs_mark_cancelled($conn, $ref_id, $csMarkStatus, $csMarkReason);
+			if ($csMarkWarning !== null) {
+				$csSendResult = $csMarkWarning;
+			}
+		}
+
 		if ($isDraftRequest) {
 			if (ob_get_level() > 0) {
 				ob_end_clean();
 			}
-			echo json_encode(array(
+			echo json_encode(array_merge(array(
 				'success' => true,
 				'ref_id' => $ref_id,
 				'message' => 'บันทึกร่างเรียบร้อยแล้ว'
-			));
+			), cs_job_json_fields($csSendResult)));
 			exit();
 		}
 
@@ -664,7 +697,7 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 		if (ob_get_level() > 0) {
 			ob_end_clean();
 		}
-		header('Location: register_supchange.php?ref_id=' . rawurlencode($ref_id) . '&saved=1');
+		header('Location: register_supchange.php?ref_id=' . rawurlencode($ref_id) . '&saved=1' . cs_job_redirect_query($csSendResult));
 		exit();
 	} else {
 		mysqli_rollback($conn);
