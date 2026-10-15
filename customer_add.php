@@ -581,8 +581,8 @@ if (empty($shippingRecords)) {
                             <div class="field">
                                 <label class="field-label">&nbsp;</label>
                                 <div class="tag-pair">
-                                    <label class="tag-toggle<?php echo !empty($customerData['vip_ckk']) ? ' is-active' : ''; ?>" id="vip_toggle">
-                                        <input type="checkbox" value="1" id="vip_ckk" name="vip_ckk" <?php echo !empty($customerData['vip_ckk']) ? 'checked' : ''; ?>>
+                                    <label class="tag-toggle<?php echo ($isEditMode && !empty($customerData['vip_ckk'])) ? ' is-active' : ''; ?><?php echo $isEditMode ? '' : ' is-disabled'; ?>" id="vip_toggle">
+                                        <input type="checkbox" value="1" id="vip_ckk" name="vip_ckk" <?php echo ($isEditMode && !empty($customerData['vip_ckk'])) ? 'checked' : ''; ?> <?php echo $isEditMode ? '' : 'disabled'; ?>>
                                         <span>VIP</span>
                                     </label>
                                     <!-- id display_credit_thb_trigger / h_bill_id ตายตัวตาม js/credit-term-modal.js -->

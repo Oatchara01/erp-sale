@@ -103,7 +103,7 @@ if (isset($_POST["submit"])) {
     $cus_tel = preg_replace('/[^0-9]/', '', postValue("cus_tel"));
     $cus_fax = postValue("cus_fax");
     $mode_name = postValue("h_mode_name");
-    $vip_ckk = isset($_POST["vip_ckk"]) ? "1" : "0";
+    $vip_ckk = "0"; // สร้างใหม่ยังเลือก VIP ไม่ได้ ต้องบันทึกก่อนแล้วแก้ไขภายหลัง
 
     $billingNames = postArray("billing_name");
     $billingTaxIds = postArray("billing_tax_id");
