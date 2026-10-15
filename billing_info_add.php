@@ -836,7 +836,7 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
 
                 <div class="field">
                     <label class="label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
-                    <input type="text" class="control" name="tax_id" id="tax_id" inputmode="numeric" maxlength="20" value="<?php echo h($formData['tax_id']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
+                    <input type="text" class="control" name="tax_id" id="tax_id" inputmode="numeric" maxlength="20" value="<?php echo h($formData['tax_id']); ?>" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required>
                 </div>
 
                 <div class="field">

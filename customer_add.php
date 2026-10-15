@@ -706,7 +706,7 @@ if (empty($shippingRecords)) {
                                         <div class="field">
                                             <label class="field-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
                                             <div class="input-shell">
-                                                <input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" value="<?php echo h($billing['billing_tax_id'] ?? ''); ?>" inputmode="numeric" maxlength="20" placeholder="Tax ID" required>
+                                                <input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" value="<?php echo h($billing['billing_tax_id'] ?? ''); ?>" inputmode="numeric" maxlength="20" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
@@ -1119,7 +1119,7 @@ if (empty($shippingRecords)) {
                     <div class="input-shell"><input type="text" class="form-input js-clearable billing-name" name="billing_name[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" inputmode="numeric" maxlength="20" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" inputmode="numeric" maxlength="20" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tel" name="billing_tel[]" inputmode="numeric" maxlength="15" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
@@ -1599,7 +1599,7 @@ if (empty($shippingRecords)) {
                     "#cus_tel": "ใส่เฉพาะตัวเลข",
                     "#cus_address": "กรอกรายละเอียดที่อยู่",
                     ".billing-name": "กรอกชื่อสำหรับออกบิล",
-                    ".billing-tax-id": "ใส่เฉพาะตัวเลข",
+                    ".billing-tax-id": "ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว",
                     ".billing-tel": "ใส่เฉพาะตัวเลข",
                     ".billing-email": "กรอกอีเมล",
                     ".billing-address": "กรอกรายละเอียดที่อยู่ออกบิล",
