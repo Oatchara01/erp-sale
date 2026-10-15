@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 include "dbconnect.php";
+include_once __DIR__ . '/includes/address_tumbon.php';
 
 function responseJson($payload, $statusCode = 200)
 {
@@ -24,7 +25,7 @@ if ($limit > 50) {
     $limit = 50;
 }
 
-$sql = "SELECT b.id AS billing_id, b.customer_id, c.first_name, c.last_name, c.customer_name, c.customer_code, c.customer_coden, b.billing_name AS bill_name, c.cus_tel, b.billing_tel AS bill_tel, b.billing_address AS bill_address, b.billing_ampher AS bill_ampher, b.billing_province AS billl_province, b.billing_postcode AS bill_postcode, b.billing_tax_id AS tax_id, b.billing_branch_no, b.billing_branch_type, b.billing_preface_name
+$sql = "SELECT b.id AS billing_id, b.customer_id, c.first_name, c.last_name, c.customer_name, c.customer_code, c.customer_coden, b.billing_name AS bill_name, c.cus_tel, b.billing_tel AS bill_tel, b.billing_address AS bill_address, b.billing_ampher AS bill_ampher, b.billing_tumbon AS bill_tumbon, b.billing_province AS billl_province, b.billing_postcode AS bill_postcode, b.billing_tax_id AS tax_id, b.billing_branch_no, b.billing_branch_type, b.billing_preface_name
         FROM tb_customer_billing_address b
         LEFT JOIN tb_customer c ON b.customer_id = c.customer_id
         WHERE 1";
@@ -50,9 +51,11 @@ if ($keyword !== '') {
         OR c.cus_tel LIKE ?
         OR b.billing_tel LIKE ?
         OR b.billing_tax_id LIKE ?
+        OR b.billing_tumbon LIKE ?
     )";
-    $types .= 'sssss';
+    $types .= 'ssssss';
     $params = array_merge($params, array(
+        $keywordLike,
         $keywordLike,
         $keywordLike,
         $keywordLike,
@@ -104,9 +107,12 @@ foreach ($rows as $row) {
         $branchText = 'สาขา ' . trim((string)$row['billing_branch_no']);
     }
 
+    // ที่อยู่ + ตำบล (ไม่ต่อซ้ำถ้าที่อยู่มีชื่อตำบลอยู่แล้ว) วางก่อนอำเภอ
+    $billStreet = address_append_tumbon($row['bill_address'], $row['bill_tumbon']);
+
     $billAddressParts = array_filter(array(
         $branchText,
-        trim((string)$row['bill_address']),
+        $billStreet,
         trim((string)$row['bill_ampher']),
         trim((string)$row['billl_province']),
         trim((string)$row['bill_postcode'])
@@ -117,7 +123,7 @@ foreach ($rows as $row) {
     // ที่อยู่สำหรับเติมลงช่อง bill_address: ไม่มีสาขา และใส่ "จ." หน้าจังหวัด (รูปแบบเดียวกับ data_bill_name1.php)
     $provinceText = trim((string)$row['billl_province']);
     $billAddressFillParts = array_filter(array(
-        trim((string)$row['bill_address']),
+        $billStreet,
         trim((string)$row['bill_ampher']),
         $provinceText !== '' ? 'จ. ' . $provinceText : '',
         trim((string)$row['bill_postcode'])

@@ -1,5 +1,6 @@
 <?php
 include('dbconnect.php');
+include_once __DIR__ . '/includes/address_tumbon.php';
 
 header('Content-Type: application/json; charset=utf-8');
 // กัน browser cache ผลลัพธ์เก่า เพราะ URL ซ้ำเดิมทุกครั้งที่ค้นหาด้วยเงื่อนไขเดียวกัน
@@ -46,6 +47,7 @@ $sql = "
         s.shipping_tel,
         s.shipping_address,
         s.shipping_ampher,
+        s.shipping_tumbon,
         s.shipping_province,
         s.shipping_postcode,
         s.install_location,
@@ -71,9 +73,11 @@ if ($keyword !== '') {
             OR s.shipping_ampher LIKE ?
             OR s.shipping_province LIKE ?
             OR s.shipping_postcode LIKE ?
+            OR s.shipping_tumbon LIKE ?
         )";
-    $types .= 'ssssssssss';
+    $types .= 'sssssssssss';
     $params = array_merge($params, array(
+        $keywordLike,
         $keywordLike,
         $keywordLike,
         $keywordLike,
@@ -115,7 +119,9 @@ $query = mysqli_stmt_get_result($stmt);
 $rows = array();
 while ($row = mysqli_fetch_assoc($query)) {
     $parts = array();
-    if (!empty($row['shipping_address'])) $parts[] = $row['shipping_address'];
+    // ที่อยู่ + ตำบล (ไม่ต่อซ้ำถ้าที่อยู่มีชื่อตำบลอยู่แล้ว) วางก่อนอำเภอ
+    $street = address_append_tumbon($row['shipping_address'], $row['shipping_tumbon']);
+    if ($street !== '') $parts[] = $street;
     if (!empty($row['shipping_ampher'])) $parts[] = $row['shipping_ampher'];
     if (!empty($row['shipping_province'])) $parts[] = $row['shipping_province'];
     if (!empty($row['shipping_postcode'])) $parts[] = $row['shipping_postcode'];

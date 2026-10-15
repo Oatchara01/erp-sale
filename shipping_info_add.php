@@ -1,6 +1,7 @@
 <?php
 include('head.php');
 include('dbconnect.php');
+include_once __DIR__ . '/includes/address_cascade.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -63,28 +64,11 @@ function requestIntValue($primaryKey, $fallbackKey = '')
     return 0;
 }
 
-$prefaceOptions = array(
-    'คุณ',
-    'มหาวิทยาลัย',
-    'บริษัท',
-    'หจก.',
-    'คลินิก',
-    'ร้าน',
-    'มูลนิธิ',
-    'ร้านขายยา',
-    'ร้านค้า',
-    'โรงพยาบาล',
-    'โรงเรียน',
-    'สถาบัน',
-    'สำนักงาน',
-    'หสน.',
-    'หสม.'
-);
-
 $provinces = fetchRows($conn, "SELECT province_name FROM tb_province ORDER BY province_name ASC");
 $customerId = requestIntValue('customer_id', 'bill_id');
 $shippingId = isset($_REQUEST['shipping_id']) ? (int)$_REQUEST['shipping_id'] : 0;
 
+// คำนำหน้าชื่อไม่มีในฟอร์มแล้ว (ตาม Figma) ค่าเดิมของแถวที่แก้คงไว้ตามที่โหลดมา เพิ่มใหม่ = ว่าง
 $formData = array(
     'customer_id' => $customerId,
     'customer_name' => '',
@@ -95,6 +79,7 @@ $formData = array(
     'shipping_address' => '',
     'shipping_province' => '',
     'shipping_ampher' => '',
+    'shipping_tumbon' => '',
     'shipping_postcode' => '',
     'install_location' => '',
     'location_link' => '',
@@ -119,6 +104,7 @@ if ($customerId > 0) {
         $formData['shipping_address'] = '';
         $formData['shipping_province'] = '';
         $formData['shipping_ampher'] = '';
+        $formData['shipping_tumbon'] = '';
         $formData['shipping_postcode'] = '';
         $formData['install_location'] = '';
         $formData['location_link'] = '';
@@ -135,6 +121,7 @@ if ($customerId > 0) {
             $formData['shipping_address'] = $shippingRow['shipping_address'] ?? '';
             $formData['shipping_province'] = $shippingRow['shipping_province'] ?? '';
             $formData['shipping_ampher'] = $shippingRow['shipping_ampher'] ?? '';
+            $formData['shipping_tumbon'] = $shippingRow['shipping_tumbon'] ?? '';
             $formData['shipping_postcode'] = $shippingRow['shipping_postcode'] ?? '';
             $formData['install_location'] = $shippingRow['install_location'] ?? '';
             $formData['location_link'] = $shippingRow['location_link'] ?? '';
@@ -154,11 +141,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData['shipping_postcode'] = preg_replace('/[^0-9]/', '', $formData['shipping_postcode']);
 
     if (
-        $formData['preface_name'] === '' ||
         $formData['shipping_tel'] === '' ||
         $formData['shipping_address'] === '' ||
         $formData['shipping_province'] === '' ||
         $formData['shipping_ampher'] === '' ||
+        $formData['shipping_tumbon'] === '' ||
         $formData['shipping_postcode'] === ''
     ) {
         $errorMessage = 'กรุณากรอกข้อมูลให้ครบถ้วน';
@@ -201,6 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "shipping_name='" . esc($conn, $formData['shipping_name']) . "'",
                 "shipping_address='" . esc($conn, $formData['shipping_address']) . "'",
                 "shipping_ampher='" . esc($conn, $formData['shipping_ampher']) . "'",
+                "shipping_tumbon='" . esc($conn, $formData['shipping_tumbon']) . "'",
                 "shipping_province='" . esc($conn, $formData['shipping_province']) . "'",
                 "shipping_postcode='" . esc($conn, $formData['shipping_postcode']) . "'",
                 "shipping_tel='" . esc($conn, $formData['shipping_tel']) . "'",
@@ -219,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "shipping_name",
                 "shipping_address",
                 "shipping_ampher",
+                "shipping_tumbon",
                 "shipping_province",
                 "shipping_postcode",
                 "shipping_tel",
@@ -234,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "'" . esc($conn, $formData['shipping_name']) . "'",
                 "'" . esc($conn, $formData['shipping_address']) . "'",
                 "'" . esc($conn, $formData['shipping_ampher']) . "'",
+                "'" . esc($conn, $formData['shipping_tumbon']) . "'",
                 "'" . esc($conn, $formData['shipping_province']) . "'",
                 "'" . esc($conn, $formData['shipping_postcode']) . "'",
                 "'" . esc($conn, $formData['shipping_tel']) . "'",
@@ -264,6 +254,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+// ชุดตัวเลือก อำเภอ/ตำบล/ไปรษณีย์ ของค่าที่แสดงอยู่ (ค่าที่บันทึกไว้ หรือค่าที่ POST มาตอนบันทึกไม่ผ่าน)
+$shippingAddressData = address_cascade_data($conn, $formData['shipping_province'], $formData['shipping_ampher'], $formData['shipping_tumbon'], $formData['shipping_postcode']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -321,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .shipping-header h1 {
             margin: 0;
-            font-size: clamp(20px, 2.5vw, 22px);
+            font-size: 20px;
             font-weight: 600;
             color: #3b3b3b;
         }
@@ -357,11 +350,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             grid-column: span 12;
         }
 
+        .field.span-8 {
+            grid-column: span 8;
+        }
+
         .label {
             display: block;
             margin: 0 0 8px;
             color: var(--primary);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 400;
             white-space: nowrap;
         }
@@ -380,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: var(--input-bg);
             color: var(--text);
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             padding: 0 16px;
             outline: none;
         }
@@ -531,7 +528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             min-height: 44px;
             border-radius: 24px;
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
         }
@@ -552,6 +549,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @container (max-width: 900px) {
 
             .field,
+            .field.span-8,
             .field.span-12 {
                 grid-column: span 12;
             }
@@ -590,17 +588,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="success-box"><?php echo h($successMessage); ?></div>
                 <?php } ?>
 
-                <div class="grid">
-                    <div class="field">
-                        <label class="label" for="preface_name">คำนำหน้าชื่อ<span class="required">*</span></label>
-                        <select class="select" name="preface_name" id="preface_name" required>
-                            <option value="">Select</option>
-                            <?php foreach ($prefaceOptions as $option) { ?>
-                                <option value="<?php echo h($option); ?>" <?php echo ($formData['preface_name'] === $option) ? 'selected' : ''; ?>><?php echo h($option); ?></option>
-                            <?php } ?>
-                        </select>
-                    </div>
-
+                <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (js/address-cascade.js) -->
+                <div class="grid" data-address-scope>
                     <div class="field">
                         <label class="label" for="shipping_name">ชื่อผู้รับสินค้า</label>
                         <div class="control-wrap">
@@ -614,7 +603,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="text" class="control" name="shipping_tel" id="shipping_tel" inputmode="numeric" maxlength="15" value="<?php echo h($formData['shipping_tel']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                     </div>
 
-                    <div class="field span-12">
+                    <div class="field span-8">
                         <label class="label" for="shipping_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
                         <div class="control-wrap">
                             <input type="text" class="control has-clear" name="shipping_address" id="shipping_address" value="<?php echo h($formData['shipping_address']); ?>" placeholder="กรอกรายละเอียดที่อยู่จัดส่ง" required>
@@ -624,7 +613,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="field">
                         <label class="label" for="shipping_province">จังหวัด<span class="required">*</span></label>
-                        <select class="select" name="shipping_province" id="shipping_province" required>
+                        <select class="select" name="shipping_province" id="shipping_province" data-address-level="province" required>
                             <option value="">Select</option>
                             <?php foreach ($provinces as $province) { ?>
                                 <option value="<?php echo h($province['province_name']); ?>" <?php echo ($formData['shipping_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -634,12 +623,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="field">
                         <label class="label" for="shipping_ampher">เขต/อำเภอ<span class="required">*</span></label>
-                        <input type="text" class="control" name="shipping_ampher" id="shipping_ampher" value="<?php echo h($formData['shipping_ampher']); ?>" placeholder="กรอกเขตหรืออำเภอ" required>
+                        <select class="select" name="shipping_ampher" id="shipping_ampher" data-address-level="district" required><?php echo address_cascade_district_options($shippingAddressData); ?></select>
+                    </div>
+
+                    <div class="field">
+                        <label class="label" for="shipping_tumbon">แขวง/ตำบล<span class="required">*</span></label>
+                        <select class="select" name="shipping_tumbon" id="shipping_tumbon" data-address-level="sub_district" required><?php echo address_cascade_sub_district_options($shippingAddressData); ?></select>
                     </div>
 
                     <div class="field">
                         <label class="label" for="shipping_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
-                        <input type="text" class="control" name="shipping_postcode" id="shipping_postcode" inputmode="numeric" maxlength="10" value="<?php echo h($formData['shipping_postcode']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
+                        <select class="select" name="shipping_postcode" id="shipping_postcode" data-address-level="postcode" required><?php echo address_cascade_postcode_options($shippingAddressData); ?></select>
                     </div>
 
                     <div class="field">
@@ -693,6 +687,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script src="js/address-cascade.js"></script>
     <script>
         var shippingForm = document.getElementById('shippingForm');
         var shippingConfirmModal = document.getElementById('shippingConfirmModal');
@@ -758,7 +753,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
 
-        ['shipping_tel', 'shipping_postcode'].forEach(function(id) {
+        ['shipping_tel'].forEach(function(id) {
             var input = document.getElementById(id);
             if (!input) return;
             input.addEventListener('input', function() {

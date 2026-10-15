@@ -1,7 +1,8 @@
 <?php
 
 
-include"dbconnect.php"; 
+include"dbconnect.php";
+include_once __DIR__ . '/includes/address_tumbon.php';
 
 $strProduct = trim($_POST["bill_id"]);
 
@@ -18,15 +19,17 @@ $objResult1 = mysqli_fetch_array($objQuery1);
 $typeName = $objResult1 ? $objResult1["type_name"] : "";
 	
 	$pro ="จ.";
-	$del_address =$objResult["del_address"];
+	// tb_customer.bill_*/del_* ไม่มีตำบล → ใช้ตำบลของแถวหลักใน billing/shipping (ต่อเฉพาะข้อความรวม index 1, 19)
+	$bill_street = address_append_tumbon($objResult["bill_address"], address_primary_tumbon($conn, $objResult["customer_id"], 'billing'));
+	$del_address = address_append_tumbon($objResult["del_address"], address_primary_tumbon($conn, $objResult["customer_id"], 'shipping'));
 	$del_ampher = $objResult["del_ampher"];
 	$del_province =$objResult["del_province"];
 	$del_postcode=$objResult["del_postcode"];
 	$delivery ="$del_address $del_ampher $del_province $del_postcode";
-	
+
 	$data = array(
 		$objResult["bill_name"], // index 0: ชื่อบิล
-		$objResult["bill_address"] . " " . $objResult["bill_ampher"] . " " . $pro . " " . $objResult["billl_province"] . " " . $objResult["bill_postcode"], // index 1: ที่อยู่ออกบิลรวม
+		$bill_street . " " . $objResult["bill_ampher"] . " " . $pro . " " . $objResult["billl_province"] . " " . $objResult["bill_postcode"], // index 1: ที่อยู่ออกบิลรวม
 		$objResult["bill_tel"], // index 2: เบอร์โทรออกบิล
 		$objResult["tax_id"], // index 3: เลขผู้เสียภาษี
 		$objResult["customer_no"], // index 4: รหัสลูกค้า

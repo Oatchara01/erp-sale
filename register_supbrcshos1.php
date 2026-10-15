@@ -766,6 +766,12 @@ if ($save_to_customer_db && !empty($customer_id)) {
 		if (in_array('location_link', $existing_cols)) {
 			$insert_fields['location_link'] = "'$esc_location_link'";
 		}
+		// ส่วนประกอบดิบไม่มีตำบล ใช้ตำบลของที่อยู่จัดส่งเดิมที่ ที่อยู่/อำเภอ/จังหวัด ตรงกัน (ไม่พบ = ว่าง)
+		if ($hasRawAddress && in_array('shipping_tumbon', $existing_cols)) {
+			include_once __DIR__ . '/includes/address_tumbon.php';
+			$ship_tumbon = address_lookup_shipping_tumbon($conn, $customer_id, $rawAddress, cs_post_raw('shipping_ampher'), cs_post_raw('province_name'));
+			$insert_fields['shipping_tumbon'] = "'" . mysqli_real_escape_string($conn, $ship_tumbon) . "'";
+		}
 
 		$insert_cols_str = implode(', ', array_keys($insert_fields));
 		$insert_vals_str = implode(', ', array_values($insert_fields));

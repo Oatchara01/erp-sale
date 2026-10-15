@@ -1,7 +1,8 @@
 <?php
 
 
-include"dbconnect.php"; 
+include"dbconnect.php";
+include_once __DIR__ . '/includes/address_tumbon.php';
 
 $strProduct = trim($_POST["bill_id"]);
 
@@ -17,7 +18,7 @@ $objQuery1 = mysqli_query($conn,$strSQL1) or die(mysqli_error());
 $objResult1 = mysqli_fetch_array($objQuery1);		
 	
 	
-	$del_address =$objResult["cus_address"];
+	$del_address = address_append_tumbon($objResult["cus_address"], $objResult["cus_addtum"]);
 	$del_ampher = $objResult["cus_ampher"];
 	$del_province =$objResult["cus_province"];
 	$del_postcode=$objResult["cus_postcode"];

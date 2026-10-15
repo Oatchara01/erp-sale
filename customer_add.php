@@ -49,6 +49,24 @@ function tableExists($connection, $tableName)
     return $query && mysqli_num_rows($query) > 0;
 }
 
+function fetchStmtRows($connection, $sql, $types, $params)
+{
+    $rows = array();
+    $stmt = $connection ? mysqli_prepare($connection, $sql) : false;
+    if (!$stmt) {
+        return $rows;
+    }
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+    if (mysqli_stmt_execute($stmt)) {
+        $result = mysqli_stmt_get_result($stmt);
+        while ($row = mysqli_fetch_assoc($result)) {
+            $rows[] = $row;
+        }
+    }
+    mysqli_stmt_close($stmt);
+    return $rows;
+}
+
 function h($value)
 {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
@@ -228,6 +246,7 @@ $customerData = array(
     'cus_address' => '',
     'cus_province' => '',
     'cus_ampher' => '',
+    'cus_addtum' => '',
     'cus_postcode' => '',
     'bill_name' => '',
     'bill_address' => '',
@@ -250,6 +269,7 @@ $customerData = array(
     'cus_fax' => '',
     'rental_address' => '',
     'rental_ampher' => '',
+    'rental_addtum' => '',
     'rental_province' => '',
     'rental_postcode' => '',
 );
@@ -290,6 +310,130 @@ foreach ($modeCustomers as $modeCustomer) {
         break;
     }
 }
+
+/* =========================================================
+   ตัวเลือก เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ (db__districts / db__sub_districts)
+   ใช้ทั้งที่อยู่ลูกค้า การ์ดออกบิล และการ์ดจัดส่ง โหลดชุดของค่าที่บันทึกไว้ตอนเปิดหน้า
+   ชั้นที่เปลี่ยนภายหลังโหลดผ่าน ajax_address_options.php (JS: address cascade)
+   ค่าเก่าที่ไม่ตรง master แสดงเป็น "(ไม่พบในรายการ)" ให้บันทึกต่อได้โดยข้อมูลไม่หาย
+========================================================= */
+
+function addressCascadeData($connection, $province, $ampher, $tumbon, $postcode)
+{
+    static $districtCache = array();
+    static $subDistrictCache = array();
+
+    $province = trim((string)$province);
+    $data = array(
+        'ampher' => trim((string)$ampher),
+        'tumbon' => trim((string)$tumbon),
+        'postcode' => trim((string)$postcode),
+        'districts' => array(),
+        'districtId' => 0,
+        'subDistricts' => array(),
+        'zip' => '',
+    );
+
+    if ($province !== '') {
+        if (!isset($districtCache[$province])) {
+            $districtCache[$province] = fetchStmtRows(
+                $connection,
+                "SELECT d.id, d.name_th
+                 FROM db__districts d
+                 INNER JOIN db__provinces p ON p.id = d.province_id
+                 WHERE p.name_th = ? AND d.deleted_at IS NULL
+                 ORDER BY d.name_th",
+                's',
+                array($province)
+            );
+        }
+        $data['districts'] = $districtCache[$province];
+        foreach ($data['districts'] as $district) {
+            if ($district['name_th'] === $data['ampher']) {
+                $data['districtId'] = (int)$district['id'];
+                break;
+            }
+        }
+    }
+
+    if ($data['districtId'] > 0) {
+        if (!isset($subDistrictCache[$data['districtId']])) {
+            $subDistrictCache[$data['districtId']] = fetchStmtRows(
+                $connection,
+                "SELECT id, name_th, zip_code
+                 FROM db__sub_districts
+                 WHERE district_id = ? AND deleted_at IS NULL
+                 ORDER BY name_th",
+                'i',
+                array($data['districtId'])
+            );
+        }
+        $data['subDistricts'] = $subDistrictCache[$data['districtId']];
+    }
+
+    // รหัสไปรษณีย์มีตัวเลือกเดียวคือรหัสของตำบลที่เลือก (ตำบลยังไม่เลือก = ไม่มีตัวเลือก)
+    foreach ($data['subDistricts'] as $subDistrict) {
+        if ($subDistrict['name_th'] === $data['tumbon']) {
+            $data['zip'] = (string)$subDistrict['zip_code'];
+            break;
+        }
+    }
+
+    return $data;
+}
+
+function addressLegacyOption($value)
+{
+    return '<option value="' . h($value) . '" selected>' . h($value) . ' (ไม่พบในรายการ)</option>';
+}
+
+function addressDistrictOptions($data)
+{
+    $html = '<option value="">Select</option>';
+    if ($data['ampher'] !== '' && $data['districtId'] === 0) {
+        $html .= addressLegacyOption($data['ampher']);
+    }
+    foreach ($data['districts'] as $district) {
+        $selected = (int)$district['id'] === $data['districtId'] ? ' selected' : '';
+        $html .= '<option value="' . h($district['name_th']) . '" data-id="' . h($district['id']) . '"' . $selected . '>' . h($district['name_th']) . '</option>';
+    }
+    return $html;
+}
+
+function addressSubDistrictOptions($data)
+{
+    $html = '<option value="">Select</option>';
+    $found = false;
+    $options = '';
+    foreach ($data['subDistricts'] as $subDistrict) {
+        $selected = '';
+        if ($subDistrict['name_th'] === $data['tumbon']) {
+            $selected = ' selected';
+            $found = true;
+        }
+        $options .= '<option value="' . h($subDistrict['name_th']) . '" data-zip="' . h($subDistrict['zip_code']) . '"' . $selected . '>' . h($subDistrict['name_th']) . '</option>';
+    }
+    if ($data['tumbon'] !== '' && !$found) {
+        $html .= addressLegacyOption($data['tumbon']);
+    }
+    return $html . $options;
+}
+
+function addressPostcodeOptions($data)
+{
+    $html = '<option value="">Select</option>';
+    if ($data['postcode'] !== '' && $data['postcode'] !== $data['zip']) {
+        $html .= addressLegacyOption($data['postcode']);
+    }
+    if ($data['zip'] !== '') {
+        $selected = $data['zip'] === $data['postcode'] ? ' selected' : '';
+        $html .= '<option value="' . h($data['zip']) . '"' . $selected . '>' . h($data['zip']) . '</option>';
+    }
+    return $html;
+}
+
+$customerAddress = addressCascadeData($conn, $customerData['cus_province'], $customerData['cus_ampher'], $customerData['cus_addtum'], $customerData['cus_postcode']);
+$rentalAddress = addressCascadeData($conn, $customerData['rental_province'], $customerData['rental_ampher'], $customerData['rental_addtum'], $customerData['rental_postcode']);
 
 if (empty($billingRecords)) {
     $billingRecords[] = array(
@@ -379,8 +523,8 @@ if (empty($shippingRecords)) {
                 </div>
 
                 <div class="customer-body">
-                    <section class="section-block">
-                        <div class="field-grid">
+                    <section class="section-block customer-main-section">
+                        <div class="field-grid" id="customerAddressScope" data-address-scope>
                             <div class="field">
                                 <label class="field-label" for="customer_name">ชื่อลูกค้า<span class="required-mark">*</span></label>
                                 <div class="input-shell">
@@ -461,7 +605,7 @@ if (empty($shippingRecords)) {
                             <div class="field">
                                 <label class="field-label" for="cus_province">จังหวัด<span class="required-mark">*</span></label>
                                 <div class="select-shell">
-                                    <select name="cus_province" id="cus_province" class="form-select" required>
+                                    <select name="cus_province" id="cus_province" class="form-select" data-address-level="province" required>
                                         <option value="">Select</option>
                                         <?php foreach ($provinces as $province) { ?>
                                             <option value="<?php echo h($province['province_name']); ?>" <?php echo ($customerData['cus_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -470,19 +614,25 @@ if (empty($shippingRecords)) {
                                 </div>
                             </div>
 
+                            <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (JS: address cascade) -->
                             <div class="field">
                                 <label class="field-label" for="cus_ampher">เขต/อำเภอ<span class="required-mark">*</span></label>
-                                <div class="input-shell">
-                                    <input type="text" name="cus_ampher" id="cus_ampher" class="form-input js-clearable" value="<?php echo h($customerData['cus_ampher']); ?>" placeholder="District / Amphur" required>
-                                    <button type="button" class="field-clear" data-clear-target="cus_ampher" aria-label="ล้างค่า">&times;</button>
+                                <div class="select-shell">
+                                    <select name="cus_ampher" id="cus_ampher" class="form-select" data-address-level="district" required><?php echo addressDistrictOptions($customerAddress); ?></select>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field-label" for="cus_addtum">แขวง/ตำบล<span class="required-mark">*</span></label>
+                                <div class="select-shell">
+                                    <select name="cus_addtum" id="cus_addtum" class="form-select" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($customerAddress); ?></select>
                                 </div>
                             </div>
 
                             <div class="field">
                                 <label class="field-label" for="cus_postcode">รหัสไปรษณีย์<span class="required-mark">*</span></label>
-                                <div class="input-shell">
-                                    <input type="text" name="cus_postcode" id="cus_postcode" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['cus_postcode']); ?>" inputmode="numeric" maxlength="10" placeholder="Postcode" required>
-                                    <button type="button" class="field-clear" data-clear-target="cus_postcode" aria-label="ล้างค่า">&times;</button>
+                                <div class="select-shell">
+                                    <select name="cus_postcode" id="cus_postcode" class="form-select" data-address-level="postcode" required><?php echo addressPostcodeOptions($customerAddress); ?></select>
                                 </div>
                             </div>
                         </div>
@@ -501,8 +651,9 @@ if (empty($shippingRecords)) {
                                 // บิล 1 ใช้รหัสลูกค้าหลัก บิล 2+ ใช้รหัสของแถวนั้นเอง
                                 $billingCode = $index === 0 ? trim((string)$customerData['customer_code']) : trim((string)($billing['billing_code'] ?? ''));
                                 $billingCoden = $index === 0 ? trim((string)$customerData['customer_coden']) : trim((string)($billing['billing_coden'] ?? ''));
+                                $billingAddressData = addressCascadeData($conn, $billing['billing_province'] ?? '', $billing['billing_ampher'] ?? '', $billing['billing_tumbon'] ?? '', $billing['billing_postcode'] ?? '');
                                 ?>
-                                <div class="sub-card billing-card" data-billing-index="<?php echo h($index); ?>">
+                                <div class="sub-card billing-card" data-billing-index="<?php echo h($index); ?>" data-address-scope>
                                     <div class="sub-card-header">
                                         <h3 class="sub-card-title">ที่อยู่ออกบิล <?php echo h($index + 1); ?></h3>
                                     </div>
@@ -576,7 +727,7 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field span-3">
+                                        <div class="field span-2">
                                             <label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable billing-address" name="billing_address[]" value="<?php echo h($billing['billing_address'] ?? ''); ?>" placeholder="Billing address" required>
@@ -587,7 +738,7 @@ if (empty($shippingRecords)) {
                                         <div class="field">
                                             <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
-                                                <select class="form-select billing-province" name="billing_province[]" required>
+                                                <select class="form-select billing-province" name="billing_province[]" data-address-level="province" required>
                                                     <option value="">Select</option>
                                                     <?php foreach ($provinces as $province) { ?>
                                                         <option value="<?php echo h($province['province_name']); ?>" <?php echo (($billing['billing_province'] ?? '') === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -598,17 +749,22 @@ if (empty($shippingRecords)) {
 
                                         <div class="field">
                                             <label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
-                                            <div class="input-shell">
-                                                <input type="text" class="form-input js-clearable billing-ampher" name="billing_ampher[]" value="<?php echo h($billing['billing_ampher'] ?? ''); ?>" placeholder="District / Amphur" required>
-                                                <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
+                                            <div class="select-shell">
+                                                <select class="form-select billing-ampher" name="billing_ampher[]" data-address-level="district" required><?php echo addressDistrictOptions($billingAddressData); ?></select>
+                                            </div>
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                                            <div class="select-shell">
+                                                <select class="form-select billing-tumbon" name="billing_tumbon[]" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($billingAddressData); ?></select>
                                             </div>
                                         </div>
 
                                         <div class="field">
                                             <label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
-                                            <div class="input-shell">
-                                                <input type="text" class="form-input js-number-only js-clearable billing-postcode" name="billing_postcode[]" value="<?php echo h($billing['billing_postcode'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Postcode" required>
-                                                <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
+                                            <div class="select-shell">
+                                                <select class="form-select billing-postcode" name="billing_postcode[]" data-address-level="postcode" required><?php echo addressPostcodeOptions($billingAddressData); ?></select>
                                             </div>
                                         </div>
 
@@ -665,7 +821,8 @@ if (empty($shippingRecords)) {
 
                         <div id="shippingCards" class="card-list">
                             <?php foreach ($shippingRecords as $index => $shipping) { ?>
-                                <div class="sub-card shipping-card" data-shipping-index="<?php echo h($index); ?>">
+                                <?php $shippingAddressData = addressCascadeData($conn, $shipping['shipping_province'] ?? '', $shipping['shipping_ampher'] ?? '', $shipping['shipping_tumbon'] ?? '', $shipping['shipping_postcode'] ?? ''); ?>
+                                <div class="sub-card shipping-card" data-shipping-index="<?php echo h($index); ?>" data-address-scope>
                                     <div class="sub-card-header">
                                         <h3 class="sub-card-title">ที่อยู่จัดส่ง <?php echo h($index + 1); ?></h3>
                                     </div>
@@ -700,7 +857,7 @@ if (empty($shippingRecords)) {
                                             </button>
                                         </div>
 
-                                        <div class="field span-3">
+                                        <div class="field span-2">
                                             <label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable shipping-address" name="shipping_address[]" value="<?php echo h($shipping['shipping_address'] ?? ''); ?>" placeholder="Shipping address" required>
@@ -711,7 +868,7 @@ if (empty($shippingRecords)) {
                                         <div class="field">
                                             <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
-                                                <select class="form-select shipping-province" name="shipping_province[]" required>
+                                                <select class="form-select shipping-province" name="shipping_province[]" data-address-level="province" required>
                                                     <option value="">Select</option>
                                                     <?php foreach ($provinces as $province) { ?>
                                                         <option value="<?php echo h($province['province_name']); ?>" <?php echo (($shipping['shipping_province'] ?? '') === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -722,17 +879,22 @@ if (empty($shippingRecords)) {
 
                                         <div class="field">
                                             <label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
-                                            <div class="input-shell">
-                                                <input type="text" class="form-input js-clearable shipping-ampher" name="shipping_ampher[]" value="<?php echo h($shipping['shipping_ampher'] ?? ''); ?>" placeholder="District / Amphur" required>
-                                                <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
+                                            <div class="select-shell">
+                                                <select class="form-select shipping-ampher" name="shipping_ampher[]" data-address-level="district" required><?php echo addressDistrictOptions($shippingAddressData); ?></select>
+                                            </div>
+                                        </div>
+
+                                        <div class="field">
+                                            <label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                                            <div class="select-shell">
+                                                <select class="form-select shipping-tumbon" name="shipping_tumbon[]" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($shippingAddressData); ?></select>
                                             </div>
                                         </div>
 
                                         <div class="field">
                                             <label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
-                                            <div class="input-shell">
-                                                <input type="text" class="form-input js-number-only js-clearable shipping-postcode" name="shipping_postcode[]" value="<?php echo h($shipping['shipping_postcode'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Postcode" required>
-                                                <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
+                                            <div class="select-shell">
+                                                <select class="form-select shipping-postcode" name="shipping_postcode[]" data-address-level="postcode" required><?php echo addressPostcodeOptions($shippingAddressData); ?></select>
                                             </div>
                                         </div>
                                     </div>
@@ -743,8 +905,9 @@ if (empty($shippingRecords)) {
 
                     <section class="section-block">
                         <h2 class="section-title">ที่อยู่ผู้เช่า</h2>
-                        <div class="field-grid">
-                            <div class="field span-3">
+                        <!-- ไม่บังคับกรอก ใบเช่า (register_suprental.php) ดึงไปเติมผ่าน data_rental_name.php -->
+                        <div class="field-grid" data-address-scope>
+                            <div class="field span-2">
                                 <label class="field-label" for="rental_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน</label>
                                 <div class="input-shell">
                                     <input type="text" name="rental_address" id="rental_address" class="form-input js-clearable" value="<?php echo h($customerData['rental_address']); ?>" placeholder="ใส่รายละเอียดที่อยู่ผู้เช่า">
@@ -755,7 +918,7 @@ if (empty($shippingRecords)) {
                             <div class="field">
                                 <label class="field-label" for="rental_province">จังหวัด</label>
                                 <div class="select-shell">
-                                    <select name="rental_province" id="rental_province" class="form-select">
+                                    <select name="rental_province" id="rental_province" class="form-select" data-address-level="province">
                                         <option value="">Select</option>
                                         <?php foreach ($provinces as $province) { ?>
                                             <option value="<?php echo h($province['province_name']); ?>" <?php echo ($customerData['rental_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -766,17 +929,22 @@ if (empty($shippingRecords)) {
 
                             <div class="field">
                                 <label class="field-label" for="rental_ampher">เขต/อำเภอ</label>
-                                <div class="input-shell">
-                                    <input type="text" name="rental_ampher" id="rental_ampher" class="form-input js-clearable" value="<?php echo h($customerData['rental_ampher']); ?>" placeholder="กรอกเขต / อำเภอ">
-                                    <button type="button" class="field-clear" data-clear-target="rental_ampher" aria-label="ล้างค่า">&times;</button>
+                                <div class="select-shell">
+                                    <select name="rental_ampher" id="rental_ampher" class="form-select" data-address-level="district"><?php echo addressDistrictOptions($rentalAddress); ?></select>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label class="field-label" for="rental_addtum">แขวง/ตำบล</label>
+                                <div class="select-shell">
+                                    <select name="rental_addtum" id="rental_addtum" class="form-select" data-address-level="sub_district"><?php echo addressSubDistrictOptions($rentalAddress); ?></select>
                                 </div>
                             </div>
 
                             <div class="field">
                                 <label class="field-label" for="rental_postcode">รหัสไปรษณีย์</label>
-                                <div class="input-shell">
-                                    <input type="text" name="rental_postcode" id="rental_postcode" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['rental_postcode']); ?>" inputmode="numeric" maxlength="10" placeholder="ใส่เฉพาะตัวเลข">
-                                    <button type="button" class="field-clear" data-clear-target="rental_postcode" aria-label="ล้างค่า">&times;</button>
+                                <div class="select-shell">
+                                    <select name="rental_postcode" id="rental_postcode" class="form-select" data-address-level="postcode"><?php echo addressPostcodeOptions($rentalAddress); ?></select>
                                 </div>
                             </div>
                         </div>
@@ -910,7 +1078,7 @@ if (empty($shippingRecords)) {
     </div>
 
     <template id="billingCardTemplate">
-        <div class="sub-card billing-card" data-billing-index="__INDEX__">
+        <div class="sub-card billing-card" data-billing-index="__INDEX__" data-address-scope>
             <div class="sub-card-header">
                 <h3 class="sub-card-title">ที่อยู่ออกบิล __NUMBER__</h3>
             </div>
@@ -959,19 +1127,22 @@ if (empty($shippingRecords)) {
                 <div class="field"><label class="field-label">E-mail<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="email" class="form-input js-clearable billing-email" name="billing_email[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field span-3"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                <div class="field span-2"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable billing-address" name="billing_address[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
-                    <div class="select-shell"><select class="form-select billing-province" name="billing_province[]" required>
+                    <div class="select-shell"><select class="form-select billing-province" name="billing_province[]" data-address-level="province" required>
                             <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
                 <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-clearable billing-ampher" name="billing_ampher[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                    <div class="select-shell"><select class="form-select billing-ampher" name="billing_ampher[]" data-address-level="district" required><option value="">Select</option></select></div>
+                </div>
+                <div class="field"><label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                    <div class="select-shell"><select class="form-select billing-tumbon" name="billing_tumbon[]" data-address-level="sub_district" required><option value="">Select</option></select></div>
                 </div>
                 <div class="field"><label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-postcode" name="billing_postcode[]" inputmode="numeric" maxlength="10" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                    <div class="select-shell"><select class="form-select billing-postcode" name="billing_postcode[]" data-address-level="postcode" required><option value="">Select</option></select></div>
                 </div>
                 <div class="field"><label class="field-label">เลือกสาขา<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-branch-type" name="billing_branch_type[]" required>
@@ -1006,7 +1177,7 @@ if (empty($shippingRecords)) {
     </template>
 
     <template id="shippingCardTemplate">
-        <div class="sub-card shipping-card" data-shipping-index="__INDEX__">
+        <div class="sub-card shipping-card" data-shipping-index="__INDEX__" data-address-scope>
             <div class="sub-card-header">
                 <h3 class="sub-card-title">ที่อยู่จัดส่ง __NUMBER__</h3>
             </div>
@@ -1030,19 +1201,22 @@ if (empty($shippingRecords)) {
                         ลบข้อมูล
                     </button>
                 </div>
-                <div class="field span-3"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                <div class="field span-2"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable shipping-address" name="shipping_address[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
-                    <div class="select-shell"><select class="form-select shipping-province" name="shipping_province[]" required>
+                    <div class="select-shell"><select class="form-select shipping-province" name="shipping_province[]" data-address-level="province" required>
                             <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
                 <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-clearable shipping-ampher" name="shipping_ampher[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                    <div class="select-shell"><select class="form-select shipping-ampher" name="shipping_ampher[]" data-address-level="district" required><option value="">Select</option></select></div>
+                </div>
+                <div class="field"><label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                    <div class="select-shell"><select class="form-select shipping-tumbon" name="shipping_tumbon[]" data-address-level="sub_district" required><option value="">Select</option></select></div>
                 </div>
                 <div class="field"><label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable shipping-postcode" name="shipping_postcode[]" inputmode="numeric" maxlength="10" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                    <div class="select-shell"><select class="form-select shipping-postcode" name="shipping_postcode[]" data-address-level="postcode" required><option value="">Select</option></select></div>
                 </div>
             </div>
         </div>
@@ -1216,6 +1390,146 @@ if (empty($shippingRecords)) {
             });
         })();
 
+        // address cascade: จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ใช้ร่วมกันทั้งที่อยู่ลูกค้า การ์ดออกบิล และการ์ดจัดส่ง
+        // แต่ละชุดอยู่ใน [data-address-scope] และระบุชั้นด้วย data-address-level ผูก event แบบ delegation ให้ครอบคลุมการ์ดที่เพิ่มทีหลัง
+        // เปลี่ยนชั้นบนล้างชั้นล่าง รหัสไปรษณีย์มาจากตำบลที่เลือกเท่านั้น
+        (function() {
+            var levels = ["province", "district", "sub_district", "postcode"];
+
+            function levelSelect(scope, level) {
+                return scope.querySelector('select[data-address-level="' + level + '"]');
+            }
+
+            function resetSelect(select) {
+                select.innerHTML = '<option value="">Select</option>';
+                select.value = "";
+            }
+
+            function resetBelow(scope, level) {
+                levels.slice(levels.indexOf(level) + 1).forEach(function(lower) {
+                    resetSelect(levelSelect(scope, lower));
+                });
+            }
+
+            // ตัวนับต่อชุด: ผลโหลดที่กลับมาช้ากว่าการเปลี่ยนครั้งล่าสุดถูกทิ้ง
+            function nextSeq(scope) {
+                scope.dataset.addressSeq = String((parseInt(scope.dataset.addressSeq || "0", 10) || 0) + 1);
+                return scope.dataset.addressSeq;
+            }
+
+            function appendOption(select, value, dataset) {
+                var option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                Object.keys(dataset || {}).forEach(function(key) {
+                    option.dataset[key] = dataset[key];
+                });
+                select.appendChild(option);
+            }
+
+            function loadOptions(params) {
+                return fetch("ajax_address_options.php?" + new URLSearchParams(params).toString(), {
+                        credentials: "same-origin"
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(result) {
+                        if (!result.success) {
+                            throw new Error(result.message || "โหลดข้อมูลที่อยู่ไม่สำเร็จ");
+                        }
+                        return result.items || [];
+                    });
+            }
+
+            function showLoadError(error) {
+                Swal.fire({
+                    icon: "error",
+                    title: "เกิดข้อผิดพลาด",
+                    text: error.message || "โหลดข้อมูลที่อยู่ไม่สำเร็จ"
+                });
+            }
+
+            function onProvinceChange(scope, select) {
+                var seq = nextSeq(scope);
+                resetBelow(scope, "province");
+                if (select.value === "") return;
+
+                loadOptions({
+                    level: "district",
+                    province: select.value
+                }).then(function(items) {
+                    if (seq !== scope.dataset.addressSeq) return;
+                    var districtSelect = levelSelect(scope, "district");
+                    items.forEach(function(item) {
+                        appendOption(districtSelect, item.name_th, {
+                            id: item.id
+                        });
+                    });
+                }).catch(showLoadError);
+            }
+
+            function onDistrictChange(scope, select) {
+                var seq = nextSeq(scope);
+                var selected = select.options[select.selectedIndex];
+                var districtId = selected ? selected.dataset.id : "";
+                resetBelow(scope, "district");
+                if (!districtId) return;
+
+                loadOptions({
+                    level: "sub_district",
+                    district_id: districtId
+                }).then(function(items) {
+                    if (seq !== scope.dataset.addressSeq) return;
+                    var subDistrictSelect = levelSelect(scope, "sub_district");
+                    items.forEach(function(item) {
+                        appendOption(subDistrictSelect, item.name_th, {
+                            zip: String(item.zip_code)
+                        });
+                    });
+                }).catch(showLoadError);
+            }
+
+            // รหัสไปรษณีย์แสดงหลังเลือกตำบลเท่านั้น มีตัวเลือกเดียวคือรหัสของตำบลนั้น (ค่าเก่า "(ไม่พบในรายการ)" หายไปด้วย)
+            function onSubDistrictChange(scope, select) {
+                var selected = select.options[select.selectedIndex];
+                var zip = selected ? (selected.dataset.zip || "") : "";
+                var postcodeSelect = levelSelect(scope, "postcode");
+                resetSelect(postcodeSelect);
+                if (zip === "") return;
+                appendOption(postcodeSelect, zip);
+                postcodeSelect.value = zip;
+            }
+
+            document.addEventListener("change", function(event) {
+                var select = event.target;
+                var level = select.dataset ? select.dataset.addressLevel : "";
+                if (!level) return;
+                var scope = select.closest("[data-address-scope]");
+                if (!scope) return;
+
+                if (level === "province") onProvinceChange(scope, select);
+                if (level === "district") onDistrictChange(scope, select);
+                if (level === "sub_district") onSubDistrictChange(scope, select);
+            });
+
+            // ปุ่ม "ใช้ข้อมูลเดียวกับ..." คัดลอกครบ 4 ชั้นพร้อมรายการตัวเลือกของต้นทาง (ค่าเก่า "(ไม่พบในรายการ)" ติดไปด้วย)
+            window.copyAddressScope = function(fromScope, toScope) {
+                if (!fromScope || !toScope || fromScope === toScope) return;
+                nextSeq(toScope);
+                levels.forEach(function(level) {
+                    var from = levelSelect(fromScope, level);
+                    var to = levelSelect(toScope, level);
+                    if (!from || !to) return;
+                    if (level !== "province") to.innerHTML = from.innerHTML;
+                    var found = Array.prototype.some.call(to.options, function(option) {
+                        return option.value === from.value;
+                    });
+                    to.value = found ? from.value : "";
+                });
+            };
+        })();
+
         (function() {
             var form = document.getElementById("customerForm");
             var successPopup = document.getElementById("successPopup");
@@ -1284,21 +1598,15 @@ if (empty($shippingRecords)) {
                     "#customer_name": "กรอกชื่อลูกค้า",
                     "#cus_tel": "ใส่เฉพาะตัวเลข",
                     "#cus_address": "กรอกรายละเอียดที่อยู่",
-                    "#cus_ampher": "กรอกเขต / อำเภอ",
-                    "#cus_postcode": "ใส่เฉพาะตัวเลข",
                     ".billing-name": "กรอกชื่อสำหรับออกบิล",
                     ".billing-tax-id": "ใส่เฉพาะตัวเลข",
                     ".billing-tel": "ใส่เฉพาะตัวเลข",
                     ".billing-email": "กรอกอีเมล",
                     ".billing-address": "กรอกรายละเอียดที่อยู่ออกบิล",
-                    ".billing-ampher": "กรอกเขต / อำเภอ",
-                    ".billing-postcode": "ใส่เฉพาะตัวเลข",
                     ".billing-branch-no": "ใส่เฉพาะตัวเลข",
                     ".shipping-name": "กรอกชื่อผู้ติดต่อ",
                     ".shipping-tel": "ใส่เฉพาะตัวเลข",
-                    ".shipping-address": "กรอกรายละเอียดที่อยู่จัดส่ง",
-                    ".shipping-ampher": "กรอกเขต / อำเภอ",
-                    ".shipping-postcode": "ใส่เฉพาะตัวเลข"
+                    ".shipping-address": "กรอกรายละเอียดที่อยู่จัดส่ง"
                 };
 
                 Object.keys(placeholders).forEach(function(selector) {
@@ -1320,10 +1628,7 @@ if (empty($shippingRecords)) {
                 return {
                     name: document.getElementById("customer_name").value.trim(),
                     tel: document.getElementById("cus_tel").value.trim(),
-                    address: document.getElementById("cus_address").value.trim(),
-                    province: document.getElementById("cus_province").value,
-                    ampher: document.getElementById("cus_ampher").value.trim(),
-                    postcode: document.getElementById("cus_postcode").value.trim()
+                    address: document.getElementById("cus_address").value.trim()
                 };
             }
 
@@ -1427,9 +1732,7 @@ if (empty($shippingRecords)) {
                     card.querySelector(".billing-name").value = data.name;
                     card.querySelector(".billing-tel").value = data.tel;
                     card.querySelector(".billing-address").value = data.address;
-                    setSelectValue(card.querySelector(".billing-province"), data.province);
-                    card.querySelector(".billing-ampher").value = data.ampher;
-                    card.querySelector(".billing-postcode").value = data.postcode;
+                    copyAddressScope(document.getElementById("customerAddressScope"), card);
                     setSelectValue(card.querySelector(".billing-branch-type"), "1");
                     if (!card.querySelector(".billing-branch-no").value.trim()) {
                         card.querySelector(".billing-branch-no").value = "00000";
@@ -1445,9 +1748,7 @@ if (empty($shippingRecords)) {
                     card.querySelector(".shipping-name").value = data.name;
                     card.querySelector(".shipping-tel").value = data.tel;
                     card.querySelector(".shipping-address").value = data.address;
-                    setSelectValue(card.querySelector(".shipping-province"), data.province);
-                    card.querySelector(".shipping-ampher").value = data.ampher;
-                    card.querySelector(".shipping-postcode").value = data.postcode;
+                    copyAddressScope(document.getElementById("customerAddressScope"), card);
                 });
                 document.getElementById("legacy_ckk_2").value = "1";
                 syncClearStates(document);
@@ -1459,18 +1760,13 @@ if (empty($shippingRecords)) {
                 var billing = {
                     name: firstBilling.querySelector(".billing-name").value.trim(),
                     tel: firstBilling.querySelector(".billing-tel").value.trim(),
-                    address: firstBilling.querySelector(".billing-address").value.trim(),
-                    province: firstBilling.querySelector(".billing-province").value,
-                    ampher: firstBilling.querySelector(".billing-ampher").value.trim(),
-                    postcode: firstBilling.querySelector(".billing-postcode").value.trim()
+                    address: firstBilling.querySelector(".billing-address").value.trim()
                 };
                 shippingCards.querySelectorAll(".shipping-card").forEach(function(card) {
                     card.querySelector(".shipping-name").value = billing.name;
                     card.querySelector(".shipping-tel").value = billing.tel;
                     card.querySelector(".shipping-address").value = billing.address;
-                    setSelectValue(card.querySelector(".shipping-province"), billing.province);
-                    card.querySelector(".shipping-ampher").value = billing.ampher;
-                    card.querySelector(".shipping-postcode").value = billing.postcode;
+                    copyAddressScope(firstBilling, card);
                 });
                 document.getElementById("legacy_ckk_2").value = "0";
                 syncClearStates(document);

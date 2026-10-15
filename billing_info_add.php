@@ -2,6 +2,7 @@
 include('head.php');
 include('dbconnect.php');
 include('customer_code_lib.php');
+include_once __DIR__ . '/includes/address_cascade.php';
 
 date_default_timezone_set('Asia/Bangkok');
 
@@ -129,6 +130,7 @@ $formData = array(
     'bill_address' => '',
     'bill_province' => '',
     'bill_ampher' => '',
+    'bill_tumbon' => '',
     'bill_postcode' => '',
     'branch_type' => '1',
     'branch_no' => '00000'
@@ -147,6 +149,7 @@ if ($billingRow) {
     $formData['bill_address'] = $billingRow['billing_address'] ?? '';
     $formData['bill_province'] = $billingRow['billing_province'] ?? '';
     $formData['bill_ampher'] = $billingRow['billing_ampher'] ?? '';
+    $formData['bill_tumbon'] = $billingRow['billing_tumbon'] ?? '';
     $formData['bill_postcode'] = $billingRow['billing_postcode'] ?? '';
     $formData['branch_type'] = ($billingRow['billing_branch_type'] ?? '') !== '' ? $billingRow['billing_branch_type'] : '1';
     $formData['branch_no'] = ($billingRow['billing_branch_no'] ?? '') !== '' ? $billingRow['billing_branch_no'] : '00000';
@@ -201,6 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formData['bill_address'] === '' ||
         $formData['bill_province'] === '' ||
         $formData['bill_ampher'] === '' ||
+        $formData['bill_tumbon'] === '' ||
         $formData['bill_postcode'] === '' ||
         $formData['branch_type'] === '' ||
         $formData['branch_no'] === ''
@@ -315,9 +319,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // เพิ่มบิลใหม่ต่อท้ายใต้ลูกค้านี้ (ลูกค้าที่ยังไม่มีบิลเลย บิลนี้คือลำดับ 1)
                 $nextBillingIndex = (int)fetchValue($conn, "SELECT MAX(billing_index) FROM tb_customer_billing_address WHERE customer_id = " . (int)$customerId, 0) + 1;
                 $billingInsertSql = "INSERT INTO tb_customer_billing_address
-                    (customer_id, billing_index, billing_code, billing_coden, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
+                    (customer_id, billing_index, billing_code, billing_coden, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_tumbon, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
                     VALUES
-                    ('" . esc($conn, $customerId) . "', '" . $nextBillingIndex . "', " . $codeAwlSql . ", " . $codeNbmSql . ", '" . esc($conn, $formData['preface_name']) . "', '" . esc($conn, $formData['bill_name']) . "', '" . esc($conn, $formData['tax_id']) . "', '" . esc($conn, $formData['bill_tel']) . "', '" . esc($conn, $formData['email_cus']) . "', '" . esc($conn, $formData['bill_address']) . "', '" . esc($conn, $formData['bill_ampher']) . "', '" . esc($conn, $formData['bill_province']) . "', '" . esc($conn, $formData['bill_postcode']) . "', '" . esc($conn, $formData['branch_type']) . "', '" . esc($conn, $formData['branch_no']) . "', '" . ($nextBillingIndex === 1 ? 1 : 0) . "')";
+                    ('" . esc($conn, $customerId) . "', '" . $nextBillingIndex . "', " . $codeAwlSql . ", " . $codeNbmSql . ", '" . esc($conn, $formData['preface_name']) . "', '" . esc($conn, $formData['bill_name']) . "', '" . esc($conn, $formData['tax_id']) . "', '" . esc($conn, $formData['bill_tel']) . "', '" . esc($conn, $formData['email_cus']) . "', '" . esc($conn, $formData['bill_address']) . "', '" . esc($conn, $formData['bill_ampher']) . "', '" . esc($conn, $formData['bill_tumbon']) . "', '" . esc($conn, $formData['bill_province']) . "', '" . esc($conn, $formData['bill_postcode']) . "', '" . esc($conn, $formData['branch_type']) . "', '" . esc($conn, $formData['branch_no']) . "', '" . ($nextBillingIndex === 1 ? 1 : 0) . "')";
                 $allOk = mysqli_query($conn, $billingInsertSql) ? true : false;
                 $targetBillingId = $allOk ? (int)mysqli_insert_id($conn) : 0;
             } else {
@@ -331,6 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     billing_email='" . esc($conn, $formData['email_cus']) . "',
                     billing_address='" . esc($conn, $formData['bill_address']) . "',
                     billing_ampher='" . esc($conn, $formData['bill_ampher']) . "',
+                    billing_tumbon='" . esc($conn, $formData['bill_tumbon']) . "',
                     billing_province='" . esc($conn, $formData['bill_province']) . "',
                     billing_postcode='" . esc($conn, $formData['bill_postcode']) . "',
                     billing_branch_type='" . esc($conn, $formData['branch_type']) . "',
@@ -388,6 +393,9 @@ $isFormBlocked = $blockMessage !== '';
 if ($isFormBlocked && $errorMessage === '') {
     $errorMessage = $blockMessage;
 }
+
+// ชุดตัวเลือก อำเภอ/ตำบล/ไปรษณีย์ ของค่าที่แสดงอยู่ (ค่าที่บันทึกไว้ หรือค่าที่ POST มาตอนบันทึกไม่ผ่าน)
+$billAddressData = address_cascade_data($conn, $formData['bill_province'], $formData['bill_ampher'], $formData['bill_tumbon'], $formData['bill_postcode']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -471,11 +479,15 @@ if ($isFormBlocked && $errorMessage === '') {
             grid-column: 1 / -1;
         }
 
+        .field.span-2 {
+            grid-column: span 2;
+        }
+
         .label {
             display: block;
             margin: 0 0 0 10px;
             color: var(--primary);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 400;
             line-height: 21px;
             white-space: nowrap;
@@ -495,7 +507,7 @@ if ($isFormBlocked && $errorMessage === '') {
             background: var(--input-bg);
             color: var(--text);
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             padding: 0 16px;
             outline: none;
         }
@@ -569,7 +581,7 @@ if ($isFormBlocked && $errorMessage === '') {
         }
 
         .control.readonly {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             color: var(--text);
         }
@@ -587,7 +599,7 @@ if ($isFormBlocked && $errorMessage === '') {
             box-shadow: 0 0 2px rgba(97, 41, 137, 0.25);
             color: var(--primary);
             font-family: 'Prompt', sans-serif;
-            font-size: 16px;
+            font-size: 13px;
             font-weight: 500;
             padding: 9px 8px 9px 13px;
             white-space: nowrap;
@@ -758,7 +770,8 @@ if ($isFormBlocked && $errorMessage === '') {
                 grid-template-columns: minmax(0, 1fr);
             }
 
-            .field.span-full {
+            .field.span-full,
+            .field.span-2 {
                 grid-column: auto;
             }
 
@@ -787,7 +800,8 @@ if ($isFormBlocked && $errorMessage === '') {
             <?php } ?>
 
             <fieldset class="form-fieldset" <?php echo $isFormBlocked ? 'disabled' : ''; ?>>
-            <div class="grid">
+            <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (js/address-cascade.js) -->
+            <div class="grid" data-address-scope>
                 <div class="field code-field js-code-row" data-code-type="awl">
                     <div class="code-group">
                         <label class="label">รหัสลูกค้า AWL</label>
@@ -835,7 +849,7 @@ if ($isFormBlocked && $errorMessage === '') {
                     <input type="email" class="control" name="email_cus" id="email_cus" value="<?php echo h($formData['email_cus']); ?>" placeholder="ใส่ที่อยู่อีเมล" required>
                 </div>
 
-                <div class="field span-full">
+                <div class="field span-2">
                     <label class="label" for="bill_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
                     <div class="control-wrap has-clear">
                         <input type="text" class="control" name="bill_address" id="bill_address" value="<?php echo h($formData['bill_address']); ?>" placeholder="ใส่เลขที่ ตรอก ซอย ถนน" required>
@@ -846,7 +860,7 @@ if ($isFormBlocked && $errorMessage === '') {
                 <div class="field">
                     <label class="label" for="bill_province">จังหวัด<span class="required">*</span></label>
                     <div class="control-wrap has-chevron">
-                        <select class="select" name="bill_province" id="bill_province" required>
+                        <select class="select" name="bill_province" id="bill_province" data-address-level="province" required>
                             <option value="">Select</option>
                             <?php foreach ($provinces as $province) { ?>
                                 <option value="<?php echo h($province['province_name']); ?>" <?php echo ($formData['bill_province'] === $province['province_name']) ? 'selected' : ''; ?>><?php echo h($province['province_name']); ?></option>
@@ -858,17 +872,25 @@ if ($isFormBlocked && $errorMessage === '') {
 
                 <div class="field">
                     <label class="label" for="bill_ampher">เขต/อำเภอ<span class="required">*</span></label>
-                    <div class="control-wrap has-clear">
-                        <input type="text" class="control" name="bill_ampher" id="bill_ampher" value="<?php echo h($formData['bill_ampher']); ?>" placeholder="ใส่เขต/อำเภอ" required>
-                        <button type="button" class="clear" data-clear-target="bill_ampher" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
+                    <div class="control-wrap has-chevron">
+                        <select class="select" name="bill_ampher" id="bill_ampher" data-address-level="district" required><?php echo address_cascade_district_options($billAddressData); ?></select>
+                        <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="bill_tumbon">แขวง/ตำบล<span class="required">*</span></label>
+                    <div class="control-wrap has-chevron">
+                        <select class="select" name="bill_tumbon" id="bill_tumbon" data-address-level="sub_district" required><?php echo address_cascade_sub_district_options($billAddressData); ?></select>
+                        <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
                     </div>
                 </div>
 
                 <div class="field">
                     <label class="label" for="bill_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
-                    <div class="control-wrap has-clear">
-                        <input type="text" class="control" name="bill_postcode" id="bill_postcode" inputmode="numeric" maxlength="10" value="<?php echo h($formData['bill_postcode']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
-                        <button type="button" class="clear" data-clear-target="bill_postcode" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
+                    <div class="control-wrap has-chevron">
+                        <select class="select" name="bill_postcode" id="bill_postcode" data-address-level="postcode" required><?php echo address_cascade_postcode_options($billAddressData); ?></select>
+                        <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
                     </div>
                 </div>
 
@@ -917,6 +939,7 @@ if ($isFormBlocked && $errorMessage === '') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/address-cascade.js"></script>
     <script>
         document.querySelectorAll('[data-clear-target]').forEach(function(button) {
             button.addEventListener('click', function() {
@@ -928,7 +951,7 @@ if ($isFormBlocked && $errorMessage === '') {
             });
         });
 
-        ['bill_tel', 'tax_id', 'bill_postcode', 'branch_no'].forEach(function(id) {
+        ['bill_tel', 'tax_id', 'branch_no'].forEach(function(id) {
             var input = document.getElementById(id);
             if (!input) return;
             input.addEventListener('input', function() {

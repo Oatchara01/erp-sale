@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include "dbconnect.php";
+include_once __DIR__ . '/includes/address_tumbon.php';
 
 
 /* =========================================================
@@ -255,6 +256,7 @@ $sql = "
         c.bill_tel,
         c.cus_address,
         c.cus_ampher,
+        c.cus_addtum,
         c.cus_province,
         c.cus_postcode,
         c.customer_no,
@@ -549,8 +551,12 @@ foreach ($rows as $row) {
         'cus_tel' =>
             $displayTel,
 
+        // ที่อยู่ + ตำบล (ไม่ต่อซ้ำถ้าที่อยู่มีชื่อตำบลอยู่แล้ว) ช่องอำเภอ/จังหวัด/ไปรษณีย์ยังแยกเหมือนเดิม
         'cus_address' =>
-            $row['cus_address'],
+            address_append_tumbon($row['cus_address'], $row['cus_addtum']),
+
+        'cus_addtum' =>
+            (string)$row['cus_addtum'],
 
         'cus_ampher' =>
             $row['cus_ampher'],
