@@ -23,7 +23,7 @@ include "dbconnect_sale.php";
 	<div class="status-so-page">
 		<div class="so-card">
 			<div class="w3-container w3-bar w3-margin-bottom" style="padding-left:0;padding-right:0;">
-				<h4 style="margin:0;">รายการแลกเปลี่ยน</h4>
+				<h4 style="margin:0;">ใบแลกเปลี่ยน</h4>
 			</div>
 
 			<form name="frmSearch" method="GET" action="<?php echo $_SERVER['SCRIPT_NAME']; ?>">
@@ -561,17 +561,29 @@ if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
 							?>
 								<tr class="expanded-row" data-row="<?php echo htmlspecialchars($row_id); ?>" style="display:none; background: #F1E1FF !important;">
 									<td></td>
-									<td colspan="4" style="padding: 10px 16px !important; font-size: 15px; color: #3B3B3B; text-align: left; vertical-align: middle; border-bottom: 1px solid #EDE9F0;">
+									<!-- Figma 3430:5915 — ชื่อสินค้าชิดซ้ายใต้ ref/วันที่ลงทะเบียน/เลขที่เอกสาร, แลกเข้า/แลกออก จัดกึ่งกลางเป็นคู่ชิดกันเริ่มที่คอลัมน์วันที่ออกเอกสาร -->
+									<td colspan="3" style="padding: 10px 16px !important; font-size: 15px; color: #3B3B3B; text-align: left; vertical-align: middle; border-bottom: 1px solid #EDE9F0;">
 										<?php if ($is_first) { ?>
 											<strong style="display: block; margin-bottom: 4px;">รายการสินค้า</strong>
 										<?php } ?>
 										<?php echo htmlspecialchars($objResult1["sol_name"]); ?>
 									</td>
-									<td colspan="4" style="padding: 10px 16px !important; font-size: 15px; color: #3B3B3B; text-align: center; vertical-align: middle; border-bottom: 1px solid #EDE9F0;">
-										<?php if ($is_first) { ?>
-											<strong style="display: block; margin-bottom: 4px; text-align: center;">จำนวน</strong>
-										<?php } ?>
-										<?php echo number_format($objResult1["count_sale"]); ?>
+									<!-- แลกเข้า = count_stock, แลกออก = count_sale (ตามฟอร์มพิมพ์ report_changehos*.php) -->
+									<td colspan="5" style="padding: 10px 16px !important; font-size: 15px; color: #3B3B3B; vertical-align: bottom; border-bottom: 1px solid #EDE9F0;">
+										<div style="display: flex; gap: 8px;">
+											<div style="width: 90px; text-align: center;">
+												<?php if ($is_first) { ?>
+													<strong style="display: block; margin-bottom: 4px;">แลกเข้า</strong>
+												<?php } ?>
+												<?php echo number_format((float)$objResult1["count_stock"]); ?>
+											</div>
+											<div style="width: 90px; text-align: center;">
+												<?php if ($is_first) { ?>
+													<strong style="display: block; margin-bottom: 4px;">แลกออก</strong>
+												<?php } ?>
+												<?php echo number_format((float)$objResult1["count_sale"]); ?>
+											</div>
+										</div>
 									</td>
 								</tr>
 							<?php
@@ -733,7 +745,6 @@ if (in_array($type_login_lower, array('it', 'admin', 'owner'), true)) {
 			updateFilterBadge();
 		});
 	</script>
-	<?php include('foot.php'); ?>
 </body>
 
 </html>
