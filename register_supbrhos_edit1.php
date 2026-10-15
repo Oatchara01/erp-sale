@@ -154,6 +154,11 @@ if (isset($_POST["submit"]) && $_POST["submit"] === "submit") {
 		$delivery_tel = mysqli_real_escape_string($conn, $_POST["customer_tel"]);
 		$date_send_key = mysqli_real_escape_string($conn, $_POST["between_date"] ?? "");
 		$type_breng = mysqli_real_escape_string($conn, $_POST["type_breng"] ?? "1");
+		// ใบยืมออกบูท (3) บังคับวัตถุประสงค์ "สินค้าออกบูธ" (tb_objective.objective_id=7) — ตรงกับ brApplyBoothObjective() ใน register_supbrhos.php
+		if ($type_breng === '3') {
+			$objective = '7';
+			$objective_des1 = $objective_des2 = $objective_des4 = $objective_des5 = '';
+		}
 		if ($type_breng == '2') {
 			$iv_no = "BRES";
 		} else {

@@ -712,8 +712,47 @@
 		brWriteObjectiveDesHidden();
 	}
 
+	// ประเภท "ใบยืมออกบูท" (type_breng=3) บังคับวัตถุประสงค์เป็น "สินค้าออกบูธ" (tb_objective.objective_id=7)
+	// ล็อกด้วยการปิด option อื่นแทนการ disable ทั้ง select เพราะ select ที่ disabled จะไม่ถูก POST (submit/draft/preview)
+	// server (register_supbrhos1.php / _edit1.php) บังคับค่าเดียวกันซ้ำอีกชั้น
+	var BR_BOOTH_TYPE = '3';
+	var BR_BOOTH_OBJECTIVE = '7';
+	var brPrevTypeBreng = null;
+
+	function brApplyBoothObjective() {
+		var typeEl = document.getElementById('type_breng');
+		var objectiveEl = document.getElementById('objective');
+		if (!typeEl || !objectiveEl) return;
+		var isBooth = typeEl.value === BR_BOOTH_TYPE;
+		var wasBooth = brPrevTypeBreng === BR_BOOTH_TYPE;
+		brPrevTypeBreng = typeEl.value;
+
+		Array.prototype.forEach.call(objectiveEl.options, function(opt) {
+			if (isBooth && opt.value !== BR_BOOTH_OBJECTIVE) {
+				opt.disabled = true;
+				opt.setAttribute('data-br-booth-lock', '1');
+			} else if (opt.getAttribute('data-br-booth-lock') === '1') {
+				opt.disabled = false;
+				opt.removeAttribute('data-br-booth-lock');
+			}
+		});
+		objectiveEl.classList.toggle('br-objective-locked', isBooth);
+
+		if (isBooth) {
+			if (objectiveEl.value === BR_BOOTH_OBJECTIVE) return;
+			objectiveEl.value = BR_BOOTH_OBJECTIVE;
+		} else if (wasBooth) {
+			// ออกจากใบยืมออกบูท -> ให้ผู้ใช้เลือกวัตถุประสงค์ใหม่
+			objectiveEl.value = '';
+		} else {
+			return;
+		}
+		brSyncObjectiveDes();
+	}
+
 	document.addEventListener('DOMContentLoaded', function() {
 		brSyncObjectiveDes();
+		brApplyBoothObjective();
 	});
 
 	function brWriteObjectiveDesHidden() {
@@ -2078,7 +2117,7 @@ $adminInfoTab = [
 					<div class="so-field-group">
 						<label class="so-label" for="type_breng">ประเภท <span style="color:red;">*</span></label>
 						<div class="so-select-wrapper">
-							<select name="type_breng" id="type_breng" class="so-select">
+							<select name="type_breng" id="type_breng" class="so-select" onchange="brApplyBoothObjective();">
 								<option value="1" selected>ใบยืมลูกค้า/สาธิต/โชว์รูม</option>
 								<option value="3">ใบยืมออกบูท</option>
 								<option value="2">ใบยืมช่าง</option>

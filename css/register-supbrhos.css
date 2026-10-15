@@ -597,3 +597,15 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* วัตถุประสงค์ถูกล็อกเป็น "สินค้าออกบูธ" เมื่อประเภทเป็นใบยืมออกบูท (brApplyBoothObjective)
+   so-web-select คัดลอก background/color จาก select ไปที่ปุ่มแสดงผล */
+#objective.br-objective-locked {
+	background-color: #F5F5F5;
+	color: #6E6E6E;
+}
+
+#objective.br-objective-locked + .so-web-select-button {
+	pointer-events: none;
+	cursor: not-allowed;
+}
