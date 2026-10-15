@@ -1455,9 +1455,9 @@ $brIsAdminUser = in_array(
     true
 );
 
+// รวมสถานะ Approve ด้วย: ปุ่ม Run เอกสารเปิดใช้เฉพาะตอน Approve ต้องมีปุ่มบันทึกเลขที่ให้กดต่อ
 $brShowAdminLimitedUpdate =
     $brIsClosed
-    && !$brIsApproved
     && !$brIsCancelled
     && $brIsAdminUser
     && $brIsEditMode;
@@ -1728,10 +1728,10 @@ $adminInfoTab = [
 				'label' => 'เลขที่เอกสาร',
 				'fields' => [
 					['type' => 'text', 'name' => 'admin_doc_no', 'value' => ($brIsEditMode ? ($savedBr['iv_no'] ?? '') : ''), 'placeholder' => 'No.'],
-					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no_br', 'onclick' => 'runDocumentNoBr();', 'variant' => 'purple'],
+					['type' => 'button', 'icon' => 'img/icons/doc.png', 'label' => 'Run เอกสาร', 'id' => 'btn_run_doc_no_br', 'onclick' => 'runDocumentNoBr();', 'variant' => 'purple', 'disabled' => !($brIsEditMode && $brStatusDoc === 'Approve'), 'title' => ($brIsEditMode && $brStatusDoc === 'Approve') ? '' : 'ต้องอนุมัติเอกสารก่อนจึงจะรันเลขที่เอกสารได้'],
 				],
 			],
-			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($brIsEditMode ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'icon' => 'far fa-calendar-alt'],
+			['type' => 'date_th', 'name' => 'admin_doc_date', 'label' => 'วันที่ออกเอกสาร', 'value' => ($brIsEditMode ? so_saved_iso_date_input($savedBr['iv_date'] ?? '') : ''), 'calendar' => true],
 			['type' => 'text', 'name' => 'admin_work_no', 'label' => 'เลขที่ลงงาน', 'value' => ($brIsEditMode ? ($savedBr['job_no'] ?? '') : ''), 'icon' => 'img/icons/preview.png', 'icon_onclick' => 'runJobNoBr();', 'icon_id' => 'btn_run_job_no_br'],
 		],
 	],
@@ -1831,6 +1831,11 @@ $adminInfoTab = [
 				var runButton = document.getElementById('btn_run_doc_no_br');
 
 				if (!companySelect || !typeBrengSelect || !docNoInput) {
+					return;
+				}
+
+				if (runButton && runButton.disabled) {
+					Swal.fire('แจ้งเตือน', 'ต้องอนุมัติเอกสารก่อนจึงจะรันเลขที่เอกสารได้', 'warning');
 					return;
 				}
 

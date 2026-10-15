@@ -26,8 +26,8 @@ try {
 			}
 
 			$isAdminLimitedUpdate = (($_POST['admin_limited_update'] ?? '') === '1');
-			// BR ใช้ role 'It' เป็นตัวเปิดแท็บ Admin (ต่างจาก SO ที่ใช้ 'Admin')
-			$isAdminUser = (($_SESSION['type_login'] ?? '') === 'It');
+			// ต้องตรงกับ $brIsAdminUser ใน register_supbrhos.php (it / admin) ที่เป็นตัวแสดงปุ่ม Update
+			$isAdminUser = in_array(strtolower((string)($_SESSION['type_login'] ?? '')), ['it', 'admin'], true);
 
 			if ($isAdminLimitedUpdate && $isAdminUser) {
 				// เอกสารจบแล้ว: จำกัดให้ Admin แก้ได้เฉพาะเลขที่/วันที่เอกสาร (และเลขงาน/หมายเหตุยกเลิก ถ้ามี)

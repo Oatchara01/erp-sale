@@ -204,6 +204,24 @@ if ($isSourceTableMode) {
 	$runPad = 4;
 }
 
+// BRES/BRNP (register_supbrhos.php) ออกเลขได้เฉพาะเอกสารที่อนุมัติแล้ว — เช็กก่อนจองเลขใน tb_docbreng
+// ไม่งั้นกด Run ตรง ๆ ผ่าน endpoint จะได้เลขเกิดขึ้นทั้งที่ยังไม่อนุมัติ
+if ($prefix === 'BRES' || $prefix === 'BRNP') {
+	$brStatusDoc = null;
+	if ($refId !== '') {
+		$brStatusStmt = mysqli_prepare($conn, "SELECT status_doc FROM hos__br WHERE ref_id_br = ? LIMIT 1");
+		mysqli_stmt_bind_param($brStatusStmt, 's', $refId);
+		mysqli_stmt_execute($brStatusStmt);
+		$brStatusResult = mysqli_stmt_get_result($brStatusStmt);
+		$brStatusRow = $brStatusResult ? mysqli_fetch_assoc($brStatusResult) : null;
+		mysqli_stmt_close($brStatusStmt);
+		$brStatusDoc = $brStatusRow['status_doc'] ?? null;
+	}
+	if ($brStatusDoc !== 'Approve') {
+		run_doc_no_fail('ต้องอนุมัติเอกสารก่อนจึงจะรันเลขที่เอกสารได้', 403);
+	}
+}
+
 $isAdmin = (($_SESSION['type_login'] ?? '') === 'Admin');
 if (in_array($prefix, $adminOnlyPrefix, true) && !$isAdmin) {
 	run_doc_no_fail('เอกสารประเภทนี้สงวนสิทธิ์ให้ผู้ใช้ Admin เท่านั้น', 403);

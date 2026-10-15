@@ -278,7 +278,7 @@ if (!function_exists('renderAdminUiButtonItem')) {
 		$disabledAttr = $btnDisabled ? ' disabled' : '';
 		$onclickAttr = (isset($btn['onclick']) && !$btnDisabled) ? ' onclick="' . so_saved_h($btn['onclick']) . '"' : '';
 ?>
-		<button type="button" class="admin-ui-btn<?php echo $variantClass . $activeClass; ?>"<?php echo isset($btn['id']) ? ' id="' . so_saved_h($btn['id']) . '"' : ''; ?><?php echo $onclickAttr; ?><?php echo $disabledAttr; ?>>
+		<button type="button" class="admin-ui-btn<?php echo $variantClass . $activeClass; ?>"<?php echo isset($btn['id']) ? ' id="' . so_saved_h($btn['id']) . '"' : ''; ?><?php echo $onclickAttr; ?><?php echo $disabledAttr; ?><?php echo !empty($btn['title']) ? ' title="' . so_saved_h($btn['title']) . '"' : ''; ?>>
 			<?php if (!empty($btn['icon'])) {
 				$isImgIcon = (strpos($btn['icon'], '/') !== false || strpos($btn['icon'], '.') !== false);
 				if ($isImgIcon) { ?>
