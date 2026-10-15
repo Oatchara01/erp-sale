@@ -763,8 +763,8 @@ include "dbconnect_sale.php";
 								$status_class = 'approve';
 								$status_text = 'อนุมัติแล้ว';
 							} else if ($objResult["status_doc"] == 'Draft' || empty($objResult["status_doc"])) {
-								$status_class = '';
-								$status_text = '';
+								$status_class = 'draft';
+								$status_text = 'Draft';
 							} else if ($objResult["status_doc"] == 'Rejected' || $objResult["status_doc"] == 'ไม่อนุมัติ') {
 								$status_class = 'rejected';
 								$status_text = 'ไม่อนุมัติ';
