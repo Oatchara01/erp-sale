@@ -449,7 +449,7 @@ include('dbconnect_sale.php');
 			<?php
 			date_default_timezone_set("Asia/Bangkok");
 
-			$strSQL = "SELECT * FROM hos__rental WHERE $sddd ";
+			$strSQL = "$sddd ";
 
 			if ($start_date != "") {
 				$strSQL .= ' AND (register_date >= "' . mysqli_real_escape_string($conn, $start_date) . '" OR iv_date >= "' . mysqli_real_escape_string($conn, $start_date) . '")';
@@ -489,8 +489,11 @@ include('dbconnect_sale.php');
 				$strSQL .= " AND (rental_name LIKE '%$safeKw%' OR iv_no LIKE '%$safeKw%' OR ref_id LIKE '%$safeKw%')";
 			}
 
-			$objQuery = mysqli_query($conn, $strSQL) or die("Error Query [" . $strSQL . "]");
-			$Num_Rows = mysqli_num_rows($objQuery);
+			// นับด้วย COUNT(*) ไม่ดึงทุกแถวเข้า PHP
+			$strCount = "SELECT COUNT(*) AS total FROM hos__rental WHERE " . $strSQL;
+			$objCount = mysqli_query($conn, $strCount) or die("Error Query [" . $strCount . "]");
+			$rowCount = mysqli_fetch_assoc($objCount);
+			$Num_Rows = (int)$rowCount['total'];
 
 			$Per_Page = 20;
 			$Page = isset($_GET['Page']) ? (int)$_GET['Page'] : 1;
@@ -508,9 +511,40 @@ include('dbconnect_sale.php');
 				$Num_Pages = (int)($Num_Rows / $Per_Page) + 1;
 			}
 
-			$strSQL .= " ORDER BY id DESC LIMIT $Page_Start, $Per_Page";
+			$strSQL = "SELECT * FROM hos__rental WHERE " . $strSQL . " ORDER BY id DESC LIMIT $Page_Start, $Per_Page";
 			$objQuery = mysqli_query($conn, $strSQL);
-			$Page_Num_Rows = $objQuery ? mysqli_num_rows($objQuery) : 0;
+
+			// ดึงข้อมูลประกอบของทั้งหน้าครั้งเดียว (แทน query ต่อแถว)
+			$pageRows = array();
+			$pageRefs = array();
+			if ($objQuery) {
+				while ($r = mysqli_fetch_array($objQuery)) {
+					$pageRows[] = $r;
+					$pageRefs[] = "'" . mysqli_real_escape_string($conn, $r['ref_id']) . "'";
+				}
+			}
+			$Page_Num_Rows = count($pageRows);
+
+			$closedMap = array();
+			$itemsMap = array();
+			if ($Page_Num_Rows > 0) {
+				$refIn = implode(',', $pageRefs);
+
+				// ปิดการเช่า: ถือว่าปิดถ้ามีแถวใดมี close_ckk = '1' (ตรงกับตัวกรอง active/closed)
+				$qClosed = mysqli_query($conn, "SELECT ref_idren FROM hos__rental_runiv WHERE close_ckk = '1' AND ref_idren IN ($refIn) GROUP BY ref_idren");
+				if ($qClosed) {
+					while ($rc = mysqli_fetch_assoc($qClosed)) {
+						$closedMap[$rc['ref_idren']] = true;
+					}
+				}
+
+				$qItems = mysqli_query($conn, "SELECT hos__subrental.ref_idd, tb_product.sol_name, hos__subrental.count FROM (hos__subrental LEFT JOIN tb_product ON hos__subrental.product_ID=tb_product.product_id) WHERE hos__subrental.ref_idd IN ($refIn)");
+				if ($qItems) {
+					while ($ri = mysqli_fetch_assoc($qItems)) {
+						$itemsMap[$ri['ref_idd']][] = $ri;
+					}
+				}
+			}
 			?>
 
 			<div class="so-table-wrapper so-table-wrapper--fit">
@@ -541,7 +575,7 @@ include('dbconnect_sale.php');
 						<?php } ?>
 
 						<?php
-						while ($objResult = mysqli_fetch_array($objQuery)) {
+						foreach ($pageRows as $objResult) {
 							$row_id = "row-" . $objResult["ref_id"];
 							$dropdown_id = "dropdown-" . $objResult["ref_id"];
 							$row_id_js = htmlspecialchars(json_encode($row_id), ENT_QUOTES, 'UTF-8');
@@ -572,11 +606,7 @@ include('dbconnect_sale.php');
 								: '-';
 							$end_promis_th_js = htmlspecialchars(json_encode($end_promis_th_val), ENT_QUOTES, 'UTF-8');
 
-							// Query close_ckk from hos__rental_runiv
-							$strSQL12 = "SELECT close_ckk FROM hos__rental_runiv WHERE ref_idren = '" . mysqli_real_escape_string($conn, $objResult['ref_id']) . "' LIMIT 1";
-							$objQuery12 = mysqli_query($conn, $strSQL12);
-							$objResult12 = $objQuery12 ? mysqli_fetch_array($objQuery12) : null;
-							$close_ckk = $objResult12 ? $objResult12["close_ckk"] : '0';
+							$close_ckk = isset($closedMap[$objResult['ref_id']]) ? '1' : '0';
 						?>
 							<tr class="so-row" onclick="toggleRow(<?php echo $row_id_js; ?>, this)">
 								<td style="text-align:center;">
@@ -722,11 +752,10 @@ include('dbconnect_sale.php');
 
 							<!-- Expanded Row Details (Child Row) -->
 							<?php
-							$strSQL1 = "SELECT * FROM (hos__subrental LEFT JOIN tb_product ON hos__subrental.product_ID=tb_product.product_id) WHERE ref_idd = '" . mysqli_real_escape_string($conn, $objResult["ref_id"]) . "' ";
-							$objQuery1 = mysqli_query($conn, $strSQL1);
+							$itemRows = isset($itemsMap[$objResult['ref_id']]) ? $itemsMap[$objResult['ref_id']] : array();
 							$is_first = true;
-							if ($objQuery1 && mysqli_num_rows($objQuery1) > 0) {
-								while ($objResult1 = mysqli_fetch_array($objQuery1)) {
+							if (count($itemRows) > 0) {
+								foreach ($itemRows as $objResult1) {
 							?>
 									<tr class="expanded-row" data-row="<?php echo htmlspecialchars($row_id); ?>" style="display:none; background: #F1E1FF !important;">
 										<td></td>
