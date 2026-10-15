@@ -4541,7 +4541,7 @@ values('" . $ref_id . "','" . $runway . "','" . $road . "','" . $soy . "','" . $
 
 		// ช่อง "สินค้า/เอกสาร" ของหน้าใหม่ -> tb_register_data.product_name (ต้องก่อนส่ง CS)
 		if (($_POST['product_note_form'] ?? '') === '1') {
-			so_save_product_note($conn, $ref_id, $_POST['product'] ?? '');
+			so_save_product_note($conn, $ref_id, $_POST['product'] ?? '', $_POST['product_note_auto'] ?? '');
 		}
 
 		// ส่งใบงานเข้าระบบ CS หลัง commit (คนละ connection จึงอยู่ใน transaction เดียวกันไม่ได้)

@@ -60,6 +60,7 @@ try {
 
 	$smpResult = smp_run_document_action($conn, $smpRefId, $smpAction, $smpReason, $_SESSION);
 	if ($smpCsWanted) {
+		smp_cs_normalize_product_note($conn, $smpRefId);
 		$smpCsResult = cs_job_send_document($conn, $smpRefId, $_SESSION, smp_cs_spec());
 		if ($smpCsResult !== null) {
 			$smpResult['warning'] = $smpCsResult['success'] ? '' : $smpCsResult['message'];

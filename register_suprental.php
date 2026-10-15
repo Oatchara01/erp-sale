@@ -1953,11 +1953,21 @@ require_once __DIR__ . '/includes/rental_cs_send.php'; // สิทธิ์/ส
 								</div>
 							</div>
 
-							<!-- สินค้า/เอกสาร -> tb_register_data.product_name (ว่างไว้ = "ส่ง <ทรัพย์ที่เช่า>") ดู rental_save_product_note() -->
+							<!-- สินค้า/เอกสาร -> tb_register_data.product_name (ว่างไว้ = "ส่ง ..." จากตารางรายการสินค้า) ดู rental_save_product_note()
+							     ใบที่บันทึกแล้วแสดงข้อความจากตารางสินค้าในช่อง; product_note_auto = ข้อความนั้น ถ้าตอนบันทึกช่องยังตรงกัน (ไม่ได้แก้) ระบบประกอบใหม่จากรายการล่าสุด -->
+							<?php
+							$rtNoteTyped = '';
+							$rtNoteAuto = '';
+							if ($savedRental !== null) {
+								$rtNoteTyped = rental_product_note_display($savedRegister['product_name'] ?? '', $conn, $savedRental);
+								$rtNoteAuto = ($rtNoteTyped === '') ? rental_cs_compose_product_name($conn, $savedRental) : '';
+							}
+							?>
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
 								<input type="hidden" name="product_note_form" value="1">
-								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo ($savedRental !== null) ? so_saved_h(rental_product_note_display($savedRegister['product_name'] ?? '')) : ''; ?></textarea>
+								<input type="hidden" name="product_note_auto" value="<?php echo so_saved_h($rtNoteAuto); ?>">
+								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo so_saved_h($rtNoteTyped !== '' ? $rtNoteTyped : $rtNoteAuto); ?></textarea>
 							</div>
 						</div>
 

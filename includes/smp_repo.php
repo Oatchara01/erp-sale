@@ -664,11 +664,21 @@ function smp_persist_from_post($conn, $mode, array $session)
 			));
 		}
 
-		$summaryParts = array();
-		foreach ($products as $product) {
-			$summaryParts[] = trim($product['product_name'] . ' ' . (float)$product['sale_count'] . ' ' . $product['unit_name']);
+		/* ช่อง "สินค้า/เอกสาร" ของ register_supsmp.php (มี flag product_note_form): ค่าที่พิมพ์ชนะ ว่างไว้ = ข้อความ "ส่ง ..." จากรายการที่เพิ่ง INSERT
+		   (อ่านได้เพราะ connection/transaction เดียวกัน) — หน้าเก่าที่ post มาไฟล์เดียวกัน (register_supsmpnb.php) ไม่มี flag จึงใช้สตริงสรุปสูตรเดิม */
+		if (smp_post('product_note_form') === '1') {
+			$productSummary = smp_post('product');
+			if ($productSummary === '') {
+				$productSummary = smp_cs_compose_product_name($conn, $refId);
+			}
+		} else {
+			$summaryParts = array();
+			foreach ($products as $product) {
+				$summaryParts[] = trim($product['product_name'] . ' ' . (float)$product['sale_count'] . ' ' . $product['unit_name']);
+			}
+			$productSummary = implode(' ', $summaryParts);
 		}
-		$registerData = smp_register_data_from_post($refId, $now, implode(' ', $summaryParts), $session);
+		$registerData = smp_register_data_from_post($refId, $now, $productSummary, $session);
 		$transactionData = smp_transaction_from_post($now);
 		if ($isUpdate) {
 			unset($registerData['add_by'], $registerData['add_date'], $registerData['add_code'], $registerData['employee_name'], $transactionData['add_by'], $transactionData['add_date']);
@@ -698,6 +708,11 @@ function smp_persist_from_post($conn, $mode, array $session)
 		if (is_file($oldPath)) {
 			@unlink($oldPath);
 		}
+	}
+
+	/* ฐาน CS เป็นคนละ connection จึงทำหลัง commit และก่อน smp_cs_send() ของ handler */
+	if (smp_post('product_note_form') === '1') {
+		smp_sync_product_note_to_cs($conn, $refId);
 	}
 
 	return array('ref_id' => $refId, 'created' => $created);
@@ -1074,9 +1089,101 @@ function smp_cs_spec()
 function smp_cs_compose_job_fields($conn, $refId, array $doc, array $session)
 {
 	return array_merge(
-		array('status' => 'ส่ง'),
+		array('status' => 'ส่ง', 'product_name' => smp_cs_compose_product_name($conn, $refId)),
 		cs_job_compose_sale_fields($conn, $doc['sale_code'] ?? '', $doc['sale_name'] ?? '', $session)
 	);
+}
+
+/**
+ * ข้อความ "สินค้า/เอกสาร" ของใบงานที่ประกอบจากรายการสินค้า (hos__subsmp) แบบเดียวกับ SO:
+ * "ส่ง <ชื่อ> <หมายเหตุ> <จำนวน> <หน่วย>" บรรทัดละรายการ
+ * hos__subsmp เก็บชุด (BOM) เป็นรายการย่อยที่แตกแล้วโดยไม่มี flag แถวลูก จึงแสดงทุกแถวเหมือนใบพิมพ์ report_sample.php
+ */
+function smp_cs_compose_product_name($conn, $refId)
+{
+	$lines = array();
+	foreach (smp_load_items($conn, (string)$refId) as $item) {
+		$name = trim((string)($item['sol_name'] ?? ''));
+		if ($name === '') {
+			continue;
+		}
+		$count = rtrim(rtrim(number_format((float)$item['sale_count'], 2, '.', ''), '0'), '.');
+		$lines[] = trim(preg_replace('/\s+/u', ' ', $name . ' ' . trim((string)($item['sale_remark'] ?? '')) . ' ' . $count . ' ' . trim((string)($item['unit_name'] ?? ''))));
+	}
+	return $lines ? 'ส่ง ' . implode("\r\n", $lines) : '';
+}
+
+/**
+ * ค่าในช่อง "สินค้า/เอกสาร" — ข้อความที่ระบบสร้างเองนับเป็นช่องว่าง ช่องว่างทำให้ตอนบันทึกประกอบข้อความจากรายการสินค้าใหม่
+ * - สตริงสรุปสูตรเดิมของ smp_persist_from_post() ("<ชื่อ> <จำนวน> <หน่วย>" ต่อกันด้วยช่องว่าง บรรทัดเดียว)
+ * - ข้อความ "ส่ง ..." ที่ smp_cs_compose_product_name() สร้างจากรายการที่บันทึกไว้ (ไม่งั้นแก้รายการสินค้าแล้วข้อความจะค้างของเดิม)
+ */
+function smp_product_note_display($conn, $refId, $value)
+{
+	$value = trim((string)$value);
+	if ($value === '') {
+		return '';
+	}
+	$items = smp_load_items($conn, (string)$refId);
+	$legacyParts = array();
+	foreach ($items as $item) {
+		$legacyParts[] = trim($item['sol_name'] . ' ' . (float)$item['sale_count'] . ' ' . $item['unit_name']);
+	}
+	if ($items && $value === implode(' ', $legacyParts)) {
+		return '';
+	}
+	return $value === smp_cs_compose_product_name($conn, $refId) ? '' : $value;
+}
+
+/**
+ * แถวข้อมูลจัดส่งที่ยังเก็บสตริงสรุปสูตรเดิม (เอกสารก่อนมีช่องสินค้า/เอกสาร) แปลงเป็นข้อความ "ส่ง ..." ก่อนส่ง CS
+ * ไม่งั้นแกนกลางจะยกสตริงนั้นไปใส่ใบงาน — ใช้กับเส้นทางส่งที่ไม่ได้บันทึกฟอร์ม (Update แบบจำกัด, อนุมัติพร้อมติ๊ก toggle)
+ */
+function smp_cs_normalize_product_note($conn, $refId)
+{
+	try {
+		$reg = smp_load_row($conn, 'tb_register_data', 'ref_id', (string)$refId);
+		if ($reg === null || smp_product_note_display($conn, $refId, $reg['product_name']) !== '') {
+			return;
+		}
+		$text = smp_cs_compose_product_name($conn, $refId);
+		if ($text !== '' && $text !== (string)$reg['product_name']) {
+			smp_exec_write($conn, 'UPDATE tb_register_data SET product_name = ? WHERE ref_id = ?', 'ss', array($text, (string)$refId));
+		}
+	} catch (Throwable $e) {
+		error_log('smp_cs_normalize_product_note ' . $refId . ': ' . $e->getMessage());
+	}
+}
+
+/**
+ * ใบที่ส่ง CS แล้ว (send_cs = 2): อัปเดต product_name ของใบงานในฐาน CS ให้ตรงกับช่อง "สินค้า/เอกสาร" ที่เพิ่งบันทึก
+ * กรอง running + ref_id คู่กันเพื่อไม่แตะใบงานที่ฝ่าย CS สร้างเอง; ฐาน CS ล้มเหลวแค่ error_log ไม่ทำให้การบันทึกเอกสารเสีย
+ */
+function smp_sync_product_note_to_cs($conn, $refId)
+{
+	try {
+		$doc = smp_load_document($conn, (string)$refId);
+		$jobNo = trim((string)($doc['cs_no'] ?? ''));
+		if ($doc === null || $jobNo === '' || (string)$doc['send_cs'] !== '2') {
+			return;
+		}
+		$reg = smp_load_row($conn, 'tb_register_data', 'ref_id', (string)$doc['ref_idsmp']);
+		if ($reg === null) {
+			return;
+		}
+		$text = (string)$reg['product_name'];
+		$refIdsmp = (string)$doc['ref_idsmp'];
+		$com1 = cs_job_connect();
+		$csStmt = mysqli_prepare($com1, 'UPDATE tb_register_data SET product_name = ? WHERE running = ? AND ref_id = ?');
+		if (!$csStmt) {
+			throw new RuntimeException(mysqli_error($com1));
+		}
+		mysqli_stmt_bind_param($csStmt, 'sss', $text, $jobNo, $refIdsmp);
+		mysqli_stmt_execute($csStmt);
+		mysqli_stmt_close($csStmt);
+	} catch (Throwable $e) {
+		error_log('smp_sync_product_note_to_cs ' . $refId . ': ' . $e->getMessage());
+	}
 }
 
 /** รูปแบบเลขอ้างอิงของใบงาน SMP ตาม sample_approve*.php เดิม */
@@ -1112,6 +1219,7 @@ function smp_cs_send($conn, $refId, array $session)
 	if ($doc === null || !smp_cs_user_can_send($doc, $session)) {
 		return null;
 	}
+	smp_cs_normalize_product_note($conn, $doc['ref_idsmp']);
 	return cs_job_send_document($conn, $doc['ref_idsmp'], $session, smp_cs_spec());
 }
 

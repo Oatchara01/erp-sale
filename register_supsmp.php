@@ -83,6 +83,8 @@ $smpCsCanSend = $smpHasDocument && smp_cs_user_can_send($smpDoc, $_SESSION);
 $smpCsJobNo = $smpCsIsSent ? trim((string)$smpDoc['cs_no']) : '';
 /* ผู้ที่แก้เอกสารได้ (ผู้อนุมัติของด่าน) ส่งผ่านปุ่ม Update / อนุมัติ ปกติของฟอร์ม; ผู้ที่เปิดดูอย่างเดียวได้ปุ่ม Update แบบจำกัดแทน */
 $smpCsLimitedUpdate = $smpCsCanSend && $smpReadOnly;
+/* เมนู Preview > รายละเอียดจัดส่ง (7112018_new.php): แสดงเมื่อมีเลขที่ลงงาน (cs_no) ไม่บังคับ send_cs = 2 (ใบที่ส่งจากหน้าเดิมก็เห็น) */
+$smpPreviewJobNo = $smpHasDocument ? trim((string)$smpDoc['cs_no']) : '';
 
 /* ประวัติส่งกลับ/ไม่อนุมัติ/ยกเลิก (tb_document_status_log) — ใช้แสดงแบนเนอร์เหตุผลล่าสุดและแท็บประวัติ */
 $smpLogLabels = array('Returned' => 'ส่งกลับ', 'ส่งกลับ' => 'ส่งกลับ', 'Rejected' => 'ไม่อนุมัติ', 'Cancelled' => 'ยกเลิกเอกสาร', 'ยกเลิก' => 'ยกเลิกเอกสาร');
@@ -210,6 +212,11 @@ if ($smpRegister !== null) {
 		'employee_tel'      => (string)$smpRegister['employee_tel'],
 	);
 }
+/* ช่อง "สินค้า/เอกสาร" = tb_register_data.product_name ของเอกสารตัวเอง (ใบที่ duplicate เริ่มว่าง)
+   ข้อความที่ระบบสร้างเอง (สตริงสรุปสูตรเดิม / "ส่ง ..." จากรายการ) แสดงเป็นช่องว่าง — ดู smp_product_note_display() */
+$smpProductNote = ($smpRegister !== null && !$smpIsCopy)
+	? smp_product_note_display($conn, $smpSource['ref_idsmp'], $smpRegister['product_name'])
+	: '';
 if ($smpTransaction !== null) {
 	$split = function ($v) {
 		$parts = array_map('trim', explode(' x ', (string)$v));
@@ -475,7 +482,6 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 			</div>
 			<div class="so-header-right">
 				<button type="button" class="btn-so-secondary" onclick="smpOpenClearLoanModal();">เคลียร์ยืม</button>
-				<button type="button" class="btn-preview-so" onclick="smpOpenPreview();"><i class="far fa-file-alt"></i> Preview</button>
 			</div>
 		</div>
 
@@ -729,6 +735,12 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 					<div class="so-field-group"><label class="so-label" for="address_send">สถานที่ติดตั้งเครื่อง <span class="required">*</span></label><div class="so-input-wrapper"><input class="so-input" name="address_send" id="address_send" placeholder="สถานที่ติดตั้งเครื่อง"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('address_send').value='';" aria-label="ล้างค่า"></button></div></div>
 					<div class="so-field-group"><label class="so-label" for="location_link">Location Link</label><div class="so-input-wrapper"><input class="so-input" name="location_link" id="location_link" placeholder="วางลิงก์ Google Maps หรือพิกัด"><button type="button" class="fas fa-times so-clear-icon" onclick="document.getElementById('location_link').value='';" aria-label="ล้างค่า"></button></div></div>
 				</div>
+				<!-- สินค้า/เอกสาร → tb_register_data.product_name (และใบงาน CS ถ้าส่งแล้ว) — flag product_note_form แยกจาก register_supsmpnb.php ที่ post มา register_supsmp1.php เหมือนกัน -->
+				<div class="so-field-group smp-addr-gap">
+					<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
+					<input type="hidden" name="product_note_form" value="1">
+					<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="width: 100%; resize: vertical;"><?php echo so_saved_h($smpProductNote); ?></textarea>
+				</div>
 			</div>
 
 			<div id="smp_addr_detail" class="smp-addr-tab" style="display:none;">
@@ -831,9 +843,74 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 				<img src="img/icons/cancel_document.png" alt="" style="width: 20px; height: 20px;"> ยกเลิกเอกสาร
 			</button>
 			<?php } ?>
+			<div class="so-preview-menu-wrap">
+				<button type="button" id="btn_smp_preview_menu" onclick="smpTogglePreviewMenu(event);" aria-haspopup="true" aria-expanded="false" aria-controls="smpPreviewMenu" style="background-color: white; color: #612989; border: 1px solid #EBEBEB; border-radius: 24px; padding: 12px 32px; font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);"><img src="img/icons/preview.png" alt="" style="width: 16px; height: 16px;"> Preview</button>
+				<div id="smpPreviewMenu" class="so-preview-menu" hidden>
+					<div class="so-preview-menu-label">Preview</div>
+					<div class="so-preview-menu-box" role="menu">
+						<button type="button" role="menuitem" onclick="smpPreviewSelect('smp');">ใบเบิกสินค้า (SMP)</button>
+						<?php if ($smpPreviewJobNo !== '') { ?>
+							<button type="button" role="menuitem" onclick="smpPreviewSelect('delivery');">รายละเอียดจัดส่ง</button>
+						<?php } ?>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 </form>
+<script>
+	function smpSetPreviewMenuOpen(open) {
+		var menu = document.getElementById('smpPreviewMenu');
+		var trigger = document.getElementById('btn_smp_preview_menu');
+		if (!menu || !trigger) return;
+		menu.hidden = !open;
+		trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+	}
+
+	function smpTogglePreviewMenu(event) {
+		if (event) event.stopPropagation();
+		var menu = document.getElementById('smpPreviewMenu');
+		smpSetPreviewMenuOpen(menu ? menu.hidden : false);
+	}
+
+	function smpPreviewSelect(kind) {
+		smpSetPreviewMenuOpen(false);
+		if (kind === 'smp') {
+			smpOpenPreview();
+			return;
+		}
+		// รายละเอียดจัดส่ง: post เฉพาะเลขที่ลงงาน + ช่อง "สินค้า/เอกสาร" ที่กำลังพิมพ์ (ไม่บันทึกลงฐาน)
+		var productNote = document.getElementById('delivery_product_note');
+		var fields = {
+			running: <?php echo json_encode($smpPreviewJobNo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+			product: productNote ? productNote.value : '',
+			doc_type: 'smp',
+			_report_preview: '1'
+		};
+		var previewForm = document.createElement('form');
+		previewForm.method = 'post';
+		previewForm.action = '7112018_new.php';
+		previewForm.target = '_blank';
+		Object.keys(fields).forEach(function (name) {
+			var input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = name;
+			input.value = fields[name];
+			previewForm.appendChild(input);
+		});
+		document.body.appendChild(previewForm);
+		previewForm.submit();
+		document.body.removeChild(previewForm);
+	}
+
+	document.addEventListener('click', function (event) {
+		var wrap = document.querySelector('.so-sticky-actions .so-preview-menu-wrap');
+		if (wrap && !wrap.contains(event.target)) smpSetPreviewMenuOpen(false);
+	});
+	document.addEventListener('keydown', function (event) {
+		if (event.key === 'Escape') smpSetPreviewMenuOpen(false);
+	});
+</script>
 
 <!-- ===================== Modal: ข้อมูลรายการสินค้าเพิ่มเติม ===================== -->
 <div id="smp_edit_modal" class="cs-modal-overlay" data-so-modal-lock style="display:none;">
@@ -931,9 +1008,11 @@ $assetVersion = function ($path) { return filemtime(__DIR__ . '/' . $path); };
 		(function () {
 			var form = document.getElementById('smp-form');
 			if (!form) return;
-			var keepClasses = ['btn-preview-so', 'so-tab-btn', 'so-latest-reason-close', 'so-back-btn'];
+			var keepClasses = ['so-tab-btn', 'so-latest-reason-close', 'so-back-btn'];
 			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea, button'), function (el) {
 				if (el.type === 'hidden' || el.name === 'cancel_edit') return;
+				/* เมนู Preview (แถบปุ่มด้านล่าง) ใช้ได้แม้เปิดดูอย่างเดียว */
+				if (el.closest('.so-preview-menu-wrap')) return;
 				/* toggle/ปุ่มส่ง CS ใช้ได้แม้เปิดดูอย่างเดียว (toggle ที่ล็อกถูก disabled มาจาก partial อยู่แล้ว) */
 				if (el.id === 'send_cs' || el.id === 'smp_btn_send_cs') return;
 				for (var i = 0; i < keepClasses.length; i++) { if (el.classList.contains(keepClasses[i])) return; }

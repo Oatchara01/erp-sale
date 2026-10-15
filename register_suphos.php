@@ -3140,9 +3140,25 @@ include("head.php"); ?>
 
 						<div class="so-field-group" style="margin-top: 16px;">
 							<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
-							<!-- เก็บที่ tb_register_data.product_name ผ่าน so_save_product_note(); flag บอก handler ว่ามาจากหน้าใหม่ (หน้าเก่าใช้สูตรเดิม) -->
+							<!-- เก็บที่ tb_register_data.product_name ผ่าน so_save_product_note(); flag บอก handler ว่ามาจากหน้าใหม่ (หน้าเก่าใช้สูตรเดิม)
+							     ใบที่บันทึกแล้วแสดงข้อความจากรายการสินค้าในช่อง; product_note_auto = ข้อความนั้น ถ้าตอนบันทึกช่องยังตรงกัน (ไม่ได้แก้) ระบบประกอบใหม่จากรายการล่าสุด -->
+							<?php
+							$soNoteTyped = '';
+							$soNoteAuto = '';
+							if ($savedSo !== null) {
+								require_once __DIR__ . '/includes/so_cs_send.php';
+								try {
+									$soNoteTyped = so_product_note_display($conn, $savedSo['ref_id'], $savedRegister['product_name'] ?? '');
+									$soNoteAuto = ($soNoteTyped === '') ? so_cs_compose_product_name($conn, $savedSo['ref_id']) : '';
+								} catch (Throwable $e) {
+									error_log('register_suphos product note ' . $savedSo['ref_id'] . ': ' . $e->getMessage());
+									$soNoteTyped = trim((string)($savedRegister['product_name'] ?? ''));
+								}
+							}
+							?>
 							<input type="hidden" name="product_note_form" value="1">
-							<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo ($savedSo !== null) ? so_saved_h(trim((string)($savedRegister['product_name'] ?? ''))) : ''; ?></textarea>
+							<input type="hidden" name="product_note_auto" value="<?php echo so_saved_h($soNoteAuto); ?>">
+							<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo so_saved_h($soNoteTyped !== '' ? $soNoteTyped : $soNoteAuto); ?></textarea>
 						</div>
 					</div>
 

@@ -30,9 +30,29 @@ if (!function_exists('rental_cs_spec')) {
 }
 
 if (!function_exists('rental_cs_compose_product_name')) {
-	/** ข้อความ "สินค้า/เอกสาร" ของใบงานที่ประกอบจากใบเช่า: "ส่ง <ทรัพย์ที่เช่า>" (hos__rental.des_productunit) */
-	function rental_cs_compose_product_name(array $doc)
+	/**
+	 * ข้อความ "สินค้า/เอกสาร" ของใบงานที่ประกอบจากตารางรายการสินค้า (hos__subrental) แบบเดียวกับ SO:
+	 * "ส่ง <ชื่อ> <หมายเหตุ> <จำนวน> <หน่วย>" บรรทัดละรายการ
+	 * ตารางไม่มีแถว (เช่น Save Draft ก่อนเลือกสินค้า) ถอยไปใช้ "ส่ง <ทรัพย์ที่เช่า>" (hos__rental.des_productunit) ตามสูตรเดิม
+	 * ว่างทั้งคู่ = '' (ไม่เก็บ "ส่ง " ล้วน)
+	 */
+	function rental_cs_compose_product_name($conn, array $doc)
 	{
+		$lines = array();
+		$itemQuery = cs_job_query($conn, "SELECT s.count, s.remark_sale, p.sol_name, p.unit_name FROM hos__subrental s
+			LEFT JOIN tb_product p ON s.product_id = p.product_ID
+			WHERE s.ref_idd = '" . mysqli_real_escape_string($conn, (string)($doc['ref_id'] ?? '')) . "' ORDER BY s.id_sub");
+		while ($item = mysqli_fetch_assoc($itemQuery)) {
+			$name = trim((string)($item['sol_name'] ?? ''));
+			if ($name === '') {
+				continue;
+			}
+			$count = rtrim(rtrim(number_format((float)$item['count'], 2, '.', ''), '0'), '.');
+			$lines[] = trim(preg_replace('/\s+/u', ' ', $name . ' ' . trim((string)($item['remark_sale'] ?? '')) . ' ' . $count . ' ' . trim((string)($item['unit_name'] ?? ''))));
+		}
+		if ($lines) {
+			return 'ส่ง ' . implode("\r\n", $lines);
+		}
 		$productName = trim((string)($doc['des_productunit'] ?? ''));
 		return $productName !== '' ? 'ส่ง ' . $productName : '';
 	}
@@ -40,25 +60,79 @@ if (!function_exists('rental_cs_compose_product_name')) {
 
 if (!function_exists('rental_product_note_display')) {
 	/**
-	 * ค่าในช่อง "สินค้า/เอกสาร" — ค่า "ส่ง" ล้วน (สูตรเดิมตอนสร้างที่ไม่มีชื่อสินค้า) นับเป็นช่องว่าง
-	 * เพื่อไม่ให้บัง placeholder และให้ตอนบันทึกประกอบข้อความจากใบเช่าแทน
+	 * ค่าในช่อง "สินค้า/เอกสาร" — ข้อความที่ระบบสร้างเองนับเป็นช่องว่าง เพื่อไม่ให้บัง placeholder
+	 * และให้ตอนบันทึกประกอบใหม่จากตารางรายการสินค้าล่าสุด (แก้รายการแล้วข้อความไม่ค้างของเดิม):
+	 * - "ส่ง" ล้วน และ "ส่ง <des_productunit>" (สูตรเดิมของ register_suprental_edit1.php)
+	 * - "ส่ง <รายการ 1-7> <ที่อยู่จัดส่ง>" บรรทัดเดียวที่ลงท้ายด้วย tb_register_data.address_name (สูตรเดิมของ register_suprental1.php)
+	 * - ข้อความที่ rental_cs_compose_product_name() สร้างจากรายการที่บันทึกไว้ตอนนี้
+	 * ตรวจเฉพาะที่ตรงสูตร ค่าที่ผู้ใช้พิมพ์เองแสดงตามเดิม
 	 */
-	function rental_product_note_display($value)
+	function rental_product_note_display($value, $conn, array $doc)
 	{
-		$value = trim((string)$value);
-		return ($value === 'ส่ง') ? '' : $value;
+		$value = trim(str_replace("\r\n", "\n", (string)$value));
+		if ($value === '' || $value === 'ส่ง') {
+			return '';
+		}
+		$flat = preg_replace('/\s+/u', ' ', $value);
+		$desProduct = trim(preg_replace('/\s+/u', ' ', (string)($doc['des_productunit'] ?? '')));
+		if ($desProduct !== '' && $flat === 'ส่ง ' . $desProduct) {
+			return '';
+		}
+
+		$refId = (string)($doc['ref_id'] ?? '');
+		$regQuery = cs_job_query($conn, "SELECT address_name FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $refId) . "' ORDER BY (running = '') DESC, ID DESC LIMIT 1");
+		$reg = mysqli_fetch_assoc($regQuery);
+		$address = trim(preg_replace('/\s+/u', ' ', (string)($reg['address_name'] ?? '')));
+		if ($address !== '' && strpos($value, "\n") === false && strpos($value, 'ส่ง') === 0
+			&& substr($flat, -strlen($address)) === $address) {
+			return '';
+		}
+
+		$composed = str_replace("\r\n", "\n", rental_cs_compose_product_name($conn, $doc));
+		return ($composed !== '' && $value === $composed) ? '' : $value;
+	}
+}
+
+if (!function_exists('rental_cs_normalize_product_note')) {
+	/**
+	 * แถวข้อมูลจัดส่งที่เก็บข้อความอัตโนมัติ/ว่าง (เอกสารก่อนประกอบจากตารางสินค้า) เขียนข้อความจากตารางลงฐานขายก่อนส่ง CS
+	 * ไม่งั้นแกนกลางยก "ส่ง " หรือสตริงสูตรเดิมไปใส่ใบงาน — ใช้กับปุ่ม Update แบบจำกัด (register_suprental_cs1.php)
+	 * เส้นทางบันทึกฟอร์มเขียนค่านี้ผ่าน rental_save_product_note() มาก่อนแล้วจึงไม่มีอะไรเปลี่ยน
+	 */
+	function rental_cs_normalize_product_note($conn, array $doc)
+	{
+		try {
+			$refId = (string)$doc['ref_id'];
+			$regQuery = cs_job_query($conn, "SELECT product_name FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $refId) . "' ORDER BY (running = '') DESC, ID DESC LIMIT 1");
+			$reg = mysqli_fetch_assoc($regQuery);
+			if (!$reg || rental_product_note_display($reg['product_name'], $conn, $doc) !== '') {
+				return;
+			}
+			$text = rental_cs_compose_product_name($conn, $doc);
+			if ($text === (string)$reg['product_name']) {
+				return;
+			}
+			$stmt = mysqli_prepare($conn, "UPDATE tb_register_data SET product_name = ? WHERE ref_id = ?");
+			if ($stmt) {
+				mysqli_stmt_bind_param($stmt, 'ss', $text, $refId);
+				mysqli_stmt_execute($stmt);
+				mysqli_stmt_close($stmt);
+			}
+		} catch (Throwable $e) {
+			error_log('rental_cs_normalize_product_note ' . ($doc['ref_id'] ?? '') . ': ' . $e->getMessage());
+		}
 	}
 }
 
 if (!function_exists('rental_save_product_note')) {
 	/**
 	 * ช่อง "สินค้า/เอกสาร" (name="product") ของ register_suprental.php -> tb_register_data.product_name
-	 * ว่างไว้ = rental_cs_compose_product_name(); ถ้าส่ง CS แล้ว (send_cs=2) อัปเดตใบงานงาน "ส่ง" (job_no) ในฐาน CS ด้วย
+	 * ว่างไว้ / ข้อความอัตโนมัติ = rental_cs_compose_product_name() (ตารางรายการสินค้า); ถ้าส่ง CS แล้ว (send_cs=2) อัปเดตใบงานงาน "ส่ง" (job_no) ในฐาน CS ด้วย
 	 * เรียกหลังบันทึกแถวข้อมูลจัดส่ง และก่อน rental_cs_send() เพื่อให้ใบงานที่ส่งในรอบเดียวกันได้ค่านี้
 	 * หน้าเก่าที่ post มา handler เดียวกันไม่มี flag product_note_form จึงไม่เข้าฟังก์ชันนี้
 	 * อัปเดตฐาน CS ไม่สำเร็จไม่ทำให้การบันทึกใบเช่าเสีย แค่เขียน error_log
 	 */
-	function rental_save_product_note($conn, $refId, $postedText)
+	function rental_save_product_note($conn, $refId, $postedText, $autoText = '')
 	{
 		$doc = rental_cs_load_document($conn, $refId);
 		if ($doc === null) {
@@ -66,9 +140,20 @@ if (!function_exists('rental_save_product_note')) {
 		}
 		$refId = (string)$doc['ref_id'];
 
-		$text = rental_product_note_display($postedText);
-		if ($text === '') {
-			$text = rental_cs_compose_product_name($doc);
+		// ช่องยังเป็นข้อความอัตโนมัติที่หน้าฟอร์มแสดงตอนโหลด (hidden product_note_auto) = ผู้ใช้ไม่ได้แก้ -> ประกอบใหม่
+		if (cs_job_note_untouched($postedText, $autoText)) {
+			$postedText = '';
+		}
+
+		try {
+			$text = rental_product_note_display($postedText, $conn, $doc);
+			if ($text === '') {
+				$text = rental_cs_compose_product_name($conn, $doc);
+			}
+		} catch (Throwable $e) {
+			// ประกอบข้อความไม่ได้: คงค่าที่ผู้ใช้ส่งมา ไม่ทำให้การบันทึกใบเช่าเสีย
+			error_log('rental_save_product_note compose ' . $refId . ': ' . $e->getMessage());
+			$text = trim((string)$postedText);
 		}
 
 		$stmt = mysqli_prepare($conn, "UPDATE tb_register_data SET product_name = ? WHERE ref_id = ?");
@@ -104,7 +189,7 @@ if (!function_exists('rental_cs_compose_job_fields')) {
 	{
 		return array_merge(array(
 			'status'       => 'ส่ง',
-			'product_name' => rental_cs_compose_product_name($doc),
+			'product_name' => rental_cs_compose_product_name($conn, $doc),
 			'type_company' => ((string)($doc['type_doc'] ?? '') === '4') ? 'โนเบิล เมด บจก.' : 'ออลล์เวล ไลฟ์ บจก.',
 		), cs_job_compose_sale_fields($conn, $doc['sale_code'] ?? '', '', $session));
 	}
@@ -196,6 +281,7 @@ if (!function_exists('rental_cs_send')) {
 		if ($doc === null || !rental_cs_user_can_send($doc, $session)) {
 			return null;
 		}
+		rental_cs_normalize_product_note($conn, $doc);
 		return cs_job_send_document($conn, $doc['ref_id'], $session, rental_cs_spec());
 	}
 }

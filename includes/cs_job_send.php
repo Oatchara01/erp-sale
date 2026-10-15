@@ -68,6 +68,21 @@ if (!function_exists('cs_job_redirect_query')) {
 	}
 }
 
+if (!function_exists('cs_job_note_untouched')) {
+	/**
+	 * ช่อง "สินค้า/เอกสาร": หน้าฟอร์มแสดงข้อความอัตโนมัติ (ประกอบจากรายการสินค้า) ในช่อง และส่ง hidden product_note_auto = ข้อความนั้นมาด้วย
+	 * ช่องยังตรงกับ product_note_auto = ผู้ใช้ไม่ได้แก้ -> save helper ประกอบใหม่จากรายการล่าสุด (แก้รายการแล้วข้อความไม่ค้างของเดิม)
+	 * เทียบแบบยุบช่องว่าง/ขึ้นบรรทัด เพราะเบราว์เซอร์แปลง \n เป็น \r\n ตอน submit
+	 */
+	function cs_job_note_untouched($postedText, $autoText)
+	{
+		$flatten = function ($text) {
+			return trim(preg_replace('/\s+/u', ' ', (string)$text));
+		};
+		return $flatten($autoText) !== '' && $flatten($postedText) === $flatten($autoText);
+	}
+}
+
 if (!function_exists('cs_job_connect')) {
 	function cs_job_connect()
 	{

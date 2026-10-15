@@ -1322,12 +1322,28 @@ $chgLatestDocumentReasonClass = renderChgDocumentReturnStatusClass($chgLatestDoc
 							<?php
 							// สินค้า/เอกสาร -> tb_register_data.product_name (chg_save_product_note()) — ว่างไว้ระบบประกอบ "ส่ง ..." จากรายการสินค้า
 							// ค่าเริ่มเฉพาะเอกสารของตัวเอง ใบที่คัดลอกมาเริ่มว่าง; สตริงสรุปจากสูตรเดิมนับเป็นว่าง (chg_product_note_display())
-							$chgProductNote = ($savedChg !== null && $savedRegister !== null) ? chg_product_note_display($savedRegister['product_name'] ?? '', $savedChg) : '';
+							// ข้อความอัตโนมัติ (ว่าง / สูตรเดิม / ตรงกับที่ประกอบจากรายการปัจจุบัน) แสดงข้อความจากรายการสินค้าในช่องแทน
+							// product_note_auto = ข้อความนั้น ถ้าตอนบันทึกช่องยังตรงกัน (ไม่ได้แก้) ระบบประกอบใหม่จากรายการล่าสุด
+							$chgProductNote = '';
+							$chgProductNoteAuto = '';
+							if ($savedChg !== null && $savedRegister !== null) {
+								try {
+									$chgComposedNote = chg_cs_compose_product_name($conn, $savedChg['ref_id']);
+									$chgProductNote = chg_product_note_display($savedRegister['product_name'] ?? '', $savedChg);
+									if (cs_job_note_untouched($chgProductNote, $chgComposedNote)) {
+										$chgProductNote = '';
+									}
+									$chgProductNoteAuto = ($chgProductNote === '') ? $chgComposedNote : '';
+								} catch (Throwable $e) {
+									error_log('register_supchange product note ' . $savedChg['ref_id'] . ': ' . $e->getMessage());
+								}
+							}
 							?>
 							<div class="so-field-group" style="margin-top: 16px;">
 								<label class="so-label" for="delivery_product_note" style="color: #612989;">สินค้า/เอกสาร</label>
 								<input type="hidden" name="product_note_form" value="1">
-								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo so_saved_h($chgProductNote); ?></textarea>
+								<input type="hidden" name="product_note_auto" value="<?php echo so_saved_h($chgProductNoteAuto); ?>">
+								<textarea name="product" id="delivery_product_note" class="so-input" rows="3" placeholder="ว่างไว้ = ระบบใช้รายการสินค้าให้อัตโนมัติ" style="background-color: #F4F3F7; border:none; border-radius: 8px; width: 100%; resize: vertical;"><?php echo so_saved_h($chgProductNote !== '' ? $chgProductNote : $chgProductNoteAuto); ?></textarea>
 							</div>
 						</div>
 

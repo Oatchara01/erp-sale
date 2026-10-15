@@ -586,7 +586,7 @@ if ($saveOk) {
 	// ช่อง "สินค้า/เอกสาร" -> tb_register_data.product_name (ว่าง = ข้อความ "ส่ง ..." จากรายการสินค้า)
 	// ต้องมาก่อนส่ง CS เพื่อให้ใบงานได้ค่านี้ — หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรสรุปเดิมด้านบน
 	if (($_POST['product_note_form'] ?? '') === '1') {
-		chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''));
+		chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''), (string)($_POST['product_note_auto'] ?? ''));
 	}
 
 	// ส่งข้อมูลลงระบบ CS เมื่อผู้ใช้ติ๊ก toggle (Save Draft ไม่ส่ง: แกนกลางข้ามเอกสารสถานะ Draft)

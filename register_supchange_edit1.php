@@ -596,7 +596,7 @@ values('" . $ref_id . "','" . $start_date . "','" . $between_date . "','" . $sta
 		// ช่อง "สินค้า/เอกสาร" -> tb_register_data.product_name (+ ใบงาน CS ถ้าส่งแล้ว) ก่อนส่ง CS ในรอบนี้
 		// หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรสรุปเดิมด้านบน
 		if (($_POST['product_note_form'] ?? '') === '1') {
-			chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''));
+			chg_save_product_note($conn, $ref_id, (string)($_POST['product'] ?? ''), (string)($_POST['product_note_auto'] ?? ''));
 		}
 
 		// ===== ปุ่มอนุมัติ/ส่งกลับ/ไม่อนุมัติ บนแถบล่างของ register_supchange.php =====

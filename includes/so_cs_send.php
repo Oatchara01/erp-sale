@@ -73,15 +73,20 @@ if (!function_exists('so_cs_compose_product_name')) {
 	/**
 	 * ข้อความ "สินค้า/เอกสาร" ของใบงานที่ประกอบจากรายการสินค้าของ SO
 	 * รูปแบบเดิมคือ "ส่ง <ชื่อ> <หมายเหตุ> <จำนวน> <หน่วย>" บรรทัดละรายการ (ไม่รวมแถวลูกของ BOM)
+	 * ไม่รวมแถวเคลียร์ยืม (clear_br = 1 — เลือกจากใบยืม/ยืมฝากขายผ่าน popup เคลียร์ยืม ของอยู่ที่ลูกค้าแล้ว ไม่ต้องจัดส่ง)
+	 * แถวจากใบจอง (jong_ckk = 1) ยังนับ; เคลียร์ยืมล้วน = '' ให้ผู้ใช้พิมพ์เอง (เช่น "ส่งเฉพาะบิล")
 	 */
-	function so_cs_compose_product_name($conn, $refId)
+	function so_cs_compose_product_name($conn, $refId, $includeClearLoan = false)
 	{
 		$safeRefId = mysqli_real_escape_string($conn, $refId);
 
+		// $includeClearLoan = true ใช้แค่ตรวจข้อความอัตโนมัติที่บันทึกไว้ก่อนตัดแถวเคลียร์ยืม (so_product_note_display())
+		$clearFilter = $includeClearLoan ? '' : " AND COALESCE(s.clear_br, '0') <> '1'";
 		$lines = array();
 		$itemQuery = cs_job_query($conn, "SELECT s.count, s.sale_remark, p.sol_name, p.unit_name FROM hos__subso s
 			LEFT JOIN tb_product p ON s.product_id = p.product_ID
-			WHERE s.ref_idd = '" . $safeRefId . "' AND COALESCE(s.bom_ckk, '0') <> '1' ORDER BY s.sort_order, s.id");
+			WHERE s.ref_idd = '" . $safeRefId . "' AND COALESCE(s.bom_ckk, '0') <> '1'" . $clearFilter . "
+			ORDER BY s.sort_order, s.id");
 		while ($item = mysqli_fetch_assoc($itemQuery)) {
 			$name = trim((string)($item['sol_name'] ?? ''));
 			if ($name === '') {
@@ -95,6 +100,39 @@ if (!function_exists('so_cs_compose_product_name')) {
 	}
 }
 
+if (!function_exists('so_product_note_display')) {
+	/**
+	 * ค่าที่ผู้ใช้พิมพ์เองในช่อง "สินค้า/เอกสาร" — ข้อความอัตโนมัติคืน '' แล้วหน้าฟอร์มแสดงข้อความจากรายการสินค้าแทน (ดู cs_job_note_untouched()):
+	 * - ว่าง / ช่องว่างล้วน (สูตรเดิมของ register_suphos_edit1.php)
+	 * - "ส่ง <รายการ 1-7> <ที่อยู่>" และ "เคลียร์ยืม เลขที่ <ใบยืม> <รายการ> <ที่อยู่>" บรรทัดเดียวที่ลงท้ายด้วย
+	 *   tb_register_data.address_name (สูตรเดิมของ register_suphos1.php)
+	 * - ข้อความที่ประกอบจากรายการปัจจุบัน ทั้งแบบตัดแถวเคลียร์ยืม และแบบรวมแถวเคลียร์ยืม (บันทึกไว้ก่อนเริ่มตัด 2026-10-15)
+	 */
+	function so_product_note_display($conn, $refId, $value)
+	{
+		$value = trim((string)$value);
+		if ($value === '') {
+			return '';
+		}
+		$refId = (string)$refId;
+		$legacyPrefix = (strpos($value, 'ส่ง') === 0 || strpos($value, 'เคลียร์ยืม เลขที่') === 0);
+		if (strpos($value, "\n") === false && $legacyPrefix) {
+			$regQuery = cs_job_query($conn, "SELECT address_name FROM tb_register_data WHERE ref_id = '" . mysqli_real_escape_string($conn, $refId) . "' ORDER BY (running = '') DESC, ID DESC LIMIT 1");
+			$reg = mysqli_fetch_assoc($regQuery);
+			$address = trim(preg_replace('/\s+/u', ' ', (string)($reg['address_name'] ?? '')));
+			$flat = preg_replace('/\s+/u', ' ', $value);
+			if ($address !== '' && substr($flat, -strlen($address)) === $address) {
+				return '';
+			}
+		}
+		if (cs_job_note_untouched($value, so_cs_compose_product_name($conn, $refId))
+			|| cs_job_note_untouched($value, so_cs_compose_product_name($conn, $refId, true))) {
+			return '';
+		}
+		return $value;
+	}
+}
+
 if (!function_exists('so_save_product_note')) {
 	/**
 	 * ช่อง "สินค้า/เอกสาร" (name="product") ของ register_suphos.php -> tb_register_data.product_name
@@ -103,14 +141,15 @@ if (!function_exists('so_save_product_note')) {
 	 * หน้าเก่าที่ post มา handler เดียวกันไม่มี flag product_note_form จึงไม่เข้าฟังก์ชันนี้
 	 * อัปเดตฐาน CS ไม่สำเร็จไม่ทำให้การบันทึก SO เสีย แค่เขียน error_log
 	 */
-	function so_save_product_note($conn, $refId, $postedText)
+	function so_save_product_note($conn, $refId, $postedText, $autoText = '')
 	{
 		$refId = (string)$refId;
 		if ($refId === '') {
 			return;
 		}
 
-		$text = trim((string)$postedText);
+		// ช่องยังเป็นข้อความอัตโนมัติที่หน้าฟอร์มแสดงตอนโหลด (hidden product_note_auto) = ผู้ใช้ไม่ได้แก้ -> ประกอบใหม่
+		$text = cs_job_note_untouched($postedText, $autoText) ? '' : trim((string)$postedText);
 		if ($text === '') {
 			$text = so_cs_compose_product_name($conn, $refId);
 		}

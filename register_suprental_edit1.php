@@ -526,7 +526,7 @@ if ($saveOk) {
 	// ช่อง "สินค้า/เอกสาร" ของหน้าใหม่ (หน้าเก่าที่ post มาที่นี่ไม่มี flag จึงคงสูตรเดิม "ส่ง " + des_productunit)
 	// ถ้าส่ง CS แล้วอัปเดตใบงานด้วย และต้องมาก่อน rental_cs_send() เพื่อให้ใบงานที่ส่งในรอบนี้ได้ค่าเดียวกัน
 	if (($_POST['product_note_form'] ?? '') === '1') {
-		rental_save_product_note($conn, $ref_id, $_POST['product'] ?? '');
+		rental_save_product_note($conn, $ref_id, $_POST['product'] ?? '', $_POST['product_note_auto'] ?? '');
 	}
 
 	// ผู้ใช้ติ๊ก toggle "ส่งข้อมูลลงระบบ CS" และมีสิทธิ์ส่ง — ตัดสินจากสถานะก่อนขั้นอนุมัติ/ยกเลิกด้านล่าง

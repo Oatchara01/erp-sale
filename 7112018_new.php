@@ -210,20 +210,26 @@ $product_sn =$objResult["product_sn"];
 $product_name=$objResult["product_name"];
 // Preview: ใช้ช่อง "สินค้า/เอกสาร" ที่ยังไม่บันทึก ว่างไว้ = ข้อความที่ระบบจะสร้างจากรายการสินค้า (ไม่เขียนฐาน)
 // doc_type บอกชนิดเอกสารที่เปิด Preview: rental = register_suprental.php, change = register_supchange.php,
-// ไม่ส่งมา = SO (register_suphos.php)
+// smp = register_supsmp.php (ref_id ของใบงาน = ref_idsmp), ไม่ส่งมา = SO (register_suphos.php)
 if (($_POST["_report_preview"] ?? '') === '1') {
 	$product_name = trim((string)($_POST["product"] ?? ''));
+	$rentalDoc = null;
 	if (($_POST["doc_type"] ?? '') === 'rental') {
 		require_once __DIR__ . '/includes/rental_cs_send.php';
-		$product_name = rental_product_note_display($product_name);
+		$rentalDoc = rental_cs_load_document($sol, $ref_id);
+		if ($rentalDoc !== null) {
+			$product_name = rental_product_note_display($product_name, $sol, $rentalDoc);
+		}
 	}
 	if ($product_name === '' && $ref_id !== '') {
 		if (($_POST["doc_type"] ?? '') === 'rental') {
-			$rentalDoc = rental_cs_load_document($sol, $ref_id);
-			$product_name = ($rentalDoc !== null) ? rental_cs_compose_product_name($rentalDoc) : '';
+			$product_name = ($rentalDoc !== null) ? rental_cs_compose_product_name($sol, $rentalDoc) : '';
 		} elseif (($_POST["doc_type"] ?? '') === 'change') {
 			require_once __DIR__ . '/includes/change_cs_send.php';
 			$product_name = chg_cs_compose_product_name($sol, $ref_id);
+		} elseif (($_POST["doc_type"] ?? '') === 'smp') {
+			require_once __DIR__ . '/includes/smp_repo.php';
+			$product_name = smp_cs_compose_product_name($sol, $ref_id);
 		} else {
 			require_once __DIR__ . '/includes/so_cs_send.php';
 			$product_name = so_cs_compose_product_name($sol, $ref_id);

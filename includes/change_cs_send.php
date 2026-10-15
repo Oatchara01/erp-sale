@@ -227,13 +227,18 @@ if (!function_exists('chg_save_product_note')) {
 	 * หน้าเก่าที่ post มา handler เดียวกัน (register_supchangenb.php) ไม่มี flag product_note_form จึงไม่เข้าฟังก์ชันนี้
 	 * อัปเดตฐาน CS ไม่สำเร็จไม่ทำให้การบันทึกเอกสารเสีย แค่เขียน error_log
 	 */
-	function chg_save_product_note($conn, $refId, $postedText)
+	function chg_save_product_note($conn, $refId, $postedText, $autoText = '')
 	{
 		$doc = chg_cs_load_document($conn, $refId);
 		if ($doc === null) {
 			return;
 		}
 		$refId = (string)$doc['ref_id'];
+
+		// ช่องยังเป็นข้อความอัตโนมัติที่หน้าฟอร์มแสดงตอนโหลด (hidden product_note_auto) = ผู้ใช้ไม่ได้แก้ -> ประกอบใหม่
+		if (cs_job_note_untouched($postedText, $autoText)) {
+			$postedText = '';
+		}
 
 		try {
 			$text = chg_product_note_display($postedText, $doc);
