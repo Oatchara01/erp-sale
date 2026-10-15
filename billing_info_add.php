@@ -151,8 +151,9 @@ if ($billingRow) {
     $formData['bill_ampher'] = $billingRow['billing_ampher'] ?? '';
     $formData['bill_tumbon'] = $billingRow['billing_tumbon'] ?? '';
     $formData['bill_postcode'] = $billingRow['billing_postcode'] ?? '';
-    $formData['branch_type'] = ($billingRow['billing_branch_type'] ?? '') !== '' ? $billingRow['billing_branch_type'] : '1';
-    $formData['branch_no'] = ($billingRow['billing_branch_no'] ?? '') !== '' ? $billingRow['billing_branch_no'] : '00000';
+    // สาขาไม่บังคับ แถวที่บันทึกไว้ว่างต้องแสดงว่างตามจริง ไม่เติมค่าเริ่มต้นทับ
+    $formData['branch_type'] = (string)($billingRow['billing_branch_type'] ?? '');
+    $formData['branch_no'] = (string)($billingRow['billing_branch_no'] ?? '');
     // รหัสบิล 1 อยู่ใน tb_customer ส่วนบิล 2+ อยู่ในแถวบิลเอง (ดู customer_code_lib.php)
     if ($formData['billing_id'] === $primaryBillingId) {
         $formData['code_awl'] = trim((string)($customerRow['customer_code'] ?? ''));
@@ -205,9 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formData['bill_province'] === '' ||
         $formData['bill_ampher'] === '' ||
         $formData['bill_tumbon'] === '' ||
-        $formData['bill_postcode'] === '' ||
-        $formData['branch_type'] === '' ||
-        $formData['branch_no'] === ''
+        $formData['bill_postcode'] === ''
     ) {
         $errorMessage = 'กรุณากรอกข้อมูลให้ครบถ้วน';
     } elseif (!filter_var($formData['email_cus'], FILTER_VALIDATE_EMAIL)) {
@@ -895,9 +894,9 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                 </div>
 
                 <div class="field">
-                    <label class="label" for="branch_type">เลือกสาขา<span class="required">*</span></label>
+                    <label class="label" for="branch_type">เลือกสาขา</label>
                     <div class="control-wrap has-chevron">
-                        <select class="select" name="branch_type" id="branch_type" required>
+                        <select class="select" name="branch_type" id="branch_type">
                             <option value="">Select</option>
                             <option value="1" <?php echo ($formData['branch_type'] === '1') ? 'selected' : ''; ?>>สำนักงานใหญ่</option>
                             <option value="2" <?php echo ($formData['branch_type'] === '2') ? 'selected' : ''; ?>>สาขา</option>
@@ -907,8 +906,8 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                 </div>
 
                 <div class="field">
-                    <label class="label" for="branch_no">เลขที่สาขา<span class="required">*</span></label>
-                    <input type="text" class="control" name="branch_no" id="branch_no" inputmode="numeric" maxlength="10" value="<?php echo h($formData['branch_no']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
+                    <label class="label" for="branch_no">เลขที่สาขา</label>
+                    <input type="text" class="control" name="branch_no" id="branch_no" inputmode="numeric" maxlength="10" value="<?php echo h($formData['branch_no']); ?>" placeholder="ใส่เฉพาะตัวเลข">
                 </div>
 
                 <div class="field primary-field">

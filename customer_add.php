@@ -769,9 +769,9 @@ if (empty($shippingRecords)) {
                                         </div>
 
                                         <div class="field">
-                                            <label class="field-label">เลือกสาขา<span class="required-mark">*</span></label>
+                                            <label class="field-label">เลือกสาขา</label>
                                             <div class="select-shell">
-                                                <select class="form-select billing-branch-type" name="billing_branch_type[]" required>
+                                                <select class="form-select billing-branch-type" name="billing_branch_type[]">
                                                     <option value="">Select</option>
                                                     <option value="1" <?php echo (($billing['billing_branch_type'] ?? '') === '1') ? 'selected' : ''; ?>>สำนักงานใหญ่</option>
                                                     <option value="2" <?php echo (($billing['billing_branch_type'] ?? '') === '2') ? 'selected' : ''; ?>>สาขา</option>
@@ -780,9 +780,9 @@ if (empty($shippingRecords)) {
                                         </div>
 
                                         <div class="field">
-                                            <label class="field-label">เลขที่สาขา<span class="required-mark">*</span></label>
+                                            <label class="field-label">เลขที่สาขา</label>
                                             <div class="input-shell">
-                                                <input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" value="<?php echo h($billing['billing_branch_no'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Branch number" required>
+                                                <input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" value="<?php echo h($billing['billing_branch_no'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Branch number">
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
@@ -1144,15 +1144,15 @@ if (empty($shippingRecords)) {
                 <div class="field"><label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-postcode" name="billing_postcode[]" data-address-level="postcode" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">เลือกสาขา<span class="required-mark">*</span></label>
-                    <div class="select-shell"><select class="form-select billing-branch-type" name="billing_branch_type[]" required>
+                <div class="field"><label class="field-label">เลือกสาขา</label>
+                    <div class="select-shell"><select class="form-select billing-branch-type" name="billing_branch_type[]">
                             <option value="">Select</option>
                             <option value="1">สำนักงานใหญ่</option>
                             <option value="2">สาขา</option>
                         </select></div>
                 </div>
-                <div class="field"><label class="field-label">เลขที่สาขา<span class="required-mark">*</span></label>
-                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" inputmode="numeric" maxlength="10" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
+                <div class="field"><label class="field-label">เลขที่สาขา</label>
+                    <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" inputmode="numeric" maxlength="10"><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field field-action">
                     <label class="tag-toggle billing-primary-toggle">
@@ -1809,14 +1809,12 @@ if (empty($shippingRecords)) {
             }
 
             function validateBranchNumbers() {
-                var valid = true;
                 billingCards.querySelectorAll(".billing-card").forEach(function(card) {
                     var branchType = card.querySelector(".billing-branch-type").value;
                     var branchNo = card.querySelector(".billing-branch-no");
                     if (branchType === "1" && !branchNo.value.trim()) branchNo.value = "00000";
-                    if (branchType === "2" && !branchNo.value.trim()) valid = false;
                 });
-                return valid;
+                return true;
             }
 
             function checkCustomerName(callback) {
