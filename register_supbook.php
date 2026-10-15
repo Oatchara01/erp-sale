@@ -1779,6 +1779,14 @@ $soHideAllActions = !$soHasAnyAction;
 		var form = document.forms['frmMain'];
 		if (!form) return;
 
+		// ใบจองที่บันทึกแล้ว (มี hidden ref_id เฉพาะโหมดแก้ไข ไม่ใช่คัดลอก): เปิดใบพิมพ์จากข้อมูลใน DB
+		var savedRefInput = form.querySelector('input[name="ref_id"]');
+		if (savedRefInput && savedRefInput.value !== '') {
+			window.open('report_jongpro.php?ref_id=' + encodeURIComponent(savedRefInput.value), '_blank');
+			return;
+		}
+
+		// ยังไม่เคยบันทึก (สร้างใหม่/คัดลอก): POST ค่าบนฟอร์มไป preview แบบเดิม
 		var flag = document.createElement('input');
 		flag.type = 'hidden';
 		flag.name = 'preview_mode';
