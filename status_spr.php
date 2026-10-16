@@ -82,6 +82,7 @@ include "dbconnect_sale.php";
 										<option value="">-- ทั้งหมด --</option>
 										<?php
 										$sprStatusFilterOptions = array(
+											'draft'        => 'Draft',
 											'pending_sup'  => 'รอหัวหน้า',
 											'returned'     => 'ส่งกลับ',
 											'pending_exec' => 'รอผู้บริหาร',
@@ -176,6 +177,7 @@ include "dbconnect_sale.php";
 						   spr_stage_of() ใน includes/spr_repo.php ไม่ใช่แค่ status_doc ตรง ๆ เพราะ Request เพียงค่าเดียว
 						   ครอบคลุมทั้งรอหัวหน้า/รอผู้บริหาร แยกกันด้วย sup_name/cm_name เท่านั้น */
 						$sprStatusFilterSql = array(
+							'draft'        => " AND (status_doc = 'Draft' OR status_doc = '' OR status_doc IS NULL)",
 							'pending_sup'  => " AND status_doc = 'Request' AND send_sup = '1' AND (sup_name IS NULL OR sup_name = '')",
 							'returned'     => " AND status_doc = 'Returned'",
 							'pending_exec' => " AND status_doc = 'Request' AND send_cm = '1' AND (cm_name IS NULL OR cm_name = '')",
@@ -267,7 +269,7 @@ include "dbconnect_sale.php";
 								$statusText = 'ส่งกลับ';
 								$statusClass = 'returned';
 							} else if ($statusDoc === 'Draft') {
-								$statusText = 'ยังไม่กดส่ง';
+								$statusText = 'Draft';
 								$statusClass = 'draft';
 							} else if ($statusDoc === 'Request') {
 								$sprStage = spr_stage_of($objResult);
@@ -284,7 +286,7 @@ include "dbconnect_sale.php";
 									$statusClass = 'draft';
 								}
 							} else if ($statusDoc === '') {
-								$statusText = '-';
+								$statusText = 'Draft';
 								$statusClass = 'draft';
 							}
 						?>

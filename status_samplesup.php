@@ -82,6 +82,7 @@ include "dbconnect_sale.php";
 										<option value="">-- ทั้งหมด --</option>
 										<?php
 										$smpStatusFilterOptions = array(
+											'draft'        => 'Draft',
 											'pending_sup'  => 'รอหัวหน้า',
 											'returned'     => 'ส่งกลับ',
 											'pending_exec' => 'รอผู้บริหาร',
@@ -438,6 +439,7 @@ include "dbconnect_sale.php";
 						$smpHasStatusLog = smp_table_exists($conn, 'tb_document_status_log');
 						$smpCancelledExists = "EXISTS (SELECT 1 FROM tb_document_status_log l WHERE l.ref_id = hos__smp.ref_idsmp AND l.status_doc = 'Cancelled')";
 						$smpStatusFilterSql = array(
+							'draft'        => " AND (status_sup = 'Draft' OR status_sup = '' OR status_sup IS NULL)",
 							'pending_sup'  => " AND status_sup = 'Request' AND send_sup = '1' AND send_dm = '0' AND send_stock = '0' AND send_admin = '0'",
 							'returned'     => " AND status_sup = 'Returned'",
 							'pending_exec' => " AND status_sup = 'Request' AND send_dm = '1' AND send_stock = '0' AND send_admin = '0'",
@@ -555,7 +557,7 @@ include "dbconnect_sale.php";
 								$statusText = 'ส่งกลับ';
 								$statusClass = 'returned';
 							} else if ($statusSup === 'Draft') {
-								$statusText = 'ยังไม่กดส่ง';
+								$statusText = 'Draft';
 								$statusClass = 'draft';
 							} else if ($statusSup === 'Request') {
 								$smpStage = smp_stage_of($objResult);
@@ -568,7 +570,7 @@ include "dbconnect_sale.php";
 								}
 								// อื่น ๆ (legacy เช่น send_sup = 0 หรือส่งคลังแล้ว) — แสดงค่าดิบ ไม่เดาสถานะ
 							} else if ($statusSup === '') {
-								$statusText = '-';
+								$statusText = 'Draft';
 							}
 
 							$commentSale = trim((string)($objResult["comment_sale"] ?? ''));
