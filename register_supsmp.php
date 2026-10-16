@@ -394,21 +394,27 @@ else {
 	// -----------------------------------------------------
 	else {
 
-		$teamSql = "
-			SELECT DISTINCT
-				t.sale_code,
-				t.sale_name
-			FROM tb_team_adm t
+		// user_sale_permission อยู่ DB หลัก ($conn) ส่วน tb_team_adm อยู่ DB sale ($com)
+		// จึงอ่านสิทธิ์จาก $conn ก่อน แล้วค่อยหาชื่อเขตจาก $com (ไม่ JOIN ข้าม DB)
+		$permCodes = array();
+		try {
+			$qPerm = mysqli_query(
+				$conn,
+				"SELECT sale_code FROM user_sale_permission WHERE em_id = '" . mysqli_real_escape_string($conn, $emid) . "'"
+			);
+			while ($qPerm && ($rowPerm = mysqli_fetch_assoc($qPerm))) {
+				if (trim($rowPerm['sale_code']) !== '') {
+					$permCodes[] = "'" . mysqli_real_escape_string($com, trim($rowPerm['sale_code'])) . "'";
+				}
+			}
+		} catch (mysqli_sql_exception $e) {
+			$permCodes = array();
+		}
 
-			INNER JOIN user_sale_permission p
-				ON p.sale_code COLLATE utf8mb3_general_ci
-				 =
-				   t.sale_code COLLATE utf8mb3_general_ci
-
-			WHERE p.em_id = '".$emid_safe."'
-
-			ORDER BY t.sale_code ASC
-		";
+		// ไม่มีสิทธิ์ = ไม่มีตัวเลือก (ไม่ขยายสิทธิ์)
+		$teamSql = count($permCodes) > 0
+			? "SELECT sale_code, sale_name FROM tb_team_adm WHERE sale_code IN (" . implode(',', $permCodes) . ") ORDER BY sale_code ASC"
+			: '';
 
 	}
 
@@ -416,7 +422,14 @@ else {
 	// =====================================================
 	// QUERY
 	// =====================================================
-	$q = mysqli_query($com, $teamSql);
+	$q = false;
+	if ($teamSql !== '') {
+		try {
+			$q = mysqli_query($com, $teamSql);
+		} catch (mysqli_sql_exception $e) {
+			$q = false;
+		}
+	}
 
 	if ($q) {
 
