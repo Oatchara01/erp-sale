@@ -382,6 +382,18 @@ $shippingAddressData = address_cascade_data($conn, $formData['shipping_province'
             outline: none;
         }
 
+        /* ฟิลด์บังคับที่ว่าง ใส่ class โดย js/so-required-fields.js สีเดียวกับ .so-field-invalid ใน css/so-core.css */
+        .control.so-field-invalid,
+        .select.so-field-invalid {
+            border: 1px solid #DC3545;
+            background-color: #FEECEB;
+        }
+
+        .control.so-field-invalid:focus,
+        .select.so-field-invalid:focus {
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        }
+
         .file-wrap {
             position: relative;
             overflow: hidden;
@@ -589,30 +601,31 @@ $shippingAddressData = address_cascade_data($conn, $formData['shipping_province'
                 <?php } ?>
 
                 <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (js/address-cascade.js) -->
+                <!-- ฟิลด์บังคับ = .so-label ที่มี <span>*</span> ใน .so-field-group ตรวจด้วย soValidateRequired() (js/so-required-fields.js) -->
                 <div class="grid" data-address-scope>
-                    <div class="field">
-                        <label class="label" for="shipping_name">ชื่อผู้รับสินค้า</label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_name">ชื่อผู้รับสินค้า</label>
                         <div class="control-wrap">
                             <input type="text" class="control has-clear" name="shipping_name" id="shipping_name" value="<?php echo h($formData['shipping_name']); ?>" placeholder="กรอกชื่อผู้รับสินค้า">
                             <i class="fas fa-times clear" onclick="this.previousElementSibling.value=''"></i>
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="shipping_tel">เบอร์โทร<span class="required">*</span></label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_tel">เบอร์โทร<span class="required">*</span></label>
                         <input type="text" class="control" name="shipping_tel" id="shipping_tel" inputmode="numeric" maxlength="15" value="<?php echo h($formData['shipping_tel']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                     </div>
 
-                    <div class="field span-8">
-                        <label class="label" for="shipping_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
+                    <div class="field span-8 so-field-group">
+                        <label class="label so-label" for="shipping_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
                         <div class="control-wrap">
                             <input type="text" class="control has-clear" name="shipping_address" id="shipping_address" value="<?php echo h($formData['shipping_address']); ?>" placeholder="กรอกรายละเอียดที่อยู่จัดส่ง" required>
                             <i class="fas fa-times clear" onclick="this.previousElementSibling.value=''"></i>
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="shipping_province">จังหวัด<span class="required">*</span></label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_province">จังหวัด<span class="required">*</span></label>
                         <select class="select" name="shipping_province" id="shipping_province" data-address-level="province" required>
                             <option value="">Select</option>
                             <?php foreach ($provinces as $province) { ?>
@@ -621,33 +634,33 @@ $shippingAddressData = address_cascade_data($conn, $formData['shipping_province'
                         </select>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="shipping_ampher">เขต/อำเภอ<span class="required">*</span></label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_ampher">เขต/อำเภอ<span class="required">*</span></label>
                         <select class="select" name="shipping_ampher" id="shipping_ampher" data-address-level="district" required><?php echo address_cascade_district_options($shippingAddressData); ?></select>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="shipping_tumbon">แขวง/ตำบล<span class="required">*</span></label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_tumbon">แขวง/ตำบล<span class="required">*</span></label>
                         <select class="select" name="shipping_tumbon" id="shipping_tumbon" data-address-level="sub_district" required><?php echo address_cascade_sub_district_options($shippingAddressData); ?></select>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="shipping_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="shipping_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
                         <select class="select" name="shipping_postcode" id="shipping_postcode" data-address-level="postcode" required><?php echo address_cascade_postcode_options($shippingAddressData); ?></select>
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="install_location">หน่วยงานที่ติดตั้ง</label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="install_location">หน่วยงานที่ติดตั้ง</label>
                         <input type="text" class="control" name="install_location" id="install_location" value="<?php echo h($formData['install_location']); ?>" placeholder="ใส่เฉพาะตัวเลข">
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="location_link">Location Link</label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="location_link">Location Link</label>
                         <input type="text" class="control" name="location_link" id="location_link" value="<?php echo h($formData['location_link']); ?>" placeholder="ใส่เฉพาะตัวเลข">
                     </div>
 
-                    <div class="field">
-                        <label class="label" for="map_image">ภาพแผนที่</label>
+                    <div class="field so-field-group">
+                        <label class="label so-label" for="map_image">ภาพแผนที่</label>
                         <div class="file-wrap">
                             <div class="file-control" id="mapImageLabel"><?php echo h($formData['map_image'] !== '' ? $formData['map_image'] : 'Choose File'); ?></div>
                             <input type="file" name="map_image" id="map_image" accept=".jpg,.jpeg,.png,.gif,.webp">
@@ -688,6 +701,7 @@ $shippingAddressData = address_cascade_data($conn, $formData['shipping_province'
     </div>
 
     <script src="js/address-cascade.js"></script>
+    <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
     <script>
         var shippingForm = document.getElementById('shippingForm');
         var shippingConfirmModal = document.getElementById('shippingConfirmModal');
@@ -714,7 +728,8 @@ $shippingAddressData = address_cascade_data($conn, $formData['shipping_province'
 
                 event.preventDefault();
 
-                if (typeof shippingForm.reportValidity === 'function' && !shippingForm.reportValidity()) {
+                // ฟิลด์บังคับที่ว่างขึ้นกรอบแดงพร้อมกันทุกช่อง แล้วเลื่อนไปช่องแรก ผ่านแล้วจึงเปิด popup ยืนยัน
+                if (!soValidateRequired(shippingForm)) {
                     return;
                 }
 

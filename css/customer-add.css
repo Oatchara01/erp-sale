@@ -275,6 +275,22 @@ body {
 	background: #fbfaff;
 }
 
+/* ฟิลด์บังคับที่ว่าง/ผิดรูปแบบ ใส่ class โดย js/so-required-fields.js สีเดียวกับ .so-field-invalid ใน css/so-core.css
+   ต่อท้าย :focus ด้านบนเพื่อให้ชนะกฎที่ specificity เท่ากัน */
+.form-input.so-field-invalid,
+.form-select.so-field-invalid,
+.multi-select-summary.so-field-invalid,
+.multi-select.is-open .multi-select-summary.so-field-invalid {
+	border-color: #DC3545;
+	background-color: #FEECEB;
+}
+
+.form-input.so-field-invalid:focus,
+.form-select.so-field-invalid:focus,
+.multi-select-summary.so-field-invalid:focus {
+	box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+}
+
 .form-input[readonly],
 .multi-select-summary[readonly] {
 	color: #7b7585;
@@ -403,6 +419,41 @@ body {
 .code-run-button:disabled {
 	opacity: 0.6;
 	cursor: wait;
+}
+
+/* รหัสที่ใช้ของเดิม/รับร่วมจากการ์ดอื่นซ่อน Run ไม่ให้เหลือพื้นที่หรือโฟกัสได้ (js/billing-customer-codes.js) */
+.code-run-button[hidden],
+.code-status[hidden] {
+	display: none;
+}
+
+.code-status {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin-top: -8px;
+	padding: 0 10px;
+	color: var(--customer-primary);
+	font-size: 13px;
+	line-height: 21px;
+}
+
+.code-status[data-tone="error"] {
+	color: #d92d20;
+}
+
+.code-status-action {
+	border: 0;
+	border-radius: 15px;
+	background: #f1e1ff;
+	color: var(--customer-primary);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 500;
+	padding: 4px 14px;
+	cursor: pointer;
 }
 
 .outline-pill {

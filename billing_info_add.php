@@ -122,6 +122,7 @@ $formData = array(
     'billing_id' => $billingRecordId,
     'code_awl' => '',
     'code_nbm' => '',
+    'code_source_key' => '',
     'preface_name' => '',
     'bill_name' => '',
     'bill_tel' => '',
@@ -154,24 +155,13 @@ if ($billingRow) {
     // สาขาไม่บังคับ แถวที่บันทึกไว้ว่างต้องแสดงว่างตามจริง ไม่เติมค่าเริ่มต้นทับ
     $formData['branch_type'] = (string)($billingRow['billing_branch_type'] ?? '');
     $formData['branch_no'] = (string)($billingRow['billing_branch_no'] ?? '');
-    // รหัสบิล 1 อยู่ใน tb_customer ส่วนบิล 2+ อยู่ในแถวบิลเอง (ดู customer_code_lib.php)
-    if ($formData['billing_id'] === $primaryBillingId) {
-        $formData['code_awl'] = trim((string)($customerRow['customer_code'] ?? ''));
-        $formData['code_nbm'] = trim((string)($customerRow['customer_coden'] ?? ''));
-    } else {
-        $formData['code_awl'] = trim((string)($billingRow['billing_code'] ?? ''));
-        $formData['code_nbm'] = trim((string)($billingRow['billing_coden'] ?? ''));
-    }
 }
 
-// ลูกค้าที่ยังไม่มีแถวบิลเลย บิลที่จะเพิ่มคือใบหลัก ใช้รหัสเดิมของลูกค้าต่อ ไม่ให้เขียนทับเป็นว่าง
-if (!$billingRow && $customerRow && $primaryBillingId === 0) {
-    $formData['code_awl'] = trim((string)($customerRow['customer_code'] ?? ''));
-    $formData['code_nbm'] = trim((string)($customerRow['customer_coden'] ?? ''));
-}
-
-// รหัสที่บันทึกอยู่ในฐานของบิลที่เปิดอยู่ ใช้เทียบว่าผู้ใช้กด Run รหัสใหม่มาหรือไม่
-$savedCodes = array('awl' => $formData['code_awl'], 'nbm' => $formData['code_nbm']);
+// รหัส AWL/NBM ตัดสินด้วย customer_id + เลขผู้เสียภาษี ทั้งตอนแสดงหน้าและตอนบันทึก (customer_code_lib.php)
+// รหัสบิล 1 อยู่ใน tb_customer ส่วนบิล 2+ อยู่ในแถวบิลเอง
+// ลูกค้าที่ยังไม่มีแถวบิล บิลที่เพิ่มคือใบหลัก ใช้รหัสเดิมบน tb_customer ต่อได้เมื่อ tax ตรงกับของลูกค้า (แหล่ง customer:<id>)
+$codeCustomer = $customerRow ? customer_code_load_customer($conn, $customerId) : null;
+$parentSourceKey = ($codeCustomer && !$billingRow && empty($codeCustomer['billings'])) ? 'customer:' . $customerId : '';
 
 $errorMessage = '';
 
@@ -194,6 +184,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $formData['code_awl'] = preg_replace('/\s+/', '', $formData['code_awl']);
     $formData['code_nbm'] = preg_replace('/\s+/', '', $formData['code_nbm']);
+    // แหล่งรหัสที่เลือกจาก browser เป็นแค่คำขอ ตัวบันทึกตรวจกับฐานใหม่เสมอ
+    $formData['code_source_key'] = trim($formData['code_source_key']);
 
     if ($blockMessage !== '') {
         $errorMessage = $blockMessage;
@@ -220,37 +212,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ใบหลัก = แถวบิลลำดับแรกของลูกค้า ติ๊ก "ใช้เป็นข้อมูลหลัก" บนบิลใบอื่นจะสลับบิลนั้นขึ้นเป็นใบแรกพร้อมรหัส (เหมือนการ์ดใน customer_add.php)
-    // แก้บิลใบอื่นโดยไม่ติ๊กต้องไม่เขียนทับค่าเริ่มต้นของลูกค้าใน tb_customer
-    // ลูกค้าที่ยังไม่มีแถวบิลเลย บิลที่เพิ่มคือใบแรก = ใบหลัก
-    $isPrimaryBillingRow = $primaryBillingId === 0 || $billingRecordId === $primaryBillingId;
-    $becomesPrimary = !$isPrimaryBillingRow && isset($_POST['is_primary']);
-
-    // รหัสที่กด Run มา: รันใหม่ถ้าไม่ใช่เลขเดือนนี้หรือมีคนใช้ไปก่อนแล้ว ต้องถือ lock ก่อนเริ่มทรานแซกชันให้ครอบถึงตอนเขียน
-    $resolvedCodes = $savedCodes;
-    if ($errorMessage === '') {
-        foreach (array('awl' => 'code_awl', 'nbm' => 'code_nbm') as $codeType => $codeField) {
-            $postedCode = $formData[$codeField];
-            if ($postedCode === '' || $postedCode === $savedCodes[$codeType]) {
-                continue;
-            }
-            if (!customer_code_acquire_lock($conn, $codeType)) {
-                $errorMessage = 'ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง';
-                break;
-            }
-            $keepCode = preg_match('/^' . customer_code_prefix($codeType) . '\d{4}$/', $postedCode) === 1 && !customer_code_is_used($conn, $codeType, $postedCode);
-            $resolvedCodes[$codeType] = $keepCode ? $postedCode : customer_code_next($conn, $codeType);
-            if ($resolvedCodes[$codeType] === '') {
-                $errorMessage = 'เลขรันรหัสลูกค้าของเดือนนี้เต็มแล้ว';
-                break;
-            }
-        }
+    // ถือ lock AWL ก่อน NBM ก่อนเริ่มทรานแซกชัน ให้ครอบตั้งแต่อ่านแหล่งรหัสจนเขียนเสร็จ (คอลัมน์รหัสเตรียมไว้ด้านบนแล้ว)
+    if ($errorMessage === '' && !customer_code_acquire_locks($conn)) {
+        $errorMessage = 'ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง';
     }
 
     if ($errorMessage === '') {
-        mysqli_begin_transaction($conn);
         $allOk = true;
-        $existingCustomerRow = $customerRow;
+        $targetBillingId = $billingRecordId;
+        $lockedCustomer = null;
+        $resolvedCodes = customer_code_pair();
+        mysqli_begin_transaction($conn);
+
+        // อ่านลูกค้า + บิลใหม่ภายใต้ lock แล้วตัดสินรหัสจากข้อมูลล่าสุด: รหัสเดิมของ customer_id + tax ใช้ต่อแม้เป็นเดือนเก่า
+        // preview ที่กด Run มา รันใหม่ถ้าไม่ใช่เลขเดือนนี้หรือมีคนใช้ไปก่อนแล้ว
+        try {
+            $lockedCustomer = customer_code_load_customer($conn, $customerId, true);
+            if (!$lockedCustomer || ($billingRecordId > 0 && !isset($lockedCustomer['billings'][$billingRecordId]))) {
+                $allOk = false;
+                $errorMessage = 'ไม่พบข้อมูลออกบิลนี้ของลูกค้า';
+            } else {
+                $resolution = customer_code_resolve_billing_cards($conn, $lockedCustomer, array(array(
+                    'key' => 'single',
+                    'number' => 1,
+                    'record_id' => $billingRecordId,
+                    'source_key' => $formData['code_source_key'],
+                    'tax' => $formData['tax_id'],
+                    'awl' => $formData['code_awl'],
+                    'nbm' => $formData['code_nbm'],
+                )));
+                if ($resolution['ok']) {
+                    $resolvedCodes = $resolution['codes'][0];
+                } else {
+                    $allOk = false;
+                    $errorMessage = $resolution['message'];
+                }
+            }
+        } catch (mysqli_sql_exception $e) {
+            $allOk = false;
+            $errorMessage = 'ตรวจสอบรหัสลูกค้าไม่สำเร็จ กรุณากดบันทึกอีกครั้ง';
+        }
+
+        $existingCustomerRow = $allOk ? $lockedCustomer['row'] : $customerRow;
+        // ใบหลัก = แถวบิลลำดับแรกของลูกค้า ติ๊ก "ใช้เป็นข้อมูลหลัก" บนบิลใบอื่นจะสลับบิลนั้นขึ้นเป็นใบแรกพร้อมรหัส (เหมือนการ์ดใน customer_add.php)
+        // แก้บิลใบอื่นโดยไม่ติ๊กต้องไม่เขียนทับค่าเริ่มต้นของลูกค้าใน tb_customer
+        // ลูกค้าที่ยังไม่มีแถวบิลเลย บิลที่เพิ่มคือใบแรก = ใบหลัก
+        $lockedBillingIds = $allOk ? array_keys($lockedCustomer['billings']) : array();
+        $primaryBillingId = $lockedBillingIds ? (int)$lockedBillingIds[0] : 0;
+        $isPrimaryBillingRow = $primaryBillingId === 0 || $billingRecordId === $primaryBillingId;
+        $becomesPrimary = !$isPrimaryBillingRow && isset($_POST['is_primary']);
 
         $fullName = trim($formData['preface_name'] . ' ' . $formData['bill_name']);
         $customerSqlData = array(
@@ -373,14 +383,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // เพิ่มสำเร็จแล้วหน้านี้กลายเป็นการแก้บิลใบที่เพิ่งสร้าง กดซ้ำจะไม่เพิ่มบิลซ้ำ
             $billingRecordId = $targetBillingId;
             $formData['billing_id'] = $targetBillingId;
-            $savedCodes = $resolvedCodes;
             $formData['code_awl'] = $resolvedCodes['awl'];
             $formData['code_nbm'] = $resolvedCodes['nbm'];
         } else {
             mysqli_rollback($conn);
-            $errorMessage = 'ไม่สามารถบันทึกข้อมูลออกบิลได้';
+            if ($errorMessage === '') {
+                $errorMessage = 'ไม่สามารถบันทึกข้อมูลออกบิลได้';
+            }
         }
+        customer_code_release_locks($conn);
     }
+}
+
+// สถานะรหัสของการ์ด: บันทึกสำเร็จอ่านจากค่าที่บันทึกจริง / บันทึกไม่ผ่านใช้ค่าที่ POST มาแต่ตรวจกับฐานใหม่
+$codeView = null;
+if ($customerRow && $blockMessage === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $codeCustomer = customer_code_load_customer($conn, $customerId);
+}
+if ($customerRow && $codeCustomer && $blockMessage === '') {
+    $showPosted = $_SERVER['REQUEST_METHOD'] === 'POST' && $successMessage === '';
+    $codeCard = array(
+        'key' => 'single',
+        'number' => 1,
+        'record_id' => (int)$formData['billing_id'],
+        // ลูกค้าที่ยังไม่มีแถวบิลอ้าง customer:<id> เสมอ (ให้ JS คืนรหัสเดิมเมื่อกรอก tax ตรงกับของลูกค้า)
+        // บิลที่เพิ่งบันทึกมีแถวแล้ว ไม่อ้างรหัสบน tb_customer แทนแถวบิล
+        'source_key' => $successMessage !== '' ? '' : ($parentSourceKey !== '' ? $parentSourceKey : ($showPosted ? $formData['code_source_key'] : '')),
+        'tax' => customer_code_normalize_tax($formData['tax_id']),
+        'awl' => $showPosted ? $formData['code_awl'] : '',
+        'nbm' => $showPosted ? $formData['code_nbm'] : '',
+    );
+    $codeView = customer_code_card_view($codeCustomer, $codeCard);
+    $formData['code_awl'] = $codeView['codes']['awl'];
+    $formData['code_nbm'] = $codeView['codes']['nbm'];
 }
 
 // บิลที่เปิดอยู่เป็นใบหลักหรือไม่ (หลังบันทึกแล้วอ่านใหม่ เพราะการติ๊กอาจสลับลำดับ) ใบหลักติ๊กค้างเอาออกไม่ได้ บิลที่กำลังเพิ่มติ๊กเองได้
@@ -516,6 +551,18 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
             box-shadow: 0 0 0 2px rgba(97, 41, 137, 0.25);
         }
 
+        /* ฟิลด์บังคับที่ว่าง/ผิดรูปแบบ ใส่ class โดย js/so-required-fields.js สีเดียวกับ .so-field-invalid ใน css/so-core.css */
+        .control.so-field-invalid,
+        .select.so-field-invalid {
+            border: 1px solid #DC3545;
+            background-color: #FEECEB;
+        }
+
+        .control.so-field-invalid:focus,
+        .select.so-field-invalid:focus {
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        }
+
         .control::placeholder {
             color: var(--placeholder);
         }
@@ -625,6 +672,40 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
         .run-button:disabled {
             opacity: 0.6;
             cursor: wait;
+        }
+
+        /* รหัสที่ใช้ของเดิม/บันทึกแล้วซ่อน Run ไม่ให้เหลือพื้นที่หรือโฟกัสได้ */
+        .run-button[hidden],
+        .code-status[hidden] {
+            display: none;
+        }
+
+        .code-status {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            margin-top: -12px;
+            padding: 0 10px;
+            color: var(--primary);
+            font-size: 13px;
+            line-height: 21px;
+        }
+
+        .code-status[data-tone="error"] {
+            color: var(--danger);
+        }
+
+        .code-status-action {
+            border: 0;
+            border-radius: 15px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-family: 'Prompt', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 4px 14px;
+            cursor: pointer;
         }
 
         .primary-field {
@@ -800,12 +881,15 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
 
             <fieldset class="form-fieldset" <?php echo $isFormBlocked ? 'disabled' : ''; ?>>
             <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (js/address-cascade.js) -->
-            <div class="grid" data-address-scope>
+            <!-- รหัส AWL/NBM ควบคุมโดย js/billing-customer-codes.js (data-code-view = customer_code_card_view) -->
+            <!-- ฟิลด์บังคับ = .so-label ที่มี <span>*</span> ใน .so-field-group ตรวจด้วย soValidateRequired() (js/so-required-fields.js) -->
+            <div class="grid js-billing-code-card" data-address-scope data-client-key="single" data-record-id="<?php echo h((int)$formData['billing_id']); ?>"<?php echo $codeView !== null ? ' data-code-view="' . customer_code_view_attr($codeView) . '"' : ''; ?>>
+                <input type="hidden" class="js-code-source" name="code_source_key" value="<?php echo h($formData['code_source_key']); ?>">
                 <div class="field code-field js-code-row" data-code-type="awl">
                     <div class="code-group">
                         <label class="label">รหัสลูกค้า AWL</label>
                         <input type="text" class="control readonly js-code-display" value="<?php echo h($formData['code_awl'] !== '' ? $formData['code_awl'] : 'Auto'); ?>" readonly>
-                        <input type="hidden" class="js-code-value" name="code_awl" value="<?php echo h($formData['code_awl']); ?>" data-saved-code="<?php echo h($savedCodes['awl']); ?>">
+                        <input type="hidden" class="js-code-value" name="code_awl" value="<?php echo h($formData['code_awl']); ?>">
                     </div>
                     <button type="button" class="run-button js-code-run">
                         <span class="run-icon"><img src="img/icons/figma_user_id.svg" alt=""></span>
@@ -817,7 +901,7 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                     <div class="code-group">
                         <label class="label">รหัสลูกค้า NBM</label>
                         <input type="text" class="control readonly js-code-display" value="<?php echo h($formData['code_nbm'] !== '' ? $formData['code_nbm'] : 'Auto'); ?>" readonly>
-                        <input type="hidden" class="js-code-value" name="code_nbm" value="<?php echo h($formData['code_nbm']); ?>" data-saved-code="<?php echo h($savedCodes['nbm']); ?>">
+                        <input type="hidden" class="js-code-value" name="code_nbm" value="<?php echo h($formData['code_nbm']); ?>">
                     </div>
                     <button type="button" class="run-button js-code-run">
                         <span class="run-icon"><img src="img/icons/figma_user_id.svg" alt=""></span>
@@ -825,39 +909,41 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                     </button>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_name">ชื่อในการออกบิล<span class="required">*</span></label>
+                <div class="field span-full code-status js-code-status" role="status" hidden></div>
+
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_name">ชื่อในการออกบิล<span class="required">*</span></label>
                     <div class="control-wrap has-clear">
                         <input type="text" class="control" name="bill_name" id="bill_name" value="<?php echo h($formData['bill_name']); ?>" placeholder="ใส่ชื่อในการออกบิล" required>
                         <button type="button" class="clear" data-clear-target="bill_name" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="tax_id">เลขประจำตัวผู้เสียภาษี<span class="required">*</span></label>
                     <input type="text" class="control" name="tax_id" id="tax_id" inputmode="numeric" maxlength="20" value="<?php echo h($formData['tax_id']); ?>" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_tel">เบอร์โทร<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_tel">เบอร์โทร<span class="required">*</span></label>
                     <input type="text" class="control" name="bill_tel" id="bill_tel" inputmode="numeric" maxlength="15" value="<?php echo h($formData['bill_tel']); ?>" placeholder="ใส่เฉพาะตัวเลข" required>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="email_cus">E-mail<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="email_cus">E-mail<span class="required">*</span></label>
                     <input type="email" class="control" name="email_cus" id="email_cus" value="<?php echo h($formData['email_cus']); ?>" placeholder="ใส่ที่อยู่อีเมล" required>
                 </div>
 
-                <div class="field span-2">
-                    <label class="label" for="bill_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
+                <div class="field span-2 so-field-group">
+                    <label class="label so-label" for="bill_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required">*</span></label>
                     <div class="control-wrap has-clear">
                         <input type="text" class="control" name="bill_address" id="bill_address" value="<?php echo h($formData['bill_address']); ?>" placeholder="ใส่เลขที่ ตรอก ซอย ถนน" required>
                         <button type="button" class="clear" data-clear-target="bill_address" aria-label="ล้างข้อมูล"><img src="img/icons/figma_cancel.svg" alt=""></button>
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_province">จังหวัด<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_province">จังหวัด<span class="required">*</span></label>
                     <div class="control-wrap has-chevron">
                         <select class="select" name="bill_province" id="bill_province" data-address-level="province" required>
                             <option value="">Select</option>
@@ -869,32 +955,32 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_ampher">เขต/อำเภอ<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_ampher">เขต/อำเภอ<span class="required">*</span></label>
                     <div class="control-wrap has-chevron">
                         <select class="select" name="bill_ampher" id="bill_ampher" data-address-level="district" required><?php echo address_cascade_district_options($billAddressData); ?></select>
                         <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_tumbon">แขวง/ตำบล<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_tumbon">แขวง/ตำบล<span class="required">*</span></label>
                     <div class="control-wrap has-chevron">
                         <select class="select" name="bill_tumbon" id="bill_tumbon" data-address-level="sub_district" required><?php echo address_cascade_sub_district_options($billAddressData); ?></select>
                         <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="bill_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="bill_postcode">รหัสไปรษณีย์<span class="required">*</span></label>
                     <div class="control-wrap has-chevron">
                         <select class="select" name="bill_postcode" id="bill_postcode" data-address-level="postcode" required><?php echo address_cascade_postcode_options($billAddressData); ?></select>
                         <img class="chevron" src="img/icons/figma_nav_arrow_down.svg" alt="">
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="branch_type">เลือกสาขา</label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="branch_type">เลือกสาขา</label>
                     <div class="control-wrap has-chevron">
                         <select class="select" name="branch_type" id="branch_type">
                             <option value="">Select</option>
@@ -905,8 +991,8 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label" for="branch_no">เลขที่สาขา</label>
+                <div class="field so-field-group">
+                    <label class="label so-label" for="branch_no">เลขที่สาขา</label>
                     <input type="text" class="control" name="branch_no" id="branch_no" inputmode="numeric" maxlength="10" value="<?php echo h($formData['branch_no']); ?>" placeholder="ใส่เฉพาะตัวเลข">
                 </div>
 
@@ -939,6 +1025,8 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="js/address-cascade.js"></script>
+    <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
+    <script src="js/billing-customer-codes.js?v=<?php echo filemtime(__DIR__ . '/js/billing-customer-codes.js'); ?>"></script>
     <script>
         document.querySelectorAll('[data-clear-target]').forEach(function(button) {
             button.addEventListener('click', function() {
@@ -982,93 +1070,48 @@ $billAddressData = address_cascade_data($conn, $formData['bill_province'], $form
             });
         })();
 
-        // Run รหัสลูกค้า: คำนวณเลขถัดไปให้ดู บันทึกจริงตอนกดเพิ่ม/อัปเดต (ดู ajax_customer_run_code.php)
+        // E-mail ที่กรอกแล้วแต่ผิดรูปแบบ: กรอบแดงค้างจนกว่าจะแก้ค่า (กรณีว่างถูก soValidateRequired() จับไปก่อนแล้ว)
+        function validateBillingEmail() {
+            var emailInput = document.getElementById('email_cus');
+            if (!emailInput) return true;
+            emailInput.value = emailInput.value.trim();
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value)) return true;
+            soMarkFieldInvalid(emailInput);
+            Swal.fire('แจ้งเตือน', 'รูปแบบ E-mail ไม่ถูกต้อง', 'warning').then(function() {
+                emailInput.focus();
+            });
+            return false;
+        }
+
+        // รหัสลูกค้า AWL/NBM: ใช้รหัสเดิมของ customer_id + เลขผู้เสียภาษีอัตโนมัติ ไม่มีจึง Run (ดู js/billing-customer-codes.js)
+        // ปิดปุ่มบันทึกระหว่างตรวจ/Run และเมื่อตรวจไม่สำเร็จหรือยังไม่ได้เลือกรหัส
         (function() {
-            var codeLabels = {
-                awl: 'รหัสลูกค้า AWL',
-                nbm: 'รหัสลูกค้า NBM'
-            };
+            var form = document.querySelector('.billing-form');
+            var card = form ? form.querySelector('.js-billing-code-card') : null;
+            var submitButton = form ? form.querySelector('button[type="submit"]') : null;
+            if (!submitButton || submitButton.disabled) return;
 
-            function notify(options) {
-                if (window.Swal) {
-                    return Swal.fire(options);
+            var billingCodes = (card && window.BillingCustomerCodes) ? window.BillingCustomerCodes.create({
+                root: form,
+                cardSelector: '.js-billing-code-card',
+                taxSelector: '#tax_id',
+                customerId: <?php echo (int)$customerId; ?>,
+                multi: false,
+                onBlockedChange: function(blocked) {
+                    submitButton.disabled = blocked;
                 }
-                window.alert((options.title ? options.title + '\n' : '') + (options.text || ''));
-                return Promise.resolve({
-                    isConfirmed: true
-                });
-            }
+            }) : null;
 
-            function runCode(row, button) {
-                var type = row.getAttribute('data-code-type');
-                var body = new URLSearchParams();
-                body.append('type', type);
-
-                button.disabled = true;
-                fetch('ajax_customer_run_code.php', {
-                        method: 'POST',
-                        body: body
-                    })
-                    .then(function(response) {
-                        return response.json();
-                    })
-                    .then(function(result) {
-                        if (!result.success) {
-                            throw new Error(result.message || 'รันรหัสลูกค้าไม่สำเร็จ');
-                        }
-                        row.querySelector('.js-code-value').value = result.code;
-                        row.querySelector('.js-code-display').value = result.code;
-                        notify({
-                            icon: 'success',
-                            title: 'รันรหัสลูกค้าแล้ว',
-                            text: codeLabels[type] + ': ' + result.code + ' (บันทึกจริงตอนกดบันทึก หากเลขนี้ถูกใช้ไปก่อน ระบบจะรันเลขใหม่ให้อัตโนมัติ)'
-                        });
-                    })
-                    .catch(function(error) {
-                        notify({
-                            icon: 'error',
-                            title: 'เกิดข้อผิดพลาด',
-                            text: error.message || 'รันรหัสลูกค้าไม่สำเร็จ'
-                        });
-                    })
-                    .finally(function() {
-                        button.disabled = false;
-                    });
-            }
-
-            document.querySelectorAll('.js-code-run').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    var row = button.closest('.js-code-row');
-                    var codeInput = row.querySelector('.js-code-value');
-                    var savedCode = codeInput.getAttribute('data-saved-code') || '';
-
-                    // ถามเฉพาะตอนจะทับรหัสที่บันทึกในฐานแล้ว เลขที่เพิ่งรันในหน้านี้กดซ้ำได้เลย
-                    if (savedCode === '' || codeInput.value.trim() !== savedCode) {
-                        runCode(row, button);
-                        return;
+            // ลำดับเดียวกับ customer_add.php: ฟิลด์บังคับ (กรอบแดงทุกช่องที่ว่าง) → รูปแบบ E-mail → รอตรวจรหัสลูกค้า
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                if (!soValidateRequired(form)) return;
+                if (!validateBillingEmail()) return;
+                var codesReady = billingCodes ? billingCodes.prepareSubmit() : Promise.resolve(true);
+                codesReady.then(function(ready) {
+                    if (ready) {
+                        HTMLFormElement.prototype.submit.call(form);
                     }
-
-                    var type = row.getAttribute('data-code-type');
-                    var safeCode = savedCode.replace(/[&<>"']/g, '');
-                    if (!window.Swal) {
-                        if (window.confirm('รัน' + codeLabels[type] + 'ใหม่?\nรหัสเดิม ' + safeCode + ' จะถูกแทนที่เมื่อกดบันทึก')) {
-                            runCode(row, button);
-                        }
-                        return;
-                    }
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'รัน' + codeLabels[type] + 'ใหม่?',
-                        html: 'รหัสเดิม <b>' + safeCode + '</b> จะถูกแทนที่เมื่อกดบันทึก<br>เอกสารเดิมที่อ้างรหัสนี้จะไม่ถูกแก้ไข',
-                        showCancelButton: true,
-                        confirmButtonText: 'รันรหัสใหม่',
-                        cancelButtonText: 'ยกเลิก',
-                        confirmButtonColor: '#612989'
-                    }).then(function(choice) {
-                        if (choice.isConfirmed) {
-                            runCode(row, button);
-                        }
-                    });
                 });
             });
         })();

@@ -6,6 +6,7 @@
 
 include('head.php');
 include('dbconnect_sale.php');
+include('customer_code_lib.php');
 
 function fetchRows($connection, $sql)
 {
@@ -450,6 +451,31 @@ if (empty($billingRecords)) {
     );
 }
 
+// รหัส AWL/NBM ของการ์ดออกบิล (customer_code_lib.php + js/billing-customer-codes.js)
+// แก้ไขลูกค้า: ใช้รหัสเดิมตาม customer_id + เลขผู้เสียภาษี / เพิ่มลูกค้า: ไม่ค้นในฐาน ใช้ร่วมกันเฉพาะการ์ดในฟอร์ม
+// ลูกค้าที่ยังไม่มีแถวบิล การ์ดแรกแสดงจาก tb_customer และอ้างรหัสเดิมผ่านแหล่ง customer:<id>
+$codeCustomer = $isEditMode ? customer_code_load_customer($conn, $customerId) : null;
+if (!$codeCustomer) {
+    $codeCustomer = customer_code_empty_customer();
+}
+$billingCodeViews = array();
+foreach ($billingRecords as $index => $billing) {
+    $recordId = isset($billing['id']) ? (int)$billing['id'] : 0;
+    $billingCodeViews[$index] = array(
+        'key' => $recordId > 0 ? 'r' . $recordId : 'c' . $index,
+        'record_id' => $recordId,
+        'view' => customer_code_card_view($codeCustomer, array(
+            'key' => $recordId > 0 ? 'r' . $recordId : 'c' . $index,
+            'number' => $index + 1,
+            'record_id' => $recordId,
+            'source_key' => ($isEditMode && $recordId === 0 && empty($codeCustomer['billings'])) ? 'customer:' . $customerId : '',
+            'tax' => customer_code_normalize_tax($billing['billing_tax_id'] ?? ''),
+            'awl' => '',
+            'nbm' => '',
+        ), $isEditMode),
+    );
+}
+
 if (empty($shippingRecords)) {
     $shippingRecords[] = array(
         'shipping_name' => $customerData['delivery_name'],
@@ -525,8 +551,8 @@ if (empty($shippingRecords)) {
                 <div class="customer-body">
                     <section class="section-block customer-main-section">
                         <div class="field-grid" id="customerAddressScope" data-address-scope>
-                            <div class="field">
-                                <label class="field-label" for="customer_name">ชื่อลูกค้า<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="customer_name">ชื่อลูกค้า<span class="required-mark">*</span></label>
                                 <div class="input-shell">
                                     <input type="text" name="customer_name" id="customer_name" class="form-input js-clearable" value="<?php echo h($customerData['customer_name']); ?>" autocomplete="off" placeholder="Customer name" required>
                                     <button type="button" class="field-clear" data-clear-target="customer_name" aria-label="ล้างค่า">&times;</button>
@@ -535,16 +561,16 @@ if (empty($shippingRecords)) {
                                 <div id="customer_name_msg" class="field-error"></div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="cus_tel">เบอร์โทร<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="cus_tel">เบอร์โทร<span class="required-mark">*</span></label>
                                 <div class="input-shell">
                                     <input type="text" name="cus_tel" id="cus_tel" class="form-input js-number-only js-clearable" value="<?php echo h($customerData['cus_tel']); ?>" inputmode="numeric" maxlength="15" placeholder="ใส่เฉพาะตัวเลข" required>
                                     <button type="button" class="field-clear" data-clear-target="cus_tel" aria-label="ล้างค่า">&times;</button>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="type_customer">ประเภทลูกค้า<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="type_customer">ประเภทลูกค้า<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="type_customer" id="type_customer" class="form-select" required>
                                         <option value="">Select</option>
@@ -555,8 +581,8 @@ if (empty($shippingRecords)) {
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="h_mode_name">กลุ่มลูกค้า<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="h_mode_name">กลุ่มลูกค้า<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="h_mode_name" id="h_mode_name" class="form-select" required>
                                         <option value="">Select</option>
@@ -570,16 +596,16 @@ if (empty($shippingRecords)) {
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="customer_code_display">รหัสสมาชิก (สถานะ)</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="customer_code_display">รหัสสมาชิก (สถานะ)</label>
                                 <div class="input-shell">
                                     <input type="text" id="customer_code_display" class="form-input" value="<?php echo h($customerData['customer_code'] !== '' ? $customerData['customer_code'] : 'Auto'); ?>" readonly>
                                 </div>
                                 <input type="hidden" name="customer_code" id="customer_code" value="<?php echo h($customerData['customer_code']); ?>">
                             </div>
 
-                            <div class="field">
-                                <label class="field-label">&nbsp;</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label">&nbsp;</label>
                                 <div class="tag-pair">
                                     <label class="tag-toggle<?php echo ($isEditMode && !empty($customerData['vip_ckk'])) ? ' is-active' : ''; ?><?php echo $isEditMode ? '' : ' is-disabled'; ?>" id="vip_toggle">
                                         <input type="checkbox" value="1" id="vip_ckk" name="vip_ckk" <?php echo ($isEditMode && !empty($customerData['vip_ckk'])) ? 'checked' : ''; ?> <?php echo $isEditMode ? '' : 'disabled'; ?>>
@@ -594,16 +620,16 @@ if (empty($shippingRecords)) {
                                 </div>
                             </div>
 
-                            <div class="field span-2">
-                                <label class="field-label" for="cus_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                            <div class="field span-2 so-field-group">
+                                <label class="field-label so-label" for="cus_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                 <div class="input-shell">
                                     <input type="text" name="cus_address" id="cus_address" class="form-input js-clearable" value="<?php echo h($customerData['cus_address']); ?>" placeholder="ใส่รายละเอียดที่อยู่" required>
                                     <button type="button" class="field-clear" data-clear-target="cus_address" aria-label="ล้างค่า">&times;</button>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="cus_province">จังหวัด<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="cus_province">จังหวัด<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="cus_province" id="cus_province" class="form-select" data-address-level="province" required>
                                         <option value="">Select</option>
@@ -615,22 +641,22 @@ if (empty($shippingRecords)) {
                             </div>
 
                             <!-- จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ผูกกันด้วย data-address-level ภายใน data-address-scope (JS: address cascade) -->
-                            <div class="field">
-                                <label class="field-label" for="cus_ampher">เขต/อำเภอ<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="cus_ampher">เขต/อำเภอ<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="cus_ampher" id="cus_ampher" class="form-select" data-address-level="district" required><?php echo addressDistrictOptions($customerAddress); ?></select>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="cus_addtum">แขวง/ตำบล<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="cus_addtum">แขวง/ตำบล<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="cus_addtum" id="cus_addtum" class="form-select" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($customerAddress); ?></select>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="cus_postcode">รหัสไปรษณีย์<span class="required-mark">*</span></label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="cus_postcode">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                                 <div class="select-shell">
                                     <select name="cus_postcode" id="cus_postcode" class="form-select" data-address-level="postcode" required><?php echo addressPostcodeOptions($customerAddress); ?></select>
                                 </div>
@@ -648,22 +674,27 @@ if (empty($shippingRecords)) {
                         <div id="billingCards" class="card-list">
                             <?php foreach ($billingRecords as $index => $billing) { ?>
                                 <?php
-                                // บิล 1 ใช้รหัสลูกค้าหลัก บิล 2+ ใช้รหัสของแถวนั้นเอง
-                                $billingCode = $index === 0 ? trim((string)$customerData['customer_code']) : trim((string)($billing['billing_code'] ?? ''));
-                                $billingCoden = $index === 0 ? trim((string)$customerData['customer_coden']) : trim((string)($billing['billing_coden'] ?? ''));
+                                // บิล 1 ใช้รหัสลูกค้าหลัก บิล 2+ ใช้รหัสของแถวนั้นเอง (customer_code_load_customer)
+                                $codeView = $billingCodeViews[$index]['view'];
+                                $billingCode = $codeView['codes']['awl'];
+                                $billingCoden = $codeView['codes']['nbm'];
                                 $billingAddressData = addressCascadeData($conn, $billing['billing_province'] ?? '', $billing['billing_ampher'] ?? '', $billing['billing_tumbon'] ?? '', $billing['billing_postcode'] ?? '');
                                 ?>
-                                <div class="sub-card billing-card" data-billing-index="<?php echo h($index); ?>" data-address-scope>
+                                <div class="sub-card billing-card js-billing-code-card" data-billing-index="<?php echo h($index); ?>" data-address-scope data-client-key="<?php echo h($billingCodeViews[$index]['key']); ?>" data-record-id="<?php echo h($billingCodeViews[$index]['record_id']); ?>" data-code-view="<?php echo customer_code_view_attr($codeView); ?>">
+                                    <!-- ตัวตนของการ์ด/แหล่งรหัส ส่งเรียงตามการ์ดคู่กับ billing_*[] ตัวบันทึกตรวจกับฐานใหม่เสมอ -->
+                                    <input type="hidden" class="js-code-client-key" name="billing_client_key[]" value="<?php echo h($billingCodeViews[$index]['key']); ?>">
+                                    <input type="hidden" class="js-code-record-id" name="billing_record_id[]" value="<?php echo h($billingCodeViews[$index]['record_id']); ?>">
+                                    <input type="hidden" class="js-code-source" name="billing_source_key[]" value="">
                                     <div class="sub-card-header">
                                         <h3 class="sub-card-title">ที่อยู่ออกบิล <?php echo h($index + 1); ?></h3>
                                     </div>
 
                                     <div class="field-grid">
-                                        <div class="field">
-                                            <label class="field-label">รหัสลูกค้า AWL</label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">รหัสลูกค้า AWL</label>
                                             <div class="code-run-row js-code-row" data-code-type="awl">
                                                 <div class="input-shell"><input type="text" class="form-input js-code-display" value="<?php echo h($billingCode !== '' ? $billingCode : 'Auto'); ?>" readonly></div>
-                                                <input type="hidden" class="js-code-value" name="billing_code[]" value="<?php echo h($billingCode); ?>" data-saved-code="<?php echo h($billingCode); ?>">
+                                                <input type="hidden" class="js-code-value" name="billing_code[]" value="<?php echo h($billingCode); ?>">
                                                 <button type="button" class="code-run-button js-code-run">
                                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                                         <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
@@ -677,11 +708,11 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">รหัสลูกค้า NBM</label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">รหัสลูกค้า NBM</label>
                                             <div class="code-run-row js-code-row" data-code-type="nbm">
                                                 <div class="input-shell"><input type="text" class="form-input js-code-display" value="<?php echo h($billingCoden !== '' ? $billingCoden : 'Auto'); ?>" readonly></div>
-                                                <input type="hidden" class="js-code-value" name="billing_coden[]" value="<?php echo h($billingCoden); ?>" data-saved-code="<?php echo h($billingCoden); ?>">
+                                                <input type="hidden" class="js-code-value" name="billing_coden[]" value="<?php echo h($billingCoden); ?>">
                                                 <button type="button" class="code-run-button js-code-run">
                                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                                         <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
@@ -695,48 +726,50 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">ชื่อในการออกบิล<span class="required-mark">*</span></label>
+                                        <div class="field code-status js-code-status" role="status" hidden></div>
+
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">ชื่อในการออกบิล<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable billing-name" name="billing_name[]" value="<?php echo h($billing['billing_name'] ?? ''); ?>" placeholder="Billing name" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" value="<?php echo h($billing['billing_tax_id'] ?? ''); ?>" inputmode="numeric" maxlength="20" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เบอร์โทร<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-number-only js-clearable billing-tel" name="billing_tel[]" value="<?php echo h($billing['billing_tel'] ?? ''); ?>" inputmode="numeric" maxlength="15" placeholder="Phone number" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">E-mail<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">E-mail<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="email" class="form-input js-clearable billing-email" name="billing_email[]" value="<?php echo h($billing['billing_email'] ?? ''); ?>" placeholder="email@example.com" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field span-2">
-                                            <label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                                        <div class="field span-2 so-field-group">
+                                            <label class="field-label so-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable billing-address" name="billing_address[]" value="<?php echo h($billing['billing_address'] ?? ''); ?>" placeholder="Billing address" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-province" name="billing_province[]" data-address-level="province" required>
                                                     <option value="">Select</option>
@@ -747,29 +780,29 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เขต/อำเภอ<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-ampher" name="billing_ampher[]" data-address-level="district" required><?php echo addressDistrictOptions($billingAddressData); ?></select>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">แขวง/ตำบล<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-tumbon" name="billing_tumbon[]" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($billingAddressData); ?></select>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-postcode" name="billing_postcode[]" data-address-level="postcode" required><?php echo addressPostcodeOptions($billingAddressData); ?></select>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เลือกสาขา</label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เลือกสาขา</label>
                                             <div class="select-shell">
                                                 <select class="form-select billing-branch-type" name="billing_branch_type[]">
                                                     <option value="">Select</option>
@@ -779,8 +812,8 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เลขที่สาขา</label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เลขที่สาขา</label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" value="<?php echo h($billing['billing_branch_no'] ?? ''); ?>" inputmode="numeric" maxlength="10" placeholder="Branch number">
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
@@ -828,16 +861,16 @@ if (empty($shippingRecords)) {
                                     </div>
 
                                     <div class="field-grid">
-                                        <div class="field">
-                                            <label class="field-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable shipping-name" name="shipping_name[]" value="<?php echo h($shipping['shipping_name'] ?? ''); ?>" placeholder="Contact name" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เบอร์โทร<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-number-only js-clearable shipping-tel" name="shipping_tel[]" value="<?php echo h($shipping['shipping_tel'] ?? ''); ?>" inputmode="numeric" maxlength="15" placeholder="Phone number" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
@@ -857,16 +890,16 @@ if (empty($shippingRecords)) {
                                             </button>
                                         </div>
 
-                                        <div class="field span-2">
-                                            <label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                                        <div class="field span-2 so-field-group">
+                                            <label class="field-label so-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                                             <div class="input-shell">
                                                 <input type="text" class="form-input js-clearable shipping-address" name="shipping_address[]" value="<?php echo h($shipping['shipping_address'] ?? ''); ?>" placeholder="Shipping address" required>
                                                 <button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">จังหวัด<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">จังหวัด<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select shipping-province" name="shipping_province[]" data-address-level="province" required>
                                                     <option value="">Select</option>
@@ -877,22 +910,22 @@ if (empty($shippingRecords)) {
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">เขต/อำเภอ<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select shipping-ampher" name="shipping_ampher[]" data-address-level="district" required><?php echo addressDistrictOptions($shippingAddressData); ?></select>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">แขวง/ตำบล<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select shipping-tumbon" name="shipping_tumbon[]" data-address-level="sub_district" required><?php echo addressSubDistrictOptions($shippingAddressData); ?></select>
                                             </div>
                                         </div>
 
-                                        <div class="field">
-                                            <label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
+                                        <div class="field so-field-group">
+                                            <label class="field-label so-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                                             <div class="select-shell">
                                                 <select class="form-select shipping-postcode" name="shipping_postcode[]" data-address-level="postcode" required><?php echo addressPostcodeOptions($shippingAddressData); ?></select>
                                             </div>
@@ -907,16 +940,16 @@ if (empty($shippingRecords)) {
                         <h2 class="section-title">ที่อยู่ผู้เช่า</h2>
                         <!-- ไม่บังคับกรอก ใบเช่า (register_suprental.php) ดึงไปเติมผ่าน data_rental_name.php -->
                         <div class="field-grid" data-address-scope>
-                            <div class="field span-2">
-                                <label class="field-label" for="rental_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน</label>
+                            <div class="field span-2 so-field-group">
+                                <label class="field-label so-label" for="rental_address">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน</label>
                                 <div class="input-shell">
                                     <input type="text" name="rental_address" id="rental_address" class="form-input js-clearable" value="<?php echo h($customerData['rental_address']); ?>" placeholder="ใส่รายละเอียดที่อยู่ผู้เช่า">
                                     <button type="button" class="field-clear" data-clear-target="rental_address" aria-label="ล้างค่า">&times;</button>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="rental_province">จังหวัด</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="rental_province">จังหวัด</label>
                                 <div class="select-shell">
                                     <select name="rental_province" id="rental_province" class="form-select" data-address-level="province">
                                         <option value="">Select</option>
@@ -927,22 +960,22 @@ if (empty($shippingRecords)) {
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="rental_ampher">เขต/อำเภอ</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="rental_ampher">เขต/อำเภอ</label>
                                 <div class="select-shell">
                                     <select name="rental_ampher" id="rental_ampher" class="form-select" data-address-level="district"><?php echo addressDistrictOptions($rentalAddress); ?></select>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="rental_addtum">แขวง/ตำบล</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="rental_addtum">แขวง/ตำบล</label>
                                 <div class="select-shell">
                                     <select name="rental_addtum" id="rental_addtum" class="form-select" data-address-level="sub_district"><?php echo addressSubDistrictOptions($rentalAddress); ?></select>
                                 </div>
                             </div>
 
-                            <div class="field">
-                                <label class="field-label" for="rental_postcode">รหัสไปรษณีย์</label>
+                            <div class="field so-field-group">
+                                <label class="field-label so-label" for="rental_postcode">รหัสไปรษณีย์</label>
                                 <div class="select-shell">
                                     <select name="rental_postcode" id="rental_postcode" class="form-select" data-address-level="postcode"><?php echo addressPostcodeOptions($rentalAddress); ?></select>
                                 </div>
@@ -956,7 +989,7 @@ if (empty($shippingRecords)) {
     <div class="field-grid">
         <div class="field span-3">
 
-            <label class="field-label">
+            <label class="field-label so-label">
                 เขตการขาย<span class="required-mark">*</span>
             </label>
 
@@ -1078,15 +1111,18 @@ if (empty($shippingRecords)) {
     </div>
 
     <template id="billingCardTemplate">
-        <div class="sub-card billing-card" data-billing-index="__INDEX__" data-address-scope>
+        <div class="sub-card billing-card js-billing-code-card" data-billing-index="__INDEX__" data-address-scope data-record-id="0">
+            <input type="hidden" class="js-code-client-key" name="billing_client_key[]" value="">
+            <input type="hidden" class="js-code-record-id" name="billing_record_id[]" value="0">
+            <input type="hidden" class="js-code-source" name="billing_source_key[]" value="">
             <div class="sub-card-header">
                 <h3 class="sub-card-title">ที่อยู่ออกบิล __NUMBER__</h3>
             </div>
             <div class="field-grid">
-                <div class="field"><label class="field-label">รหัสลูกค้า AWL</label>
+                <div class="field so-field-group"><label class="field-label so-label">รหัสลูกค้า AWL</label>
                     <div class="code-run-row js-code-row" data-code-type="awl">
                         <div class="input-shell"><input type="text" class="form-input js-code-display" value="Auto" readonly></div>
-                        <input type="hidden" class="js-code-value" name="billing_code[]" value="" data-saved-code="">
+                        <input type="hidden" class="js-code-value" name="billing_code[]" value="">
                         <button type="button" class="code-run-button js-code-run">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
@@ -1099,10 +1135,10 @@ if (empty($shippingRecords)) {
                         </button>
                     </div>
                 </div>
-                <div class="field"><label class="field-label">รหัสลูกค้า NBM</label>
+                <div class="field so-field-group"><label class="field-label so-label">รหัสลูกค้า NBM</label>
                     <div class="code-run-row js-code-row" data-code-type="nbm">
                         <div class="input-shell"><input type="text" class="form-input js-code-display" value="Auto" readonly></div>
-                        <input type="hidden" class="js-code-value" name="billing_coden[]" value="" data-saved-code="">
+                        <input type="hidden" class="js-code-value" name="billing_coden[]" value="">
                         <button type="button" class="code-run-button js-code-run">
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <rect x="2.5" y="4.5" width="19" height="15" rx="3.5"></rect>
@@ -1115,43 +1151,44 @@ if (empty($shippingRecords)) {
                         </button>
                     </div>
                 </div>
-                <div class="field"><label class="field-label">ชื่อในการออกบิล<span class="required-mark">*</span></label>
+                <div class="field code-status js-code-status" role="status" hidden></div>
+                <div class="field so-field-group"><label class="field-label so-label">ชื่อในการออกบิล<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable billing-name" name="billing_name[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">เลขประจำตัวผู้เสียภาษี<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tax-id" name="billing_tax_id[]" inputmode="numeric" maxlength="20" placeholder="ถ้าไม่มีข้อมูลใส่ศูนย์ 13 ตัว" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">เบอร์โทร<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-tel" name="billing_tel[]" inputmode="numeric" maxlength="15" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">E-mail<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">E-mail<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="email" class="form-input js-clearable billing-email" name="billing_email[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field span-2"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                <div class="field span-2 so-field-group"><label class="field-label so-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable billing-address" name="billing_address[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">จังหวัด<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-province" name="billing_province[]" data-address-level="province" required>
                             <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
-                <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">เขต/อำเภอ<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-ampher" name="billing_ampher[]" data-address-level="district" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">แขวง/ตำบล<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-tumbon" name="billing_tumbon[]" data-address-level="sub_district" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select billing-postcode" name="billing_postcode[]" data-address-level="postcode" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">เลือกสาขา</label>
+                <div class="field so-field-group"><label class="field-label so-label">เลือกสาขา</label>
                     <div class="select-shell"><select class="form-select billing-branch-type" name="billing_branch_type[]">
                             <option value="">Select</option>
                             <option value="1">สำนักงานใหญ่</option>
                             <option value="2">สาขา</option>
                         </select></div>
                 </div>
-                <div class="field"><label class="field-label">เลขที่สาขา</label>
+                <div class="field so-field-group"><label class="field-label so-label">เลขที่สาขา</label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable billing-branch-no" name="billing_branch_no[]" inputmode="numeric" maxlength="10"><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field field-action">
@@ -1182,10 +1219,10 @@ if (empty($shippingRecords)) {
                 <h3 class="sub-card-title">ที่อยู่จัดส่ง __NUMBER__</h3>
             </div>
             <div class="field-grid">
-                <div class="field"><label class="field-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">ชื่อผู้ติดต่อ<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable shipping-name" name="shipping_name[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">เบอร์โทร<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">เบอร์โทร<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-number-only js-clearable shipping-tel" name="shipping_tel[]" inputmode="numeric" maxlength="15" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
                 <div class="field field-action">
@@ -1201,21 +1238,21 @@ if (empty($shippingRecords)) {
                         ลบข้อมูล
                     </button>
                 </div>
-                <div class="field span-2"><label class="field-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
+                <div class="field span-2 so-field-group"><label class="field-label so-label">ที่อยู่ เลขที่/ตรอก/ซอย/ถนน<span class="required-mark">*</span></label>
                     <div class="input-shell"><input type="text" class="form-input js-clearable shipping-address" name="shipping_address[]" required><button type="button" class="field-clear" aria-label="ล้างค่า">&times;</button></div>
                 </div>
-                <div class="field"><label class="field-label">จังหวัด<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">จังหวัด<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select shipping-province" name="shipping_province[]" data-address-level="province" required>
                             <option value="">Select</option><?php foreach ($provinces as $province) { ?><option value="<?php echo h($province['province_name']); ?>"><?php echo h($province['province_name']); ?></option><?php } ?>
                         </select></div>
                 </div>
-                <div class="field"><label class="field-label">เขต/อำเภอ<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">เขต/อำเภอ<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select shipping-ampher" name="shipping_ampher[]" data-address-level="district" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">แขวง/ตำบล<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">แขวง/ตำบล<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select shipping-tumbon" name="shipping_tumbon[]" data-address-level="sub_district" required><option value="">Select</option></select></div>
                 </div>
-                <div class="field"><label class="field-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
+                <div class="field so-field-group"><label class="field-label so-label">รหัสไปรษณีย์<span class="required-mark">*</span></label>
                     <div class="select-shell"><select class="form-select shipping-postcode" name="shipping_postcode[]" data-address-level="postcode" required><option value="">Select</option></select></div>
                 </div>
             </div>
@@ -1287,109 +1324,11 @@ if (empty($shippingRecords)) {
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- ฟิลด์บังคับ = .so-label ที่มี <span>*</span> ใน .so-field-group (การ์ดที่เพิ่มจาก template ด้วย) ตรวจด้วย soValidateRequired() -->
+    <script src="js/so-required-fields.js?v=<?php echo filemtime(__DIR__ . '/js/so-required-fields.js'); ?>"></script>
+    <!-- รหัส AWL/NBM ของการ์ดออกบิล: ใช้รหัสเดิมตาม customer_id + tax / ลูกค้าใหม่ใช้ร่วมกันเฉพาะการ์ด tax เดียวกันในฟอร์ม -->
+    <script src="js/billing-customer-codes.js?v=<?php echo filemtime(__DIR__ . '/js/billing-customer-codes.js'); ?>"></script>
     <script>
-        (function() {
-            // การ์ดที่อยู่ออกบิลแต่ละใบรันรหัส AWL (billing_code[]) และ NBM (billing_coden[]) ของตัวเอง ชุดเลขแยกกัน
-            // บิล 1 = รหัสลูกค้าหลัก บันทึกจริง + เช็คซ้ำตอนกดบันทึกฟอร์ม ผูก event แบบ delegation ให้ครอบคลุมการ์ดที่เพิ่มทีหลัง
-            var codeLabels = {
-                awl: "รหัสลูกค้า AWL",
-                nbm: "รหัสลูกค้า NBM"
-            };
-
-            function cardCodeInputs(row) {
-                return {
-                    display: row.querySelector(".js-code-display"),
-                    value: row.querySelector(".js-code-value")
-                };
-            }
-
-            function setCardCode(row, code) {
-                var inputs = cardCodeInputs(row);
-                inputs.value.value = code;
-                inputs.display.value = code !== "" ? code : "Auto";
-
-                // รหัส AWL ของใบหลักคือ tb_customer.customer_code (ใบหลักขึ้นเป็นบิล 1 ตอนบันทึก) ให้ช่องรหัสด้านบนตรงกัน
-                var primaryToggle = document.querySelector("#billingCards .billing-primary:checked");
-                var primaryCard = primaryToggle ? primaryToggle.closest(".billing-card") : document.querySelector("#billingCards .billing-card");
-                if (row.dataset.codeType === "awl" && row.closest(".billing-card") === primaryCard) {
-                    document.getElementById("customer_code").value = code;
-                    document.getElementById("customer_code_display").value = code !== "" ? code : "Auto";
-                }
-            }
-
-            function runCode(row, button) {
-                var type = row.dataset.codeType;
-                var body = new URLSearchParams();
-                body.append("type", type);
-                document.querySelectorAll('#billingCards .js-code-row[data-code-type="' + type + '"] .js-code-value').forEach(function(input) {
-                    if (input.closest(".js-code-row") !== row && input.value.trim() !== "") {
-                        body.append("exclude[]", input.value.trim());
-                    }
-                });
-
-                button.disabled = true;
-                fetch("ajax_customer_run_code.php", {
-                        method: "POST",
-                        body: body
-                    })
-                    .then(function(response) {
-                        return response.json();
-                    })
-                    .then(function(result) {
-                        if (!result.success) {
-                            throw new Error(result.message || "รันรหัสลูกค้าไม่สำเร็จ");
-                        }
-                        setCardCode(row, result.code);
-                        Swal.fire({
-                            icon: "success",
-                            title: "รันรหัสลูกค้าแล้ว",
-                            text: codeLabels[type] + ": " + result.code + " (บันทึกจริงตอนกดบันทึก หากเลขนี้ถูกใช้ไปก่อน ระบบจะรันเลขใหม่ให้อัตโนมัติ)"
-                        });
-                    })
-                    .catch(function(error) {
-                        Swal.fire({
-                            icon: "error",
-                            title: "เกิดข้อผิดพลาด",
-                            text: error.message || "รันรหัสลูกค้าไม่สำเร็จ"
-                        });
-                    })
-                    .finally(function() {
-                        button.disabled = false;
-                    });
-            }
-
-            document.addEventListener("click", function(event) {
-                var button = event.target.closest(".js-code-run");
-                if (!button) {
-                    return;
-                }
-
-                var row = button.closest(".js-code-row");
-                var codeInput = cardCodeInputs(row).value;
-                var savedCode = codeInput.dataset.savedCode || "";
-
-                // ถามเฉพาะตอนจะทับรหัสที่บันทึกในฐานแล้ว เลขที่เพิ่งรันในหน้านี้กดซ้ำได้เลย
-                if (savedCode === "" || codeInput.value.trim() !== savedCode) {
-                    runCode(row, button);
-                    return;
-                }
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "รัน" + codeLabels[row.dataset.codeType] + "ใหม่?",
-                    html: "รหัสเดิม <b>" + savedCode.replace(/[&<>"']/g, "") + "</b> จะถูกแทนที่เมื่อกดบันทึก<br>เอกสารเดิมที่อ้างรหัสนี้จะไม่ถูกแก้ไข",
-                    showCancelButton: true,
-                    confirmButtonText: "รันรหัสใหม่",
-                    cancelButtonText: "ยกเลิก",
-                    confirmButtonColor: "#612989"
-                }).then(function(choice) {
-                    if (choice.isConfirmed) {
-                        runCode(row, button);
-                    }
-                });
-            });
-        })();
-
         // address cascade: จังหวัด → เขต/อำเภอ → แขวง/ตำบล → รหัสไปรษณีย์ ใช้ร่วมกันทั้งที่อยู่ลูกค้า การ์ดออกบิล และการ์ดจัดส่ง
         // แต่ละชุดอยู่ใน [data-address-scope] และระบุชั้นด้วย data-address-level ผูก event แบบ delegation ให้ครอบคลุมการ์ดที่เพิ่มทีหลัง
         // เปลี่ยนชั้นบนล้างชั้นล่าง รหัสไปรษณีย์มาจากตำบลที่เลือกเท่านั้น
@@ -1557,6 +1496,12 @@ if (empty($shippingRecords)) {
             var confirmPopupResolver = null;
             var deleteConfirmPopup = document.getElementById("deleteConfirmPopup");
             var deleteConfirmPopupResolver = null;
+            var billingCodes = null;
+
+            // ทุกทางที่แก้การ์ดออกบิลด้วย JS ต้องให้ตัวควบคุมรหัสตรวจ state ใหม่ ไม่พึ่ง input event
+            function reconcileBillingCodes() {
+                if (billingCodes) billingCodes.reconcile();
+            }
 
             function bindClearables(scope) {
                 scope.querySelectorAll(".field-clear").forEach(function(button) {
@@ -1577,6 +1522,7 @@ if (empty($shippingRecords)) {
                         target.dispatchEvent(new Event("input", {
                             bubbles: true
                         }));
+                        if (billingCards.contains(target)) reconcileBillingCodes();
                         target.focus();
                     });
                     sync();
@@ -1641,6 +1587,15 @@ if (empty($shippingRecords)) {
                 return checked ? checked.closest(".billing-card") : billingCards.querySelector(".billing-card");
             }
 
+            // ช่องรหัสด้านบนคือรหัส AWL ของใบหลัก (ใบหลักขึ้นเป็นบิล 1 = tb_customer.customer_code ตอนบันทึก)
+            function syncPrimaryCustomerCode() {
+                var primaryCard = getPrimaryBillingCard();
+                if (!primaryCard) return;
+                var primaryCode = primaryCard.querySelector('.js-code-row[data-code-type="awl"] .js-code-value').value.trim();
+                document.getElementById("customer_code").value = primaryCode;
+                document.getElementById("customer_code_display").value = primaryCode !== "" ? primaryCode : "Auto";
+            }
+
             // ใบหลักมีได้ใบเดียวเสมอ กดซ้ำใบที่เป็นหลักอยู่จึงไม่หลุด
             function setPrimaryBillingCard(primaryCard) {
                 if (!primaryCard) return;
@@ -1650,11 +1605,8 @@ if (empty($shippingRecords)) {
                     toggle.checked = card === primaryCard;
                     toggle.closest(".billing-primary-toggle").classList.toggle("is-active", toggle.checked);
                 });
-
-                // ช่องรหัสด้านบนคือรหัส AWL ของใบหลัก
-                var primaryCode = primaryCard.querySelector('.js-code-row[data-code-type="awl"] .js-code-value').value.trim();
-                document.getElementById("customer_code").value = primaryCode;
-                document.getElementById("customer_code_display").value = primaryCode !== "" ? primaryCode : "Auto";
+                reconcileBillingCodes();
+                syncPrimaryCustomerCode();
             }
 
             function updateTitles() {
@@ -1670,13 +1622,16 @@ if (empty($shippingRecords)) {
                 });
             }
 
+            // Sale ล็อกเขตของตัวเอง ไม่มี dropdown เขตการขาย (saleCodeSelect = null)
             function updateSaleCodeSummary() {
+                if (!saleCodeSelect) return;
                 var checked = saleCodeSelect.querySelectorAll("input[type='checkbox']:checked");
                 var values = Array.prototype.map.call(checked, function(input) {
                     return input.value;
                 });
                 saleCodeSummary.value = values.length ? values.join(", ") : "Select";
                 saleCodeError.textContent = "";
+                if (values.length) soClearFieldInvalid(saleCodeSummary);
             }
 
             function setActivePill(button, groupSelector) {
@@ -1716,6 +1671,7 @@ if (empty($shippingRecords)) {
                 billingCards.insertAdjacentHTML("beforeend", billingTemplate.replace(/__INDEX__/g, count).replace(/__NUMBER__/g, count + 1));
                 bindDynamic(billingCards.lastElementChild);
                 updateTitles();
+                reconcileBillingCodes();
             }
 
             function appendShippingCard() {
@@ -1740,6 +1696,7 @@ if (empty($shippingRecords)) {
                 });
                 document.getElementById("legacy_ckk_1").value = "1";
                 syncClearStates(document);
+                reconcileBillingCodes();
             }
 
             function copyCustomerToShipping() {
@@ -1798,14 +1755,35 @@ if (empty($shippingRecords)) {
                 }
             }
 
+            // กล่องสรุปแสดง "Select" ตอนไม่เลือก (ไม่ว่าง) จึงมาร์กด้วย soMarkFieldInvalid ไม่ให้ตัววนเช็คของ so-required-fields.js ล้างกรอบแดงเอง
+            // ล้างเมื่อติ๊กเขตใน updateSaleCodeSummary()
             function validateSaleCodes() {
+                if (!saleCodeSelect) return true;
                 var checked = saleCodeSelect.querySelectorAll("input[type='checkbox']:checked");
                 if (!checked.length) {
                     saleCodeError.textContent = "กรุณาเลือกเขตการขายอย่างน้อย 1 รายการ";
+                    soMarkFieldInvalid(saleCodeSummary);
                     return false;
                 }
                 saleCodeError.textContent = "";
+                soClearFieldInvalid(saleCodeSummary);
                 return true;
+            }
+
+            // E-mail ที่กรอกแล้วแต่ผิดรูปแบบ ทุกการ์ดออกบิล: กรอบแดงค้างจนกว่าจะแก้ค่า (กรณีว่างถูก soValidateRequired() จับไปก่อนแล้ว)
+            function validateBillingEmails() {
+                var invalidInputs = [];
+                billingCards.querySelectorAll(".billing-email").forEach(function(input) {
+                    input.value = input.value.trim();
+                    if (input.value !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
+                        soMarkFieldInvalid(input);
+                        invalidInputs.push(input);
+                    }
+                });
+                if (!invalidInputs.length) return true;
+                soRevealField(invalidInputs[0]);
+                Swal.fire("แจ้งเตือน", "รูปแบบ E-mail ไม่ถูกต้อง", "warning");
+                return false;
             }
 
             function validateBranchNumbers() {
@@ -2062,6 +2040,8 @@ if (empty($shippingRecords)) {
                                 setPrimaryBillingCard(billingCards.querySelector(".billing-card"));
                             }
                             updateTitles();
+                            // ยกเลิกคำขอค้างของการ์ดที่ลบ ย้ายตัวควบคุมกลุ่มไปการ์ดที่เหลือ
+                            reconcileBillingCodes();
                         }
                     }
                 }
@@ -2082,19 +2062,22 @@ if (empty($shippingRecords)) {
                 }
             });
 
-            saleCodeSummary.addEventListener("click", function() {
-                saleCodeSelect.classList.toggle("is-open");
-            });
+            // เดิมไม่เช็ค null: ผู้ใช้ Sale (ไม่มี dropdown) throw ตรงนี้ ทำให้ submit handler ด้านล่างไม่ถูกผูก
+            if (saleCodeSelect) {
+                saleCodeSummary.addEventListener("click", function() {
+                    saleCodeSelect.classList.toggle("is-open");
+                });
 
-            document.addEventListener("click", function(event) {
-                if (!saleCodeSelect.contains(event.target)) {
-                    saleCodeSelect.classList.remove("is-open");
-                }
-            });
+                document.addEventListener("click", function(event) {
+                    if (!saleCodeSelect.contains(event.target)) {
+                        saleCodeSelect.classList.remove("is-open");
+                    }
+                });
 
-            saleCodeSelect.querySelectorAll("input[type='checkbox']").forEach(function(checkbox) {
-                checkbox.addEventListener("change", updateSaleCodeSummary);
-            });
+                saleCodeSelect.querySelectorAll("input[type='checkbox']").forEach(function(checkbox) {
+                    checkbox.addEventListener("change", updateSaleCodeSummary);
+                });
+            }
 
             document.getElementById("vip_ckk").addEventListener("change", updateVipState);
 
@@ -2110,28 +2093,41 @@ if (empty($shippingRecords)) {
             form.addEventListener("submit", function(event) {
                 event.preventDefault();
                 syncLegacyFields();
-                if (!validateSaleCodes()) return false;
                 if (!validateBranchNumbers()) {
                     alert("กรุณาระบุเลขที่สาขาให้ครบถ้วน");
                     return false;
                 }
-                if (!form.checkValidity()) {
-                    form.reportValidity();
+                // ฟิลด์บังคับทุกการ์ด + เขตการขาย กรอบแดงพร้อมกันในรอบเดียว แล้วเลื่อนไปช่องแรกของหน้า
+                // (soValidateRequired เลื่อนไปช่องของตัวเองแล้ว เขตการขายอยู่ท้ายฟอร์มจึงเลื่อนไปเมื่อเหลือแค่เขตการขาย)
+                var requiredOk = soValidateRequired(form);
+                var saleCodesOk = validateSaleCodes();
+                if (!requiredOk) return false;
+                if (!saleCodesOk) {
+                    soRevealField(saleCodeSummary);
                     return false;
                 }
-                openConfirmPopup({
-                    title: "ยืนยันการบันทึกข้อมูล",
-                    message: "ตรวจสอบข้อมูลเรียบร้อยแล้วใช่หรือไม่\nกด \"ยืนยัน\" เพื่อบันทึกข้อมูลลูกค้า",
-                    cancelText: "ยกเลิก",
-                    confirmText: "<?php echo $isEditMode ? 'ยืนยันการอัปเดต' : 'ยืนยันการบันทึก'; ?>"
+                if (!validateBillingEmails()) return false;
+                // รอตรวจรหัสลูกค้าที่ค้าง ไม่ให้บันทึกถ้าตรวจไม่สำเร็จหรือพบหลายชุดที่ยังไม่ได้เลือก
+                var codesReady = billingCodes ? billingCodes.prepareSubmit() : Promise.resolve(true);
+                codesReady.then(function(ready) {
+                    if (!ready) return false;
+                    return openConfirmPopup({
+                        title: "ยืนยันการบันทึกข้อมูล",
+                        message: "ตรวจสอบข้อมูลเรียบร้อยแล้วใช่หรือไม่\nกด \"ยืนยัน\" เพื่อบันทึกข้อมูลลูกค้า",
+                        cancelText: "ยกเลิก",
+                        confirmText: "<?php echo $isEditMode ? 'ยืนยันการอัปเดต' : 'ยืนยันการบันทึก'; ?>"
+                    });
                 }).then(function(submitConfirmed) {
                     if (submitConfirmed && nativeFormSubmit) {
                         // ฝั่งบันทึกถือบิลตำแหน่งแรกเป็นใบหลัก (รหัสลูกค้า + is_primary) จึงย้ายการ์ดใบหลักขึ้นบนสุดหลังยืนยันแล้วเท่านั้น
+                        // hidden ของรหัส/ตัวตนการ์ดอยู่ในการ์ด ย้ายไปพร้อมกัน arrays จึงเรียงตรงกัน
                         var primaryBilling = getPrimaryBillingCard();
                         if (primaryBilling && primaryBilling !== billingCards.firstElementChild) {
                             billingCards.insertBefore(primaryBilling, billingCards.firstElementChild);
                             updateTitles();
                         }
+                        reconcileBillingCodes();
+                        syncLegacyFields();
                         nativeFormSubmit.call(form);
                     }
                 });
@@ -2141,6 +2137,17 @@ if (empty($shippingRecords)) {
             updateTitles();
             updateSaleCodeSummary();
             updateVipState();
+
+            if (window.BillingCustomerCodes) {
+                billingCodes = window.BillingCustomerCodes.create({
+                    root: billingCards,
+                    cardSelector: ".js-billing-code-card",
+                    taxSelector: ".billing-tax-id",
+                    customerId: <?php echo $isEditMode ? (int)$customerId : 0; ?>,
+                    multi: true,
+                    onChange: syncPrimaryCustomerCode
+                });
+            }
         })();
     </script>
 </body>

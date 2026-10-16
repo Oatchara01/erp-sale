@@ -171,22 +171,58 @@ if (isset($_POST["submit"])) {
         exit();
     }
 
-    // รหัส AWL/NBM ที่รันไว้ในหน้าเพิ่มลูกค้ายังไม่ได้จอง: lock แล้วรันใหม่ถ้าเลขถูกใช้ไปแล้ว/ข้ามเดือน
-    // AWL: บิล 1 = tb_customer.customer_code, บิล 2+ = billing_code / NBM: บิล 1 = customer_coden, บิล 2+ = billing_coden
-    $billingCodes = customer_code_resolve_posted_codes($conn, 'awl', 0);
-    $billingCodens = $billingCodes === false ? false : customer_code_resolve_posted_codes($conn, 'nbm', 0);
-    if ($billingCodes === false || $billingCodens === false) {
-        echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง');history.back();</script>";
+    // เตรียมตาราง/คอลัมน์ก่อนเริ่มทรานแซกชัน (DDL commit ทรานแซกชันเอง)
+    if (!ensureCustomerChildTables($conn) || !customer_code_ensure_billing_column($conn, 'awl') || !customer_code_ensure_billing_column($conn, 'nbm')) {
+        echo "<script>alert('ไม่สามารถเตรียมตารางข้อมูลออกบิลได้');history.back();</script>";
         exit();
     }
-    $customer_code = isset($billingCodes[0]) ? $billingCodes[0] : '';
-    $customer_coden = isset($billingCodens[0]) ? $billingCodens[0] : '';
+
+    // การ์ดออกบิลที่จะบันทึกจริง (ข้ามการ์ดว่าง) ใบแรก = ใบหลัก
+    $postedBilling = customer_code_posted_billing_cards();
+    $billingCards = $postedBilling['cards'];
+
+    // รหัส AWL/NBM ที่รันไว้ในหน้าเพิ่มลูกค้ายังไม่ได้จอง: lock แล้วรันใหม่ถ้าเลขถูกใช้ไปแล้ว/ข้ามเดือน
+    // AWL: บิล 1 = tb_customer.customer_code, บิล 2+ = billing_code / NBM: บิล 1 = customer_coden, บิล 2+ = billing_coden
+    // ลูกค้าใหม่ไม่ค้นรหัสของลูกค้ารายอื่น การ์ดที่ tax เดียวกันในฟอร์มได้รหัสชุดเดียวกัน (customer_code_resolve_billing_cards)
+    $billingCodePairs = array();
+    if ($postedBilling['has_meta']) {
+        if (!customer_code_acquire_locks($conn)) {
+            echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง');history.back();</script>";
+            exit();
+        }
+    } else {
+        // ฟอร์มรุ่นก่อน (ไม่ส่ง billing_client_key[]) ใช้กติกาเดิมตามตำแหน่งการ์ด
+        $billingCodes = customer_code_resolve_posted_codes($conn, 'awl', 0);
+        $billingCodens = $billingCodes === false ? false : customer_code_resolve_posted_codes($conn, 'nbm', 0);
+        if ($billingCodes === false || $billingCodens === false) {
+            echo "<script>alert('ระบบกำลังรันรหัสลูกค้าให้ผู้ใช้อื่น กรุณากดบันทึกอีกครั้ง');history.back();</script>";
+            exit();
+        }
+        foreach ($billingCards as $position => $card) {
+            $billingCodePairs[$position] = customer_code_pair($billingCodes[$card['index']] ?? '', $billingCodens[$card['index']] ?? '');
+        }
+        $customer_code = isset($billingCodes[0]) ? $billingCodes[0] : '';
+        $customer_coden = isset($billingCodens[0]) ? $billingCodens[0] : '';
+    }
 
     mysqli_begin_transaction($conn);
     $allOk = true;
+    $codeErrorMessage = '';
 
-    if (!ensureCustomerChildTables($conn)) {
-        $allOk = false;
+    if ($postedBilling['has_meta']) {
+        try {
+            $resolution = customer_code_resolve_billing_cards($conn, customer_code_empty_customer(), $billingCards);
+        } catch (mysqli_sql_exception $e) {
+            $resolution = array('ok' => false, 'message' => 'ตรวจสอบรหัสลูกค้าไม่สำเร็จ กรุณากดบันทึกอีกครั้ง');
+        }
+        if ($resolution['ok']) {
+            $billingCodePairs = $resolution['codes'];
+            $customer_code = isset($billingCodePairs[0]) ? $billingCodePairs[0]['awl'] : '';
+            $customer_coden = isset($billingCodePairs[0]) ? $billingCodePairs[0]['nbm'] : '';
+        } else {
+            $allOk = false;
+            $codeErrorMessage = $resolution['message'];
+        }
     }
 
     if ($allOk) {
@@ -216,25 +252,12 @@ if (isset($_POST["submit"])) {
     }
 
     if ($allOk && $customer_id > 0) {
-        $billingCount = max(
-            count($billingNames),
-            count($billingAddresses),
-            count($billingProvinces),
-            count($billingTaxIds),
-            count($billingTels),
-            count($billingEmails),
-            count($billingBranchTypes),
-            count($billingBranchNos)
-        );
-
-        for ($i = 0; $i < $billingCount; $i++) {
+        // การ์ดว่างถูกข้ามไปแล้วใน customer_code_posted_billing_cards: ใบหลักและ billing_index นับเฉพาะการ์ดที่บันทึกจริง
+        foreach ($billingCards as $position => $billingCard) {
+            $i = $billingCard['index'];
             $billingName = isset($billingNames[$i]) ? normalizeThaiName($billingNames[$i]) : '';
             $billingAddress = isset($billingAddresses[$i]) ? trim($billingAddresses[$i]) : '';
             $billingProvince = isset($billingProvinces[$i]) ? trim($billingProvinces[$i]) : '';
-
-            if ($billingName === '' && $billingAddress === '' && $billingProvince === '') {
-                continue;
-            }
 
             $billingTaxId = isset($billingTaxIds[$i]) ? preg_replace('/[^0-9]/', '', $billingTaxIds[$i]) : '';
             $billingTel = isset($billingTels[$i]) ? preg_replace('/[^0-9]/', '', $billingTels[$i]) : '';
@@ -247,10 +270,10 @@ if (isset($_POST["submit"])) {
             if ($billingBranchType === '1' && $billingBranchNo === '') {
                 $billingBranchNo = '00000';
             }
-            $isPrimary = ($i === 0) ? 1 : 0;
-            $billingIndex = $i + 1;
-            $billingCode = isset($billingCodes[$i]) ? $billingCodes[$i] : '';
-            $billingCoden = isset($billingCodens[$i]) ? $billingCodens[$i] : '';
+            $isPrimary = ($position === 0) ? 1 : 0;
+            $billingIndex = $position + 1;
+            $billingCode = isset($billingCodePairs[$position]) ? $billingCodePairs[$position]['awl'] : '';
+            $billingCoden = isset($billingCodePairs[$position]) ? $billingCodePairs[$position]['nbm'] : '';
 
             $billingInsert = "INSERT INTO tb_customer_billing_address
             (customer_id, billing_index, billing_code, billing_coden, billing_preface_name, billing_name, billing_tax_id, billing_tel, billing_email, billing_address, billing_ampher, billing_tumbon, billing_province, billing_postcode, billing_branch_type, billing_branch_no, is_primary)
@@ -302,6 +325,7 @@ if (isset($_POST["submit"])) {
 
     if ($allOk) {
         mysqli_commit($conn);
+        customer_code_release_locks($conn);
         echo "<script language=\"JavaScript\">";
         echo "window.location='customer_add.php?customer_id=" . (int)$customer_id . "&success=created'";
         echo "</script>";
@@ -311,7 +335,12 @@ if (isset($_POST["submit"])) {
         echo "</script>";
     } else {
         mysqli_rollback($conn);
+        customer_code_release_locks($conn);
         $errorMessage = mysqli_error($conn);
+        if ($codeErrorMessage !== '') {
+            echo "<script>alert(" . json_encode($codeErrorMessage, JSON_UNESCAPED_UNICODE) . ");history.back();</script>";
+            exit();
+        }
         echo "<script language=\"JavaScript\">";
         echo "alert('ไม่สามารถบันทึกข้อมูลได้: " . addslashes($errorMessage) . "');history.back();";
         echo "</script>";
