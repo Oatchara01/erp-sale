@@ -2932,8 +2932,10 @@ include("head.php"); ?>
 						<div class="so-field-group">
 							<label class="so-label" for="slip_upload">หลักฐานการโอนเงิน</label>
 							<div class="so-file-upload">
-								<label for="slip_upload" class="so-input" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: #333333;">
-									<span id="file_name_display"><?php echo ($savedSo !== null && !empty($savedSo['slip1'])) ? so_saved_h($savedSo['slip1']) : 'Choose File'; ?></span>
+								<!-- ลิงก์ชื่อไฟล์/ปุ่มลบอยู่ใน label ได้ เพราะคลิกบน a/button จะไม่เปิดหน้าต่างเลือกไฟล์ — renderSlip1Display() วาดใหม่ทุกครั้ง -->
+								<label for="slip_upload" class="so-input" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; color: #333333;">
+									<span id="file_name_display" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?php if ($savedSo !== null && !empty($savedSo['slip1'])) { ?><a href="upload/<?php echo so_saved_h(rawurlencode($savedSo['slip1'])); ?>" target="_blank" rel="noopener" style="color: #612989; text-decoration: underline;"><?php echo so_saved_h($savedSo['slip1']); ?></a><?php } else { ?>Choose File<?php } ?></span>
+									<button type="button" id="slip1_remove_btn" onclick="removeSlip1()" aria-label="ลบไฟล์หลักฐานการโอนเงิน" style="display: <?php echo ($savedSo !== null && !empty($savedSo['slip1'])) ? 'inline-block' : 'none'; ?>; background: none; border: 0; padding: 0; cursor: pointer; color: #DC3545; line-height: 1;"><i class="far fa-trash-alt" style="font-size: 16px;"></i></button>
 									<i class="far fa-image" style="color: #333333; font-size: 18px;"></i>
 								</label>
 								<input type="file" id="slip_upload" style="display: none;" onchange="syncSlipUploadToSlip1(this)">
@@ -3913,15 +3915,76 @@ include("head.php"); ?>
 					// addDeptComment/syncDeptComments/restoreDeptComments now live in js/doc-tabs-dept-comment.js
 
 					// === Attach Files JS (triggerAttachFile/handleFileSelect/renderFileList/removeFile/removeExistingFile now live in js/doc-tabs-attach.js) ===
-					function syncSlipUploadToSlip1(input) {
+					// สลิปที่บันทึกไว้ใน DB — ใช้คืนค่าเมื่อยกเลิกไฟล์ใหม่ที่เลือกมาแทน (ล้างเป็นค่าว่างเมื่อผู้ใช้กดลบสลิปเดิม)
+					let soSlip1SavedName = <?php echo json_encode(($savedSo !== null) ? (string)($savedSo['slip1'] ?? '') : '', JSON_UNESCAPED_UNICODE); ?>;
+					let soSlip1PreviewFile = null;
+					let soSlip1PreviewUrl = '';
+
+					// วาดช่องหลักฐานการโอนเงิน: ไฟล์ใหม่ (ยังไม่บันทึก) เปิดจากเครื่องผู้ใช้ผ่าน blob URL, สลิปเดิมเปิดจาก upload/
+					// renderFileList() ใน js/doc-tabs-attach.js เรียกฟังก์ชันนี้แทนการเขียนชื่อไฟล์เป็นข้อความ
+					function renderSlip1Display() {
 						const fileNameDisplay = document.getElementById('file_name_display');
+						const removeBtn = document.getElementById('slip1_remove_btn');
+						const slip1Input = document.getElementById('hidden_slip1');
+						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
+						if (!fileNameDisplay) return;
+
+						const newFile = (slip1Input && slip1Input.files && slip1Input.files[0]) ? slip1Input.files[0] : null;
+						if (newFile !== soSlip1PreviewFile) {
+							if (soSlip1PreviewUrl) URL.revokeObjectURL(soSlip1PreviewUrl);
+							soSlip1PreviewFile = newFile;
+							soSlip1PreviewUrl = newFile ? URL.createObjectURL(newFile) : '';
+						}
+
+						let fileName = '';
+						let fileHref = '';
+						if (newFile) {
+							fileName = newFile.name;
+							fileHref = soSlip1PreviewUrl;
+						} else if (slip1HiddenVal && slip1HiddenVal.value) {
+							fileName = slip1HiddenVal.value;
+							fileHref = 'upload/' + encodeURIComponent(slip1HiddenVal.value);
+						}
+
+						fileNameDisplay.textContent = '';
+						if (fileName) {
+							const link = document.createElement('a');
+							link.href = fileHref;
+							link.target = '_blank';
+							link.rel = 'noopener';
+							link.textContent = fileName;
+							link.style.cssText = 'color: #612989; text-decoration: underline;';
+							fileNameDisplay.appendChild(link);
+						} else {
+							fileNameDisplay.textContent = 'Choose File';
+						}
+						if (removeBtn) {
+							removeBtn.style.display = fileName ? 'inline-block' : 'none';
+						}
+					}
+
+					// ถังขยะ: ถ้ามีไฟล์ใหม่ = ยกเลิกไฟล์ใหม่แล้วกลับไปใช้สลิปเดิม, ถ้าไม่มี = ลบสลิปเดิม (มีผลเมื่อกดบันทึก ไฟล์ใน upload/ ยังอยู่)
+					function removeSlip1() {
+						const slip1Input = document.getElementById('hidden_slip1');
+						const slipUploadInput = document.getElementById('slip_upload');
+						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
+						const hadNewFile = !!(slip1Input && slip1Input.files && slip1Input.files.length > 0);
+
+						if (slip1Input) slip1Input.value = '';
+						if (slipUploadInput) slipUploadInput.value = '';
+						if (!hadNewFile) soSlip1SavedName = '';
+						if (slip1HiddenVal) slip1HiddenVal.value = soSlip1SavedName;
+
+						renderFileList();
+					}
+
+					function syncSlipUploadToSlip1(input) {
 						const slip1Input = document.getElementById('hidden_slip1');
 						const slip1HiddenVal = document.getElementById('hidden_slip_val1');
 						const maxFileSize = 1100000;
 
-						fileNameDisplay.textContent = input.files && input.files[0] ? input.files[0].name : 'Choose File';
-
 						if (!slip1Input) {
+							renderSlip1Display();
 							return;
 						}
 
@@ -3930,9 +3993,8 @@ include("head.php"); ?>
 								input.value = '';
 								slip1Input.value = '';
 								if (slip1HiddenVal) {
-									slip1HiddenVal.value = '';
+									slip1HiddenVal.value = soSlip1SavedName;
 								}
-								fileNameDisplay.textContent = 'Choose File';
 								if (typeof Swal !== 'undefined') {
 									Swal.fire({
 										icon: 'warning',
@@ -3953,7 +4015,11 @@ include("head.php"); ?>
 								slip1HiddenVal.value = '';
 							}
 						} else {
+							// ยกเลิกหน้าต่างเลือกไฟล์ = ไม่มีไฟล์ใหม่ กลับไปใช้สลิปเดิม (ถ้ายังไม่ถูกลบ)
 							slip1Input.value = '';
+							if (slip1HiddenVal) {
+								slip1HiddenVal.value = soSlip1SavedName;
+							}
 						}
 
 						renderFileList();

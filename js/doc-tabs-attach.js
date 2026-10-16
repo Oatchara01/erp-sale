@@ -88,7 +88,10 @@ function renderFileList() {
 	const slip1HiddenVal = document.getElementById('hidden_slip_val1');
 	list.innerHTML = '';
 
-	if (fileNameDisplay) {
+	// register_suphos.php วาดช่องหลักฐานการโอนเงินเอง (ลิงก์เปิดไฟล์ + ปุ่มลบ); หน้าอื่นยังแสดงชื่อไฟล์เป็นข้อความ
+	if (typeof renderSlip1Display === 'function') {
+		renderSlip1Display();
+	} else if (fileNameDisplay) {
 		if (slip1Input && slip1Input.files && slip1Input.files[0]) {
 			fileNameDisplay.textContent = slip1Input.files[0].name;
 		} else if (slip1HiddenVal && slip1HiddenVal.value) {
