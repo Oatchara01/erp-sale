@@ -22,6 +22,8 @@ $waranty2 = $_GET["waranty2"];
 $waranty3 = $_GET["waranty3"];
 $waranty4 = $_GET["waranty4"];
 
+//
+
 
 $save="insert into tb_product_lzd
 (code_lazada,name_lazada,price_lazada,id_product1,id_product2,id_product3,id_product4,unit1,unit2,unit3,unit4,waranty1,waranty2,waranty3,waranty4)
