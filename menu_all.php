@@ -438,7 +438,7 @@ $token = encryptData(
                     in_array(
                         $_SESSION['type_login'],
                         [
-                            'Engineer',
+                            'engineer',
                             'It',
                             'owner',
                             'Sup_en'
